@@ -52,8 +52,6 @@ a{color:var(--red)}
 .hero::after{content:"";position:absolute;top:-40%;right:6%;width:6%;height:180%;
   background:var(--red);transform:skewX(var(--skew));opacity:.10}
 .hero .wrap{position:relative;padding:66px 1.25rem 58px;z-index:1}
-.eu{display:inline-flex;align-items:center;gap:.7em;font-style:italic;font-weight:600;
-  font-size:.82rem;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin-bottom:1.4rem}
 .hero h1{font-weight:300;font-style:italic;color:var(--red);
   font-size:clamp(2.1rem,5vw,3.7rem);line-height:1.12;margin:0 0 .5em;max-width:18ch}
 .hero h1 b{font-weight:700;font-style:italic}
@@ -137,20 +135,6 @@ a{color:var(--red)}
 .done-card .run{display:flex;align-items:center;gap:.7em;font-weight:600;color:var(--ink);font-size:.95rem}
 .done-card .run .mark{width:.6em;height:.6em}
 
-/* ---------- Kontakt / CTA ---------- */
-.contact{background:#fff;border-top:3px solid var(--red)}
-.contact .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px;padding:34px 1.25rem}
-.contact .info{font-weight:300}
-.contact .info strong{display:block;font-style:italic;font-weight:600;color:var(--ink-2);font-size:1.15rem;margin-bottom:.3rem}
-.contact .info a{color:var(--ink);text-decoration:none;font-weight:600}
-.contact .info a:hover{color:var(--red)}
-.btn-skew{position:relative;display:inline-flex;align-items:center;gap:.6em;padding:.95em 2.2em;
-  text-decoration:none;font-style:italic;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  font-size:.92rem;color:#fff;border:0;cursor:pointer;background:transparent}
-.btn-skew::after{content:"";position:absolute;inset:0;background:var(--red);transform:skewX(var(--skew));z-index:-1;transition:background .25s}
-.btn-skew:hover::after{background:var(--ink-2)}
-.note{color:var(--muted-2);font-style:italic;font-size:.82rem;text-align:center;padding:18px 1.25rem 0}
-
 /* ---------- Reveal ---------- */
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
 .reveal.in{opacity:1;transform:none}
@@ -162,7 +146,6 @@ a{color:var(--red)}
   .stat b{font-size:1.8rem}
   .timeline{gap:8px}
   .tl-point .date{font-size:.92rem}
-  .contact .wrap{flex-direction:column;align-items:flex-start}
 }
 @media(prefers-reduced-motion:reduce){
   .reveal{opacity:1;transform:none;transition:none}
@@ -177,7 +160,7 @@ a{color:var(--red)}
 <section class="hero">
   <div class="wrap">
     <h1>Harmonogram kursów na <b>2026 i 2027 rok</b></h1>
-    <p class="lead">Bezpłatne kursy specjalistyczne, kwalifikacyjne i dokształcające dla pielęgniarek, pielęgniarzy i położnych — realizowane przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku.</p>
+    <p class="lead">Bezpłatne kursy specjalistyczne, kwalifikacyjne i dokształcające dla pielęgniarek, pielęgniarzy i położnych — realizowane przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku w ramach Projektu NIPiP pt. „Wsparcie kształcenia pielęgniarek, pielęgniarzy i położnych w Polsce".</p>
     <div class="stats">
       <div class="stat"><b id="st-courses">0</b><span>kursów</span></div>
       <div class="stat"><b id="st-editions">0</b><span>edycji</span></div>
