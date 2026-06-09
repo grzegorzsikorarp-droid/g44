@@ -176,13 +176,12 @@ a{color:var(--red)}
 <!-- Hero -->
 <section class="hero">
   <div class="wrap">
-    <span class="eu"><span class="mark"></span> Dofinansowano z Funduszy Europejskich · Projekt NIPiP</span>
     <h1>Harmonogram kursów na <b>2026 i 2027 rok</b></h1>
     <p class="lead">Bezpłatne kursy specjalistyczne, kwalifikacyjne i dokształcające dla pielęgniarek, pielęgniarzy i położnych — realizowane przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku.</p>
     <div class="stats">
       <div class="stat"><b id="st-courses">0</b><span>kursów</span></div>
       <div class="stat"><b id="st-editions">0</b><span>edycji</span></div>
-      <div class="stat"><b>3</b><span>typy kształcenia</span></div>
+      <div class="stat"><b>3</b><span>typy kursów</span></div>
     </div>
   </div>
 </section>
@@ -205,19 +204,6 @@ a{color:var(--red)}
   </noscript>
 </main>
 
-<!-- Kontakt -->
-<section class="contact" id="zapisy">
-  <div class="wrap">
-    <div class="info">
-      <strong>Zapisy i informacje</strong>
-      Biuro OIPiP w Słupsku, ul. Poniatowskiego 4, 76-200 Słupsk<br>
-      <a href="tel:+48668026287">(+48) 668 026 287</a> · <a href="mailto:biuro@oipip.slupsk.pl">biuro@oipip.slupsk.pl</a>
-    </div>
-    <a class="btn-skew" href="mailto:biuro@oipip.slupsk.pl"><span class="mark" style="background:#fff;width:.7em;height:.7em"></span> Zapisz się na kurs</a>
-  </div>
-  <p class="note">Harmonogram ma charakter informacyjny — terminy mogą ulec zmianie. Kursy dofinansowane w ramach Projektu NIPiP ze środków Unii Europejskiej.</p>
-</section>
-
 <script>
 /* =========================================================
    DANE — harmonogram kursów (źródło: OIPiP w Słupsku)
@@ -225,7 +211,7 @@ a{color:var(--red)}
 const SCHEDULE = [
   {
     id:'specjalistyczne', title:'Kursy specjalistyczne',
-    sub:'Pogłębienie wiedzy i umiejętności w wybranej dziedzinie pielęgniarstwa.',
+    sub:'',
     courses:[
       {name:'Leczenie ran', aud:'dla pielęgniarek',
         editions:[{ed:'Edycja 1', start:'11.09.2026', end:'16.11.2026'}]},
@@ -298,7 +284,7 @@ SCHEDULE.forEach(sec=>{
       <h2>${sec.title}</h2>
       <span class="count">${sec.courses.length} ${plural(sec.courses.length)}</span>
     </div>`));
-  wrap.appendChild(el(`<p class="sub reveal">${sec.sub}</p>`));
+  if(sec.sub) wrap.appendChild(el(`<p class="sub reveal">${sec.sub}</p>`));
   const grid=el(`<div class="grid"></div>`);
   sec.courses.forEach(c=>{
     const eds=c.editions.map(e=>`
