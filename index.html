@@ -279,8 +279,8 @@ const DONE_2025 = [
 
 /* helpers */
 function parseDate(d){const[a,b,c]=d.split('.').map(Number);return new Date(c,b-1,a);}
-function durLabel(s,e){const days=Math.round((parseDate(e)-parseDate(s))/86400000);
-  if(days<=1)return '1 dzień'; if(days<14)return days+' dni'; return '~'+Math.round(days/7)+' tyg.';}
+function durLabel(s,e){const days=Math.round((parseDate(e)-parseDate(s))/86400000)+1; /* inkluzywnie: liczymy dzień rozpoczęcia i zakończenia */
+  if(days===1)return '1 dzień'; if(days<14)return days+' dni'; return '~'+Math.round(days/7)+' tyg.';}
 function el(h){const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstElementChild;}
 function plural(n){if(n===1)return 'kurs';const t=n%10,h=n%100;return (t>=2&&t<=4&&!(h>=12&&h<=14))?'kursy':'kursów';}
 
