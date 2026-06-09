@@ -1,0 +1,185 @@
+<!-- OIPiP w Słupsku — nipip-oferta (wklej do bloku Custom HTML; CSS pod #nipip-oferta, klasy nh-, bez JS) -->
+<div id="nipip-oferta">
+<style>
+#nipip-oferta{--red:#e30513;--red-2:#ce000c;--ink:#1a1718;--ink-2:#000;--muted:#5a5a5a;--muted-2:#8c8a8b;
+  --line:#dedede;--line-2:#ececec;--bg:#e7e7e7;--card:#ffffff;--skew:-13deg;--wrap:75rem;}
+#nipip-oferta *{box-sizing:border-box}
+#nipip-oferta{scroll-behavior:smooth}
+#nipip-oferta{margin:0;font-family:"Titillium Web",system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg);
+  line-height:1.66;font-size:clamp(0.95rem,1.05rem,1.25vw);-webkit-font-smoothing:antialiased}
+#nipip-oferta .nh-wrap{width:var(--wrap);max-width:100%;margin:0 auto;padding:0 1.25rem}
+#nipip-oferta a{color:var(--red)}
+#nipip-oferta .nh-mark{display:inline-block;width:.85em;height:.85em;background:var(--red);transform:skewX(var(--skew));flex:0 0 auto}
+#nipip-oferta .nh-hero{background:#fff;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+#nipip-oferta .nh-hero::before{content:"";position:absolute;top:-40%;right:-6%;width:42%;height:180%;background:var(--red);transform:skewX(var(--skew));opacity:.06}
+#nipip-oferta .nh-hero::after{content:"";position:absolute;top:-40%;right:6%;width:6%;height:180%;background:var(--red);transform:skewX(var(--skew));opacity:.10}
+#nipip-oferta .nh-hero .nh-wrap{position:relative;padding:66px 1.25rem 58px;z-index:1}
+#nipip-oferta .nh-hero h1{font-weight:300;font-style:italic;color:var(--red);font-size:clamp(2.1rem,5vw,3.7rem);line-height:1.12;margin:0 0 .5em;max-width:20ch}
+#nipip-oferta .nh-hero h1 b{font-weight:700;font-style:italic}
+#nipip-oferta .nh-hero .nh-lead{max-width:60ch;font-weight:300;color:var(--ink);font-size:clamp(1rem,1.15rem,1.4vw);margin:0 0 2.2rem}
+#nipip-oferta .nh-stats{display:inline-flex;flex-wrap:wrap;gap:0;border:1px solid var(--line)}
+#nipip-oferta .nh-stat{padding:16px 30px 14px;border-right:1px solid var(--line);min-width:130px}
+#nipip-oferta .nh-stat:last-child{border-right:0}
+#nipip-oferta .nh-stat b{display:block;font-weight:600;color:var(--red);font-size:2.3rem;line-height:1;font-style:italic}
+#nipip-oferta .nh-stat span{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;font-style:italic}
+#nipip-oferta .nh-subnav{background:#fff;border-bottom:1px solid var(--line)}
+#nipip-oferta .nh-subnav .nh-wrap{display:flex;flex-wrap:wrap;gap:1.6rem;padding:14px 1.25rem;overflow-x:auto}
+#nipip-oferta .nh-subnav a{display:inline-flex;align-items:center;gap:.6em;text-decoration:none;color:var(--ink);font-style:italic;font-weight:600;font-size:.92rem;white-space:nowrap;transition:color .2s}
+#nipip-oferta .nh-subnav a .nh-mark{width:.6em;height:.6em;background:#c9c9c9;transition:background .2s}
+#nipip-oferta .nh-subnav a:hover{color:var(--red)}
+#nipip-oferta .nh-subnav a:hover .nh-mark{background:var(--red)}
+#nipip-oferta .nh-section{padding:58px 0}
+#nipip-oferta .nh-section.alt{background:var(--bg)}
+#nipip-oferta .nh-section-head{display:flex;align-items:center;gap:1rem;padding-bottom:1rem;margin-bottom:2.2rem;border-bottom:2px solid var(--ink-2);flex-wrap:wrap}
+#nipip-oferta .nh-section-head .nh-mark{width:18px;height:18px;align-self:center}
+#nipip-oferta .nh-section-head h2{font-weight:300;font-style:italic;color:var(--ink-2);font-size:clamp(1.5rem,2.4vw,2.2rem);line-height:1.1;margin:0;flex:1}
+#nipip-oferta .nh-section-head .nh-count{font-style:italic;font-weight:600;color:var(--muted);font-size:.95rem;white-space:nowrap}
+#nipip-oferta .nh-callout{display:flex;gap:.9em;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+  border-left:5px solid var(--red);padding:16px 20px;margin:-1rem 0 2rem;font-weight:300;font-size:1rem}
+#nipip-oferta .nh-callout .nh-mark{margin-top:.4em}
+#nipip-oferta .nh-callout strong{font-style:italic;font-weight:700;color:var(--red)}
+#nipip-oferta .nh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px}
+#nipip-oferta .nh-course{background:var(--card);border:1px solid var(--line);position:relative;display:flex;flex-direction:column;transition:border-color .2s ease,box-shadow .2s ease}
+#nipip-oferta .nh-course::before{content:"";position:absolute;left:0;top:0;width:5px;height:100%;background:var(--red);transform-origin:top;transform:scaleY(0);transition:transform .25s ease}
+#nipip-oferta .nh-course:hover{border-color:#c9c9c9;box-shadow:0 14px 34px rgba(0,0,0,.07)}
+#nipip-oferta .nh-course:hover::before{transform:scaleY(1)}
+#nipip-oferta .nh-course .nh-body{padding:24px 26px 22px;display:flex;flex-direction:column;gap:14px;flex:1}
+#nipip-oferta .nh-course h3{font-weight:600;color:var(--ink-2);font-size:1.12rem;line-height:1.32;margin:0;transition:color .2s;display:flex;gap:.6em}
+#nipip-oferta .nh-course h3 .nh-mark{width:.7em;height:.7em;margin-top:.34em}
+#nipip-oferta .nh-course:hover h3{color:var(--red)}
+#nipip-oferta .nh-audience{font-style:italic;font-weight:400;color:var(--muted-2);font-size:.9rem;margin-top:-4px;padding-left:1.3em}
+#nipip-oferta .nh-editions{display:flex;flex-direction:column;gap:16px;margin-top:auto;padding-top:16px;border-top:1px solid var(--line-2)}
+#nipip-oferta .nh-edition{display:flex;flex-direction:column;gap:10px}
+#nipip-oferta .nh-ed-tag{align-self:flex-start;background:var(--red);transform:skewX(var(--skew));padding:.28em 1.1em}
+#nipip-oferta .nh-ed-tag span{display:inline-block;transform:skewX(calc(-1 * var(--skew)));color:#fff;font-style:italic;font-weight:700;text-transform:uppercase;font-size:.7rem;letter-spacing:.06em}
+#nipip-oferta .nh-timeline{display:flex;align-items:center;gap:12px}
+#nipip-oferta .nh-tl-point{min-width:0}
+#nipip-oferta .nh-tl-point .nh-lbl{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);font-weight:700;font-style:italic;margin-bottom:2px}
+#nipip-oferta .nh-tl-point .nh-date{font-size:1.02rem;font-weight:700;color:var(--ink-2);white-space:nowrap}
+#nipip-oferta .nh-tl-point.end{text-align:right;margin-left:auto}
+#nipip-oferta .nh-tl-line{flex:1;height:1px;background:var(--line);position:relative;min-width:26px}
+#nipip-oferta .nh-tl-line::before,#nipip-oferta .nh-tl-line::after{content:"";position:absolute;top:50%;width:8px;height:8px;background:var(--red);transform:translateY(-50%) skewX(var(--skew))}
+#nipip-oferta .nh-tl-line::before{left:0}
+#nipip-oferta .nh-tl-line::after{right:0}
+#nipip-oferta .nh-tl-line .nh-dur{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--card);padding:0 8px;font-size:.64rem;font-weight:700;font-style:italic;letter-spacing:.04em;color:var(--muted-2);text-transform:uppercase;white-space:nowrap}
+#nipip-oferta .nh-reveal{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
+#nipip-oferta .nh-reveal.in{opacity:1;transform:none}
+@media(max-width:640px){
+#nipip-oferta .nh-hero .nh-wrap{padding:46px 1.25rem 42px}
+#nipip-oferta .nh-stats{display:flex}
+#nipip-oferta .nh-stat{flex:1 1 40%;min-width:0;padding:14px 16px}
+#nipip-oferta .nh-stat b{font-size:1.8rem}
+#nipip-oferta .nh-timeline{gap:8px}
+#nipip-oferta .nh-tl-point .nh-date{font-size:.92rem}
+}
+@media(prefers-reduced-motion:reduce){
+#nipip-oferta .nh-reveal{opacity:1;transform:none;transition:none}
+#nipip-oferta{scroll-behavior:auto}
+#nipip-oferta .nh-course::before{transition:none}
+}
+
+#nipip-oferta{box-sizing:border-box}
+#nipip-oferta .nh-reveal{opacity:1;transform:none}
+</style>
+<!-- Hero -->
+<section class="nh-hero">
+  <div class="nh-wrap">
+    <h1>Oferta specjalizacji i kursów <b>OIPiP w Słupsku</b></h1>
+    <p class="nh-lead">Specjalizacje i kurs kwalifikacyjny prowadzone przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku dla pielęgniarek i pielęgniarzy.</p>
+    <div class="nh-stats">
+      <div class="nh-stat"><b>2</b><span>specjalizacje</span></div>
+      <div class="nh-stat"><b>1</b><span>kurs kwalifikacyjny</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- In-page nav -->
+<nav class="nh-subnav">
+  <div class="nh-wrap">
+    <a href="#specjalizacje"><span class="nh-mark"></span>Specjalizacje</a>
+    <a href="#kwalifikacyjny"><span class="nh-mark"></span>Kurs kwalifikacyjny</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- Specjalizacje -->
+<section class="nh-section" id="specjalizacje">
+  <div class="nh-wrap">
+    <div class="nh-section-head nh-reveal">
+      <span class="nh-mark"></span>
+      <h2>Specjalizacje</h2>
+      <span class="nh-count">2 specjalizacje</span>
+    </div>
+    <div class="nh-callout nh-reveal">
+      <span class="nh-mark"></span>
+      <div>Termin realizacji obu specjalizacji: <strong>29.05.2026 r. – 05.10.2027 r.</strong> &nbsp;·&nbsp; Wciąż istnieje możliwość zapisu!</div>
+    </div>
+    <div class="nh-grid">
+      <article class="nh-course nh-reveal">
+        <div class="nh-body">
+          <h3><span class="nh-mark"></span>Pielęgniarstwo rodzinne</h3>
+          <span class="nh-audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="nh-editions">
+            <div class="nh-edition">
+              <span class="nh-ed-tag"><span>Zapisy otwarte</span></span>
+              <div class="nh-timeline">
+                <div class="nh-tl-point"><span class="nh-lbl">Rozpoczęcie</span><span class="nh-date">29.05.2026</span></div>
+                <div class="nh-tl-line"><span class="nh-dur">~16 mies.</span></div>
+                <div class="nh-tl-point end"><span class="nh-lbl">Zakończenie</span><span class="nh-date">05.10.2027</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+      <article class="nh-course nh-reveal">
+        <div class="nh-body">
+          <h3><span class="nh-mark"></span>Pielęgniarstwo onkologiczne</h3>
+          <span class="nh-audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="nh-editions">
+            <div class="nh-edition">
+              <span class="nh-ed-tag"><span>Zapisy otwarte</span></span>
+              <div class="nh-timeline">
+                <div class="nh-tl-point"><span class="nh-lbl">Rozpoczęcie</span><span class="nh-date">29.05.2026</span></div>
+                <div class="nh-tl-line"><span class="nh-dur">~16 mies.</span></div>
+                <div class="nh-tl-point end"><span class="nh-lbl">Zakończenie</span><span class="nh-date">05.10.2027</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Kurs kwalifikacyjny -->
+<section class="nh-section alt" id="kwalifikacyjny">
+  <div class="nh-wrap">
+    <div class="nh-section-head nh-reveal">
+      <span class="nh-mark"></span>
+      <h2>Kurs kwalifikacyjny</h2>
+      <span class="nh-count">1 kurs</span>
+    </div>
+    <div class="nh-grid">
+      <article class="nh-course nh-reveal">
+        <div class="nh-body">
+          <h3><span class="nh-mark"></span>Pielęgniarstwo opieki paliatywnej</h3>
+          <span class="nh-audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="nh-editions">
+            <div class="nh-edition">
+              <span class="nh-ed-tag"><span>Termin realizacji</span></span>
+              <div class="nh-timeline">
+                <div class="nh-tl-point"><span class="nh-lbl">Rozpoczęcie</span><span class="nh-date">18.09.2026</span></div>
+                <div class="nh-tl-line"><span class="nh-dur">~12 tyg.</span></div>
+                <div class="nh-tl-point end"><span class="nh-lbl">Zakończenie</span><span class="nh-date">09.12.2026</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oferta specjalizacji i kursów | OIPiP w Słupsku</title>
+<meta name="description" content="Oferta specjalizacji i kursów kwalifikacyjnych realizowanych przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;0,900;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   OIPiP w Słupsku — identyfikacja wizualna (motyw izba-slupsk)
+   Cienka KURSYWA w nagłówkach, motyw SKOSU skewX(-13deg),
+   paleta monochromatyczna: czerwień + czerń + szarości.
+   ========================================================= */
+:root{
+  --red:#e30513;--red-2:#ce000c;--ink:#1a1718;--ink-2:#000;--muted:#5a5a5a;--muted-2:#8c8a8b;
+  --line:#dedede;--line-2:#ececec;--bg:#e7e7e7;--card:#ffffff;--skew:-13deg;--wrap:75rem;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Titillium Web",system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg);
+  line-height:1.66;font-size:clamp(0.95rem,1.05rem,1.25vw);-webkit-font-smoothing:antialiased}
+.wrap{width:var(--wrap);max-width:100%;margin:0 auto;padding:0 1.25rem}
+a{color:var(--red)}
+.mark{display:inline-block;width:.85em;height:.85em;background:var(--red);transform:skewX(var(--skew));flex:0 0 auto}
+
+/* ---------- Hero ---------- */
+.hero{background:#fff;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;top:-40%;right:-6%;width:42%;height:180%;background:var(--red);transform:skewX(var(--skew));opacity:.06}
+.hero::after{content:"";position:absolute;top:-40%;right:6%;width:6%;height:180%;background:var(--red);transform:skewX(var(--skew));opacity:.10}
+.hero .wrap{position:relative;padding:66px 1.25rem 58px;z-index:1}
+.hero h1{font-weight:300;font-style:italic;color:var(--red);font-size:clamp(2.1rem,5vw,3.7rem);line-height:1.12;margin:0 0 .5em;max-width:20ch}
+.hero h1 b{font-weight:700;font-style:italic}
+.hero .lead{max-width:60ch;font-weight:300;color:var(--ink);font-size:clamp(1rem,1.15rem,1.4vw);margin:0 0 2.2rem}
+.stats{display:inline-flex;flex-wrap:wrap;gap:0;border:1px solid var(--line)}
+.stat{padding:16px 30px 14px;border-right:1px solid var(--line);min-width:130px}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-weight:600;color:var(--red);font-size:2.3rem;line-height:1;font-style:italic}
+.stat span{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;font-style:italic}
+
+/* ---------- Subnav ---------- */
+.subnav{background:#fff;border-bottom:1px solid var(--line)}
+.subnav .wrap{display:flex;flex-wrap:wrap;gap:1.6rem;padding:14px 1.25rem;overflow-x:auto}
+.subnav a{display:inline-flex;align-items:center;gap:.6em;text-decoration:none;color:var(--ink);font-style:italic;font-weight:600;font-size:.92rem;white-space:nowrap;transition:color .2s}
+.subnav a .mark{width:.6em;height:.6em;background:#c9c9c9;transition:background .2s}
+.subnav a:hover{color:var(--red)}
+.subnav a:hover .mark{background:var(--red)}
+
+/* ---------- Section ---------- */
+.section{padding:58px 0}
+.section.alt{background:var(--bg)}
+.section-head{display:flex;align-items:center;gap:1rem;padding-bottom:1rem;margin-bottom:2.2rem;border-bottom:2px solid var(--ink-2);flex-wrap:wrap}
+.section-head .mark{width:18px;height:18px;align-self:center}
+.section-head h2{font-weight:300;font-style:italic;color:var(--ink-2);font-size:clamp(1.5rem,2.4vw,2.2rem);line-height:1.1;margin:0;flex:1}
+.section-head .count{font-style:italic;font-weight:600;color:var(--muted);font-size:.95rem;white-space:nowrap}
+
+/* ---------- Callout (termin / zapisy) ---------- */
+.callout{display:flex;gap:.9em;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+  border-left:5px solid var(--red);padding:16px 20px;margin:-1rem 0 2rem;font-weight:300;font-size:1rem}
+.callout .mark{margin-top:.4em}
+.callout strong{font-style:italic;font-weight:700;color:var(--red)}
+
+/* ---------- Karty ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px}
+.course{background:var(--card);border:1px solid var(--line);position:relative;display:flex;flex-direction:column;transition:border-color .2s ease,box-shadow .2s ease}
+.course::before{content:"";position:absolute;left:0;top:0;width:5px;height:100%;background:var(--red);transform-origin:top;transform:scaleY(0);transition:transform .25s ease}
+.course:hover{border-color:#c9c9c9;box-shadow:0 14px 34px rgba(0,0,0,.07)}
+.course:hover::before{transform:scaleY(1)}
+.course .body{padding:24px 26px 22px;display:flex;flex-direction:column;gap:14px;flex:1}
+.course h3{font-weight:600;color:var(--ink-2);font-size:1.12rem;line-height:1.32;margin:0;transition:color .2s;display:flex;gap:.6em}
+.course h3 .mark{width:.7em;height:.7em;margin-top:.34em}
+.course:hover h3{color:var(--red)}
+.audience{font-style:italic;font-weight:400;color:var(--muted-2);font-size:.9rem;margin-top:-4px;padding-left:1.3em}
+
+/* edycje + oś czasu */
+.editions{display:flex;flex-direction:column;gap:16px;margin-top:auto;padding-top:16px;border-top:1px solid var(--line-2)}
+.edition{display:flex;flex-direction:column;gap:10px}
+.ed-tag{align-self:flex-start;background:var(--red);transform:skewX(var(--skew));padding:.28em 1.1em}
+.ed-tag span{display:inline-block;transform:skewX(calc(-1 * var(--skew)));color:#fff;font-style:italic;font-weight:700;text-transform:uppercase;font-size:.7rem;letter-spacing:.06em}
+.timeline{display:flex;align-items:center;gap:12px}
+.tl-point{min-width:0}
+.tl-point .lbl{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);font-weight:700;font-style:italic;margin-bottom:2px}
+.tl-point .date{font-size:1.02rem;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.tl-point.end{text-align:right;margin-left:auto}
+.tl-line{flex:1;height:1px;background:var(--line);position:relative;min-width:26px}
+.tl-line::before,.tl-line::after{content:"";position:absolute;top:50%;width:8px;height:8px;background:var(--red);transform:translateY(-50%) skewX(var(--skew))}
+.tl-line::before{left:0}.tl-line::after{right:0}
+.tl-line .dur{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--card);padding:0 8px;font-size:.64rem;font-weight:700;font-style:italic;letter-spacing:.04em;color:var(--muted-2);text-transform:uppercase;white-space:nowrap}
+
+/* ---------- Reveal ---------- */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- Responsive ---------- */
+@media(max-width:640px){
+  .hero .wrap{padding:46px 1.25rem 42px}
+  .stats{display:flex}
+  .stat{flex:1 1 40%;min-width:0;padding:14px 16px}
+  .stat b{font-size:1.8rem}
+  .timeline{gap:8px}
+  .tl-point .date{font-size:.92rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  .course::before{transition:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="wrap">
+    <h1>Oferta specjalizacji i kursów <b>OIPiP w Słupsku</b></h1>
+    <p class="lead">Specjalizacje i kurs kwalifikacyjny prowadzone przez Okręgową Izbę Pielęgniarek i Położnych w Słupsku dla pielęgniarek i pielęgniarzy.</p>
+    <div class="stats">
+      <div class="stat"><b>2</b><span>specjalizacje</span></div>
+      <div class="stat"><b>1</b><span>kurs kwalifikacyjny</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- In-page nav -->
+<nav class="subnav">
+  <div class="wrap">
+    <a href="#specjalizacje"><span class="mark"></span>Specjalizacje</a>
+    <a href="#kwalifikacyjny"><span class="mark"></span>Kurs kwalifikacyjny</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- Specjalizacje -->
+<section class="section" id="specjalizacje">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="mark"></span>
+      <h2>Specjalizacje</h2>
+      <span class="count">2 specjalizacje</span>
+    </div>
+    <div class="callout reveal">
+      <span class="mark"></span>
+      <div>Termin realizacji obu specjalizacji: <strong>29.05.2026 r. – 05.10.2027 r.</strong> &nbsp;·&nbsp; Wciąż istnieje możliwość zapisu!</div>
+    </div>
+    <div class="grid">
+      <article class="course reveal">
+        <div class="body">
+          <h3><span class="mark"></span>Pielęgniarstwo rodzinne</h3>
+          <span class="audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="editions">
+            <div class="edition">
+              <span class="ed-tag"><span>Zapisy otwarte</span></span>
+              <div class="timeline">
+                <div class="tl-point"><span class="lbl">Rozpoczęcie</span><span class="date">29.05.2026</span></div>
+                <div class="tl-line"><span class="dur">~16 mies.</span></div>
+                <div class="tl-point end"><span class="lbl">Zakończenie</span><span class="date">05.10.2027</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+      <article class="course reveal">
+        <div class="body">
+          <h3><span class="mark"></span>Pielęgniarstwo onkologiczne</h3>
+          <span class="audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="editions">
+            <div class="edition">
+              <span class="ed-tag"><span>Zapisy otwarte</span></span>
+              <div class="timeline">
+                <div class="tl-point"><span class="lbl">Rozpoczęcie</span><span class="date">29.05.2026</span></div>
+                <div class="tl-line"><span class="dur">~16 mies.</span></div>
+                <div class="tl-point end"><span class="lbl">Zakończenie</span><span class="date">05.10.2027</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Kurs kwalifikacyjny -->
+<section class="section alt" id="kwalifikacyjny">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="mark"></span>
+      <h2>Kurs kwalifikacyjny</h2>
+      <span class="count">1 kurs</span>
+    </div>
+    <div class="grid">
+      <article class="course reveal">
+        <div class="body">
+          <h3><span class="mark"></span>Pielęgniarstwo opieki paliatywnej</h3>
+          <span class="audience">dla pielęgniarek i pielęgniarzy</span>
+          <div class="editions">
+            <div class="edition">
+              <span class="ed-tag"><span>Termin realizacji</span></span>
+              <div class="timeline">
+                <div class="tl-point"><span class="lbl">Rozpoczęcie</span><span class="date">18.09.2026</span></div>
+                <div class="tl-line"><span class="dur">~12 tyg.</span></div>
+                <div class="tl-point end"><span class="lbl">Zakończenie</span><span class="date">09.12.2026</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(n=>io.observe(n));
+</script>
+</body>
+</html>
