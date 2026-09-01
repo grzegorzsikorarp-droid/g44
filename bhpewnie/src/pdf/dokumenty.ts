@@ -1,6 +1,10 @@
 import { PDFDocument, PDFName, PDFString, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { t } from '../dane/wczytaj'
+// Fonty wciagamy jako zasoby modulow, a nie plikiem z serwera — dzieki temu
+// generator dziala tak samo w paczce PWA i w wersji jednoplikowej do testow.
+import adresPisma from './fonty/pismo.ttf?url'
+import adresPismaGrubego from './fonty/pismo-gruby.ttf?url'
 import { STAN_PRAWNY } from '../silnik/parametry'
 
 /**
@@ -25,8 +29,8 @@ let pamiecFontow: { zwykly: ArrayBuffer; gruby: ArrayBuffer } | null = null
 async function wczytajFonty(): Promise<{ zwykly: ArrayBuffer; gruby: ArrayBuffer }> {
   if (pamiecFontow) return pamiecFontow
   const [zwykly, gruby] = await Promise.all([
-    fetch(new URL('fonty/pismo.ttf', document.baseURI)).then((o) => o.arrayBuffer()),
-    fetch(new URL('fonty/pismo-gruby.ttf', document.baseURI)).then((o) => o.arrayBuffer()),
+    fetch(adresPisma).then((o) => o.arrayBuffer()),
+    fetch(adresPismaGrubego).then((o) => o.arrayBuffer()),
   ])
   pamiecFontow = { zwykly, gruby }
   return pamiecFontow

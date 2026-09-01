@@ -11,8 +11,8 @@ const znaki = [
 ].join('')
 
 const pary = [
-  ['/tmp/plex-Regular.ttf', 'public/fonty/pismo.ttf'],
-  ['/tmp/plex-Bold.ttf', 'public/fonty/pismo-gruby.ttf'],
+  ['/tmp/plex-Regular.ttf', 'src/pdf/fonty/pismo.ttf'],
+  ['/tmp/plex-Bold.ttf', 'src/pdf/fonty/pismo-gruby.ttf'],
 ]
 
 for (const [zrodlo, cel] of pary) {

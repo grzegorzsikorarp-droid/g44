@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['fonty/*.ttf', 'ikony/*.svg'],
+      includeAssets: ['ikony/*.png'],
       manifest: {
         name: 'BHPewnie',
         short_name: 'BHPewnie',
