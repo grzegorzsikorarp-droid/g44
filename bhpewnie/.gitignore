@@ -7,3 +7,4 @@ ekrany.json
 test-results/
 playwright-report/
 zrzuty/
+*.docx
