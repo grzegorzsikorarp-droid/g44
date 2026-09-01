@@ -1,0 +1,111 @@
+{
+  "cecha": "monitor",
+  "prog": "Uprawnienia z rozporządzenia o monitorach ekranowych włączają się, gdy praca przy ekranie zajmuje co najmniej połowę dobowego czasu pracy (w kreatorze: 2–4 h i powyżej).",
+  "uprawnienia": [
+    {
+      "id": "przerwa_monitor",
+      "tytul": "Przerwa przy monitorze",
+      "konkret": "{przerwa_monitor} — wliczane do czasu pracy",
+      "wyjasnienie": "Po każdej godzinie pracy przy ekranie należy Ci się krótka przerwa. Nie można jej zbierać na koniec dnia — ma odciążać wzrok na bieżąco.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [
+        "przerwa_monitor"
+      ],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "monitor",
+            "wartosc_w": [
+              "od2do4",
+              "ponad4"
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "monitor",
+      "grupa": "czas",
+      "ikona": "monitor"
+    },
+    {
+      "id": "okulary_monitor",
+      "tytul": "Okulary do pracy przy ekranie",
+      "konkret": "Na koszt pracodawcy, gdy zaleci je lekarz medycyny pracy",
+      "wyjasnienie": "Jeśli badanie profilaktyczne wykaże potrzebę okularów do pracy przy monitorze, ich koszt pokrywa pracodawca.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "monitor",
+            "wartosc_w": [
+              "od2do4",
+              "ponad4"
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "monitor",
+      "grupa": "zdrowie",
+      "ikona": "monitor"
+    },
+    {
+      "id": "stanowisko_ergonomia",
+      "tytul": "Ustawienie stanowiska",
+      "konkret": "Ekran, siedzisko i oświetlenie wg wymagań rozporządzenia",
+      "wyjasnienie": "Stanowisko z monitorem ma spełniać wymagania techniczne — od wysokości ekranu po ustawienie światła. Możesz poprosić o przegląd stanowiska.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "monitor",
+            "wartosc_w": [
+              "do2",
+              "od2do4",
+              "ponad4"
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "monitor",
+      "grupa": "ochrona",
+      "ikona": "monitor"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

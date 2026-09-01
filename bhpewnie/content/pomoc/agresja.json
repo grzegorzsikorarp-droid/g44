@@ -1,0 +1,14 @@
+{
+  "id": "agresja",
+  "etykieta": "Agresja lub napaść",
+  "ikona": "dlon",
+  "opis": "Ktoś Cię zaatakował albo grozi Ci w pracy",
+  "pelna": false,
+  "kroki": [],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

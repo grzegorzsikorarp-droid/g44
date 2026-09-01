@@ -1,0 +1,49 @@
+{
+  "id": "noc",
+  "etykieta": "Pracuję w nocy",
+  "pelna": false,
+  "reguly": [
+    {
+      "umowa": [
+        "zlecenie",
+        "dzialalnosc"
+      ],
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Na zleceniu nie przysługuje z mocy prawa — sprawdź swoją umowę",
+        "uzasadnienie": "Dodatek za pracę w nocy wynika z przepisów o czasie pracy, które obejmują pracowników. Przy umowie zlecenia i przy własnej działalności nie działa to z mocy prawa — ale może wynikać z Twojej umowy.",
+        "ile": [
+          "Zajrzyj do swojej umowy: to ona rozstrzyga, co Ci przysługuje.",
+          "Możesz zaproponować dopisanie takich zasad przy najbliższej okazji.",
+          "Bezpieczne i higieniczne warunki pracy trzeba Ci zapewnić niezależnie od rodzaju umowy."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": {
+          "tytul": "Normy dźwigania",
+          "sprawdzacz": "dzwiganie"
+        },
+        "pismo": {
+          "tytul": "Propozycja uzupełnienia umowy o zasady czasu pracy i odpoczynku",
+          "akapity": [
+            "Proszę o uzupełnienie mojej umowy o zapisy dotyczące czasu pracy oraz przerw i odpoczynku między kolejnymi dniami pracy.",
+            "Proponuję przyjąć rozwiązania odpowiadające standardom obowiązującym dla pracowników wykonujących tę samą pracę."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, pracuję na zleceniu i chciałabym/chciałbym ustalić na piśmie zasady dotyczące odpoczynku między kolejnymi dniami pracy. Czy możemy dopisać taki punkt do umowy?",
+          "mail": {
+            "temat": "Zasady czasu pracy i odpoczynku w umowie",
+            "tresc": "Dzień dobry,\n\nproszę o rozważenie uzupełnienia mojej umowy o zapisy dotyczące czasu pracy oraz odpoczynku między kolejnymi dniami pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

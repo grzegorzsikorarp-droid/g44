@@ -1,0 +1,483 @@
+{
+  "_uwaga": "Brzmienia pytań wg sekcji 6.1 briefu. Zmiana treści pytania NIE wymaga zmiany w kodzie.",
+  "pytania": [
+    {
+      "id": "monitor",
+      "ekran": "E0.2",
+      "cecha": "monitor",
+      "tresc": "Czy pracujesz przy komputerze albo z ekranem?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "komputer w biurze",
+        "kasa albo terminal",
+        "tablet lub czytnik w terenie"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ],
+      "dopytanie": {
+        "tresc": "Ile mniej więcej godzin dziennie?",
+        "opcje": [
+          {
+            "wartosc": "do2",
+            "etykieta": "Do 2 godzin"
+          },
+          {
+            "wartosc": "od2do4",
+            "etykieta": "Od 2 do 4 godzin"
+          },
+          {
+            "wartosc": "ponad4",
+            "etykieta": "Ponad 4 godziny"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dzwiganie",
+      "ekran": "E0.3",
+      "cecha": "dzwiganie",
+      "tresc": "Czy dźwigasz lub przenosisz ciężkie rzeczy — albo pomagasz przemieszczać się ludziom?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "worki, skrzynie, narzędzia, meble",
+        "pacjent, podopieczny, osoba z ograniczoną sprawnością"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ],
+      "dopytanie": {
+        "tresc": "Rzeczy, ludzie, czy jedno i drugie?",
+        "opcje": [
+          {
+            "wartosc": "rzeczy",
+            "etykieta": "Rzeczy"
+          },
+          {
+            "wartosc": "ludzie",
+            "etykieta": "Ludzi"
+          },
+          {
+            "wartosc": "oba",
+            "etykieta": "Jedno i drugie"
+          }
+        ]
+      }
+    },
+    {
+      "id": "teren",
+      "ekran": "E0.4",
+      "cecha": "teren",
+      "tresc": "Czy pracujesz na dworze — w terenie, w polu, na drodze, na budowie?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "budowa, droga, las",
+        "pole, ogród, gospodarstwo",
+        "obchód lub dostawy na zewnątrz"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "pojazd",
+      "ekran": "E0.5",
+      "cecha": "pojazd",
+      "tresc": "Czy prowadzisz pojazd w ramach pracy — auto, busa, ciężarówkę, maszynę?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "samochód służbowy",
+        "bus lub autobus",
+        "wózek widłowy, ciągnik, koparka"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "kontakt",
+      "ekran": "E0.6",
+      "cecha": "kontakt",
+      "tresc": "Czy Twoja praca to kontakt z ludźmi z zewnątrz — pacjentami, uczniami, petentami, pasażerami, klientami?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "okienko, recepcja, kasa",
+        "oddział, klasa, sala",
+        "interwencje i kontrole"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ],
+      "dopytanie": {
+        "tresc": "Jak bywa?",
+        "opcje": [
+          {
+            "wartosc": "obsluga",
+            "etykieta": "Spokojna obsługa"
+          },
+          {
+            "wartosc": "nerwowo",
+            "etykieta": "Bywa nerwowo"
+          },
+          {
+            "wartosc": "agresja",
+            "etykieta": "Bywają groźby lub agresja"
+          }
+        ]
+      }
+    },
+    {
+      "id": "glos",
+      "ekran": "E0.7",
+      "cecha": "glos",
+      "tresc": "Czy mówisz zawodowo przez wiele godzin — uczysz, prowadzisz zajęcia, obsługujesz telefon?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "lekcje i zajęcia",
+        "infolinia, dyspozytornia",
+        "szkolenia i prezentacje"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "chemia",
+      "ekran": "E0.8",
+      "cecha": "chemia",
+      "tresc": "Czy masz styczność z chemią — środkami przemysłowymi, opryskami, rozpuszczalnikami, pyłem?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "środki czystości i dezynfekcja",
+        "farby, kleje, rozpuszczalniki",
+        "pył drzewny, mączny, budowlany"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "biologia",
+      "ekran": "E0.9",
+      "cecha": "biologia",
+      "tresc": "Czy masz kontakt z chorymi, materiałem zakaźnym, zwierzętami albo kleszczami?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "pacjenci i materiał do badań",
+        "zwierzęta gospodarskie lub dzikie",
+        "praca w lesie i w wysokiej trawie"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "halas",
+      "ekran": "E0.10",
+      "cecha": "halas",
+      "tresc": "Czy w Twojej pracy jest głośno albo pracujesz narzędziami, które drgają?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "hala produkcyjna, warsztat",
+        "pilarka, młot, szlifierka",
+        "głośna sala lub świetlica"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "temperatura",
+      "ekran": "E0.11",
+      "cecha": "temperatura",
+      "tresc": "Czy pracujesz w gorącu (kuchnia, piec, pełne słońce) albo w zimnie (chłodnia, dwór zimą)?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "kuchnia, piekarnia, hutnictwo",
+        "chłodnia i mroźnia",
+        "praca na zewnątrz zimą"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "urazowe",
+      "ekran": "E0.12",
+      "cecha": "urazowe",
+      "tresc": "Czy pracujesz przy maszynach w ruchu, na wysokości, z ostrymi narzędziami albo z bronią?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "maszyny i linie produkcyjne",
+        "rusztowanie, drabina, dach",
+        "noże, piły, broń służbowa"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "odziez",
+      "ekran": "E0.13",
+      "cecha": "odziez",
+      "tresc": "Czy używasz do pracy własnych ubrań albo sam(-a) pierzesz odzież roboczą?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "pracuję w swoim ubraniu",
+        "fartuch albo mundur piorę w domu"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "samotnie",
+      "ekran": "E0.14",
+      "cecha": "samotnie",
+      "tresc": "Czy bywasz w pracy zupełnie sam(-a) — bez nikogo w pobliżu, kto mógłby pomóc?",
+      "typ": "tak_nie",
+      "bezpieczna": true,
+      "mozna_pominac": true,
+      "przyklady": [
+        "dyżur nocny w pojedynkę",
+        "obchód lub trasa w pojedynkę",
+        "sklep albo punkt na jedną osobę"
+      ],
+      "opcje": [
+        {
+          "wartosc": true,
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": false,
+          "etykieta": "Nie"
+        }
+      ]
+    },
+    {
+      "id": "zmiany",
+      "ekran": "E0.15",
+      "cecha": "zmiany",
+      "tresc": "Stałe godziny czy zmiany?",
+      "typ": "wybor",
+      "bezpieczna": "zmiany_noce",
+      "mozna_pominac": true,
+      "opcje": [
+        {
+          "wartosc": "stale",
+          "etykieta": "Stałe godziny"
+        },
+        {
+          "wartosc": "zmiany",
+          "etykieta": "Zmiany"
+        }
+      ]
+    },
+    {
+      "id": "umowa",
+      "ekran": "E0.18",
+      "cecha": "umowa",
+      "tresc": "Jaką masz umowę?",
+      "typ": "wybor",
+      "bezpieczna": "o_prace",
+      "mozna_pominac": true,
+      "opcje": [
+        {
+          "wartosc": "o_prace",
+          "etykieta": "Umowa o pracę"
+        },
+        {
+          "wartosc": "zlecenie",
+          "etykieta": "Umowa zlecenia"
+        },
+        {
+          "wartosc": "dzialalnosc",
+          "etykieta": "Własna działalność"
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "ekran": "E0.19",
+      "cecha": "status",
+      "tresc": "Czy należysz do grupy z osobnymi przepisami?",
+      "typ": "wybor",
+      "bezpieczna": "brak",
+      "mozna_pominac": true,
+      "opcje": [
+        {
+          "wartosc": "brak",
+          "etykieta": "Nie należę"
+        },
+        {
+          "wartosc": "nauczyciel",
+          "etykieta": "Nauczyciel — Karta Nauczyciela obok Kodeksu pracy"
+        },
+        {
+          "wartosc": "funkcjonariusz",
+          "etykieta": "Funkcjonariusz — służba ma własne przepisy zamiast Kodeksu pracy"
+        },
+        {
+          "wartosc": "cywil_w_sluzbie",
+          "etykieta": "Pracownik cywilny w służbie — Kodeks pracy jak wszędzie"
+        },
+        {
+          "wartosc": "kierowca_zawodowy",
+          "etykieta": "Kierowca zawodowy — osobna ustawa o czasie pracy"
+        },
+        {
+          "wartosc": "medyk",
+          "etykieta": "Ochrona zdrowia — dodatkowe przepisy o ekspozycji"
+        },
+        {
+          "wartosc": "kolejarz",
+          "etykieta": "Kolej — przepisy branżowe"
+        },
+        {
+          "wartosc": "gornik",
+          "etykieta": "Górnictwo — przepisy branżowe"
+        }
+      ]
+    },
+    {
+      "id": "rocznik",
+      "ekran": "E0.20",
+      "cecha": "rocznik",
+      "tresc": "W którym roku się urodziłeś(-aś)?",
+      "typ": "rocznik",
+      "bezpieczna": 1980,
+      "mozna_pominac": true
+    },
+    {
+      "id": "niepelnosprawnosc",
+      "ekran": "E0.21",
+      "cecha": "niepelnosprawnosc",
+      "tresc": "Czy masz orzeczenie o niepełnosprawności?",
+      "typ": "wybor",
+      "bezpieczna": "brak_odpowiedzi",
+      "mozna_pominac": true,
+      "opcje": [
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "brak_odpowiedzi",
+          "etykieta": "Wolę nie odpowiadać"
+        }
+      ]
+    }
+  ]
+}

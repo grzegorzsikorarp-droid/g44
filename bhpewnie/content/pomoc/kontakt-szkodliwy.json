@@ -1,0 +1,14 @@
+{
+  "id": "kontakt_szkodliwy",
+  "etykieta": "Kontakt z czymś szkodliwym",
+  "ikona": "igla",
+  "opis": "Zakłucie, oblanie, wdychanie, ekspozycja",
+  "pelna": false,
+  "kroki": [],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

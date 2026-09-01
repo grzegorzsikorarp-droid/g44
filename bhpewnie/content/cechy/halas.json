@@ -1,0 +1,53 @@
+{
+  "cecha": "halas",
+  "prog": "Hałas i drgania — także narzędzia wibracyjne.",
+  "uprawnienia": [
+    {
+      "id": "ochronniki",
+      "tytul": "Ochronniki słuchu",
+      "konkret": "Bezpłatnie, dobrane do poziomu hałasu",
+      "wyjasnienie": "Przy przekroczeniu progów pracodawca wydaje ochronniki i ma obowiązek ograniczać hałas u źródła.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "halas",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "srodki",
+      "grupa": "ochrona",
+      "ikona": "ucho"
+    },
+    {
+      "id": "badania_sluch",
+      "tytul": "Badania słuchu",
+      "konkret": "W ramach badań profilaktycznych",
+      "wyjasnienie": "Przy narażeniu na hałas badania profilaktyczne obejmują ocenę słuchu.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "halas",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zdrowie",
+      "ikona": "ucho"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

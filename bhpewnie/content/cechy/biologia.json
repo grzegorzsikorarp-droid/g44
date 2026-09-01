@@ -1,0 +1,74 @@
+{
+  "cecha": "biologia",
+  "prog": "Kontakt z chorymi, materiałem zakaźnym, zwierzętami albo kleszczami.",
+  "uprawnienia": [
+    {
+      "id": "szczepienia",
+      "tytul": "Szczepienia ochronne",
+      "konkret": "Na koszt pracodawcy — nie z Twojej kieszeni",
+      "wyjasnienie": "Przy narażeniu na czynniki biologiczne zalecane szczepienia ochronne finansuje pracodawca.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "biologia",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "srodki",
+      "grupa": "zdrowie",
+      "ikona": "tarcza"
+    },
+    {
+      "id": "odziez_skazenie",
+      "tytul": "Odzież przy materiale zakaźnym",
+      "konkret": "Własna odzież jest niedopuszczalna",
+      "wyjasnienie": "Gdy ubranie może ulec skażeniu biologicznemu, praca we własnej odzieży nie wchodzi w grę — komplet wydaje i pierze pracodawca.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "biologia",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "odziez",
+      "grupa": "ochrona",
+      "ikona": "ubranie"
+    },
+    {
+      "id": "procedura_zaklucie",
+      "tytul": "Postępowanie po zakłuciu",
+      "konkret": "Procedura i rejestr — obowiązek pracodawcy",
+      "wyjasnienie": "Zakład ma mieć procedurę postępowania po ekspozycji i rejestr zdarzeń. Masz prawo ją znać, zanim coś się stanie.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "biologia",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zasady",
+      "ikona": "igla"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "id": "monitor",
+  "etykieta": "Siedzę przy monitorze",
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "ile_godzin",
+      "tresc": "Ile godzin dziennie pracujesz przy ekranie?",
+      "opcje": [
+        { "wartosc": "malo", "etykieta": "Mniej niż połowę dnia pracy" },
+        { "wartosc": "duzo", "etykieta": "Co najmniej połowę dnia pracy" }
+      ]
+    },
+    {
+      "id": "przerwy",
+      "tresc": "Czy możesz w czasie pracy robić krótkie przerwy od ekranu?",
+      "opcje": [
+        { "wartosc": "nie", "etykieta": "Nie, siedzę bez przerwy" },
+        { "wartosc": "tak", "etykieta": "Tak, robię je swobodnie" }
+      ]
+    },
+    {
+      "id": "okulary",
+      "tresc": "Czy lekarz medycyny pracy zalecił Ci okulary do pracy przy ekranie?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak, mam takie zalecenie" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_bylem", "etykieta": "Nie byłem(-am) jeszcze na badaniach" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "umowa": ["zlecenie", "dzialalnosc"],
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Na Twojej umowie nie przysługuje z mocy prawa",
+        "uzasadnienie": "Przerwy przy monitorze i zwrot kosztu okularów przepisy przewidują dla pracowników. Przy umowie zlecenia i przy własnej działalności nie wynikają one z prawa — mogą jednak wynikać z Twojej umowy.",
+        "ile": [
+          "Sprawdź w swojej umowie, czy przewiduje przerwy i zwrot kosztu okularów.",
+          "Możesz zaproponować dopisanie takich zasad przy najbliższym aneksie.",
+          "Bezpieczne i higieniczne warunki pracy trzeba Ci zapewnić niezależnie od rodzaju umowy."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Ustawienie stanowiska z monitorem", "sprawdzacz": "srodki" },
+        "pismo": {
+          "tytul": "Propozycja uzupełnienia umowy o zasady pracy przy monitorze",
+          "akapity": [
+            "Proszę o uzupełnienie mojej umowy o zapis dotyczący krótkich przerw w pracy przy monitorze ekranowym oraz zasad zwrotu kosztu okularów zalecanych do tej pracy.",
+            "Proponuję przyjąć rozwiązania odpowiadające standardom obowiązującym dla pracowników wykonujących tę samą pracę."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, większość zadań wykonuję przy monitorze. Chciałabym/chciałbym uzgodnić krótkie przerwy od ekranu i zasady dotyczące okularów. Czy moglibyśmy dopisać to do umowy?",
+          "mail": {
+            "temat": "Praca przy monitorze — propozycja uzupełnienia umowy",
+            "tresc": "Dzień dobry,\n\nwiększość swojej pracy wykonuję przy monitorze ekranowym. Proszę o rozważenie uzupełnienia umowy o zasady dotyczące krótkich przerw od ekranu oraz zwrotu kosztu okularów zalecanych do tej pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_godzin": ["duzo"], "przerwy": ["nie"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci przerwa przy monitorze",
+        "uzasadnienie": "Pracujesz przy ekranie co najmniej połowę dnia pracy i nie masz możliwości robienia przerw. Przy takiej pracy krótka przerwa po każdej godzinie należy się z przepisów i jest wliczana do czasu pracy.",
+        "ile": [
+          "{przerwa_monitor} — wliczane do czasu pracy.",
+          "Przerwy nie wolno „zbierać” i wykorzystywać na koniec dnia.",
+          "Jeśli lekarz medycyny pracy zaleci okulary do pracy przy ekranie, ich koszt pokrywa pracodawca."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o uwzględnienie przerw przy pracy z monitorem ekranowym",
+          "akapity": [
+            "Wnoszę o uwzględnienie w organizacji mojej pracy przerw przysługujących przy pracy z monitorem ekranowym, wliczanych do czasu pracy.",
+            "Praca przy ekranie zajmuje co najmniej połowę mojego dobowego czasu pracy, a obecna organizacja pracy nie pozwala na ich wykorzystanie.",
+            "Proszę o informację, w jaki sposób przerwy zostaną uwzględnione w grafiku zespołu."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, przy monitorze pracuję ponad połowę dnia i nie mam kiedy oderwać wzroku od ekranu. Przy takiej pracy przysługuje mi krótka przerwa po każdej godzinie, wliczana do czasu pracy. Proszę o uwzględnienie tego w organizacji pracy.",
+          "mail": {
+            "temat": "Przerwy przy pracy z monitorem ekranowym",
+            "tresc": "Dzień dobry,\n\npraca przy monitorze ekranowym zajmuje co najmniej połowę mojego dobowego czasu pracy, a obecna organizacja pracy nie pozwala mi na wykorzystanie przysługujących przerw.\n\nProszę o uwzględnienie tych przerw w organizacji pracy oraz o informację, w jaki sposób zostanie to rozwiązane.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_godzin": ["duzo"], "okulary": ["tak"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci zwrot kosztu okularów",
+        "uzasadnienie": "Pracujesz przy ekranie co najmniej połowę dnia pracy, a lekarz medycyny pracy zalecił okulary do tej pracy. W takiej sytuacji koszt okularów pokrywa pracodawca.",
+        "ile": [
+          "Zwrot obejmuje okulary do pracy przy ekranie — na podstawie zalecenia lekarza.",
+          "Zasady zwrotu (kwota, sposób rozliczenia) ustala pracodawca w zakładzie — masz prawo je poznać.",
+          "Poza tym przysługuje Ci przerwa: {przerwa_monitor}."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zwrot kosztu okularów do pracy przy monitorze",
+          "akapity": [
+            "W związku z zaleceniem lekarza medycyny pracy wnoszę o zwrot kosztu okularów korygujących wzrok, przeznaczonych do pracy przy monitorze ekranowym.",
+            "Praca przy ekranie zajmuje co najmniej połowę mojego dobowego czasu pracy.",
+            "Proszę o informację o obowiązujących w zakładzie zasadach zwrotu oraz o wymaganych dokumentach."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, lekarz medycyny pracy zalecił mi okulary do pracy przy ekranie. Ponieważ przy monitorze pracuję ponad połowę dnia, koszt tych okularów pokrywa pracodawca. Proszę o informację, jak to u nas rozliczyć.",
+          "mail": {
+            "temat": "Zwrot kosztu okularów do pracy przy monitorze",
+            "tresc": "Dzień dobry,\n\nlekarz medycyny pracy zalecił mi okulary korygujące wzrok do pracy przy monitorze ekranowym. Praca przy ekranie zajmuje co najmniej połowę mojego dobowego czasu pracy.\n\nProszę o informację o zasadach zwrotu kosztu okularów obowiązujących w zakładzie oraz o wymaganych dokumentach.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_godzin": ["duzo"], "okulary": ["nie_bylem"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "To zależy od wyniku badania",
+        "uzasadnienie": "Przerwa przy monitorze należy Ci się już teraz, bo pracujesz przy ekranie co najmniej połowę dnia. O okularach zdecyduje jednak lekarz medycyny pracy — bez jego zalecenia nie ma podstawy do zwrotu kosztu.",
+        "ile": [
+          "Przerwa: {przerwa_monitor}, wliczana do czasu pracy.",
+          "Okulary: koszt pokrywa pracodawca, ale dopiero po zaleceniu lekarza."
+        ],
+        "do_sprawdzenia": [
+          "Na najbliższych badaniach powiedz wprost, ile godzin dziennie pracujesz przy ekranie.",
+          "Sprawdź, kiedy masz termin kolejnych badań profilaktycznych — możesz go zapisać w aplikacji."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Badania okresowe", "sprawdzacz": "badania" },
+        "pismo": {
+          "tytul": "Wniosek o skierowanie na badanie w związku z pracą przy monitorze",
+          "akapity": [
+            "Wnoszę o skierowanie na badanie profilaktyczne z uwzględnieniem pracy przy monitorze ekranowym.",
+            "Praca przy ekranie zajmuje co najmniej połowę mojego dobowego czasu pracy.",
+            "Proszę również o uwzględnienie w organizacji pracy przerw przysługujących przy pracy z monitorem."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, przy monitorze pracuję ponad połowę dnia, a nie byłam(-em) jeszcze na badaniach z tego tytułu. Proszę o skierowanie na badanie z uwzględnieniem pracy przy ekranie oraz o uwzględnienie przysługujących mi przerw.",
+          "mail": {
+            "temat": "Badanie w związku z pracą przy monitorze ekranowym",
+            "tresc": "Dzień dobry,\n\npraca przy monitorze ekranowym zajmuje co najmniej połowę mojego dobowego czasu pracy. Proszę o skierowanie na badanie profilaktyczne z uwzględnieniem tej pracy oraz o uwzględnienie w organizacji pracy przysługujących mi przerw.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_godzin": ["duzo"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci przerwa przy monitorze",
+        "uzasadnienie": "Praca przy ekranie zajmuje co najmniej połowę Twojego dnia pracy, więc krótka przerwa po każdej godzinie należy Ci się z przepisów — nawet jeśli dziś udaje Ci się je robić bez proszenia.",
+        "ile": [
+          "{przerwa_monitor} — wliczane do czasu pracy.",
+          "To uprawnienie, nie przywilej: nie trzeba go za każdym razem uzgadniać.",
+          "Jeśli lekarz zaleci okulary do pracy przy ekranie, ich koszt pokrywa pracodawca."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o potwierdzenie zasad przerw przy pracy z monitorem",
+          "akapity": [
+            "Proszę o potwierdzenie zasad korzystania z przerw przysługujących przy pracy z monitorem ekranowym oraz o ich uwzględnienie w organizacji pracy zespołu."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałabym/chciałbym potwierdzić, że przy pracy przy monitorze przysługuje mi krótka przerwa po każdej godzinie, wliczana do czasu pracy. Proszę o uwzględnienie tego w organizacji pracy.",
+          "mail": {
+            "temat": "Przerwy przy pracy z monitorem — prośba o potwierdzenie zasad",
+            "tresc": "Dzień dobry,\n\nproszę o potwierdzenie zasad korzystania z przerw przysługujących przy pracy z monitorem ekranowym oraz o ich uwzględnienie w organizacji pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "To zależy od tego, ile czasu spędzasz przy ekranie",
+        "uzasadnienie": "Przerwa przy monitorze przysługuje, gdy praca przy ekranie zajmuje co najmniej połowę dobowego czasu pracy. Z Twojej odpowiedzi wynika, że u Ciebie jest tego mniej.",
+        "ile": [
+          "Próg to co najmniej połowa dobowego czasu pracy przy ekranie.",
+          "Niezależnie od progu stanowisko z monitorem ma spełniać wymagania techniczne — ekran, siedzisko, oświetlenie."
+        ],
+        "do_sprawdzenia": [
+          "Policz przez trzy dni, ile realnie godzin spędzasz przy ekranie — wynik często zaskakuje.",
+          "Sprawdź, czy Twoje stanowisko było kiedykolwiek ocenione pod kątem ergonomii."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Prośba o przegląd stanowiska z monitorem ekranowym",
+          "akapity": [
+            "Proszę o przegląd mojego stanowiska pracy z monitorem ekranowym pod kątem wymagań dotyczących ustawienia ekranu, siedziska i oświetlenia."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, sporo pracuję przy ekranie i chciałabym/chciałbym się upewnić, że moje stanowisko jest dobrze ustawione. Czy moglibyśmy je wspólnie przejrzeć?",
+          "mail": {
+            "temat": "Prośba o przegląd stanowiska z monitorem",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd mojego stanowiska pracy z monitorem ekranowym pod kątem ustawienia ekranu, siedziska i oświetlenia.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

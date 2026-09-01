@@ -1,0 +1,133 @@
+{
+  "_uwaga": "Ekran „Gdzie szukać pomocy”. Opisy przykładowe na potrzeby prototypu — przed publikacją wymagają autoryzacji przez specjalistów wskazanych w metryczkach. W prototypie nie podajemy adresów, stron internetowych ani numerów telefonu poza całodobowym wsparciem 800 70 2222, telefonem zaufania dla dorosłych 116 123 oraz numerem alarmowym 112. Pozostałe dane kontaktowe oznaczono ciągiem [do uzupełnienia przez specjalistę]. Jeśli zagrożone jest życie — dzwoń 112.",
+  "instytucje": [
+    {
+      "id": "pip",
+      "nazwa": "Państwowa Inspekcja Pracy",
+      "dla_kogo": "Dla każdej osoby wykonującej pracę, która widzi naruszenie przepisów bezpieczeństwa i higieny pracy — niezależnie od tego, czy w zakładzie działa organizacja związkowa.",
+      "kiedy": "Gdy zagrożenie utrzymuje się mimo zgłoszenia w zakładzie, gdy warunki pracy są niebezpieczne albo gdy masz wątpliwości co do sposobu ustalenia okoliczności wypadku przy pracy.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Skargę składa się na piśmie, ustnie do protokołu albo w formie zgłoszenia elektronicznego. Żeby sprawa została rozpatrzona, potrzebne są Twoje dane — zgłoszenie bez nich może zostać pozostawione bez rozpoznania. Zasady ochrony tożsamości osoby skarżącej, dane kontaktowe okręgowego inspektoratu i podstawa prawna: [do uzupełnienia przez specjalistę].",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "spoleczny_inspektor_pracy",
+      "nazwa": "Społeczny inspektor pracy",
+      "dla_kogo": "Dla osób zatrudnionych w zakładach, w których działa organizacja związkowa i wybrano społecznego inspektora pracy. Nie w każdym zakładzie taka osoba jest.",
+      "kiedy": "Gdy chcesz, żeby ktoś z zakładu obejrzał stanowisko na miejscu, sprawdził stan maszyn, oświetlenia czy środków ochrony i miał prawo wpisać uwagi do księgi zaleceń.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Wystarczy rozmowa — społeczny inspektor pracy jest pracownikiem tego samego zakładu. Warto poprosić o odnotowanie zgłoszenia, żeby została po nim data. Kto pełni tę funkcję w Twoim zakładzie i gdzie go znaleźć: [do uzupełnienia przez specjalistę].",
+      "branzowa": true,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "zwiazek_zawodowy",
+      "nazwa": "Związek zawodowy — Forum Związków Zawodowych",
+      "dla_kogo": "Dla osób należących do organizacji związkowej oraz dla zatrudnionych w zakładach, w których taka organizacja działa. Forum Związków Zawodowych zrzesza organizacje z wielu branż.",
+      "kiedy": "Gdy sprawa dotyczy warunków pracy całej grupy, a nie tylko Twojego stanowiska, gdy potrzebujesz kogoś do rozmowy z pracodawcą albo wsparcia przy zgłoszeniu zagrożenia.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Zgłoś się do organizacji związkowej działającej w Twoim zakładzie albo do struktury branżowej. Pomoc dla osób zrzeszonych jest nieodpłatna. Dane kontaktowe organizacji właściwej dla Twojego zakładu: [do uzupełnienia przez specjalistę].",
+      "branzowa": true,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw dialogu społecznego",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "sluzba_bhp",
+      "nazwa": "Służba BHP w zakładzie",
+      "dla_kogo": "Dla wszystkich pracujących w danym zakładzie. W mniejszych zakładach zadania te wykonuje pracodawca albo specjalista spoza zakładu.",
+      "kiedy": "Przy każdym zagrożeniu, niesprawnym zabezpieczeniu, brakującym lub niewłaściwie dobranym środku ochrony, a także po zdarzeniu, w którym o mały włos nie doszło do wypadku.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Zgłoszenie ustne wystarczy, żeby zaczęło się dziać, ale to zgłoszenie na piśmie zostawia ślad z datą. Zachowaj kopię albo zrób zdjęcie pisma dla siebie. Kto pełni obowiązki służby BHP w Twoim zakładzie i gdzie ją zastaniesz: [do uzupełnienia przez specjalistę].",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "lekarz_medycyny_pracy",
+      "nazwa": "Lekarz medycyny pracy",
+      "dla_kogo": "Dla osób objętych profilaktyczną opieką zdrowotną ze strony pracodawcy.",
+      "kiedy": "Przy badaniach okresowych, przy powrocie po dłuższej chorobie, a także wtedy, gdy dolegliwości wiążesz z warunkami na stanowisku — hałasem, pracą zmianową, dźwiganiem, pracą z monitorem lub obciążeniem psychicznym.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Skierowanie wystawia pracodawca, a koszt badań profilaktycznych nie obciąża osoby badanej. Na wizytę warto przyjść z konkretami: od kiedy trwają dolegliwości, przy jakich czynnościach się nasilają i co już zgłaszałeś lub zgłaszałaś w zakładzie. Placówka właściwa dla Twojego zakładu oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "rzecznik_praw_obywatelskich",
+      "nazwa": "Rzecznik Praw Obywatelskich",
+      "dla_kogo": "Dla każdego, kto uważa, że organ władzy publicznej naruszył jego prawa lub wolności — także w sprawach dotyczących bezpieczeństwa pracy.",
+      "kiedy": "Gdy sprawa dotyczy działania lub bezczynności urzędu albo instytucji publicznej i wcześniejsze wystąpienia nie przyniosły skutku. To droga wtórna wobec zgłoszenia w zakładzie i wobec Państwowej Inspekcji Pracy.",
+      "anonimowo": false,
+      "platne": false,
+      "jak_sie_zglosic": "Wniosek składa się na piśmie i jest wolny od opłat. Warto opisać sprawę po kolei, z datami, i dołączyć kopie wcześniejszej korespondencji. Adres, formularz i szczegółowy tryb: [do uzupełnienia przez specjalistę].",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "prawnik (wymaga autoryzacji)",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "wsparcie_calodobowe",
+      "nazwa": "Całodobowe wsparcie telefoniczne 800 70 2222",
+      "dla_kogo": "Dla osób dorosłych w kryzysie psychicznym oraz dla ich bliskich. Nie musisz być w zakładzie ani mieć nic wspólnego ze sprawą zawodową, żeby zadzwonić.",
+      "kiedy": "Gdy po trudnym zdarzeniu nie możesz sobie poradzić z napięciem, gdy nie masz z kim porozmawiać w nocy albo gdy pojawiają się myśli o zrobieniu sobie krzywdy. Czynne całodobowo. Jeśli zagrożone jest życie — dzwoń 112.",
+      "anonimowo": true,
+      "platne": false,
+      "jak_sie_zglosic": "Zadzwoń pod 800 70 2222. Połączenie jest bezpłatne i nie musisz się przedstawiać.",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "psycholog interwencji kryzysowej",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "telefon_zaufania_dorosli",
+      "nazwa": "Telefon zaufania dla dorosłych 116 123",
+      "dla_kogo": "Dla osób dorosłych przeżywających trudności emocjonalne, które potrzebują rozmowy, a nie procedury.",
+      "kiedy": "Gdy chcesz porozmawiać z człowiekiem o tym, co się dzieje — po trudnym zdarzeniu w pracy, przy długo trwającym obciążeniu albo wtedy, gdy nie umiesz nazwać, co Ci dolega. Jeśli zagrożone jest życie — dzwoń 112.",
+      "anonimowo": true,
+      "platne": false,
+      "jak_sie_zglosic": "Zadzwoń pod 116 123. Nie musisz podawać nazwiska ani nazwy zakładu. Godziny pracy linii: [do uzupełnienia przez specjalistę].",
+      "branzowa": false,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "psycholog interwencji kryzysowej",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    }
+  ]
+}

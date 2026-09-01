@@ -1,0 +1,148 @@
+{
+  "_uwaga": "Plik generowany: node narzedzia/generuj-wymiar.mjs. Podstawa: art. 130 Kodeksu pracy.",
+  "rok": 2026,
+  "swieta": [
+    {
+      "data": "2026-01-01",
+      "nazwa": "Nowy Rok"
+    },
+    {
+      "data": "2026-01-06",
+      "nazwa": "Trzech Kroli"
+    },
+    {
+      "data": "2026-04-05",
+      "nazwa": "Wielkanoc"
+    },
+    {
+      "data": "2026-04-06",
+      "nazwa": "Poniedzialek Wielkanocny"
+    },
+    {
+      "data": "2026-05-01",
+      "nazwa": "Swieto Pracy"
+    },
+    {
+      "data": "2026-05-03",
+      "nazwa": "Swieto Konstytucji 3 Maja"
+    },
+    {
+      "data": "2026-05-24",
+      "nazwa": "Zielone Swiatki"
+    },
+    {
+      "data": "2026-06-04",
+      "nazwa": "Boze Cialo"
+    },
+    {
+      "data": "2026-08-15",
+      "nazwa": "Wniebowziecie NMP"
+    },
+    {
+      "data": "2026-11-01",
+      "nazwa": "Wszystkich Swietych"
+    },
+    {
+      "data": "2026-11-11",
+      "nazwa": "Narodowe Swieto Niepodleglosci"
+    },
+    {
+      "data": "2026-12-25",
+      "nazwa": "Boze Narodzenie"
+    },
+    {
+      "data": "2026-12-26",
+      "nazwa": "Drugi dzien Bozego Narodzenia"
+    }
+  ],
+  "miesiace": [
+    {
+      "miesiac": "2026-01",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [
+        "Nowy Rok",
+        "Trzech Kroli"
+      ],
+      "wymiar_godzin": 160
+    },
+    {
+      "miesiac": "2026-02",
+      "dni_pn_pt": 20,
+      "swieta_obnizajace": [],
+      "wymiar_godzin": 160
+    },
+    {
+      "miesiac": "2026-03",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [],
+      "wymiar_godzin": 176
+    },
+    {
+      "miesiac": "2026-04",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [
+        "Poniedzialek Wielkanocny"
+      ],
+      "wymiar_godzin": 168
+    },
+    {
+      "miesiac": "2026-05",
+      "dni_pn_pt": 21,
+      "swieta_obnizajace": [
+        "Swieto Pracy"
+      ],
+      "wymiar_godzin": 160
+    },
+    {
+      "miesiac": "2026-06",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [
+        "Boze Cialo"
+      ],
+      "wymiar_godzin": 168
+    },
+    {
+      "miesiac": "2026-07",
+      "dni_pn_pt": 23,
+      "swieta_obnizajace": [],
+      "wymiar_godzin": 184
+    },
+    {
+      "miesiac": "2026-08",
+      "dni_pn_pt": 21,
+      "swieta_obnizajace": [
+        "Wniebowziecie NMP"
+      ],
+      "wymiar_godzin": 160
+    },
+    {
+      "miesiac": "2026-09",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [],
+      "wymiar_godzin": 176
+    },
+    {
+      "miesiac": "2026-10",
+      "dni_pn_pt": 22,
+      "swieta_obnizajace": [],
+      "wymiar_godzin": 176
+    },
+    {
+      "miesiac": "2026-11",
+      "dni_pn_pt": 21,
+      "swieta_obnizajace": [
+        "Narodowe Swieto Niepodleglosci"
+      ],
+      "wymiar_godzin": 160
+    },
+    {
+      "miesiac": "2026-12",
+      "dni_pn_pt": 23,
+      "swieta_obnizajace": [
+        "Boze Narodzenie",
+        "Drugi dzien Bozego Narodzenia"
+      ],
+      "wymiar_godzin": 168
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dev-dist/
+wyniki-e2e.json
+wyniki-axe.json
+ekrany.json
+test-results/
+playwright-report/
+zrzuty/

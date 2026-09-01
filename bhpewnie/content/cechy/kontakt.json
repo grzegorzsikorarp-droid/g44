@@ -1,0 +1,53 @@
+{
+  "cecha": "kontakt",
+  "prog": "Trzy poziomy: spokojna obsługa, bywa nerwowo, bywają groźby lub agresja. Uprawnienia włączają się od poziomu drugiego.",
+  "uprawnienia": [
+    {
+      "id": "procedura_agresja",
+      "tytul": "Procedura na wypadek agresji",
+      "konkret": "Zakład ma ją mieć i Cię z nią zapoznać",
+      "wyjasnienie": "Tam, gdzie zdarzają się zachowania agresywne, pracodawca ma ustalić zasady postępowania i zapewnić możliwość wezwania pomocy.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "kontakt",
+            "wartosc_w": [
+              "nerwowo",
+              "agresja"
+            ]
+          }
+        ]
+      },
+      "grupa": "zasady",
+      "ikona": "dlon"
+    },
+    {
+      "id": "wsparcie_po_zdarzeniu",
+      "tytul": "Zgłoszenie napaści i wsparcie",
+      "konkret": "Napaść zgłasza się jak zdarzenie wypadkowe",
+      "wyjasnienie": "Po napaści masz prawo przerwać pracę, zgłosić zdarzenie i skorzystać ze wsparcia. To nie jest „część zawodu”.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "kontakt",
+            "wartosc_w": [
+              "agresja"
+            ]
+          }
+        ]
+      },
+      "grupa": "zasady",
+      "ikona": "serce"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

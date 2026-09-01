@@ -1,0 +1,172 @@
+{
+  "cecha": "status",
+  "prog": "Grupy z odrębnymi przepisami. Status 'funkcjonariusz' przepina całą macierz: uprawnienia z Kodeksu pracy nie obowiązują wprost, w ich miejsce wchodzą przepisy służbowe.",
+  "uprawnienia": [
+    {
+      "id": "sluzba_odrebne",
+      "tytul": "Twoje uprawnienia określa pragmatyka służbowa",
+      "konkret": "Osobny system: komisje lekarskie, odrębne odszkodowania",
+      "wyjasnienie": "W służbie nie stosuje się wprost Kodeksu pracy. Orzeka komisja lekarska formacji, a świadczenia po wypadku wynikają z ustawy z 4 kwietnia 2014 r.",
+      "podstawa": "ustawa z 4 kwietnia 2014 r. (świadczenia odszkodowawcze w służbach)",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "funkcjonariusz"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "odznaka"
+    },
+    {
+      "id": "sluzba_brak_pip",
+      "tytul": "Nadzór nad warunkami służby",
+      "konkret": "Poza właściwością Państwowej Inspekcji Pracy",
+      "wyjasnienie": "Warunki pełnienia służby nadzoruje formacja, a nie inspekcja pracy. Ścieżka zgłoszenia jest inna niż u pracownika.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "funkcjonariusz"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "odznaka"
+    },
+    {
+      "id": "cywil_w_sluzbie",
+      "tytul": "Pracownik cywilny w służbie",
+      "konkret": "Kodeks pracy obowiązuje jak wszędzie",
+      "wyjasnienie": "Pracujesz w jednostce mundurowej, ale na umowie o pracę — obowiązuje Cię Kodeks pracy, a nie pragmatyka służbowa.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "cywil_w_sluzbie"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "teczka"
+    },
+    {
+      "id": "nauczyciel_glos",
+      "tytul": "Nauczyciel — narząd głosu",
+      "konkret": "Choroby głosu są chorobami zawodowymi nauczycieli",
+      "wyjasnienie": "Przewlekłe choroby narządu głosu figurują w wykazie chorób zawodowych. Warto zgłaszać chrypkę wcześnie, nie po latach.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "nauczyciel"
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "choroba",
+      "grupa": "grupa",
+      "ikona": "mowa"
+    },
+    {
+      "id": "medyk_ekspozycja",
+      "tytul": "Medyk — ekspozycja zawodowa",
+      "konkret": "Procedura poekspozycyjna dostępna całą dobę",
+      "wyjasnienie": "Po zakłuciu lub kontakcie z materiałem zakaźnym postępowanie ma być dostępne natychmiast, o każdej porze — także na nocnej zmianie.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "medyk"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "igla"
+    },
+    {
+      "id": "kierowca_czas_pracy",
+      "tytul": "Kierowca zawodowy — czas pracy",
+      "konkret": "Odrębna ustawa o czasie pracy kierowców",
+      "wyjasnienie": "Czas prowadzenia, przerwy i odpoczynki reguluje osobna ustawa oraz przepisy unijne — surowsze niż ogólny Kodeks pracy.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "kierowca_zawodowy"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "kierownica"
+    },
+    {
+      "id": "gornik_kolejarz",
+      "tytul": "Przepisy branżowe",
+      "konkret": "Górnictwo i kolej mają własne rozporządzenia BHP",
+      "wyjasnienie": "W Twojej branży obowiązują dodatkowe przepisy szczególne. W pełnej wersji rozpiszemy je osobno.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "ktorakolwiek": [
+          {
+            "status": true,
+            "wartosc_w": [
+              "gornik",
+              "kolejarz"
+            ]
+          }
+        ]
+      },
+      "grupa": "grupa",
+      "ikona": "odznaka"
+    },
+    {
+      "id": "pracownik_50plus",
+      "tytul": "Ochrona po 50. roku życia",
+      "konkret": "Rozszerzona profilaktyka zdrowotna",
+      "wyjasnienie": "Po pięćdziesiątce częściej pojawiają się skutki wieloletniego obciążenia. Warto pilnować badań i zgłaszać dolegliwości powiązane z pracą.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "modyfikator": "rocznik",
+            "wiek_od": 50
+          }
+        ]
+      },
+      "grupa": "zdrowie",
+      "ikona": "osoba"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "cecha": "urazowe",
+  "prog": "Maszyny w ruchu, praca na wysokości, ostre narzędzia, broń.",
+  "uprawnienia": [
+    {
+      "id": "oslony_maszyn",
+      "tytul": "Osłony i zabezpieczenia maszyn",
+      "konkret": "Sprawne przed rozpoczęciem pracy",
+      "wyjasnienie": "Maszyna bez sprawnych osłon nie może pracować. Zgłoszenie usterki jest Twoim prawem, nie donosem.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "urazowe",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "ochrona",
+      "ikona": "wykrzyknik"
+    },
+    {
+      "id": "srodki_wysokosc",
+      "tytul": "Zabezpieczenie przy pracy na wysokości",
+      "konkret": "Szelki i punkty kotwiczenia od pracodawcy",
+      "wyjasnienie": "Przy pracy na wysokości sprzęt zabezpieczający wydaje pracodawca i odpowiada za jego przeglądy.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "urazowe",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "srodki",
+      "grupa": "ochrona",
+      "ikona": "tarcza"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

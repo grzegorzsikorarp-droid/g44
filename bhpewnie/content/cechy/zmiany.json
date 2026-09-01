@@ -1,0 +1,133 @@
+{
+  "cecha": "zmiany",
+  "prog": "Uprawnienia zmianowe. Nocki rozpoznajemy z grafiku — jeśli w kalendarzu jest choć jedna zmiana nocna, włączamy dodatek nocny i ciszę po nocce.",
+  "uprawnienia": [
+    {
+      "id": "dodatek_nocny",
+      "tytul": "Dodatek za pracę w nocy",
+      "konkret": "{dodatek_nocny_stawka} za każdą godzinę pracy w nocy",
+      "wyjasnienie": "Za każdą godzinę pracy w porze nocnej należy Ci się dodatek — 20% stawki godzinowej liczonej z minimalnego wynagrodzenia. Stawka zmienia się co miesiąc razem z wymiarem czasu pracy.",
+      "podstawa": "art. 151⁸ Kodeksu pracy",
+      "parametry": [
+        "dodatek_nocny_stawka"
+      ],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "zmiany",
+            "wartosc_w": [
+              "zmiany_noce"
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        },
+        "funkcjonariusz": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "noc",
+      "grupa": "pieniadze",
+      "ikona": "ksiezyc"
+    },
+    {
+      "id": "odpoczynek_dobowy",
+      "tytul": "Odpoczynek między zmianami",
+      "konkret": "{odpoczynek_dobowy} na dobę i {odpoczynek_tygodniowy} raz w tygodniu",
+      "wyjasnienie": "Po zmianie należy Ci się nieprzerwany odpoczynek dobowy, a raz w tygodniu — dłuższy odpoczynek tygodniowy.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [
+        "odpoczynek_dobowy",
+        "odpoczynek_tygodniowy"
+      ],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "zmiany",
+            "wartosc_w": [
+              "zmiany",
+              "zmiany_noce"
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "odpoczynek",
+      "grupa": "czas",
+      "ikona": "sen"
+    },
+    {
+      "id": "badania_nocne",
+      "tytul": "Badania przy pracy w nocy",
+      "konkret": "Na Twój wniosek — przed przejściem na nocki i okresowo",
+      "wyjasnienie": "Praca w nocy uprawnia do dodatkowych badań profilaktycznych. Jeśli lekarz stwierdzi przeciwwskazania, pracodawca ma przenieść Cię do pracy dziennej.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "zmiany",
+            "wartosc_w": [
+              "zmiany_noce"
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "sprawdzacz": "noc",
+      "grupa": "zdrowie",
+      "ikona": "stetoskop"
+    }
+  ],
+  "terminarz": [
+    {
+      "nazwa": "Cisza po nocce",
+      "regula": "okno snu liczone z grafiku",
+      "zdarzenie_poczatkowe": "koniec zmiany nocnej"
+    },
+    {
+      "nazwa": "Protokół przed nocką",
+      "regula": "2 godziny przed zmianą N",
+      "zdarzenie_poczatkowe": "początek zmiany nocnej"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

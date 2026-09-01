@@ -1,0 +1,268 @@
+{
+  "_uwaga": "Katalog materiałów do czytania w zakładce Pomoc. Treści przykładowe na potrzeby prototypu — przed publikacją wymagają autoryzacji przez specjalistów wskazanych w metryczkach. Materiały mają charakter edukacyjny i nie zastępują porady lekarskiej ani prawnej. Miejsca wymagające kwoty lub podstawy prawnej oznaczono ciągiem [do uzupełnienia przez specjalistę].",
+  "dzialy": [
+    {
+      "id": "glowa",
+      "nazwa": "Głowa",
+      "opis": "Reakcje po trudnych zdarzeniach, obciążenie psychiczne pracą i wypalenie zawodowe."
+    },
+    {
+      "id": "cialo",
+      "nazwa": "Ciało",
+      "opis": "Sen przy pracy zmianowej, kręgosłup, wysiłek fizyczny i rytm dnia."
+    },
+    {
+      "id": "zdrowie",
+      "nazwa": "Zdrowie",
+      "opis": "Słuch, wzrok i inne skutki warunków panujących na Twoim stanowisku."
+    },
+    {
+      "id": "wsparcie_innych",
+      "nazwa": "Wsparcie innych",
+      "opis": "Jak być obok osoby, której coś się stało w pracy, i czego lepiej nie mówić."
+    }
+  ],
+  "materialy": [
+    {
+      "id": "co_sie_ze_mna_dzieje",
+      "dzial": "glowa",
+      "tytul": "Co się ze mną dzieje po trudnym zdarzeniu",
+      "opis": "Reakcje ciała i głowy w pierwszych dniach po wypadku, napaści lub innym trudnym zdarzeniu w pracy.",
+      "czas_czytania": "6 minut",
+      "rozmiar_mb": 0.9,
+      "tresc": [
+        "Po trudnym zdarzeniu w pracy ciało reaguje wcześniej niż myśli. Serce bije szybciej, mięśnie pozostają napięte, ręce mogą drżeć jeszcze długo po tym, jak sytuacja się skończyła. To nie jest oznaka słabości ani utraty panowania nad sobą — tak działa układ nerwowy, który przygotował Cię do obrony.",
+        "W pierwszych godzinach i dniach wiele osób czuje się obco we własnym życiu. Zdarza się, że obrazy ze zdarzenia wracają same, bez zapowiedzi, albo że pamięć jest dziurawa i nie sposób odtworzyć kolejności wydarzeń. Równie często pojawia się drażliwość wobec bliskich, którzy nie mają z tą sprawą nic wspólnego.",
+        "Sen zwykle psuje się jako pierwszy. Zasypianie się przeciąga, w nocy przychodzą przebudzenia, a nad ranem trudno wrócić do snu. Apetyt bywa zupełnie inny niż zwykle — jedni nie mogą nic przełknąć, inni jedzą bez przerwy.",
+        "U większości osób te reakcje słabną samoistnie w ciągu kilku tygodni. Pomaga w tym powrót do zwykłego rytmu dnia: stałe pory posiłków i snu, ruch na świeżym powietrzu, obecność osób, przy których czujesz się bezpiecznie. Nie musisz zmuszać się do opowiadania o zdarzeniu, jeśli nie masz na to gotowości — warto jednak, żeby ktoś wiedział, że przez to przechodzisz.",
+        "Są rzeczy, które pozornie pomagają, a przedłużają kłopot. Sięganie po alkohol na sen skraca noc i pogłębia niepokój następnego dnia. Całkowite unikanie miejsca zdarzenia albo czynności, przy której doszło do wypadku, na krótko przynosi ulgę, a na dłużej utrwala lęk.",
+        "Jeśli po miesiącu nic się nie poprawia albo dolegliwości narastają, jest to sygnał, żeby porozmawiać z lekarzem — najprościej zacząć od lekarza podstawowej opieki zdrowotnej albo od lekarza medycyny pracy. Możesz też skorzystać z całodobowego wsparcia telefonicznego, które znajdziesz w części „Gdzie szukać pomocy”."
+      ],
+      "objawy_alarmowe": [
+        "Myśli o tym, że nie chcesz dalej żyć, albo o zrobieniu sobie krzywdy.",
+        "Dolegliwości, które po miesiącu od zdarzenia nie słabną albo się nasilają.",
+        "Powtarzające się napady bardzo szybkiego bicia serca, duszności i uczucia, że zaraz zasłabniesz.",
+        "Sięganie po alkohol lub inne substancje, żeby zasnąć albo przetrwać dzień.",
+        "Utrata zdolności do wykonywania zwykłych obowiązków — w pracy i w domu."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "psycholog interwencji kryzysowej",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "cztery_tygodnie_na_wypalenie",
+      "dzial": "glowa",
+      "tytul": "Cztery tygodnie na wypalenie",
+      "opis": "Czterotygodniowa obserwacja, która pomaga odróżnić przemęczenie od wypalenia zawodowego i zdecydować, co dalej.",
+      "czas_czytania": "6 minut",
+      "rozmiar_mb": 0.8,
+      "tresc": [
+        "Wypalenie zawodowe nie zaczyna się jednego dnia. Narasta miesiącami, dlatego łatwo pomylić je ze zwykłym przemęczeniem, które mija po kilku dniach wolnego i kilku przespanych nocach. Różnicę widać dopiero wtedy, gdy spojrzysz na dłuższy odcinek czasu, a nie na jeden trudny tydzień.",
+        "Cztery tygodnie to rozsądny okres obserwacji: dość długi, żeby przypadkowy gorszy nastrój się wyrównał, i dość krótki, żeby nie odkładać sprawy w nieskończoność. Raz w tygodniu, zawsze tego samego dnia, zanotuj trzy rzeczy: jak Ci się pracowało, jak Ci się spało i jak wyglądał Twój kontakt z ludźmi. Wystarczą dwa zdania — notatka ma być do odczytania po miesiącu, a nie do pokazywania komukolwiek.",
+        "Wypalenie widać po trzech obszarach naraz. Pierwszy to wyczerpanie, które nie mija po odpoczynku. Drugi to rosnący dystans do pracy i do ludzi — obojętność albo zniecierpliwienie tam, gdzie wcześniej było zaangażowanie. Trzeci to poczucie, że cokolwiek robisz, nie ma znaczenia i nic z tego nie wychodzi.",
+        "Po czterech tygodniach przeczytaj notatki od początku. Jeżeli te same trudności wracają w co najmniej trzech tygodniach z czterech i dotyczą więcej niż jednego z tych obszarów, nie jest to przypadek. Jeżeli zapisy są nierówne — kilka ciężkich dni po trudnym zdarzeniu, a poza tym spokojnie — bliżej temu do przeciążenia niż do wypalenia.",
+        "Wypalenie bierze się z warunków pracy, nie z charakteru. Najczęstsze źródła to nadmiar obowiązków przy zbyt małym wpływie na sposób ich wykonania, brak jasnych zasad, przewlekły konflikt w zespole i praca, w której trzeba stale tłumić własne reakcje. Dlatego sam odpoczynek nie rozwiązuje sprawy, jeśli po powrocie zastajesz dokładnie to samo.",
+        "Notatki z czterech tygodni przydają się w rozmowie — z przełożonym, ze służbą BHP, z lekarzem medycyny pracy albo z organizacją związkową. Konkretne zapisy z datami trudniej zbyć stwierdzeniem, że to chwilowe. Nie musisz pokazywać całości; wystarczy to, co uznasz za potrzebne."
+      ],
+      "objawy_alarmowe": [
+        "Wyczerpanie utrzymujące się ponad miesiąc mimo dni wolnych i przespanych nocy.",
+        "Uporczywa bezsenność albo budzenie się w nocy z myślami o pracy.",
+        "Niewyjaśnione dolegliwości ciała: kołatanie serca, ból w klatce piersiowej, ucisk w żołądku, nawracające bóle głowy.",
+        "Utrata zainteresowania rzeczami, które wcześniej sprawiały Ci przyjemność.",
+        "Myśli o odebraniu sobie życia lub o zrobieniu sobie krzywdy."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "psycholog pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "sen_przy_pracy_zmianowej",
+      "dzial": "cialo",
+      "tytul": "Sen przy pracy zmianowej",
+      "opis": "Co realnie poprawia sen po nocnej zmianie i dlaczego powrót do domu bywa najniebezpieczniejszą częścią doby.",
+      "czas_czytania": "7 minut",
+      "rozmiar_mb": 1.1,
+      "tresc": [
+        "Organizm rozpoznaje porę doby przede wszystkim po świetle. Praca w nocy nie wyłącza tego zegara — ustawia go jedynie w poprzek tego, co robisz. Dlatego sen po nocnej zmianie jest krótszy i płytszy niż sen nocny, nawet jeśli położysz się o właściwej dla siebie porze.",
+        "Największą różnicę robi światło w drodze powrotnej. Jasny poranek mówi organizmowi, że dzień się zaczął, i utrudnia zaśnięcie po powrocie. Okulary przeciwsłoneczne założone jeszcze przed wyjściem z zakładu i noszone do samego domu to prosty sposób, żeby ograniczyć ten sygnał.",
+        "Pokój do spania po nocnej zmianie ma być ciemny, chłodny i cichy. Zasłony zaciemniające albo opaska na oczy, temperatura niższa niż w dzień oraz zatyczki do uszu lub jednostajny szum tłumiący odgłosy z zewnątrz zwykle dają więcej niż wszystko inne razem. Warto też uprzedzić domowników o godzinach, w których śpisz.",
+        "Kawa działa dłużej, niż się wydaje. Ostatnią porcję dobrze jest wypić najpóźniej w połowie nocnej zmiany, żeby nie przeszkadzała w zaśnięciu po powrocie. Ciężki posiłek tuż przed snem i alkohol „na sen” działają podobnie źle — alkohol skraca drugą połowę snu i budzi nad ranem.",
+        "Krótka drzemka przed nocną zmianą, dwadzieścia do trzydziestu minut, poprawia czujność w jej najtrudniejszych godzinach. Dłuższa kończy się rozbiciem i sennością przez kolejną godzinę, więc lepiej trzymać się krótkiej. Jeśli organizacja pracy na to pozwala, najlepiej wykorzystać na nią drugą połowę zmiany.",
+        "Powrót do domu po nocnej zmianie jest tą częścią doby, w której zdarza się najwięcej wypadków drogowych. Senności za kierownicą nie da się przezwyciężyć siłą woli — otwarte okno i głośne radio maskują ją najwyżej na kilka minut. Jeśli czujesz, że zamykają Ci się oczy, zatrzymaj się w bezpiecznym miejscu, zdrzemnij dwadzieścia minut albo poproś kogoś, żeby Cię odebrał.",
+        "Praca zmianowa jest obciążeniem, które wymaga obserwacji, a nie tylko przetrwania. Jeżeli mimo uporządkowania warunków snu nie wraca on do normy przez kilka tygodni, powiedz o tym lekarzowi medycyny pracy przy najbliższym badaniu — to jest właściwe miejsce na taką rozmowę."
+      ],
+      "objawy_alarmowe": [
+        "Zasypianie wbrew sobie w ciągu dnia — przy stole, przed telewizorem, a zwłaszcza za kierownicą.",
+        "Głośne chrapanie z przerwami w oddychaniu, o których mówią domownicy.",
+        "Bezsenność utrzymująca się dłużej niż miesiąc mimo uporządkowania warunków snu.",
+        "Poranne bóle głowy i uczucie, że sen w ogóle nie przyniósł odpoczynku.",
+        "Kołatanie serca lub ból w klatce piersiowej pojawiające się w czasie nocnych zmian."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "plecy_przy_dzwiganiu",
+      "dzial": "cialo",
+      "tytul": "Plecy przy dźwiganiu i przenoszeniu",
+      "opis": "Dlaczego skręt tułowia szkodzi bardziej niż sam ciężar i co zmniejsza obciążenie kręgosłupa w czasie zmiany.",
+      "czas_czytania": "6 minut",
+      "rozmiar_mb": 1.0,
+      "tresc": [
+        "Kręgosłup obciąża nie tyle sam ciężar, ile odległość, na jaką odsuwasz go od siebie. Ten sam przedmiot trzymany przy tułowiu i na wyprostowanych rękach to dla dolnego odcinka pleców zupełnie inne obciążenie. Dlatego pierwsza zasada brzmi: podejdź bliżej, zanim chwycisz.",
+        "Skręt tułowia pod obciążeniem jest groźniejszy niż samo pochylenie. Uraz najczęściej zdarza się wtedy, gdy ktoś podnosi ciężar i w tym samym ruchu obraca się w bok, na przykład przekładając coś z palety na wózek. Przestaw stopy zamiast skręcać plecy — ta jedna zmiana usuwa większość takich urazów.",
+        "Podnoszenie zaczyna się od nóg. Ustaw stopy w lekkim rozkroku, ugnij kolana i biodra, napnij brzuch, trzymaj plecy proste i unieś ciężar siłą nóg, bez szarpnięcia. Jeżeli musisz szarpnąć, żeby ruszyć przedmiot z miejsca, znaczy to, że jest za ciężki na jedną osobę.",
+        "Powtarzalność bywa gorsza od jednorazowego wysiłku. Lekkie przedmioty przenoszone setki razy w ciągu zmiany męczą mięśnie i krążki międzykręgowe podobnie jak pojedynczy duży ciężar. Zmiana wysokości, na której pracujesz, przerwa co pewien czas i zmiana strony ciała to sposoby, które realnie zmniejszają to obciążenie.",
+        "Sprzęt pomocniczy nie jest zbytkiem. Wózek, rolki, uchwyty, pas transportowy albo druga osoba do pomocy zmniejszają obciążenie bardziej niż jakakolwiek technika podnoszenia. Jeśli sprzętu brakuje albo jest niesprawny, jest to sprawa do zgłoszenia przełożonemu i służbie BHP — najlepiej na piśmie. Dopuszczalne masy przenoszonych ciężarów oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+        "Ból pleców po pracy fizycznej najczęściej mija w ciągu kilku dni i nie wymaga leżenia w łóżku. Umiarkowany ruch pomaga bardziej niż bezruch, a powrót do zwykłych czynności przyspiesza dochodzenie do siebie. Są jednak sygnały, przy których zwłoka jest błędem — wypisano je poniżej."
+      ],
+      "objawy_alarmowe": [
+        "Ból promieniujący do nogi poniżej kolana, z drętwieniem lub mrowieniem.",
+        "Osłabienie siły w nodze albo opadanie stopy.",
+        "Kłopot z oddawaniem moczu lub stolca albo drętwienie okolicy krocza — to stan wymagający pilnej pomocy.",
+        "Ból pleców po upadku z wysokości albo po uderzeniu w plecy.",
+        "Ból pleców z gorączką, dreszczami albo chudnięciem bez wyraźnego powodu."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "fizjoterapeuta, konsultacja: specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "sluch_w_halasie",
+      "dzial": "zdrowie",
+      "tytul": "Słuch w hałasie",
+      "opis": "Ubytek słuchu narasta bezboleśnie przez lata. Po czym go poznać i co naprawdę daje ochrona.",
+      "czas_czytania": "6 minut",
+      "rozmiar_mb": 0.9,
+      "tresc": [
+        "Ubytek słuchu spowodowany hałasem narasta bezboleśnie i przez lata nie daje o sobie znać. Znika najpierw to, co najwyższe — wysokie tony, spółgłoski, głosy dzieci. Dlatego pierwszym objawem zwykle nie jest cisza, lecz kłopot ze zrozumieniem mowy tam, gdzie mówi kilka osób naraz.",
+        "Uszkodzenie dotyczy komórek słuchowych ucha wewnętrznego i jest nieodwracalne. Nie da się go wyleczyć ani odbudować — można jedynie zatrzymać jego postęp. To jest powód, dla którego ochrona słuchu ma sens od pierwszego dnia pracy w hałasie, a nie dopiero wtedy, gdy coś zacznie doskwierać.",
+        "Prosty sprawdzian: jeżeli żeby porozumieć się z osobą stojącą na wyciągnięcie ręki, musisz podnosić głos, hałas jest na tyle duży, że warto założyć ochronniki. Szum lub piszczenie w uszach po zmianie to kolejny sygnał, że dawka była za duża, nawet jeśli słuch wraca do normy przed następnym dniem. Dopuszczalne natężenie hałasu na stanowisku i podstawa prawna: [do uzupełnienia przez specjalistę].",
+        "Ochronniki działają tylko wtedy, gdy są noszone bez przerwy. Zdjęcie nauszników na kilka minut w największym hałasie potrafi zniweczyć ochronę z całej zmiany, bo to właśnie w tych minutach dawka rośnie najszybciej. Wkładki muszą być dobrze osadzone w kanale słuchowym, a nauszniki szczelnie przylegać — długie włosy, oprawki okularów i kaptur pod czaszą realnie obniżają ich skuteczność.",
+        "Ochronniki, które przeszkadzają, przestają być noszone. Jeśli Twoje są niewygodne, uszkodzone albo tłumią tak, że nie słyszysz sygnałów ostrzegawczych, powiedz o tym służbie BHP i poproś o inny rodzaj. Dobór ochronników do hałasu rzeczywiście występującego na stanowisku należy do pracodawcy i nie jest Twoją sprawą prywatną.",
+        "Badania słuchu wykonywane w ramach medycyny pracy mają wartość wtedy, gdy porównuje się je między sobą. Warto zapisać, kiedy było ostatnie, i pytać o sam wynik, a nie tylko o treść orzeczenia. Zakres i częstotliwość takich badań: [do uzupełnienia przez specjalistę]."
+      ],
+      "objawy_alarmowe": [
+        "Szum, piszczenie lub dzwonienie w uszach utrzymujące się po zakończeniu zmiany.",
+        "Nagłe pogorszenie słuchu w jednym uchu — to sytuacja wymagająca pilnej wizyty u lekarza.",
+        "Coraz częstsze proszenie o powtórzenie i kłopot ze zrozumieniem mowy w hałaśliwym otoczeniu.",
+        "Zawroty głowy lub zaburzenia równowagi towarzyszące kłopotom ze słuchem.",
+        "Ból ucha, wyciek albo uczucie zatkania utrzymujące się dłużej niż kilka dni."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy, konsultacja: audiolog",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "oczy_przy_monitorze",
+      "dzial": "zdrowie",
+      "tytul": "Oczy przy pracy z monitorem",
+      "opis": "Skąd bierze się pieczenie, suchość i zamglone widzenie pod koniec zmiany oraz co ustawić na stanowisku.",
+      "czas_czytania": "5 minut",
+      "rozmiar_mb": 0.7,
+      "tresc": [
+        "Praca przy monitorze nie psuje wzroku trwale, ale potrafi bardzo uprzykrzyć dzień. Dolegliwości, które daje — pieczenie, suchość, zamglone widzenie pod koniec zmiany, ból głowy nad oczami — biorą się głównie z dwóch rzeczy: rzadszego mrugania i długiego patrzenia na tę samą odległość.",
+        "Przy monitorze mrugamy nawet kilkakrotnie rzadziej niż zwykle. Film łzowy nie odnawia się wtedy tak, jak powinien, i powierzchnia oka wysycha. Świadome, pełne mrugnięcia powtarzane co jakiś czas oraz odpowiednio nawilżone powietrze w pomieszczeniu dają tu więcej niż wymiana samego monitora.",
+        "Oczy męczy też stałe napięcie mięśnia nastawności. Pomaga zasada przerywania: mniej więcej co pół godziny oderwij wzrok od ekranu i przez chwilę popatrz w dal, na przykład przez okno. Kilka krótkich przerw działa lepiej niż jedna długa pod koniec zmiany.",
+        "Ustawienie stanowiska rozwiązuje część kłopotów raz na zawsze. Górna krawędź monitora mniej więcej na wysokości oczu lub nieco niżej, odległość na wyciągniętą rękę, monitor bokiem do okna, a nie naprzeciw ani plecami do niego. Jasność ekranu powinna być zbliżona do jasności otoczenia — świecący ekran w ciemnym pomieszczeniu męczy najbardziej.",
+        "Okulary do pracy przy monitorze to inna sprawa niż okulary do czytania. Odległość do ekranu jest pośrednia i wiele osób potrzebuje do niej osobnej korekcji, zwłaszcza po czterdziestym roku życia. Zasady i wysokość dofinansowania takich okularów oraz podstawa prawna: [do uzupełnienia przez specjalistę] — pytanie o to kieruje się do służby BHP albo do lekarza medycyny pracy.",
+        "Jeżeli dolegliwości utrzymują się mimo poprawnie ustawionego stanowiska i regularnych przerw, przyczyną bywa nieskorygowana wada wzroku albo choroba powierzchni oka. To jest moment na badanie u okulisty, a nie na kolejne domowe sposoby."
+      ],
+      "objawy_alarmowe": [
+        "Nagłe pogorszenie ostrości widzenia albo podwójne widzenie.",
+        "Błyski światła, nagły deszcz ciemnych plamek albo cień zasłaniający część pola widzenia — to stan wymagający pilnej pomocy.",
+        "Ból oka lub ból głowy z zaczerwienieniem oka i nudnościami.",
+        "Suchość, pieczenie i zaczerwienienie utrzymujące się mimo przerw i poprawnie ustawionego stanowiska.",
+        "Każdy uraz oka, w tym prysnięcie substancją chemiczną i odprysk ciała obcego."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy, konsultacja: okulista",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "pierwsze_dni_po_ciezkim_zdarzeniu",
+      "dzial": "wsparcie_innych",
+      "tytul": "Pierwsze dni po ciężkim zdarzeniu",
+      "opis": "Jak być obok osoby, która przeżyła w pracy coś ciężkiego — i jakich zdań lepiej nie mówić.",
+      "czas_czytania": "6 minut",
+      "rozmiar_mb": 0.8,
+      "tresc": [
+        "W pierwszych dniach po ciężkim zdarzeniu najważniejsza jest obecność, nie rozmowa. Osoba, która to przeżyła, często nie ma jeszcze słów na to, co się stało, a pytania zadawane na siłę bardziej męczą, niż pomagają. Wystarczy dać znać, że jesteś w pobliżu i że można się do Ciebie odezwać.",
+        "Pomagają rzeczy zwyczajne i konkretne: podwiezienie do domu, ciepły posiłek, przejęcie części obowiązków, dopilnowanie spraw, o których nikt teraz nie pamięta. Zamiast pytać, czy możesz w czymś pomóc, zaproponuj jedną określoną rzecz, na którą łatwo się zgodzić.",
+        "Nie naciskaj na opowiedzenie przebiegu zdarzenia. Powtarzane relacjonowanie szczegółów w pierwszych dniach nie przyspiesza dochodzenia do siebie, a u części osób utrwala najtrudniejsze obrazy. Jeżeli ktoś sam zaczyna mówić, słuchaj bez przerywania i bez dopowiadania, jak było naprawdę.",
+        "Uważaj na zdania, które miały pocieszyć. „Mogło być gorzej”, „już po wszystkim”, „inni mają ciężej”, „weź się w garść” — każde z nich zamyka rozmowę i zostawia poczucie, że reakcja jest przesadzona. Bezpieczniejsze są zdania proste: „to było ciężkie”, „dobrze, że żyjesz”, „jestem obok”.",
+        "Reakcje bywają zaskakujące i nie są oceną Twojej pomocy. Ktoś może być drażliwy, zamknięty w sobie, przesadnie wesoły albo rzucić się w pracę ponad miarę. To są sposoby radzenia sobie z napięciem, a nie niewdzięczność ani odrzucenie.",
+        "Wsparcie kolegów nie zastępuje pomocy fachowej i nie musi jej zastępować. Jeżeli widzisz sygnały wypisane poniżej albo po miesiącu nie ma poprawy, powiedz o tym wprost i wskaż konkretne miejsce: lekarza, całodobowe wsparcie telefoniczne, służbę BHP lub organizację związkową. Zadbaj też o siebie — towarzyszenie komuś po ciężkim zdarzeniu również obciąża."
+      ],
+      "objawy_alarmowe": [
+        "Mówienie o tym, że nie chce się dalej żyć, albo o zrobieniu sobie krzywdy — także w formie żartu lub aluzji.",
+        "Sięganie po alkohol lub inne substancje w ilościach wyraźnie większych niż wcześniej.",
+        "Brak poprawy albo narastanie dolegliwości po miesiącu od zdarzenia.",
+        "Całkowite wycofanie się z kontaktu z ludźmi i z codziennych obowiązków.",
+        "Zachowanie zagrażające bezpieczeństwu, na przykład praca przy maszynie w stanie skrajnego rozkojarzenia."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "psycholog interwencji kryzysowej",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "powrot_do_pracy_po_wypadku",
+      "dzial": "wsparcie_innych",
+      "tytul": "Powrót do pracy po wypadku",
+      "opis": "Co ustalić przed pierwszym dniem osoby wracającej po dłuższej nieobecności i o czym zespół zwykle zapomina.",
+      "czas_czytania": "5 minut",
+      "rozmiar_mb": 0.7,
+      "tresc": [
+        "Powrót po dłuższej nieobecności bywa trudniejszy, niż wygląda z zewnątrz. Osoba wracająca zwykle obawia się dwóch rzeczy: że nie da rady tak jak wcześniej i że stanie się tematem rozmów. Pierwsze godziny pierwszego dnia w dużej mierze rozstrzygają, która z tych obaw się potwierdzi.",
+        "Ustalcie z wyprzedzeniem, jak wygląda ten pierwszy dzień: kto wita, kto pokazuje zmiany, które zaszły podczas nieobecności, przy jakim stanowisku i przy jakich zadaniach zaczyna. Krótka rozmowa dzień wcześniej zdejmuje większą część napięcia.",
+        "Zapytaj, co osoba chce, żeby zespół wiedział. Jedni wolą powiedzieć wprost, co się stało, żeby zamknąć temat, inni nie chcą do tego wracać wcale. Uszanowanie tej decyzji jest ważniejsze niż zaspokojenie ciekawości pozostałych.",
+        "Powrót do miejsca zdarzenia albo do tej samej czynności bywa najtrudniejszym punktem. Warto zrobić to w towarzystwie i bez pośpiechu, a jeśli to możliwe — stopniowo, zaczynając od obecności w pobliżu, a nie od pełnego zakresu obowiązków. Zasady dostosowania zakresu czynności do orzeczenia lekarza medycyny pracy oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+        "Sprawdźcie, czy przyczyna wypadku została usunięta. Powrót na stanowisko, na którym nic się nie zmieniło, jest obciążający dla osoby wracającej i niebezpieczny dla wszystkich pozostałych. Jeżeli usterka albo sposób pracy pozostały bez zmian, jest to sprawa do zgłoszenia służbie BHP i społecznemu inspektorowi pracy.",
+        "Dobre wsparcie jest rozłożone w czasie. Zainteresowanie po tygodniu i po miesiącu znaczy więcej niż tłum ludzi pierwszego dnia. Krótkie pytanie o to, jak idzie, zadane bez świadków, wystarczy, żeby ktoś wiedział, że nie został sam."
+      ],
+      "objawy_alarmowe": [
+        "Narastający lęk przed wejściem na stanowisko albo przed wykonaniem czynności, przy której doszło do wypadku.",
+        "Ból, zawroty głowy lub osłabienie pojawiające się przy powrocie do obowiązków.",
+        "Bezsenność i powracające obrazy zdarzenia utrzymujące się dłużej niż miesiąc.",
+        "Wyraźne pogorszenie sprawności lub uwagi przy pracy, która wymaga skupienia.",
+        "Wycofanie się z kontaktu z zespołem i unikanie rozmów o czymkolwiek."
+      ],
+      "zastrzezenie": "To materiał edukacyjny, który nie zastępuje badania ani rozpoznania postawionego przez lekarza.",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy, konsultacja: psycholog pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    }
+  ]
+}

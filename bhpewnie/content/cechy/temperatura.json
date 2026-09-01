@@ -1,0 +1,81 @@
+{
+  "cecha": "temperatura",
+  "prog": "Progi napojów: {napoje_prog_pomieszczenie} w pomieszczeniu, {napoje_prog_otwarta} na otwartej przestrzeni.",
+  "uprawnienia": [
+    {
+      "id": "napoje",
+      "tytul": "Napoje w upale",
+      "konkret": "Od {napoje_prog_pomieszczenie} w pomieszczeniu, od {napoje_prog_otwarta} na dworze",
+      "wyjasnienie": "Po przekroczeniu progu pracodawca ma zapewnić napoje bezpłatnie i w ilości zaspokajającej potrzeby. Ekwiwalent pieniężny zamiast napojów nie wchodzi w grę.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [
+        "napoje_prog_pomieszczenie",
+        "napoje_prog_otwarta"
+      ],
+      "gdy": {
+        "ktorakolwiek": [
+          {
+            "cecha": "temperatura",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "cecha": "teren",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "upal",
+      "grupa": "zdrowie",
+      "ikona": "slonce"
+    },
+    {
+      "id": "posilki_profilaktyczne",
+      "tytul": "Posiłek profilaktyczny",
+      "konkret": "Przy pracy w niskich temperaturach w miesiącach zimowych",
+      "wyjasnienie": "Przy pracy w chłodzie — na dworze lub w nieogrzewanych pomieszczeniach — przysługuje ciepły posiłek profilaktyczny.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "ktorakolwiek": [
+          {
+            "cecha": "temperatura",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "cecha": "teren",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "zimno",
+      "grupa": "zdrowie",
+      "ikona": "chmura"
+    }
+  ],
+  "alerty": [
+    {
+      "id": "alert_upal",
+      "regula": "temperatura w okolicy przekracza próg",
+      "tresc": "Dziś {temperatura}°C w Twojej okolicy. Pracodawca ma obowiązek zapewnić napoje."
+    },
+    {
+      "id": "alert_zimno",
+      "regula": "temperatura poniżej progu zimowego",
+      "tresc": "Dziś {temperatura}°C. Przy pracy w chłodzie należy Ci się ciepły posiłek i miejsce do ogrzania."
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

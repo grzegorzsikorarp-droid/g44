@@ -1,0 +1,32 @@
+{
+  "cecha": "glos",
+  "prog": "Praca głosem — nauczanie, prowadzenie zajęć, obsługa telefonu.",
+  "uprawnienia": [
+    {
+      "id": "ochrona_glosu",
+      "tytul": "Ochrona narządu głosu",
+      "konkret": "Profilaktyka i badania w ramach medycyny pracy",
+      "wyjasnienie": "Praca głosem obciąża strunowo. Profilaktyka i ocena narządu głosu należą do badań profilaktycznych.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "glos",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zdrowie",
+      "ikona": "mowa"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

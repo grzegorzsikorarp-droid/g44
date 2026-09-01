@@ -1,0 +1,184 @@
+{
+  "id": "upal",
+  "etykieta": "Pracuję w upale albo na mrozie",
+  "pelna": true,
+  "sezonowa": "lato",
+  "pytania": [
+    {
+      "id": "gdzie",
+      "tresc": "Gdzie wtedy pracujesz?",
+      "opcje": [
+        { "wartosc": "pomieszczenie", "etykieta": "W pomieszczeniu" },
+        { "wartosc": "zewnatrz", "etykieta": "Na otwartej przestrzeni" }
+      ]
+    },
+    {
+      "id": "ile",
+      "tresc": "Ile pokazuje termometr na Twoim stanowisku?",
+      "opcje": [
+        { "wartosc": "nisko", "etykieta": "Poniżej 25 °C" },
+        { "wartosc": "srednio", "etykieta": "Między 25 a 28 °C" },
+        { "wartosc": "wysoko", "etykieta": "Powyżej 28 °C" }
+      ]
+    },
+    {
+      "id": "napoje",
+      "tresc": "Czy pracodawca daje Wam wodę albo inne napoje?",
+      "opcje": [
+        { "wartosc": "nie", "etykieta": "Nie ma nic" },
+        { "wartosc": "czasem", "etykieta": "Czasem się pojawia" },
+        { "wartosc": "tak", "etykieta": "Tak, stale są dostępne" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "gdy": { "ile": ["wysoko"], "napoje": ["nie", "czasem"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługują Ci napoje",
+        "uzasadnienie": "Na Twoim stanowisku jest powyżej 28 °C, a napojów nie ma albo pojawiają się nieregularnie. Powyżej tego progu zapewnienie napojów jest obowiązkiem pracodawcy, a nie uprzejmością.",
+        "ile": [
+          "Napoje mają być dostępne przez całą zmianę, w ilości zaspokajającej potrzeby.",
+          "Napoje są bezpłatne — pracodawca nie może zamiast nich wypłacić pieniędzy.",
+          "Próg w pomieszczeniu to {napoje_prog_pomieszczenie}, na otwartej przestrzeni {napoje_prog_otwarta}."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie napojów na stanowisku pracy",
+          "akapity": [
+            "Wnoszę o zapewnienie napojów na moim stanowisku pracy. Temperatura na stanowisku przekracza próg, od którego zapewnienie napojów należy do obowiązków pracodawcy.",
+            "Proszę o udostępnienie napojów w ilości zaspokajającej potrzeby pracowników, przez cały czas trwania zmiany roboczej.",
+            "Proszę o informację, od kiedy napoje będą dostępne."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, na moim stanowisku temperatura przekracza dziś 28 stopni, a nie mamy dostępu do napojów. Przy takiej temperaturze zapewnienie napojów jest obowiązkiem pracodawcy. Proszę o ustawienie wody dla zespołu jeszcze na tę zmianę.",
+          "mail": {
+            "temat": "Prośba o zapewnienie napojów na stanowisku pracy",
+            "tresc": "Dzień dobry,\n\nna moim stanowisku temperatura przekracza dziś 28 stopni Celsjusza, a napoje nie są dostępne. Przy takiej temperaturze zapewnienie napojów należy do obowiązków pracodawcy.\n\nProszę o udostępnienie napojów w ilości zaspokajającej potrzeby pracowników oraz o informację, od kiedy będą dostępne.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "gdzie": ["zewnatrz"], "ile": ["srednio"], "napoje": ["nie", "czasem"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługują Ci napoje",
+        "uzasadnienie": "Pracujesz na otwartej przestrzeni, a temperatura przekracza 25 °C. Na dworze to właśnie ten próg uruchamia obowiązek zapewnienia napojów.",
+        "ile": [
+          "Na otwartej przestrzeni próg to {napoje_prog_otwarta}.",
+          "Napoje bezpłatnie i przez całą zmianę.",
+          "Przy pracy w pełnym słońcu warto ustalić także przerwy w miejscu zacienionym."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie napojów przy pracy na otwartej przestrzeni",
+          "akapity": [
+            "Wnoszę o zapewnienie napojów na stanowisku pracy na otwartej przestrzeni. Temperatura przekracza próg, od którego napoje są obowiązkiem pracodawcy.",
+            "Proszę o zapewnienie napojów w ilości zaspokajającej potrzeby oraz o wskazanie miejsca, w którym będą dostępne w czasie pracy w terenie."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, pracujemy dziś na zewnątrz przy ponad 25 stopniach. Przy pracy na otwartej przestrzeni napoje należą się pracownikom z tego tytułu. Proszę o zorganizowanie wody w miejscu pracy.",
+          "mail": {
+            "temat": "Napoje przy pracy w terenie",
+            "tresc": "Dzień dobry,\n\npracujemy na otwartej przestrzeni w temperaturze przekraczającej 25 stopni Celsjusza. W takich warunkach zapewnienie napojów jest obowiązkiem pracodawcy.\n\nProszę o zorganizowanie stałego dostępu do napojów w miejscu wykonywania pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile": ["srednio"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "To zależy od dokładnej temperatury",
+        "uzasadnienie": "Wskazałeś(-aś) przedział 25–28 °C. W pomieszczeniu obowiązek zaczyna się powyżej 28 °C, a na otwartej przestrzeni powyżej 25 °C — o wyniku decyduje więc konkretny pomiar.",
+        "ile": [
+          "W pomieszczeniu próg to {napoje_prog_pomieszczenie}.",
+          "Na otwartej przestrzeni próg to {napoje_prog_otwarta}."
+        ],
+        "do_sprawdzenia": [
+          "Zmierz temperaturę na swoim stanowisku, a nie w korytarzu czy w cieniu.",
+          "Sprawdź, czy Twoja praca jest zaliczona do prac w warunkach gorących — to może zmienić próg."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Prośba o pomiar temperatury na stanowisku pracy",
+          "akapity": [
+            "Proszę o wykonanie pomiaru temperatury na moim stanowisku pracy oraz o informację o jego wyniku.",
+            "W razie przekroczenia progu określonego w przepisach proszę o zapewnienie napojów zgodnie z obowiązkiem pracodawcy."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, na naszym stanowisku robi się bardzo ciepło i nie wiem, czy nie przekraczamy już progu z przepisów. Proszę o zmierzenie temperatury na stanowisku i o informację, jaki był wynik.",
+          "mail": {
+            "temat": "Prośba o pomiar temperatury na stanowisku",
+            "tresc": "Dzień dobry,\n\nchciałabym/chciałbym prosić o pomiar temperatury na moim stanowisku pracy. Zbliżamy się do progu, przy którym pracodawca ma obowiązek zapewnić napoje.\n\nProszę o informację o wyniku pomiaru.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "napoje": ["tak"] },
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Nie ma tu czego dochodzić",
+        "uzasadnienie": "Napoje są u Was stale dostępne, więc obowiązek jest spełniony. Mówimy to wprost — nie każde pytanie musi kończyć się wnioskiem.",
+        "ile": [
+          "Gdyby napoje zniknęły w czasie upału, wróć do tej ścieżki.",
+          "Przy pracy w gorącu warto pilnować także przerw i dostępu do chłodniejszego miejsca."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Przerwa w czasie dnia pracy", "sprawdzacz": "odpoczynek" },
+        "pismo": {
+          "tytul": "Prośba o utrzymanie dostępu do napojów",
+          "akapity": [
+            "Proszę o utrzymanie stałego dostępu do napojów na stanowiskach pracy również w kolejnych miesiącach o wysokich temperaturach."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałabym/chciałbym podziękować za wodę na stanowiskach i poprosić, żeby została z nami także w kolejne upalne dni.",
+          "mail": {
+            "temat": "Dostęp do napojów w upalne dni",
+            "tresc": "Dzień dobry,\n\ndziękuję za zapewnienie napojów na stanowiskach pracy. Proszę o utrzymanie tego rozwiązania w kolejnych dniach o wysokich temperaturach.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Dziś progi nie są przekroczone",
+        "uzasadnienie": "Przy temperaturze poniżej 25 °C przepisy nie nakładają obowiązku zapewnienia napojów. Mówimy to wprost, żebyś nie szedł(-ła) do pracodawcy z żądaniem bez oparcia.",
+        "ile": [
+          "W pomieszczeniu obowiązek zaczyna się od {napoje_prog_pomieszczenie}.",
+          "Na otwartej przestrzeni od {napoje_prog_otwarta}."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Miejsce do ogrzania się i zjedzenia", "sprawdzacz": "zimno" },
+        "pismo": {
+          "tytul": "Prośba o dostęp do wody na stanowiskach",
+          "akapity": [
+            "Zwracam się z prośbą o udostępnienie wody do picia na stanowiskach pracy. Choć progi temperatury nie są obecnie przekroczone, stały dostęp do wody poprawia bezpieczeństwo pracy."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałabym/chciałbym poprosić o stały dostęp do wody na naszych stanowiskach. Formalnego progu dziś nie przekraczamy, ale woda pod ręką po prostu pomaga w pracy.",
+          "mail": {
+            "temat": "Prośba o dostęp do wody na stanowiskach pracy",
+            "tresc": "Dzień dobry,\n\nzwracam się z prośbą o udostępnienie wody do picia na stanowiskach pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

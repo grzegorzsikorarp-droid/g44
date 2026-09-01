@@ -1,0 +1,52 @@
+{
+  "cecha": "samotnie",
+  "prog": "Praca w pojedynkę — bez nikogo w pobliżu, kto mógłby pomóc.",
+  "uprawnienia": [
+    {
+      "id": "lacznosc_samotna",
+      "tytul": "Możliwość wezwania pomocy",
+      "konkret": "Łączność i ustalony sposób kontaktu",
+      "wyjasnienie": "Przy pracy w pojedynkę pracodawca ma zapewnić sposób wezwania pomocy i ustalić zasady kontaktu.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "samotnie",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zasady",
+      "ikona": "telefon"
+    },
+    {
+      "id": "pierwsza_pomoc_samotna",
+      "tytul": "Dostęp do pierwszej pomocy",
+      "konkret": "Apteczka i wyznaczone osoby",
+      "wyjasnienie": "W zakładzie mają być wyznaczone osoby do udzielania pierwszej pomocy i sprawna apteczka.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "samotnie",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zasady",
+      "ikona": "tarcza"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

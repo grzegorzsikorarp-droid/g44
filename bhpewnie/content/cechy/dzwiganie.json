@@ -1,0 +1,62 @@
+{
+  "cecha": "dzwiganie",
+  "prog": "Normy ręcznych prac transportowych. Pokazujemy obie tabele — dla kobiet i dla mężczyzn — bo aplikacja nie pyta o płeć.",
+  "uprawnienia": [
+    {
+      "id": "normy_dzwigania",
+      "tytul": "Normy dźwigania",
+      "konkret": "Kobiety {dzwiganie_kobiety_stale} stale / {dzwiganie_kobiety_dorywczo} dorywczo · mężczyźni {dzwiganie_mezczyzni_stale} / {dzwiganie_mezczyzni_dorywczo}",
+      "wyjasnienie": "To górne granice przy ręcznym przenoszeniu. Powyżej nich pracę trzeba zorganizować inaczej: sprzęt pomocniczy, druga osoba, mniejsze partie.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [
+        "dzwiganie_kobiety_stale",
+        "dzwiganie_kobiety_dorywczo",
+        "dzwiganie_mezczyzni_stale",
+        "dzwiganie_mezczyzni_dorywczo"
+      ],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "dzwiganie",
+            "wartosc_w": [
+              "rzeczy",
+              "ludzie",
+              "oba"
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "dzwiganie",
+      "grupa": "ochrona",
+      "ikona": "ciezar"
+    },
+    {
+      "id": "sprzet_do_ludzi",
+      "tytul": "Przemieszczanie pacjenta lub podopiecznego",
+      "konkret": "Sprzęt pomocniczy to obowiązek pracodawcy",
+      "wyjasnienie": "Przy przemieszczaniu człowieka norm kilogramowych nie da się utrzymać. Pracodawca ma zapewnić sprzęt — podnośnik, matę ślizgową, pas — albo pracę w dwie osoby.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "dzwiganie",
+            "wartosc_w": [
+              "ludzie",
+              "oba"
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "dzwiganie",
+      "grupa": "ochrona",
+      "ikona": "ciezar"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

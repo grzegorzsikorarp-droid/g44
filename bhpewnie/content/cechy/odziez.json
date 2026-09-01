@@ -1,0 +1,84 @@
+{
+  "cecha": "odziez",
+  "prog": "Włącza się, gdy pracujesz we własnych ubraniach albo sam(-a) pierzesz odzież roboczą.",
+  "uprawnienia": [
+    {
+      "id": "ekwiwalent_pranie",
+      "tytul": "Ekwiwalent za pranie odzieży",
+      "konkret": "Kwotę ustala pracodawca — masz prawo poznać wyliczenie",
+      "wyjasnienie": "Jeśli pierzesz odzież roboczą we własnym zakresie, należy Ci się ekwiwalent pieniężny.",
+      "podstawa": "art. 237⁹ § 3 Kodeksu pracy",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "odziez",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "odziez",
+      "grupa": "pieniadze",
+      "ikona": "ubranie"
+    },
+    {
+      "id": "odziez_robocza",
+      "tytul": "Odzież i obuwie robocze",
+      "konkret": "Od pracodawcy — nieodpłatnie",
+      "wyjasnienie": "Tam, gdzie ubranie niszczy się lub brudzi, odzież roboczą wydaje pracodawca. Za używanie własnej należy się ekwiwalent.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "odziez",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "odziez",
+      "grupa": "ochrona",
+      "ikona": "ubranie"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

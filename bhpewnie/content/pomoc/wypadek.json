@@ -1,0 +1,126 @@
+{
+  "id": "wypadek",
+  "etykieta": "Wypadek przy pracy",
+  "opis": "Twój własny wypadek — poprowadzę Cię krok po kroku",
+  "ikona": "krzyz",
+  "pelna": true,
+  "kroki": [
+    {
+      "id": "k1",
+      "naglowek": "Przerwij zagrożenie.",
+      "tresc": "Odsuń się od miejsca, w którym doszło do zdarzenia. Jeśli możesz bezpiecznie — wyłącz maszynę albo zasilanie.",
+      "nie_rob": "Nie wracaj po rzeczy — po telefon, po narzędzie, po kurtkę. Rzeczy poczekają.",
+      "rozgalezienie": {
+        "pytanie": "Czy możesz się poruszać?",
+        "opcje": [
+          {
+            "etykieta": "Tak, mogę się poruszać",
+            "idzDo": "k2"
+          },
+          {
+            "etykieta": "Nie, nie mogę wstać",
+            "idzDo": "k3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "k2",
+      "naglowek": "Sprawdź siebie.",
+      "tresc": "Obejrzyj ręce, nogi, głowę. Sprawdź, czy coś krwawi, drętwieje albo boli przy ruchu.",
+      "nie_rob": "Nie bagatelizuj uderzenia w głowę ani zawrotów — nawet gdy wyglądasz na całego. Przy krwotoku, utracie przytomności, trudności z oddychaniem albo silnym bólu wezwij pomoc od razu."
+    },
+    {
+      "id": "k3",
+      "naglowek": "Wezwij pomoc.",
+      "tresc": "Zadzwoń albo poproś kogoś o telefon. Powiedz: gdzie jesteś, co się stało, ile osób jest poszkodowanych i czy są przytomne.",
+      "nie_rob": "Nie rozłączaj się pierwszy(-a). Dyspozytor może mieć jeszcze pytania albo poprowadzić Cię przez pierwszą pomoc."
+    },
+    {
+      "id": "k4",
+      "naglowek": "Powiedz przełożonemu.",
+      "tresc": "Zgłoś zdarzenie od razu, choćby ustnie. Zapisz sobie godzinę zgłoszenia i to, komu je przekazałeś(-aś).",
+      "nie_rob": "Nie odpuszczaj drobnego urazu. Skaleczenie, które dziś wygląda niegroźnie, za tydzień bywa zakażeniem — a bez zgłoszenia trudno wykazać, że stało się w pracy."
+    },
+    {
+      "id": "k5",
+      "naglowek": "Nie zmieniaj miejsca zdarzenia.",
+      "tresc": "Zostaw maszynę, narzędzia i otoczenie tak, jak są. Miejsce wolno uporządkować dopiero po oględzinach przez zespół powypadkowy.",
+      "nie_rob": "Nie sprzątaj i nie pozwól posprzątać „żeby nie było bałaganu”. Zmienić miejsce można tylko wtedy, gdy trzeba ratować ludzi albo zapobiec kolejnemu wypadkowi."
+    },
+    {
+      "id": "k6",
+      "naglowek": "Zapisz świadków.",
+      "tresc": "Spisz imiona i nazwiska osób, które to widziały — albo które były w pobliżu tuż przed zdarzeniem.",
+      "nie_rob": "Nie zakładaj, że „wszyscy i tak wiedzą”. Za miesiąc pamięć bywa wybiórcza, a lista świadków zostaje."
+    },
+    {
+      "id": "k7",
+      "naglowek": "Zapisz swoją wersję — dziś, nie za tydzień.",
+      "tresc": "Napisz własnymi słowami: data i godzina, miejsce, co robiłeś(-aś), co się stało, jaki jest uraz, kto był obok, czy sprzęt był sprawny.",
+      "nie_rob": "Nie licz na pamięć. Po kilku dniach szczegóły się zacierają, a to one decydują o treści protokołu."
+    },
+    {
+      "id": "k8",
+      "naglowek": "Poproś o dokumentację medyczną.",
+      "tresc": "Weź ze sobą kartę z izby przyjęć albo od lekarza. Zachowaj kopię dla siebie — nie oddawaj jedynego egzemplarza.",
+      "nie_rob": "Nie oddawaj oryginałów bez zrobienia zdjęcia albo kopii."
+    }
+  ],
+  "zamkniecie": {
+    "naglowek": "Masz to za sobą. Teraz kolej na zakład.",
+    "tresc": [
+      "Pracodawca powołuje zespół powypadkowy, który bada okoliczności i przyczyny zdarzenia.",
+      "Protokół powypadkowy sporządza się w ciągu {protokol_powypadkowy_termin} od zgłoszenia.",
+      "Masz prawo zapoznać się z protokołem przed jego zatwierdzeniem i zgłosić do niego uwagi i zastrzeżenia. Przeczytaj go uważnie — zwłaszcza opis przyczyn."
+    ],
+    "karta_praw": "wypadek"
+  },
+  "karta_praw": {
+    "naglowek": "Co Ci teraz przysługuje",
+    "prawa": [
+      {
+        "tytul": "Zasiłek chorobowy w wysokości {chorobowe_wypadkowe}",
+        "opis": "Za czas niezdolności do pracy z powodu wypadku przy pracy zasiłek liczy się od pełnej podstawy, a nie od zwykłych 80 procent.",
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "warianty": {
+          "funkcjonariusz": {
+            "tytul": "Uposażenie w czasie zwolnienia — zasady służbowe",
+            "opis": "W służbie świadczenia w czasie niezdolności do służby wynikają z przepisów formacji, a nie z ustawy o świadczeniach z ubezpieczenia chorobowego.",
+            "podstawa": "[do uzupełnienia przez specjalistę]"
+          }
+        }
+      },
+      {
+        "tytul": "Jednorazowe odszkodowanie",
+        "opis": "Za każdy procent stałego lub długotrwałego uszczerbku na zdrowiu przysługuje {odszkodowanie_1proc}. O uszczerbku orzeka lekarz orzecznik.",
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "warianty": {
+          "funkcjonariusz": {
+            "tytul": "Odszkodowanie w służbie",
+            "opis": "Świadczenia odszkodowawcze funkcjonariuszy reguluje ustawa z 4 kwietnia 2014 r., a o uszczerbku orzeka komisja lekarska formacji.",
+            "podstawa": "ustawa z 4 kwietnia 2014 r. o świadczeniach odszkodowawczych przysługujących w razie wypadku lub choroby pozostających w związku ze służbą"
+          }
+        }
+      },
+      {
+        "tytul": "Prawo zgłoszenia uwag i zastrzeżeń do protokołu",
+        "opis": "Zanim protokół zostanie zatwierdzony, masz prawo go przeczytać i wnieść na piśmie uwagi oraz zastrzeżenia. To Twój jedyny moment na sprostowanie opisu zdarzenia.",
+        "podstawa": "[do uzupełnienia przez specjalistę]"
+      }
+    ],
+    "co_dalej": [
+      "Zgłoś wypadek na piśmie, nawet jeśli zgłaszałeś(-aś) go już ustnie — zachowaj kopię z potwierdzeniem przyjęcia.",
+      "Zbierz dokumentację medyczną i zdjęcia miejsca zdarzenia w jednym miejscu.",
+      "Przeczytaj protokół przed podpisaniem. Jeśli coś się nie zgadza — wpisz zastrzeżenia, nie podpisuj „na wiarę”.",
+      "Jeśli źle znosisz to, co się stało, zajrzyj do materiału „Co się ze mną dzieje po trudnym zdarzeniu”."
+    ],
+    "material": "co_sie_ze_mna_dzieje"
+  },
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

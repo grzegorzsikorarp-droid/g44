@@ -1,0 +1,53 @@
+{
+  "cecha": "pojazd",
+  "prog": "Prowadzenie pojazdu w ramach pracy.",
+  "uprawnienia": [
+    {
+      "id": "przerwy_kierowca",
+      "tytul": "Przerwy w prowadzeniu",
+      "konkret": "Zasady zależą od rodzaju przewozu",
+      "wyjasnienie": "Czas prowadzenia i przerwy reguluje osobno prawo o czasie pracy kierowców i przepisy unijne.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "pojazd",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "odpoczynek",
+      "grupa": "czas",
+      "ikona": "kierownica"
+    },
+    {
+      "id": "badania_kierowca",
+      "tytul": "Badania kierowcy",
+      "konkret": "Zakres szerszy niż zwykłe okresowe",
+      "wyjasnienie": "Prowadzenie pojazdu w pracy oznacza dodatkowy zakres badań profilaktycznych.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "cecha": "pojazd",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "grupa": "zdrowie",
+      "ikona": "kierownica"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

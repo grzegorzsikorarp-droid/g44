@@ -1,0 +1,73 @@
+{
+  "_uwaga": "Strumień prasówki pobierany z sieci. Jedyne — obok biblioteki — połączenie sieciowe aplikacji.",
+  "odswiezono": "2026-08-28",
+  "wpisy": [
+    {
+      "id": "nowe-wytyczne",
+      "tytul": "Nowe wytyczne dotyczące ręcznych prac transportowych w opiece",
+      "zrodlo": "Centralny Instytut Ochrony Pracy",
+      "data": "2026-08-28",
+      "od_redakcji": [
+        "Wytyczne opisują, jak organizować przemieszczanie pacjentów, żeby zmieścić się w normach dźwigania.",
+        "Dla kobiet normy wynoszą {dzwiganie_kobiety_stale} przy pracy stałej i {dzwiganie_kobiety_dorywczo} dorywczo."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "mobbing-2026",
+      "tytul": "Nowa definicja nękania w pracy — wchodzi 5 listopada 2026",
+      "zrodlo": "Dziennik Ustaw",
+      "data": "2026-08-22",
+      "wchodzi_w_zycie": "2026-11-05",
+      "od_redakcji": [
+        "Od listopada zmienia się definicja nękania w pracy — przesądza uporczywość zachowania, a nie tylko jego długotrwałość.",
+        "Ustawa przewiduje minimalne zadośćuczynienie w wysokości {mobbing_zadoscuczynienie_min}."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "upaly-2026",
+      "tytul": "Projekt przepisów o maksymalnych temperaturach na stanowiskach pracy",
+      "zrodlo": "Ministerstwo Rodziny, Pracy i Polityki Społecznej",
+      "data": "2026-08-11",
+      "od_redakcji": [
+        "Projekt zakłada obowiązkowe działania pracodawcy po przekroczeniu progów temperatury w pomieszczeniach i przy pracy fizycznej.",
+        "Do czasu wejścia przepisów podstawą pozostają progi napojów: {napoje_prog_pomieszczenie} w pomieszczeniu i {napoje_prog_otwarta} na otwartej przestrzeni."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "pip-kontrole",
+      "tytul": "Inspekcja pracy podsumowała kontrole w ochronie zdrowia",
+      "zrodlo": "Państwowa Inspekcja Pracy",
+      "data": "2026-07-30",
+      "od_redakcji": [
+        "Najczęstsze uchybienia dotyczyły odzieży roboczej i terminów szkoleń okresowych.",
+        "Inspekcja zapowiada powtórne kontrole jesienią — warto wcześniej sprawdzić własne terminy."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "odszkodowania",
+      "tytul": "Nowe kwoty jednorazowych odszkodowań powypadkowych",
+      "zrodlo": "Zakład Ubezpieczeń Społecznych",
+      "data": "2026-07-14",
+      "od_redakcji": [
+        "Od kwietnia obowiązuje wyższa kwota za każdy procent uszczerbku na zdrowiu: {odszkodowanie_1proc}.",
+        "Kwoty zmieniają się co roku — sprawdź aktualną, zanim podpiszesz protokół powypadkowy."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "szczepienia",
+      "tytul": "Przypomnienie o szczepieniach dla osób narażonych na czynniki biologiczne",
+      "zrodlo": "Główny Inspektorat Sanitarny",
+      "data": "2026-07-02",
+      "od_redakcji": [
+        "Zalecane szczepienia ochronne dla osób narażonych na materiał zakaźny finansuje pracodawca.",
+        "Koszt nie może obciążać pracownika — także wtedy, gdy szczepienie wykonuje się poza zakładem."
+      ],
+      "odnosnik": "[do uzupełnienia przez specjalistę]"
+    }
+  ]
+}

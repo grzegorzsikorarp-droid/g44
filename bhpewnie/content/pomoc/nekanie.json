@@ -1,0 +1,16 @@
+{
+  "id": "nekanie",
+  "etykieta": "Nękanie",
+  "ikona": "mowa",
+  "opis": "Uporczywe zachowania, które Cię niszczą",
+  "pelna": false,
+  "kroki": [],
+  "zamiast_karty_praw": "dziennik",
+  "uwaga_dziennik": "Przy nękaniu najważniejsze jest systematyczne zapisywanie zdarzeń. Zamiast karty praw prowadzimy Cię do dziennika.",
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

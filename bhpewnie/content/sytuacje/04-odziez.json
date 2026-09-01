@@ -1,0 +1,155 @@
+{
+  "_uwaga": "Wzorcowa karta wyniku z sekcji 6.4 briefu — brzmienia werdyktu, uzasadnienia, bloku „ile” i skryptu przeniesione dosłownie.",
+  "id": "odziez",
+  "etykieta": "Używam własnych ubrań do pracy",
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "wydaje",
+      "tresc": "Czy pracodawca wydaje Ci odzież roboczą?",
+      "opcje": [
+        { "wartosc": "nie", "etykieta": "Nie, pracuję w swoim ubraniu" },
+        { "wartosc": "czesc", "etykieta": "Tylko część rzeczy" },
+        { "wartosc": "tak", "etykieta": "Tak, pełny komplet" }
+      ]
+    },
+    {
+      "id": "pranie",
+      "tresc": "Kto pierze odzież, w której pracujesz?",
+      "opcje": [
+        { "wartosc": "ja", "etykieta": "Ja, w domu" },
+        { "wartosc": "pracodawca", "etykieta": "Pracodawca" }
+      ]
+    },
+    {
+      "id": "brudzi",
+      "tresc": "Czy w Twojej pracy ubranie niszczy się, brudzi albo może się zetknąć z czymś szkodliwym?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "gdy": { "wydaje": ["nie", "czesc"], "pranie": ["ja"], "brudzi": ["tak"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci ekwiwalent",
+        "uzasadnienie": "Pracodawca nie zapewnia Ci odzieży roboczej, a Ty pierzesz ją sam — za jedno i drugie należy się ekwiwalent pieniężny.",
+        "ile": [
+          "Kwotę ustala pracodawca według kosztów prania i cen odzieży. Masz prawo poznać sposób wyliczenia.",
+          "Ekwiwalent za pranie i ekwiwalent za używanie własnej odzieży to dwie osobne sprawy — pytaj o obie.",
+          "Ekwiwalent wypłaca się regularnie, a nie jednorazowo „na koniec roku”."
+        ],
+        "podstawa": "art. 237⁹ § 3 Kodeksu pracy",
+        "pismo": {
+          "tytul": "Wniosek o wypłatę ekwiwalentu za używanie i pranie własnej odzieży",
+          "akapity": [
+            "Na podstawie art. 237⁹ § 3 Kodeksu pracy wnoszę o wypłatę ekwiwalentu pieniężnego za pranie odzieży roboczej, które wykonuję we własnym zakresie.",
+            "Jednocześnie proszę o informację, czy moje stanowisko objęte jest przydziałem odzieży roboczej, a jeżeli tak — o jej wydanie albo o ustalenie ekwiwalentu za używanie odzieży własnej.",
+            "Proszę o wskazanie wysokości ekwiwalentu oraz sposobu jego wyliczenia."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Pani Kierowniczko, używam do pracy własnej odzieży i sam ją piorę. Zgodnie z art. 237⁹ § 3 Kodeksu pracy przysługuje mi za to ekwiwalent pieniężny. Proszę o informację, w jakiej wysokości i od kiedy będzie mi wypłacany.",
+          "mail": {
+            "temat": "Ekwiwalent za pranie odzieży roboczej — prośba o ustalenie wysokości",
+            "tresc": "Dzień dobry,\n\nużywam do pracy własnej odzieży i piorę ją we własnym zakresie. Zgodnie z art. 237⁹ § 3 Kodeksu pracy przysługuje mi za to ekwiwalent pieniężny.\n\nProszę o informację, w jakiej wysokości ekwiwalent zostanie ustalony, w jaki sposób jest wyliczany i od kiedy będzie wypłacany.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "wydaje": ["tak"], "pranie": ["ja"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci ekwiwalent za pranie",
+        "uzasadnienie": "Odzież dostajesz od pracodawcy, ale pierzesz ją sam(-a). Za samo pranie odzieży roboczej we własnym zakresie należy się ekwiwalent pieniężny.",
+        "ile": [
+          "Kwotę ustala pracodawca według kosztów prania. Masz prawo poznać sposób wyliczenia.",
+          "Ekwiwalent należy się za każdy okres, w którym pierzesz odzież — nie tylko po zgłoszeniu."
+        ],
+        "podstawa": "art. 237⁹ § 3 Kodeksu pracy",
+        "pismo": {
+          "tytul": "Wniosek o wypłatę ekwiwalentu za pranie odzieży roboczej",
+          "akapity": [
+            "Na podstawie art. 237⁹ § 3 Kodeksu pracy wnoszę o wypłatę ekwiwalentu pieniężnego za pranie odzieży roboczej, które wykonuję we własnym zakresie.",
+            "Proszę o wskazanie wysokości ekwiwalentu, sposobu jego wyliczenia oraz terminu wypłaty."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, odzież roboczą dostaję od zakładu, ale piorę ją w domu na własny koszt. Zgodnie z art. 237⁹ § 3 Kodeksu pracy należy mi się za to ekwiwalent pieniężny. Proszę o informację, w jakiej wysokości będzie wypłacany.",
+          "mail": {
+            "temat": "Ekwiwalent za pranie odzieży roboczej",
+            "tresc": "Dzień dobry,\n\nodzież roboczą otrzymuję od pracodawcy, jednak piorę ją we własnym zakresie. Zgodnie z art. 237⁹ § 3 Kodeksu pracy przysługuje mi za to ekwiwalent pieniężny.\n\nProszę o ustalenie jego wysokości oraz o informację o terminie wypłaty.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "wydaje": ["nie", "czesc"], "brudzi": ["nie"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "To zależy od tego, co robisz na stanowisku",
+        "uzasadnienie": "Odzież robocza należy się tam, gdzie ubranie może ulec zniszczeniu lub zabrudzeniu albo wymagają tego względy sanitarne i bezpieczeństwa. Z Twoich odpowiedzi wynika, że u Ciebie tak nie jest — ale o przydziale decyduje wykaz stanowisk w zakładzie.",
+        "ile": [
+          "Wykaz stanowisk z przydziałem odzieży ustala pracodawca — masz prawo go poznać.",
+          "Jeśli charakter Twojej pracy się zmieni, wróć do tej ścieżki."
+        ],
+        "do_sprawdzenia": [
+          "Poproś o wgląd do zakładowego wykazu stanowisk, na których przydziela się odzież roboczą.",
+          "Sprawdź, czy w Twoim zakładzie obowiązuje regulamin określający zasady przydziału."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Prośba o informację o przydziale odzieży roboczej",
+          "akapity": [
+            "Proszę o informację, czy moje stanowisko objęte jest zakładowym wykazem stanowisk, na których przydzielana jest odzież i obuwie robocze.",
+            "Proszę także o udostępnienie zasad przydziału obowiązujących w zakładzie."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałabym/chciałbym się dowiedzieć, czy moje stanowisko jest w wykazie stanowisk z przydziałem odzieży roboczej. Proszę o informację i o wgląd do zasad przydziału.",
+          "mail": {
+            "temat": "Pytanie o przydział odzieży roboczej na moim stanowisku",
+            "tresc": "Dzień dobry,\n\nproszę o informację, czy moje stanowisko objęte jest wykazem stanowisk, na których przydzielana jest odzież i obuwie robocze, oraz o udostępnienie zasad przydziału obowiązujących w zakładzie.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "wydaje": ["tak"], "pranie": ["pracodawca"] },
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Tu nic Ci się dodatkowo nie należy",
+        "uzasadnienie": "Odzież dostajesz od pracodawcy i on ją pierze, więc obowiązek jest w całości spełniony. Ekwiwalent należy się wtedy, gdy koszt spada na Ciebie.",
+        "ile": [
+          "Zużytą odzież wymienia pracodawca — nie musisz jej donaszać.",
+          "Gdyby pranie wróciło do Ciebie, wróć do tej ścieżki: wtedy ekwiwalent się należy."
+        ],
+        "podstawa": "art. 237⁹ § 3 Kodeksu pracy",
+        "pokrewne": { "tytul": "Środki ochrony indywidualnej", "sprawdzacz": "srodki" },
+        "pismo": {
+          "tytul": "Prośba o wymianę zużytej odzieży roboczej",
+          "akapity": [
+            "Proszę o wymianę odzieży roboczej, która uległa zużyciu w trakcie pracy, na komplet sprawny i odpowiedni do warunków na moim stanowisku."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, moja odzież robocza jest już mocno zużyta. Proszę o wymianę na nowy komplet.",
+          "mail": {
+            "temat": "Prośba o wymianę zużytej odzieży roboczej",
+            "tresc": "Dzień dobry,\n\nproszę o wymianę zużytej odzieży roboczej na komplet odpowiedni do warunków pracy na moim stanowisku.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "cecha": "powszechne",
+  "prog": "Uprawnienia niezależne od warunków pracy — pokazujemy je również wtedy, gdy nie znamy jeszcze Twojego stanowiska.",
+  "uprawnienia": [
+    {
+      "id": "badania_okresowe",
+      "tytul": "Badania okresowe",
+      "konkret": "W godzinach pracy, na koszt pracodawcy",
+      "wyjasnienie": "Na badania idziesz w miarę możliwości w godzinach pracy i zachowujesz za ten czas wynagrodzenie. Skierowanie i koszt badania są po stronie pracodawcy.",
+      "podstawa": "art. 229 Kodeksu pracy",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "funkcjonariusz": {
+          "tytul": "Badania w służbie",
+          "konkret": "Komisja lekarska formacji zamiast medycyny pracy",
+          "wyjasnienie": "W służbie o zdolności do pełnienia obowiązków orzeka komisja lekarska formacji, a nie lekarz medycyny pracy.",
+          "podstawa": "[do uzupełnienia przez specjalistę]"
+        }
+      },
+      "sprawdzacz": "badania",
+      "grupa": "zdrowie",
+      "ikona": "stetoskop"
+    },
+    {
+      "id": "szkolenie_bhp",
+      "tytul": "Szkolenie BHP",
+      "konkret": "W czasie pracy i na koszt pracodawcy",
+      "wyjasnienie": "Szkolenie odbywa się w czasie pracy — nie po godzinach i nie z Twojej kieszeni.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "wszystkie": [
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "sprawdzacz": "szkolenie",
+      "grupa": "zdrowie",
+      "ikona": "ksiazka"
+    },
+    {
+      "id": "przerwa_art134",
+      "tytul": "Przerwa w czasie dnia pracy",
+      "konkret": "{przerwa_art134_podstawowa}, a przy dłuższej dniówce druga: {przerwa_art134_druga}",
+      "wyjasnienie": "Przerwa jest wliczana do czasu pracy. Przy dłuższej dniówce przysługuje Ci druga, a przy pracy ponad 16 godzin — trzecia.",
+      "podstawa": "art. 134 Kodeksu pracy",
+      "parametry": [
+        "przerwa_art134_podstawowa",
+        "przerwa_art134_druga"
+      ],
+      "gdy": {
+        "wszystkie": [
+          {
+            "modyfikator": "umowa",
+            "wartosc_w": [
+              "o_prace"
+            ]
+          }
+        ]
+      },
+      "zrodlo_kp": true,
+      "warianty": {
+        "zlecenie": {
+          "ukryte": true
+        },
+        "dzialalnosc": {
+          "ukryte": true
+        }
+      },
+      "sprawdzacz": "odpoczynek",
+      "grupa": "czas",
+      "ikona": "zegar"
+    },
+    {
+      "id": "srodki_ochrony",
+      "tytul": "Środki ochrony indywidualnej",
+      "konkret": "Bezpłatnie, przed dopuszczeniem do pracy",
+      "wyjasnienie": "Jeśli stanowisko wymaga ochrony — rękawic, okularów, ochronników słuchu — dostajesz je od pracodawcy, zanim zaczniesz pracę.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {
+        "ktorakolwiek": [
+          {
+            "cecha": "chemia",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "cecha": "biologia",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "cecha": "halas",
+            "wartosc_w": [
+              true
+            ]
+          },
+          {
+            "cecha": "urazowe",
+            "wartosc_w": [
+              true
+            ]
+          }
+        ]
+      },
+      "sprawdzacz": "srodki",
+      "grupa": "ochrona",
+      "ikona": "tarcza"
+    },
+    {
+      "id": "ocena_ryzyka",
+      "tytul": "Informacja o zagrożeniach na Twoim stanowisku",
+      "konkret": "Masz prawo ją poznać — na piśmie",
+      "wyjasnienie": "Pracodawca ma obowiązek poinformować Cię o zagrożeniach na stanowisku i o zasadach ochrony. Możesz poprosić o to na piśmie.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {},
+      "grupa": "zasady",
+      "ikona": "dokument"
+    },
+    {
+      "id": "prawo_powstrzymania",
+      "tytul": "Prawo powstrzymania się od pracy",
+      "konkret": "Gdy warunki grożą bezpośrednim niebezpieczeństwem",
+      "wyjasnienie": "Jeśli warunki pracy grożą bezpośrednim niebezpieczeństwem dla zdrowia lub życia, masz prawo powstrzymać się od pracy — powiadamiając o tym przełożonego.",
+      "podstawa": "[do uzupełnienia przez specjalistę]",
+      "parametry": [],
+      "gdy": {},
+      "warianty": {
+        "funkcjonariusz": {
+          "konkret": "W służbie obowiązują odrębne zasady",
+          "wyjasnienie": "W formacjach mundurowych prawo powstrzymania się od czynności jest ograniczone przepisami służbowymi.",
+          "podstawa": "[do uzupełnienia przez specjalistę]"
+        }
+      },
+      "grupa": "zasady",
+      "ikona": "dlon"
+    }
+  ],
+  "terminarz": [
+    {
+      "nazwa": "Badania okresowe",
+      "regula": "30 i 7 dni przed terminem",
+      "zdarzenie_poczatkowe": "data z profilu użytkownika"
+    },
+    {
+      "nazwa": "Szkolenie okresowe BHP",
+      "regula": "30 dni przed terminem",
+      "zdarzenie_poczatkowe": "data z profilu użytkownika"
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-01",
+    "data_przegladu": "2026-12-01"
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "_uwaga": "PANEL REDAKCYJNY. Każdy parametr ma daty obowiązywania. Po upływie „obowiazuje_do” bez nowego wiersza aplikacja NIE pokazuje starej liczby (zasada nieprzekraczalna nr 9). Wartości pochodzą wyłącznie z briefu FZZ; brakujące podstawy prawne oznaczono jako [do uzupełnienia przez specjalistę].",
+  "stan_prawny": "1 września 2026",
+  "parametry": [
+    {
+      "id": "minimalne_wynagrodzenie",
+      "wartosc": 4806,
+      "jednostka": "zł",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie Rady Ministrów w sprawie minimalnego wynagrodzenia za pracę"
+    },
+    {
+      "id": "dodatek_nocny_stawka",
+      "wartosc": 0,
+      "wzor": "dodatek_nocny",
+      "jednostka": "zł",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": "2026-12-31",
+      "zrodlo": "art. 151⁸ § 1 Kodeksu pracy — 20% stawki godzinowej liczonej z minimalnego wynagrodzenia; stawka zmienia się co miesiąc razem z wymiarem czasu pracy"
+    },
+    {
+      "id": "odszkodowanie_1proc",
+      "wartosc": 1781,
+      "jednostka": "zł",
+      "obowiazuje_od": "2026-04-01",
+      "obowiazuje_do": "2027-03-31",
+      "zrodlo": "obwieszczenie o wysokości kwot jednorazowych odszkodowań z tytułu wypadku przy pracy"
+    },
+    {
+      "id": "mobbing_zadoscuczynienie_min",
+      "wartosc": 28836,
+      "jednostka": "zł",
+      "obowiazuje_od": "2026-11-05",
+      "obowiazuje_do": null,
+      "zrodlo": "nowelizacja Kodeksu pracy wchodząca w życie 5 listopada 2026 — sześciokrotność minimalnego wynagrodzenia"
+    },
+    {
+      "id": "napoje_prog_pomieszczenie",
+      "wartosc": 28,
+      "jednostka": "°C",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie Rady Ministrów w sprawie profilaktycznych posiłków i napojów"
+    },
+    {
+      "id": "napoje_prog_otwarta",
+      "wartosc": 25,
+      "jednostka": "°C",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie Rady Ministrów w sprawie profilaktycznych posiłków i napojów"
+    },
+    {
+      "id": "dzwiganie_kobiety_stale",
+      "wartosc": 12,
+      "jednostka": "kg",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie w sprawie bhp przy ręcznych pracach transportowych"
+    },
+    {
+      "id": "dzwiganie_kobiety_dorywczo",
+      "wartosc": 20,
+      "jednostka": "kg",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie w sprawie bhp przy ręcznych pracach transportowych"
+    },
+    {
+      "id": "dzwiganie_mezczyzni_stale",
+      "wartosc": 30,
+      "jednostka": "kg",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie w sprawie bhp przy ręcznych pracach transportowych"
+    },
+    {
+      "id": "dzwiganie_mezczyzni_dorywczo",
+      "wartosc": 50,
+      "jednostka": "kg",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie w sprawie bhp przy ręcznych pracach transportowych"
+    },
+    {
+      "id": "przerwa_monitor",
+      "wartosc": 5,
+      "jednostka": "minut przerwy po każdej godzinie",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "rozporządzenie w sprawie bhp na stanowiskach wyposażonych w monitory ekranowe"
+    },
+    {
+      "id": "przerwa_art134_podstawowa",
+      "wartosc": 15,
+      "jednostka": "minut przerwy przy pracy co najmniej 6 godzin",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "art. 134 Kodeksu pracy"
+    },
+    {
+      "id": "przerwa_art134_druga",
+      "wartosc": 15,
+      "jednostka": "minut dodatkowej przerwy przy pracy ponad 9 godzin",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "art. 134 Kodeksu pracy"
+    },
+    {
+      "id": "przerwa_art134_trzecia",
+      "wartosc": 15,
+      "jednostka": "minut dodatkowej przerwy przy pracy ponad 16 godzin",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "art. 134 Kodeksu pracy"
+    },
+    {
+      "id": "odpoczynek_dobowy",
+      "wartosc": 11,
+      "jednostka": "godzin",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "odpoczynek_tygodniowy",
+      "wartosc": 35,
+      "jednostka": "godzin",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "chorobowe_wypadkowe",
+      "wartosc": 100,
+      "jednostka": "% podstawy",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "protokol_powypadkowy_termin",
+      "wartosc": 14,
+      "jednostka": "dni",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "[do uzupełnienia przez specjalistę]"
+    }
+  ]
+}

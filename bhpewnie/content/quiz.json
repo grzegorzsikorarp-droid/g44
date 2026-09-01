@@ -1,0 +1,213 @@
+{
+  "_uwaga": "Sprawdzian wiedzy o bezpieczeństwie pracy. Działa wyłącznie w telefonie: bez punktów, rankingów, odznak i porównań z innymi — wynik służy tylko osobie, która go rozwiązuje, i nigdzie nie jest wysyłany. Pytania przykładowe na potrzeby prototypu, przed publikacją wymagają autoryzacji przez specjalistów wskazanych w metryczkach. Wyjaśnienia nie zawierają kwot ani podstaw prawnych — w tych miejscach wpisano ciąg [do uzupełnienia przez specjalistę].",
+  "pytania": [
+    {
+      "id": "zaklucie_igla",
+      "pytanie": "Zakłułeś lub zakłułaś się igłą użytą wcześniej u pacjenta. Co robisz najpierw?",
+      "opcje": [
+        {
+          "tekst": "Myjesz miejsce zakłucia wodą z mydłem, nie wyciskasz krwi i natychmiast zgłaszasz zdarzenie przełożonemu.",
+          "trafna": true
+        },
+        {
+          "tekst": "Wyciskasz jak najwięcej krwi, przemywasz ranę spirytusem, a zgłaszasz dopiero po zakończeniu zmiany.",
+          "trafna": false
+        },
+        {
+          "tekst": "Zaklejasz miejsce plastrem i obserwujesz przez kilka dni, czy pojawi się zaczerwienienie.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Liczy się czas — ocena ryzyka i decyzja o dalszym postępowaniu należą do lekarza, a część działań ma sens tylko w pierwszych godzinach po zdarzeniu. Wyciskanie krwi i środki drażniące uszkadzają tkanki, a ryzyka zakażenia nie zmniejszają.",
+      "material": null,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "napoje_profilaktyczne",
+      "pytanie": "Od czego zależy to, czy pracodawca ma zapewnić napoje?",
+      "opcje": [
+        {
+          "tekst": "Od warunków panujących na stanowisku — temperatury oraz wysiłku — po przekroczeniu progów określonych w przepisach.",
+          "trafna": true
+        },
+        {
+          "tekst": "Od tego, czy pracownik złożył pisemny wniosek o ich przyznanie.",
+          "trafna": false
+        },
+        {
+          "tekst": "Wyłącznie od pory roku — napoje należą się w miesiącach letnich.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Obowiązek wynika z warunków na stanowisku, a nie z kalendarza ani z wniosku osoby zatrudnionej. Dokładne progi temperatury i wysiłku oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+      "material": null,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "prawie_wypadek_komu",
+      "pytanie": "Wózek widłowy minął Cię o pół metra na ciasnym przejściu. Nikt nie ucierpiał. Komu to zgłosić?",
+      "opcje": [
+        {
+          "tekst": "Nikomu — skoro nic się nie stało, nie ma czego zgłaszać.",
+          "trafna": false
+        },
+        {
+          "tekst": "Przełożonemu i służbie BHP, a jeśli w zakładzie działa — także społecznemu inspektorowi pracy.",
+          "trafna": true
+        },
+        {
+          "tekst": "Od razu Państwowej Inspekcji Pracy, z pominięciem zakładu.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Zdarzenie, w którym o mały włos nie doszło do wypadku, ma tę samą przyczynę, która następnym razem może kogoś okaleczyć — zgłoszenie w zakładzie pozwala tę przyczynę usunąć, zanim to nastąpi. Warto zapisać sobie datę, godzinę i przebieg zdarzenia, bo po kilku tygodniach szczegóły się zacierają.",
+      "material": null,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "protokol_powypadkowy",
+      "pytanie": "Dostajesz do podpisu protokół powypadkowy. Co zrobić przed podpisaniem?",
+      "opcje": [
+        {
+          "tekst": "Podpisać od razu, żeby nie opóźniać sprawy — poprawki i tak można zgłosić w dowolnym późniejszym momencie.",
+          "trafna": false
+        },
+        {
+          "tekst": "Przeczytać całość, sprawdzić, czy opis okoliczności i przyczyn zgadza się ze stanem faktycznym, i skorzystać z prawa do zgłoszenia uwag i zastrzeżeń.",
+          "trafna": true
+        },
+        {
+          "tekst": "Odmówić zapoznania się z protokołem i poczekać na rozstrzygnięcie sądu.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Protokół jest opisem okoliczności i przyczyn, na którym opierają się wszystkie dalsze rozstrzygnięcia, więc błąd w opisie ciąży nad całą sprawą. Termin i tryb zgłaszania uwag i zastrzeżeń oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+      "material": null,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy, konsultacja prawna wymagana",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "brak_oslony_maszyny",
+      "pytanie": "Zauważasz, że w maszynie brakuje osłony, którą ktoś zdjął. Co robisz?",
+      "opcje": [
+        {
+          "tekst": "Pracujesz ostrożniej i mówisz o tym kolegom na najbliższej przerwie.",
+          "trafna": false
+        },
+        {
+          "tekst": "Wstrzymujesz pracę na tej maszynie, oznaczasz ją i zgłaszasz przełożonemu oraz służbie BHP, najlepiej na piśmie.",
+          "trafna": true
+        },
+        {
+          "tekst": "Zakładasz zastępczą osłonę zrobioną własnym sposobem i pracujesz dalej.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Maszyna bez sprawnych osłon nie powinna pracować, a zabezpieczenie zrobione własnym sposobem tworzy nowe zagrożenie i zaciera odpowiedzialność za stan maszyny. Zgłoszenie na piśmie zostawia ślad z datą, a zasady powstrzymania się od pracy przy bezpośrednim zagrożeniu oraz podstawa prawna: [do uzupełnienia przez specjalistę].",
+      "material": null,
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "ochronniki_sluchu_przerwa",
+      "pytanie": "Nosisz nauszniki przez całą zmianę, ale w najgłośniejszym miejscu zdejmujesz je na kilka minut, żeby się porozumieć. Co się wtedy dzieje?",
+      "opcje": [
+        {
+          "tekst": "Nic istotnego — kilka minut to za krótko, żeby miało znaczenie.",
+          "trafna": false
+        },
+        {
+          "tekst": "Ochrona z całej zmiany zostaje w dużej części zniweczona, bo właśnie w tych najgłośniejszych minutach dawka hałasu rośnie najszybciej.",
+          "trafna": true
+        },
+        {
+          "tekst": "Ochrona spada dokładnie o tyle procent, ile minut trwała przerwa.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Dawka hałasu zależy od jego natężenia, a to rośnie bardzo szybko — dlatego krótka chwila bez ochronników w największym hałasie waży więcej niż godziny w hałasie umiarkowanym. Jeśli ochronniki uniemożliwiają porozumienie albo słyszenie sygnałów ostrzegawczych, jest to powód, żeby poprosić służbę BHP o inny ich rodzaj.",
+      "material": "sluch_w_halasie",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy, konsultacja: audiolog",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "przekladanie_ciezaru",
+      "pytanie": "Przekładasz ciężki karton z palety na wózek stojący za Tobą. Co obciąża kręgosłup najbardziej?",
+      "opcje": [
+        {
+          "tekst": "Skręt tułowia z ciężarem w rękach zamiast przestawienia stóp.",
+          "trafna": true
+        },
+        {
+          "tekst": "Trzymanie ciężaru blisko tułowia.",
+          "trafna": false
+        },
+        {
+          "tekst": "Ugięcie kolan przed podniesieniem.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Najwięcej urazów dolnego odcinka pleców zdarza się wtedy, gdy podnoszenie i skręcanie następują w jednym ruchu. Przestawienie stóp zajmuje chwilę i usuwa tę przyczynę, a trzymanie ciężaru blisko tułowia i ugięcie kolan obciążenie zmniejszają, a nie zwiększają.",
+      "material": "plecy_przy_dzwiganiu",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "fizjoterapeuta, konsultacja: specjalista do spraw bezpieczeństwa i higieny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    },
+    {
+      "id": "senosc_po_nocce",
+      "pytanie": "Wracasz samochodem po nocnej zmianie i czujesz, że zamykają Ci się oczy. Co jest bezpieczne?",
+      "opcje": [
+        {
+          "tekst": "Otworzyć okno, włączyć głośno radio i jechać dalej.",
+          "trafna": false
+        },
+        {
+          "tekst": "Zatrzymać się w bezpiecznym miejscu i zdrzemnąć około dwudziestu minut albo poprosić kogoś o odbiór.",
+          "trafna": true
+        },
+        {
+          "tekst": "Przyspieszyć, żeby skrócić czas jazdy.",
+          "trafna": false
+        }
+      ],
+      "wyjasnienie": "Senności nie da się pokonać siłą woli — chłodne powietrze i głośna muzyka maskują ją najwyżej na kilka minut, zamiast usuwać przyczynę. Krótka drzemka przed dalszą jazdą jest jedynym sposobem, który realnie przywraca czujność.",
+      "material": "sen_przy_pracy_zmianowej",
+      "metryczka": {
+        "autor": "opracowanie przykładowe",
+        "rola": "lekarz medycyny pracy",
+        "data_opracowania": "2026-09-01",
+        "data_przegladu": "2026-12-01"
+      }
+    }
+  ]
+}
