@@ -1,11 +1,12 @@
 import type { ComponentType } from 'react'
 import { Powitanie, PytanieCechy, TrybPracy, SzablonyZmian, KalendarzGrafiku, Umowa, PrzepisySzczegolne, RokUrodzenia, Niepelnosprawnosc, WynikKreatora, NazwaProfilu } from './kreator'
 import { MojeStanowisko, KartaUprawnienia, PodgladKartyPdf, MojeTerminy } from './stanowisko'
-import { ListaSytuacji, PytaniaSprawdzacza, KartaWyniku, PodgladWniosku, SkryptRozmowy, PanelPrzypomnienia } from './sprawdz'
+import { ListaSytuacji, PytaniaSprawdzacza, KartaWyniku, WynikPosredni, PorownanieUmow, PodgladWniosku, SkryptRozmowy, PanelPrzypomnienia } from './sprawdz'
 import { StrumienAktualnosci, WpisAktualnosci, ArchiwumAktualnosci } from './aktualnosci'
 import { PomocWejscie, WyborSytuacji, KrokSciezki, ZamkniecieSciezki, KartaPraw, DziennikZdarzen, WpisDoDziennika, NotatnikPrawieWypadkow, EkranKryzysowy, Biblioteka, MaterialBiblioteki, GdzieSzukacPomocy } from './pomoc'
-import { MenuUstawien, MojProfil, MojGrafik, MojeBudziki, PobraneMaterialy, OAplikacji, ZglosUwage, EkranDeweloperski } from './ustawienia'
+import { MenuUstawien, MojProfil, MojGrafik, GrafikStaleGodziny, MojeBudziki, PobraneMaterialy, OAplikacji, ZglosUwage, EkranDeweloperski } from './ustawienia'
 import { PytanieSprawdzianu, WynikSprawdzianu } from './quiz'
+import { MojCzasDzis, WpisCzasuEkran, TydzienIMiesiac, SygnalyCzasu, EksportEwidencji } from './czas-pracy'
 
 type Ekran = ComponentType<{ dane: Record<string, unknown> }>
 
@@ -40,9 +41,11 @@ export const EKRANY_KOMPONENTY: Record<string, Ekran> = {
   'E2.1': ListaSytuacji as Ekran,
   'E2.2': PytaniaSprawdzacza,
   'E2.3': KartaWyniku,
+  'E2.4': WynikPosredni,
   'E2.5': PodgladWniosku,
   'E2.6': SkryptRozmowy,
   'E2.7': PanelPrzypomnienia,
+  'E2.8': PorownanieUmow as Ekran,
 
   'E3.1': StrumienAktualnosci as Ekran,
   'E3.2': WpisAktualnosci,
@@ -64,7 +67,8 @@ export const EKRANY_KOMPONENTY: Record<string, Ekran> = {
 
   'E5.1': MenuUstawien as Ekran,
   'E5.2': MojProfil as Ekran,
-  'E5.3': MojGrafik as Ekran,
+  'E5.3a': GrafikStaleGodziny as Ekran,
+  'E5.3b': MojGrafik as Ekran,
   'E5.4': MojeBudziki as Ekran,
   'E5.5': PobraneMaterialy as Ekran,
   'E5.6': OAplikacji as Ekran,
@@ -72,6 +76,12 @@ export const EKRANY_KOMPONENTY: Record<string, Ekran> = {
 
   'E6.1': PytanieSprawdzianu,
   'E6.2': WynikSprawdzianu,
+
+  'E7.1': MojCzasDzis as Ekran,
+  'E7.2': WpisCzasuEkran,
+  'E7.3': TydzienIMiesiac as Ekran,
+  'E7.4': SygnalyCzasu,
+  'E7.5': EksportEwidencji as Ekran,
 
   DEV: EkranDeweloperski as Ekran,
 }

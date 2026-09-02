@@ -4,7 +4,14 @@ import { dodajDni, iso, oknoSnuPoNocce, ramyZmiany, szablonDnia } from './grafik
 /**
  * SILNIK HARMONOGRAMU — sedno prototypu.
  * Budzik jest REGUŁĄ, nie godziną. Harmonogram wyliczamy na 14 dni z grafiku
- * i z terminów użytkownika, a potem przycinamy sufitem 3 powiadomień na dobę.
+ * i z terminów użytkownika.
+ *
+ * ZMIANA 1.2 — zasada 8 w nowym brzmieniu: sufit trzech powiadomień na dobę
+ * i reguła pierwszeństwa ZOSTAŁY USUNIĘTE. Pomiar z prototypu 1.1 pokazał,
+ * że odrzucały dwie piąte przypomnień, o które użytkownik świadomie prosił
+ * (ROZBIEZNOSCI.md, wpis 7). Przełącznik przy każdym budziku wystarcza:
+ * użytkownik, który włączył przerwę przy monitorze, ma ją dostawać.
+ * Sufitu nie wolno przywracać w żadnej postaci.
  *
  * Uwaga inżynierska (patrz ROZBIEZNOSCI.md): wyliczenie harmonogramu jest w pełni
  * wykonalne w przeglądarce, ale SAMO WYZWOLENIE powiadomienia o zadanej godzinie
@@ -14,56 +21,54 @@ import { dodajDni, iso, oknoSnuPoNocce, ramyZmiany, szablonDnia } from './grafik
 export const DEFINICJE_BUDZIKOW: DefinicjaBudzika[] = [
   {
     id: 'powrot_po_pomocy', nazwa: 'Powrót po ścieżce Pomocy',
-    regula: 'następnego dnia po przejściu ścieżki', grupa: 'rytm', pierwszenstwo: 1,
+    regula: 'następnego dnia po przejściu ścieżki', grupa: 'rytm',
   },
   {
     id: 'badania_okresowe', nazwa: 'Badania okresowe',
-    regula: '30 i 7 dni przed terminem', grupa: 'terminy', pierwszenstwo: 2,
+    regula: '30 i 7 dni przed terminem', grupa: 'terminy',
   },
   {
     id: 'szkolenie_bhp', nazwa: 'Szkolenie okresowe BHP',
-    regula: '30 dni przed terminem', grupa: 'terminy', pierwszenstwo: 2,
+    regula: '30 dni przed terminem', grupa: 'terminy',
   },
   {
     id: 'wejscie_przepisu', nazwa: 'Wejście przepisu w życie',
-    regula: 'w dniu wejścia w życie', grupa: 'terminy', pierwszenstwo: 2,
+    regula: 'w dniu wejścia w życie', grupa: 'terminy',
   },
   {
     id: 'nowa_stawka_nocna', nazwa: 'Nowa stawka dodatku nocnego',
-    regula: '1 stycznia i 1 lipca', grupa: 'terminy', pierwszenstwo: 2,
+    regula: '1 stycznia i 1 lipca', grupa: 'terminy',
     widoczny_gdy: { wszystkie: [{ cecha: 'zmiany', wartosc_w: ['zmiany_noce'] }, { modyfikator: 'umowa', wartosc_w: ['o_prace'] }] },
   },
   {
     id: 'przerwa_monitor', nazwa: 'Przerwa przy monitorze',
-    regula: 'co 2 godziny w trakcie zmiany', grupa: 'rytm', pierwszenstwo: 3,
+    regula: 'co godzinę w trakcie zmiany', grupa: 'rytm',
     widoczny_gdy: { wszystkie: [{ cecha: 'monitor', wartosc_w: ['od2do4', 'ponad4'] }, { modyfikator: 'umowa', wartosc_w: ['o_prace'] }] },
   },
   {
     id: 'protokol_przed_nocka', nazwa: 'Protokół przed nocką',
-    regula: '2 godziny przed zmianą N', grupa: 'rytm', pierwszenstwo: 3,
+    regula: '2 godziny przed zmianą N', grupa: 'rytm',
     widoczny_gdy: { wszystkie: [{ cecha: 'zmiany', wartosc_w: ['zmiany_noce'] }] },
   },
   {
     id: 'cisza_po_nocce', nazwa: 'Cisza po nocce',
-    regula: 'okno snu wyliczone z grafiku', grupa: 'rytm', automatyczny: true, pierwszenstwo: 3,
+    regula: 'okno snu wyliczone z grafiku', grupa: 'rytm', automatyczny: true,
     widoczny_gdy: { wszystkie: [{ cecha: 'zmiany', wartosc_w: ['zmiany_noce'] }] },
   },
   {
     id: 'alert_pogodowy', nazwa: 'Alert upałowy i zimowy',
-    regula: 'gdy prognoza przekroczy próg z przepisów', grupa: 'otoczenie', pierwszenstwo: 4,
+    regula: 'gdy prognoza przekroczy próg z przepisów', grupa: 'otoczenie',
   },
   {
     id: 'prasowka', nazwa: 'Przegląd tygodnia',
-    regula: 'wtorek, o godzinie którą wybierzesz', grupa: 'aktualnosci', pierwszenstwo: 5,
+    regula: 'wtorek, o godzinie którą wybierzesz', grupa: 'aktualnosci',
   },
 ]
-
-export const SUFIT_NA_DOBE = 3
 
 export interface WejscieHarmonogramu {
   profil: Profil
   wlaczone: Partial<Record<IdBudzika, boolean>>
-  /** Ścieżka Pomocy przejdzia wczoraj — wywołuje przypomnienie o najwyższym pierwszeństwie. */
+  /** Ścieżka Pomocy przejdzia wczoraj — wywołuje przypomnienie nazajutrz. */
   powrotPoPomocy?: string | null
   /** Symulacja alertu pogodowego w prototypie. */
   alertPogodowy?: { dzien: string; tresc: string } | null
@@ -74,7 +79,7 @@ function dodaj(lista: ZaplanowanePrzypomnienie[], p: ZaplanowanePrzypomnienie) {
   lista.push(p)
 }
 
-/** Wylicza wszystkie przypomnienia na najbliższe 14 dni — przed przycięciem sufitem. */
+/** Wylicza wszystkie przypomnienia na najbliższe 14 dni. */
 export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Date()): ZaplanowanePrzypomnienie[] {
   const { profil, wlaczone } = wejscie
   const lista: ZaplanowanePrzypomnienie[] = []
@@ -90,7 +95,7 @@ export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Dat
       const { start, koniec } = ramyZmiany(dzien, szablon)
 
       if (wlaczone.przerwa_monitor) {
-        for (let g = 2; g < (koniec.getTime() - start.getTime()) / 3600000; g += 2) {
+        for (let g = 1; g < (koniec.getTime() - start.getTime()) / 3600000; g += 1) {
           dodaj(lista, {
             budzik: 'przerwa_monitor', nazwa: 'Przerwa przy monitorze',
             kiedy: new Date(start.getTime() + g * 3600000).toISOString(),
@@ -151,7 +156,7 @@ export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Dat
     }
   }
 
-  // Powrót po ścieżce Pomocy — nazajutrz, najwyższe pierwszeństwo.
+  // Powrót po ścieżce Pomocy — nazajutrz rano.
   if (wejscie.powrotPoPomocy) {
     const kiedy = dodajDni(teraz, 1)
     kiedy.setHours(10, 0, 0, 0)
@@ -164,35 +169,12 @@ export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Dat
   return lista.sort((a, b) => a.kiedy.localeCompare(b.kiedy))
 }
 
-const PIERWSZENSTWO = new Map(DEFINICJE_BUDZIKOW.map((d) => [d.id, d.pierwszenstwo]))
-
 /**
- * Sufit 3 powiadomień na dobę z pierwszeństwem (zasada 8):
- * powrót po Pomocy → terminy → rytmiczne → sezonowe → prasówka.
- * Odrzucone zostają na liście z oznaczeniem — pokazujemy je w podglądzie harmonogramu,
- * żeby użytkownik wiedział, czego się NIE spodziewać.
+ * Harmonogram widziany przez użytkownika. Od zmiany 1.2 jest tożsamy z surowym:
+ * nic nie jest odrzucane, bo każde przypomnienie ma za sobą świadomie włączony przełącznik.
  */
-export function zastosujSufit(lista: ZaplanowanePrzypomnienie[]): ZaplanowanePrzypomnienie[] {
-  const wgDnia = new Map<string, ZaplanowanePrzypomnienie[]>()
-  for (const p of lista) {
-    const dzien = p.kiedy.slice(0, 10)
-    if (!wgDnia.has(dzien)) wgDnia.set(dzien, [])
-    wgDnia.get(dzien)!.push(p)
-  }
-  const wynik: ZaplanowanePrzypomnienie[] = []
-  for (const [, dzienne] of wgDnia) {
-    const wgWaznosci = [...dzienne].sort((a, b) => {
-      const roznica = (PIERWSZENSTWO.get(a.budzik) ?? 9) - (PIERWSZENSTWO.get(b.budzik) ?? 9)
-      return roznica !== 0 ? roznica : a.kiedy.localeCompare(b.kiedy)
-    })
-    const przyjete = new Set(wgWaznosci.slice(0, SUFIT_NA_DOBE))
-    for (const p of dzienne) wynik.push({ ...p, odrzucone: !przyjete.has(p) })
-  }
-  return wynik.sort((a, b) => a.kiedy.localeCompare(b.kiedy))
-}
-
 export function wyliczHarmonogram(wejscie: WejscieHarmonogramu, teraz: Date = new Date()): ZaplanowanePrzypomnienie[] {
-  return zastosujSufit(wyliczSurowy(wejscie, teraz))
+  return wyliczSurowy(wejscie, teraz)
 }
 
 /** „Następne przypomnienie: dziś 14:00” — to, co widzi użytkownik na ekranie budzików. */
@@ -200,7 +182,7 @@ export function nastepnePrzypomnienie(
   harmonogram: ZaplanowanePrzypomnienie[],
   teraz: Date = new Date(),
 ): ZaplanowanePrzypomnienie | null {
-  const przyszle = harmonogram.filter((p) => !p.odrzucone && p.kiedy > teraz.toISOString())
+  const przyszle = harmonogram.filter((p) => p.kiedy > teraz.toISOString())
   return przyszle.length > 0 ? przyszle[0] : null
 }
 

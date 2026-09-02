@@ -7,6 +7,7 @@
       "tytul": "Przerwa przy monitorze",
       "konkret": "{przerwa_monitor} — wliczane do czasu pracy",
       "wyjasnienie": "Po każdej godzinie pracy przy ekranie należy Ci się krótka przerwa. Nie można jej zbierać na koniec dnia — ma odciążać wzrok na bieżąco.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [
         "przerwa_monitor"
@@ -46,6 +47,34 @@
       "tytul": "Okulary do pracy przy ekranie",
       "konkret": "Na koszt pracodawcy, gdy zaleci je lekarz medycyny pracy",
       "wyjasnienie": "Jeśli badanie profilaktyczne wykaże potrzebę okularów do pracy przy monitorze, ich koszt pokrywa pracodawca.",
+      "warunek": {
+        "pytanie": "Czy lekarz medycyny pracy stwierdził, że potrzebujesz okularów do pracy przy ekranie?",
+        "odpowiedzi": [
+          {
+            "tekst": "Tak, mam takie zalecenie",
+            "wynik": "przysluguje",
+            "uzasadnienie": "Zalecenie lekarza medycyny pracy jest tym, co uruchamia obowiązek pracodawcy. Koszt okularów albo szkieł kontaktowych pokrywa pracodawca, do wysokości ustalonej u Ciebie w firmie."
+          },
+          {
+            "tekst": "Nie, ale mam własne okulary",
+            "wynik": "zalezy",
+            "uzasadnienie": "Własne okulary korekcyjne to nie to samo co okulary do pracy przy ekranie. Podstawą jest orzeczenie z badania profilaktycznego, a nie recepta od okulisty.",
+            "do_sprawdzenia": [
+              "Czy w Twoim ostatnim orzeczeniu z badań okresowych jest wzmianka o pracy przy monitorze",
+              "Jaką kwotę na okulary ustalił pracodawca w regulaminie albo zarządzeniu"
+            ]
+          },
+          {
+            "tekst": "Nie badano mnie pod tym kątem",
+            "wynik": "zalezy",
+            "uzasadnienie": "Praca przy ekranie powyżej połowy dobowego wymiaru powinna być ujęta w skierowaniu na badania profilaktyczne. Jeśli jej tam nie było, badanie mogło pominąć wzrok.",
+            "do_sprawdzenia": [
+              "Czy w skierowaniu na ostatnie badania była wpisana praca przy monitorze",
+              "Kiedy masz następne badanie okresowe"
+            ]
+          }
+        ]
+      },
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -83,6 +112,7 @@
       "tytul": "Ustawienie stanowiska",
       "konkret": "Ekran, siedzisko i oświetlenie wg wymagań rozporządzenia",
       "wyjasnienie": "Stanowisko z monitorem ma spełniać wymagania techniczne — od wysokości ekranu po ustawienie światła. Możesz poprosić o przegląd stanowiska.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

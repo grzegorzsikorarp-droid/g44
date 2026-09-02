@@ -7,6 +7,7 @@
       "tytul": "Napoje w upale",
       "konkret": "Od {napoje_prog_pomieszczenie} w pomieszczeniu, od {napoje_prog_otwarta} na dworze",
       "wyjasnienie": "Po przekroczeniu progu pracodawca ma zapewnić napoje bezpłatnie i w ilości zaspokajającej potrzeby. Ekwiwalent pieniężny zamiast napojów nie wchodzi w grę.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [
         "napoje_prog_pomieszczenie",
@@ -37,6 +38,35 @@
       "tytul": "Posiłek profilaktyczny",
       "konkret": "Przy pracy w niskich temperaturach w miesiącach zimowych",
       "wyjasnienie": "Przy pracy w chłodzie — na dworze lub w nieogrzewanych pomieszczeniach — przysługuje ciepły posiłek profilaktyczny.",
+      "warunek": {
+        "pytanie": "Czy pracujesz na dworze albo w nieogrzewanym pomieszczeniu w miesiącach zimowych?",
+        "odpowiedzi": [
+          {
+            "tekst": "Tak, w okresie zimowym pracuję w chłodzie",
+            "wynik": "przysluguje",
+            "uzasadnienie": "Praca na otwartej przestrzeni albo w nieogrzewanym pomieszczeniu w okresie zimowym to jeden z przypadków, w których posiłek profilaktyczny się należy — o ile spełniony jest też próg wydatku energetycznego."
+          },
+          {
+            "tekst": "Pracuję w chłodzie, ale tylko czasem",
+            "wynik": "zalezy",
+            "uzasadnienie": "Posiłki przysługują przy pracy w takich warunkach, a nie przy pojedynczym wyjściu na zewnątrz. Granicę wyznacza wykaz stanowisk ustalony u pracodawcy.",
+            "do_sprawdzenia": [
+              "Czy Twoje stanowisko jest w firmowym wykazie stanowisk uprawnionych do posiłków",
+              "Ile godzin dziennie faktycznie pracujesz w chłodzie"
+            ]
+          },
+          {
+            "tekst": "Nie, pracuję w ogrzewanym pomieszczeniu",
+            "wynik": "nie_przysluguje",
+            "uzasadnienie": "Posiłek profilaktyczny wiąże się z pracą w chłodzie albo z dużym wydatkiem energetycznym. Praca w ogrzewanym pomieszczeniu tego progu nie przekracza.",
+            "zamiast": [
+              "Minimalna temperatura w pomieszczeniu: 18 °C przy pracy lekkiej, 14 °C przy pracy fizycznej",
+              "Napoje, gdy temperatura przekroczy próg upału",
+              "Pomieszczenie do zjedzenia posiłku, gdy pracuje więcej niż 20 osób"
+            ]
+          }
+        ]
+      },
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

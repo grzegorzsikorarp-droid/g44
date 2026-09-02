@@ -45,5 +45,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['testy/**/*.test.ts'],
+    /*
+      Aplikacja jest dla pracowników w Polsce, więc i testy liczą czas po polsku.
+      Bez tego kontener chodzi w UTC, gdzie zmiana czasu urzędowego nie istnieje —
+      a to właśnie ona rozstrzyga długość nocki (badanie 5 ze zmiany 1.2).
+    */
+    env: { TZ: 'Europe/Warsaw' },
   },
 } as any)

@@ -1,0 +1,59 @@
+{
+  "_uwaga": "Zmiana 1.2, punkt 5.4. Tabela obejmuje WYŁĄCZNIE to, co aplikacja zna z własnych modułów wiedzy. Urlop, wynagrodzenie chorobowe i ochrona przed zwolnieniem są poza zakresem BHP i celowo tu nie występują.",
+  "tytul": "Co masz teraz, a co miałbyś na umowie o pracę",
+  "naglowki": {
+    "cecha": "",
+    "cywilna": "zlecenie / działalność",
+    "etat": "umowa o pracę"
+  },
+  "wiersze": [
+    {
+      "cecha": "przerwa {przerwa_art134_podstawowa} przy dniówce od 6 h",
+      "cywilna": "nie z mocy prawa",
+      "etat": "tak"
+    },
+    {
+      "cecha": "odpoczynek {odpoczynek_dobowy} dobowy, {odpoczynek_tygodniowy} tygodniowy",
+      "cywilna": "nie z mocy prawa",
+      "etat": "tak"
+    },
+    {
+      "cecha": "dodatek za pracę w nocy",
+      "cywilna": "nie",
+      "etat": "{dodatek_nocny_stawka} za godzinę pracy w nocy"
+    },
+    {
+      "cecha": "badania lekarskie na koszt pracodawcy, w godzinach pracy",
+      "cywilna": "tylko gdy zleceniodawca zdecyduje",
+      "etat": "tak, obowiązkowo"
+    },
+    {
+      "cecha": "szkolenie BHP w czasie pracy, na koszt pracodawcy",
+      "cywilna": "tylko gdy zleceniodawca zdecyduje",
+      "etat": "tak"
+    },
+    {
+      "cecha": "bezpieczne warunki pracy",
+      "cywilna": "tak — od organizującego pracę",
+      "etat": "tak"
+    },
+    {
+      "cecha": "świadczenia po wypadku",
+      "cywilna": "tak, jeśli podlegasz ubezpieczeniom",
+      "etat": "tak"
+    },
+    {
+      "cecha": "nadzór inspekcji pracy nad Twoją sytuacją",
+      "cywilna": "ograniczony",
+      "etat": "pełny"
+    }
+  ],
+  "pod_tabela": "Pełne porównanie obejmuje też urlop, wynagrodzenie za chorobę i ochronę przed zwolnieniem — tego aplikacja nie liczy, ale doradca tak.",
+  "podstawa": "[do uzupełnienia przez specjalistę]",
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty od prawa pracy)",
+    "data_opracowania": "2026-09-02",
+    "data_przegladu": "2026-12-01"
+  }
+}

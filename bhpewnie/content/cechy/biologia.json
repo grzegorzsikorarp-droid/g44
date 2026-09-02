@@ -7,6 +7,7 @@
       "tytul": "Szczepienia ochronne",
       "konkret": "Na koszt pracodawcy — nie z Twojej kieszeni",
       "wyjasnienie": "Przy narażeniu na czynniki biologiczne zalecane szczepienia ochronne finansuje pracodawca.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -28,6 +29,7 @@
       "tytul": "Odzież przy materiale zakaźnym",
       "konkret": "Własna odzież jest niedopuszczalna",
       "wyjasnienie": "Gdy ubranie może ulec skażeniu biologicznemu, praca we własnej odzieży nie wchodzi w grę — komplet wydaje i pierze pracodawca.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -49,6 +51,7 @@
       "tytul": "Postępowanie po zakłuciu",
       "konkret": "Procedura i rejestr — obowiązek pracodawcy",
       "wyjasnienie": "Zakład ma mieć procedurę postępowania po ekspozycji i rejestr zdarzeń. Masz prawo ją znać, zanim coś się stanie.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

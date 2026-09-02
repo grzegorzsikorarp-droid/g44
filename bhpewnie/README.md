@@ -1,10 +1,12 @@
 # BHPewnie — prototyp roboczy
 
-Aplikacja BHP Forum Związków Zawodowych. Odpowiadasz na kilkanaście pytań o **warunki** swojej pracy, a aplikacja pokazuje uprawnienia z konkretnymi kwotami, progami i terminami, dostarcza wzorów pism i przypomina o rzeczach we właściwym momencie.
+Aplikacja BHP Forum Związków Zawodowych. Odpowiadasz na kilkanaście pytań o **warunki** swojej pracy, a aplikacja pokazuje uprawnienia z konkretnymi kwotami, progami i terminami, dostarcza wzorów pism, notuje Twój czas pracy i przypomina o rzeczach we właściwym momencie.
+
+Stan: **wydanie 1.2** (zmiana z 2 września 2026).
 
 To **prototyp roboczy**, nie produkt. Ma trzy zadania: przeklikać założenia strategii i znaleźć miejsca, gdzie się nie sprawdzają (patrz `ROZBIEZNOSCI.md`), posłużyć do testów z użytkownikami i stać się załącznikiem do zamówienia dla wykonawcy komercyjnego.
 
-**Treści prawne mają charakter roboczy i wymagają autoryzacji specjalistów przed publikacją.** W 86 miejscach stoi znacznik `[do uzupełnienia przez specjalistę]` — to nie jest niedopatrzenie, tylko konsekwencja zasady z briefu: prototyp nie wymyśla podstaw prawnych.
+**Treści prawne mają charakter roboczy i wymagają autoryzacji specjalistów przed publikacją.** Znaczniki `[do uzupełnienia przez specjalistę]` i `[do potwierdzenia przez specjalistę]` nie są niedopatrzeniem, tylko konsekwencją zasady z briefu: prototyp nie wymyśla podstaw prawnych.
 
 ---
 
@@ -20,12 +22,14 @@ npm run preview      # podgląd zbudowanej paczki, port 4173
 Testy:
 
 ```bash
-npm test             # 34 testy jednostkowe: silnik reguł, parametry, harmonogram
-npm run test:e2e     # 48 testów e2e: przebiegi P1–P9, sytuacje brzegowe, dostępność
-npm run ekrany       # eksport listy ekranów i porównanie z mapą z briefu
+npm test             # 94 testy jednostkowe: reguły, parametry, harmonogram, ewidencja, sprawdzacze
+npm run test:e2e     # 87 testów e2e: przebiegi P1–P12, sytuacje brzegowe, dostępność
+npm run ekrany       # eksport listy ekranów i porównanie z mapą (66)
 ```
 
-Testy e2e uruchamiają podgląd same. Wyniki dostępności zapisują się do `wyniki-axe.json`.
+Testy e2e budują paczkę i uruchamiają podgląd same. Wyniki dostępności zapisują się
+do `wyniki-axe.json`. Testy jednostkowe chodzą w strefie `Europe/Warsaw` — bez tego
+zmiana czasu urzędowego, która rozstrzyga długość nocki, byłaby niewykrywalna.
 
 ---
 
@@ -37,14 +41,25 @@ Testy e2e uruchamiają podgląd same. Wyniki dostępności zapisują się do `wy
 | B | Kreator E0.1–E0.23, Moje stanowisko E1.1–E1.4, generator PDF | gotowe |
 | C | Sprawdź E2.1–E2.7, trzy pełne ścieżki sprawdzacza | gotowe |
 | D | Pomoc E4.1–E4.13, ścieżka wypadkowa (8 kroków), ekran kryzysowy, dzienniki | gotowe |
-| E | Grafik, budziki, silnik harmonogramu na 14 dni, sufit 3/dobę | gotowe |
+| E | Grafik, budziki, silnik harmonogramu na 14 dni | gotowe |
 | F | Aktualności, ustawienia, sprawdzian wiedzy, tryb ciemny, axe bez naruszeń | gotowe |
 | G | Testy e2e, eksport ekranów, dokumentacja, rejestr rozbieżności | gotowe |
 | H | System wizualny z kanwy projektowej: tokeny, logotyp, osiem reguł nienegocjowalnych | gotowe |
 
-Zaimplementowano **58 ekranów** — wszystkie wymienione w sekcji 5 briefu (tytuł mówi o 48, ale wyliczenia w grupach sumują się do 58; patrz `ROZBIEZNOSCI.md`, wpis 2).
+### Zmiana 1.2 (2 września 2026)
 
-Trzy pełne ścieżki sprawdzacza: **upał → napoje**, **własna odzież → ekwiwalent** (trzy stany), **monitor → przerwa i okulary**. Pozostałe dziesięć pokazuje planszę „w pełnej wersji" — z wyjątkiem „Pracuję w nocy" i „Nie mam kiedy odpocząć", które przy zleceniu dają uczciwy szary werdykt.
+| Etap | Zakres | Stan |
+|---|---|---|
+| 1.2 A | Zniesienie sufitu powiadomień, budzik monitorowy co godzinę, warunek na kaflu | gotowe |
+| 1.2 B | Nazwy zakładek, przebudowa E1.1 i E1.2 (dopytanie w miejscu, trzy akcje) | gotowe |
+| 1.2 C | „Mam sprawę": 8 sytuacji, pakiet umowy, porównanie E2.8, wynik pośredni E2.4 | gotowe |
+| 1.2 D | Ewidencja czasu pracy — nowa grupa E7 (5 ekranów) | gotowe |
+| 1.2 E | Grafik na dwóch poziomach E5.3a/E5.3b, wyzwalacz zmiany rytmu | gotowe |
+| 1.2 F | Testy P10–P12, B13, axe na nowych ekranach, rejestr 66 ekranów, rozbieżności 15–24 | gotowe |
+
+Zaimplementowano **66 ekranów** — dokładnie tyle, ile podaje punkt 8 zmiany 1.2 (`npm run ekrany` porównuje rejestr z mapą i kończy się zerem tylko przy pełnej zgodności).
+
+Cztery pełne sytuacje w „Mam sprawę": **upał → napoje**, **dźwiganie → obie normy bez pytania o płeć**, **odpoczynek → przerwy i 11 h**, **umowa → sześć pytań i punktacja**. Cztery pozostałe pokazują planszę „w pełnej wersji". Warunki, które da się rozstrzygnąć jednym pytaniem, przeniesiono na kafle w zakładce pierwszej — aplikacja nie pyta dwa razy o to samo.
 
 ---
 
@@ -54,12 +69,13 @@ Zmiana brzmienia pytania, kwoty, podstawy prawnej albo werdyktu **nie wymaga dot
 
 ```
 content/
-  teksty.json                  napisy interfejsu (131 pozycji)
+  teksty.json                  napisy interfejsu (140 pozycji)
   parametry.json               kwoty i progi z datami obowiązywania
   wymiar-czasu-pracy.json      generowany: node narzedzia/generuj-wymiar.mjs
   kreator.json                 18 pytań kreatora, brzmienia z sekcji 6.1
   cechy/*.json                 16 modułów wiedzy: uprawnienia, warunki, warianty
-  sytuacje/*.json              13 sytuacji „Sprawdź" z regułami werdyktów
+  sytuacje/*.json              8 sytuacji „Mam sprawę" z regułami werdyktów
+  porownanie-umow.json         tabela E2.8: zlecenie a umowa o pracę
   pomoc/*.json                 5 ścieżek Pomocy z krokami i kartami praw
   biblioteka.json              8 materiałów do czytania z metryczkami
   gdzie-szukac.json            8 instytucji: dla kogo, kiedy, czy anonimowo
@@ -94,7 +110,8 @@ Moduły w `content/cechy/` mają jednakową budowę:
   "gdy": { "wszystkie": [ { "cecha": "zmiany", "wartosc_w": ["zmiany_noce"] },
                           { "modyfikator": "umowa", "wartosc_w": ["o_prace"] } ] },
   "warianty": { "zlecenie": { "ukryte": true }, "funkcjonariusz": { "ukryte": true } },
-  "grupa": "pieniadze", "ikona": "ksiezyc", "sprawdzacz": "noc"
+  "grupa": "pieniadze", "ikona": "ksiezyc", "sprawdzacz": "noc",
+  "warunek": null
 }
 ```
 
@@ -102,10 +119,15 @@ Moduły w `content/cechy/` mają jednakową budowę:
 - `gdy` to warunek: `wszystkie` (koniunkcja) albo `ktorakolwiek` (alternatywa).
 - `warianty` nadpisują treść dla konkretnej umowy albo statusu; `ukryte: true` zdejmuje kafel.
 - `grupa` decyduje o kolejności na ekranie głównym, `ikona` o piktogramie.
+- `warunek` to **jedno** pytanie rozstrzygane na karcie uprawnienia (zmiana 1.2). `null` znaczy „uprawnienie bezwarunkowe, kafel od razu zielony". Każda odpowiedź ma `wynik` (`przysluguje` / `zalezy` / `nie_przysluguje`) i `uzasadnienie`; odpowiedź bursztynowa dostaje `do_sprawdzenia` (najwyżej dwie pozycje), szara — obowiązkowy blok `zamiast`. Jeśli warunek wymaga dwóch pytań, to nie jest kafel, tylko sytuacja z zakładki „Mam sprawę".
 
-### Jak dodać sytuację do „Sprawdź"
+### Jak dodać sytuację do „Mam sprawę"
 
 Plik w `content/sytuacje/` z listą `pytania` i listą `reguly`. Wygrywa **pierwsza pasująca reguła**, więc kolejność ma znaczenie: od najbardziej szczegółowej do najogólniejszej. Reguła bez `gdy` łapie wszystko, co zostało.
+
+Test przy każdej nowej sytuacji: „czy aplikacja mogłaby to wiedzieć z kreatora?". Jeśli tak — to nie jest sprawa, tylko kafel z warunkiem.
+
+Sytuacja może też mieć `punktacja` (jak pakiet umowy): silnik liczy, ile cech zaszło, i wstawia wynik jako pseudo-odpowiedź `_punkty`, na którą reagują zwykłe reguły. Werdykt może wtedy użyć `{punkty}`, `{cechy_stwierdzone}` i `{cechy_brakujace}`.
 
 ---
 
@@ -119,11 +141,13 @@ src/
     parametry.ts         wartość parametru na dany dzień + zasada 9
     reguly.ts            wektor cech → lista uprawnień z wariantami
     sprawdzacz.ts        odpowiedzi → werdykt
-    grafik.ts            szablony zmian, wzorce rotacji, okno snu po nocce
-    harmonogram.ts       14 dni przypomnień, sufit 3/dobę z pierwszeństwem
+    grafik.ts            szablony zmian, wzorce rotacji, stałe godziny, okno snu po nocce
+    harmonogram.ts       14 dni przypomnień, bez sufitu (zmiana 1.2)
+    ewidencja.ts         czas pracy: wpisy, sygnały art. 132/133/134/131, wyzwalacz rytmu
+    dokumenty-uprawnien.ts  pismo i skrypt składane z kafla uprawnienia
   magazyn/magazyn.ts     pamięć urządzenia; profil przykładowy w osobnym magazynie
   pdf/dokumenty.ts       generator PDF po stronie klienta + pas oznaczeń
-  ekrany/                58 ekranów pogrupowanych wg mapy z briefu
+  ekrany/                66 ekranów pogrupowanych wg mapy (w tym E7 — ewidencja czasu)
   komponenty/            logotyp, znak FZZ, przyciski, kafle, przełączniki
   style/globalne.css     tokeny systemu wizualnego
   rejestr-ekranow.ts     źródło prawdy dla mapy ekranów
@@ -145,13 +169,18 @@ Testy sprawdzają nie tylko czy aplikacja działa, ale czy nie łamie zasad z br
 | Kafel bez konkretu nie istnieje | `testy/silnik.test.ts` — „każdy kafel ma niepusty konkret" |
 | Trzy stany werdyktu, nigdy czerwony | `testy/e2e/p5-sprawdzacz.spec.ts` — sprawdza wyliczony kolor tła |
 | Trzy stałe akcje w tej kolejności | `testy/e2e/p5-sprawdzacz.spec.ts` |
-| Nic domyślnie włączone | `testy/e2e/p2-p3-p9-budziki.spec.ts` |
+| Nic domyślnie włączone; sufit powiadomień nie istnieje | `testy/e2e/p2-p3-p9-budziki.spec.ts`, `testy/harmonogram.test.ts` |
+| Kafel warunkowy pyta o jedną rzecz i pamięta odpowiedź | `testy/silnik.test.ts`, `testy/e2e/p4-p6-stanowisko.spec.ts` |
+| Pakiet umowy nigdy nie generuje pisma do pracodawcy | `testy/sprawdzacz.test.ts`, `testy/e2e/p10-umowa.spec.ts` |
+| Dźwiganie pokazuje obie normy i nie pyta o płeć | `testy/sprawdzacz.test.ts`, `testy/e2e/p5-sprawdzacz.spec.ts` |
+| Ewidencja nigdzie nie wychodzi i nie liczy pieniędzy | brak wywołań sieciowych w `src/silnik/ewidencja.ts` |
+| Funkcjonariusz: sygnały kodeksowe wyłączone | `testy/ewidencja.test.ts`, `testy/e2e/p11-p12-ewidencja.spec.ts` |
 | Nigdy nieaktualna liczba jako pewna | `testy/parametry.test.ts` — zasada 9 i B10 |
 | Bez grywalizacji | brak punktów i odznak; sprawdzian wiedzy bez zapisu wyniku |
 | Metryczka przy każdej treści | pole `metryczka` wymagane w modułach |
 | Dostępność WCAG 2.1 AA | `testy/e2e/dostepnosc.spec.ts` — axe, cele 48 px, 200%, klawiatura |
 
-Ostatni przebieg axe: **zero naruszeń** na sześciu kluczowych ekranach (`wyniki-axe.json`).
+Ostatni przebieg axe: **zero naruszeń** na piętnastu ekranach, w tym na wszystkich dodanych w zmianie 1.2 (`wyniki-axe.json`). Jedno realne naruszenie znalazł test i zostało naprawione: przewijana tabela porównania nie była osiągalna z klawiatury.
 
 ---
 
@@ -175,8 +204,10 @@ Rozstrzygnięcia projektowe, w których brief kolidował sam ze sobą, opisuje `
 Trzy rzeczy wymagają decyzji zespołu albo testu z ludźmi, nie kolejnej iteracji kodu:
 
 1. **Powiadomienia.** Silnik harmonogramu działa i liczy poprawnie, ale czysta PWA nie wyzwoli budzika przy zamkniętej aplikacji. Potrzebne opakowanie natywne (Capacitor). Szczegóły: `ROZBIEZNOSCI.md`, wpis 6.
-2. **Sufit powiadomień.** Przy pełnym grafiku sufit trzech na dobę odrzuca 41% wyliczonych przypomnień, najczęściej przerwy przy monitorze. Trzy warianty rozwiązania: wpis 7.
-3. **Autoryzacja treści prawnych.** 86 pozycji czeka na specjalistę; około 20 z nich jest krytycznych przed testami z użytkownikami: wpis 8.
+2. **Hałas po zniesieniu sufitu.** Sufit zniesiono zgodnie ze zmianą 1.2 — i ta sama miara pokazuje teraz do **13 przypomnień na dobę** przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem: wpis 17.
+3. **„Nie wiem" w pakiecie umowy.** Sześć odpowiedzi „Nie wiem" daje dziś werdykt szary „nic nie musisz robić" — najbardziej niepewny użytkownik dostaje najbardziej stanowczą odpowiedź: wpis 20.
+4. **„Pobierz kartę" poniżej krawędzi ekranu.** Zmierzone 347 px; sam obowiązkowy zestaw z punktu 3.4 przekracza wysokość ekranu: wpis 16.
+5. **Autoryzacja treści prawnych.** Pozycje ze znacznikiem czekają na specjalistę; około 20 z nich jest krytycznych przed testami z użytkownikami: wpis 8.
 
 ---
 

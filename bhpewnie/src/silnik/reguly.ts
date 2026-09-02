@@ -1,5 +1,5 @@
 import type {
-  KafelUprawnienia, ModulCechy, OdpowiedziCech, Profil, Status, Umowa,
+  KafelUprawnienia, OdpowiedziCech, OdpowiedziWarunkow, Profil, StanKafla, Status, Umowa,
   Uprawnienie, Warunek, WarunekZlozony, WektorCech,
 } from '../typy'
 import { POMINIETE } from '../typy'
@@ -135,7 +135,29 @@ function zastosujWariant(u: Uprawnienie, p: RozwiazanyProfil): Uprawnienie | nul
 
 /* ---------- Glowna funkcja silnika ---------- */
 
-export function policzUprawnienia(profil: Profil, dzien: string = dzisIso()): KafelUprawnienia[] {
+/**
+ * Stan kafla (zmiana 1.2, punkt 3.3). Kolejnosc rozstrzygania jest istotna:
+ * wygasly parametr bije wszystko (zasada 9), potem pominiete pytanie kreatora,
+ * potem warunek — rozstrzygniety albo czekajacy na jedno dotkniecie.
+ */
+function stanKafla(
+  warunek: Uprawnienie['warunek'],
+  odpowiedz: number | undefined,
+  niepewne: boolean,
+  wygasly: boolean,
+): StanKafla {
+  if (wygasly) return 'wygaszony'
+  if (niepewne) return 'niepewny'
+  if (!warunek) return 'przysluguje'
+  if (odpowiedz === undefined || !warunek.odpowiedzi[odpowiedz]) return 'sprawdz_warunek'
+  return warunek.odpowiedzi[odpowiedz].wynik
+}
+
+export function policzUprawnienia(
+  profil: Profil,
+  dzien: string = dzisIso(),
+  odpowiedziWarunkow: OdpowiedziWarunkow = {},
+): KafelUprawnienia[] {
   const p = rozwiazProfil(profil, dzien)
   const kafle: KafelUprawnienia[] = []
 
@@ -148,6 +170,9 @@ export function policzUprawnienia(profil: Profil, dzien: string = dzisIso()): Ka
       const konkret = wypelnij(zwariantem.konkret, dzien)
       const wyjasnienie = wypelnij(zwariantem.wyjasnienie, dzien)
       const niepewne = cechyWarunku(uprawnienie.gdy).some((c) => p.pominiete.has(c))
+      const warunek = zwariantem.warunek ?? null
+      const nrOdpowiedzi = odpowiedziWarunkow[zwariantem.id]
+      const stan = stanKafla(warunek, nrOdpowiedzi, niepewne, konkret.wygasly)
 
       kafle.push({
         id: zwariantem.id,
@@ -162,19 +187,24 @@ export function policzUprawnienia(profil: Profil, dzien: string = dzisIso()): Ka
         sprawdzacz: zwariantem.sprawdzacz,
         grupa: zwariantem.grupa ?? 'zasady',
         ikona: zwariantem.ikona,
+        stan,
+        warunek,
+        odpowiedz: warunek && nrOdpowiedzi !== undefined ? warunek.odpowiedzi[nrOdpowiedzi] ?? null : null,
       })
     }
   }
 
-  // Kolejnosc na ekranie glownym: najpierw pieniadze i czas pracy (konkret, ktory da sie
-  // policzyc), potem zdrowie, sprzet, zasady i przepisy grupy zawodowej. Kafle niepewne
-  // zawsze na koncu — uzytkownik najpierw widzi to, czego jestesmy pewni.
+  // Sortowanie z punktu 3.4 zmiany 1.2: pieniadze → czas → do sprawdzenia → niepewne.
+  // Wewnatrz jednej wagi stanu decyduje grupa tematyczna.
   const WAGA_GRUPY: Record<string, number> = {
     pieniadze: 0, czas: 1, zdrowie: 2, ochrona: 3, zasady: 4, grupa: 5,
   }
+  const WAGA_STANU: Record<StanKafla, number> = {
+    przysluguje: 0, zalezy: 1, sprawdz_warunek: 2, nie_przysluguje: 3, niepewny: 4, wygaszony: 5,
+  }
   return kafle.sort((a, b) => {
-    const roznicaPewnosci = Number(a.niepewne) - Number(b.niepewne)
-    if (roznicaPewnosci !== 0) return roznicaPewnosci
+    const roznicaStanu = WAGA_STANU[a.stan] - WAGA_STANU[b.stan]
+    if (roznicaStanu !== 0) return roznicaStanu
     return (WAGA_GRUPY[a.grupa] ?? 9) - (WAGA_GRUPY[b.grupa] ?? 9)
   })
 }

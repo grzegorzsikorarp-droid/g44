@@ -7,6 +7,7 @@
       "tytul": "Twoje uprawnienia określa pragmatyka służbowa",
       "konkret": "Osobny system: komisje lekarskie, odrębne odszkodowania",
       "wyjasnienie": "W służbie nie stosuje się wprost Kodeksu pracy. Orzeka komisja lekarska formacji, a świadczenia po wypadku wynikają z ustawy z 4 kwietnia 2014 r.",
+      "warunek": null,
       "podstawa": "ustawa z 4 kwietnia 2014 r. (świadczenia odszkodowawcze w służbach)",
       "parametry": [],
       "gdy": {
@@ -27,6 +28,7 @@
       "tytul": "Nadzór nad warunkami służby",
       "konkret": "Poza właściwością Państwowej Inspekcji Pracy",
       "wyjasnienie": "Warunki pełnienia służby nadzoruje formacja, a nie inspekcja pracy. Ścieżka zgłoszenia jest inna niż u pracownika.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -47,6 +49,7 @@
       "tytul": "Pracownik cywilny w służbie",
       "konkret": "Kodeks pracy obowiązuje jak wszędzie",
       "wyjasnienie": "Pracujesz w jednostce mundurowej, ale na umowie o pracę — obowiązuje Cię Kodeks pracy, a nie pragmatyka służbowa.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -67,6 +70,7 @@
       "tytul": "Nauczyciel — narząd głosu",
       "konkret": "Choroby głosu są chorobami zawodowymi nauczycieli",
       "wyjasnienie": "Przewlekłe choroby narządu głosu figurują w wykazie chorób zawodowych. Warto zgłaszać chrypkę wcześnie, nie po latach.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -88,6 +92,7 @@
       "tytul": "Medyk — ekspozycja zawodowa",
       "konkret": "Procedura poekspozycyjna dostępna całą dobę",
       "wyjasnienie": "Po zakłuciu lub kontakcie z materiałem zakaźnym postępowanie ma być dostępne natychmiast, o każdej porze — także na nocnej zmianie.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -108,6 +113,7 @@
       "tytul": "Kierowca zawodowy — czas pracy",
       "konkret": "Odrębna ustawa o czasie pracy kierowców",
       "wyjasnienie": "Czas prowadzenia, przerwy i odpoczynki reguluje osobna ustawa oraz przepisy unijne — surowsze niż ogólny Kodeks pracy.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -128,6 +134,7 @@
       "tytul": "Przepisy branżowe",
       "konkret": "Górnictwo i kolej mają własne rozporządzenia BHP",
       "wyjasnienie": "W Twojej branży obowiązują dodatkowe przepisy szczególne. W pełnej wersji rozpiszemy je osobno.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -149,6 +156,7 @@
       "tytul": "Ochrona po 50. roku życia",
       "konkret": "Rozszerzona profilaktyka zdrowotna",
       "wyjasnienie": "Po pięćdziesiątce częściej pojawiają się skutki wieloletniego obciążenia. Warto pilnować badań i zgłaszać dolegliwości powiązane z pracą.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

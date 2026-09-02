@@ -3,22 +3,23 @@ import { useAplikacja } from '../App'
 import { Ikona, Logotyp, Naglowek, Przelacznik, Przycisk, ZnakFZZ } from '../komponenty/podstawowe'
 import { t } from '../dane/wczytaj'
 import { policzLuki, policzUprawnienia, rozwiazProfil, warunekSpelniony } from '../silnik/reguly'
-import { DEFINICJE_BUDZIKOW, nastepnePrzypomnienie, opiszKiedy, SUFIT_NA_DOBE, wyliczHarmonogram } from '../silnik/harmonogram'
-import { DNI_SKROTY, dodajDni, iso, nalozWzorzec, pomalujDzien, poczatekTygodnia, pustyGrafik, trybZGrafiku, WZORCE_ROTACJI } from '../silnik/grafik'
+import { DEFINICJE_BUDZIKOW, nastepnePrzypomnienie, opiszKiedy, wyliczHarmonogram } from '../silnik/harmonogram'
+import { DNI_SKROTY, dodajDni, domyslneStaleGodziny, iso, nalozWzorzec, pomalujDzien, poczatekTygodnia, pustyGrafik, trybZGrafiku, WZORCE_ROTACJI } from '../silnik/grafik'
 import { pustyProfil } from '../magazyn/magazyn'
-import { dzisIso, STAN_PRAWNY } from '../silnik/parametry'
+import { datePoPolsku, dzisIso, STAN_PRAWNY } from '../silnik/parametry'
 import { pytaniaKreatora } from '../dane/wczytaj'
 import { opisStanowiska } from './stanowisko'
-import type { Grafik, IdBudzika } from '../typy'
+import type { Grafik, IdBudzika, Profil, StaleGodziny } from '../typy'
 import biblioteka from '../../content/biblioteka.json'
 
 /* ================= E5.1 Menu ustawień ================= */
 
 export function MenuUstawien() {
-  const { nawiguj, wroc, przyklad, wyjdzZPrzykladu } = useAplikacja()
+  const { stan, nawiguj, wroc, przyklad, wyjdzZPrzykladu } = useAplikacja()
   const pozycje = [
     { ekran: 'E5.2', ikona: 'osoba', napis: t('ustawienia.profil'), opis: 'zmień pojedynczą odpowiedź' },
-    { ekran: 'E5.3', ikona: 'kalendarz', napis: t('ustawienia.grafik'), opis: 'zmiany, z których liczymy przypomnienia' },
+    { ekran: 'E7.1', ikona: 'zegar', napis: t('stanowisko.czas_pracy'), opis: 'ewidencja godzin — tylko w tym telefonie' },
+    { ekran: ekranGrafiku(stan.profil), ikona: 'kalendarz', napis: t('ustawienia.grafik'), opis: 'godziny, z których liczymy przypomnienia' },
     { ekran: 'E5.4', ikona: 'dzwonek', napis: t('ustawienia.budziki'), opis: 'co i kiedy ma się odezwać' },
     { ekran: 'E5.5', ikona: 'ksiazka', napis: t('ustawienia.materialy'), opis: 'co masz pobrane na telefon' },
     { ekran: 'E6.1', ikona: 'lupa', napis: t('quiz.naglowek'), opis: 'sprawdź się — bez punktów i rankingów' },
@@ -149,20 +150,162 @@ export function MojProfil() {
 
 /* ================= E5.3 Mój grafik ================= */
 
+/**
+ * Zmiana 1.2, punkt 7: grafik na dwóch poziomach.
+ * E5.3a — stałe godziny, E5.3b — zmiany. Do którego trafiasz, decyduje rytm w profilu.
+ * Kalendarza zmian NIE KASUJEMY przy przejściu na stałe godziny — można wrócić.
+ */
+export function ekranGrafiku(profil: Profil | null): string {
+  return profil?.grafik?.rytm === 'stale' || profil?.odpowiedzi.zmiany === 'stale' ? 'E5.3a' : 'E5.3b'
+}
+
+/* ================= E5.3a Mój grafik — stałe godziny ================= */
+
+export function GrafikStaleGodziny() {
+  const { stan, zmienStan, wroc, nawiguj, chmurka } = useAplikacja()
+  const profil = stan.profil ?? pustyProfil()
+  const [stale, ustawStale] = useState<StaleGodziny>(
+    profil.grafik?.stale ?? domyslneStaleGodziny(),
+  )
+  const [nowaData, ustawNowaData] = useState('')
+
+  const maBudziki = Object.values(stan.budziki).some(Boolean)
+
+  const zapisz = (nowe: StaleGodziny) => {
+    ustawStale(nowe)
+    zmienStan((s) => ({
+      ...s,
+      profil: s.profil
+        ? {
+          ...s.profil,
+          // Kalendarz zmian zostaje nietknięty — to jest ta gwarancja z punktu 11.
+          grafik: { ...(s.profil.grafik ?? pustyGrafik()), rytm: 'stale', stale: nowe },
+          odpowiedzi: { ...s.profil.odpowiedzi, zmiany: 'stale' },
+        }
+        : s.profil,
+    }))
+    if (maBudziki) chmurka('Przeliczyliśmy przypomnienia z nowych godzin.')
+  }
+
+  const przelaczDzien = (nr: number) => {
+    const dni = stale.dni.includes(nr) ? stale.dni.filter((d) => d !== nr) : [...stale.dni, nr].sort()
+    zapisz({ ...stale, dni })
+  }
+
+  return (
+    <>
+      <Naglowek naWstecz={wroc} oczko="Stałe godziny" tytul={t('ustawienia.grafik')} />
+      <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
+        <p className="opis">
+          Podaj godziny, w których zwykle pracujesz. Z nich liczymy przerwy w trakcie zmiany
+          i porównujemy plan z ewidencją.
+        </p>
+
+        <div className="rzad">
+          <label className="kolumna kolumna--ciasna" style={{ flex: 1 }}>
+            <span className="oczko">Od</span>
+            <input className="pole" type="time" value={stale.od} onChange={(e) => zapisz({ ...stale, od: e.target.value })} />
+          </label>
+          <label className="kolumna kolumna--ciasna" style={{ flex: 1 }}>
+            <span className="oczko">Do</span>
+            <input className="pole" type="time" value={stale.do} onChange={(e) => zapisz({ ...stale, do: e.target.value })} />
+          </label>
+        </div>
+
+        <div className="kolumna kolumna--ciasna">
+          <p className="oczko">Dni tygodnia</p>
+          <div className="rzad" role="group" aria-label="Dni tygodnia, w które pracujesz">
+            {DNI_SKROTY.map((skrot, i) => {
+              const nr = i + 1
+              const wlaczony = stale.dni.includes(nr)
+              return (
+                <button
+                  key={skrot}
+                  className="odpowiedz"
+                  aria-pressed={wlaczony}
+                  style={{ justifyContent: 'center', minWidth: 48, minHeight: 48, flex: '1 0 auto' }}
+                  onClick={() => przelaczDzien(nr)}
+                >
+                  {skrot}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="karta kolumna kolumna--ciasna">
+          <p className="oczko">Odstępstwa</p>
+          {Object.keys(stale.odstepstwa).length === 0 && (
+            <p className="drobne">Brak. Dopisz dzień, w którym pracowałeś(-aś) inaczej albo miałeś(-aś) wolne.</p>
+          )}
+          {Object.entries(stale.odstepstwa).map(([data, wartosc]) => (
+            <div key={data} className="rzad" style={{ justifyContent: 'space-between' }}>
+              <span>
+                <b>{datePoPolsku(data)}</b>{' '}
+                <span className="drobne">{wartosc === 'wolne' ? 'wolne' : `${wartosc.od}–${wartosc.do}`}</span>
+              </span>
+              <Przycisk
+                odmiana="obrys" ikona="minus"
+                opisDlaCzytnika={`Usuń odstępstwo ${data}`}
+                onClick={() => {
+                  const bez = { ...stale.odstepstwa }
+                  delete bez[data]
+                  zapisz({ ...stale, odstepstwa: bez })
+                }}
+              >
+                Usuń
+              </Przycisk>
+            </div>
+          ))}
+          <div className="rzad">
+            <input
+              className="pole" type="date" value={nowaData} aria-label="Data odstępstwa"
+              onChange={(e) => ustawNowaData(e.target.value)}
+            />
+            <Przycisk
+              odmiana="obrys"
+              wylaczony={!nowaData}
+              onClick={() => {
+                zapisz({ ...stale, odstepstwa: { ...stale.odstepstwa, [nowaData]: 'wolne' } })
+                ustawNowaData('')
+              }}
+            >
+              Dodaj jako wolne
+            </Przycisk>
+          </div>
+        </div>
+
+        <Przycisk odmiana="obrys" ikona="kalendarz" onClick={() => nawiguj('E5.3b')}>
+          Pracuję na zmiany — przejdź do kalendarza
+        </Przycisk>
+
+        <p className="drobne">
+          Z tych godzin liczymy przerwy w trakcie zmiany. Nie musisz podawać żadnych godzin
+          przypomnień — wyliczymy je sami.
+        </p>
+      </div>
+    </>
+  )
+}
+
+/* ================= E5.3b Mój grafik — zmiany ================= */
+
 export function MojGrafik() {
-  const { stan, zmienStan, wroc, chmurka } = useAplikacja()
+  const { stan, zmienStan, wroc, nawiguj, chmurka } = useAplikacja()
   const profil = stan.profil ?? pustyProfil()
   const [grafik, ustawGrafik] = useState<Grafik>(profil.grafik ?? pustyGrafik())
   const [pedzel, ustawPedzel] = useState('D')
   const dzisiaj = new Date()
   const poczatek = poczatekTygodnia(dzisiaj)
+  const pusty = Object.keys(grafik.kalendarz).length === 0
 
   const zapisz = (nowy: Grafik) => {
-    ustawGrafik(nowy)
+    const zRytmem: Grafik = { ...nowy, rytm: 'zmiany' }
+    ustawGrafik(zRytmem)
     zmienStan((s) => ({
       ...s,
       profil: s.profil
-        ? { ...s.profil, grafik: nowy, odpowiedzi: { ...s.profil.odpowiedzi, zmiany: trybZGrafiku(nowy) ?? s.profil.odpowiedzi.zmiany } }
+        ? { ...s.profil, grafik: zRytmem, odpowiedzi: { ...s.profil.odpowiedzi, zmiany: trybZGrafiku(zRytmem) ?? s.profil.odpowiedzi.zmiany } }
         : s.profil,
     }))
   }
@@ -171,8 +314,19 @@ export function MojGrafik() {
 
   return (
     <>
-      <Naglowek naWstecz={wroc} tytul={t('ustawienia.grafik')} />
+      <Naglowek naWstecz={wroc} oczko="Zmiany" tytul={t('ustawienia.grafik')} />
       <div className="kolumna" style={{ flex: 1 }}>
+        {/* Przy przejściu ze stałych godzin na zmiany kalendarz startuje pusty — podpowiadamy wzorce. */}
+        {pusty && (
+          <div className="pas pas--spokojny">
+            <Ikona nazwa="kalendarz" rozmiar={22} />
+            <p>
+              Kalendarz jest pusty. Najszybciej wypełnisz go wzorcem rotacji poniżej,
+              a potem poprawisz pojedyncze dni dotknięciem.
+            </p>
+          </div>
+        )}
+
         <div className="rzad">
           {grafik.szablony.map((s) => (
             <button key={s.skrot} className="odpowiedz" aria-pressed={pedzel === s.skrot}
@@ -220,6 +374,10 @@ export function MojGrafik() {
             </div>
           ))}
         </div>
+
+        <Przycisk odmiana="obrys" ikona="zegar" onClick={() => nawiguj('E5.3a')}>
+          Pracuję w stałych godzinach
+        </Przycisk>
 
         <p className="drobne">
           Z grafiku liczymy protokół przed nocką, ciszę po nocce i przerwy w trakcie zmiany.
@@ -325,9 +483,8 @@ export function MojeBudziki() {
             <p className="drobne">{t('budziki.sufit')}</p>
             <ul style={{ margin: '10px 0 0 18px' }}>
               {harmonogram.slice(0, 14).map((p, i) => (
-                <li key={i} style={{ opacity: p.odrzucone ? 0.55 : 1 }}>
+                <li key={i}>
                   <b>{opiszKiedy(p.kiedy, new Date())}</b> — {p.nazwa}
-                  {p.odrzucone && <span className="znacznik znacznik--szary" style={{ marginLeft: 6 }}>{t('budziki.odrzucone')}</span>}
                 </li>
               ))}
             </ul>
@@ -521,8 +678,11 @@ export function EkranDeweloperski() {
         </div>
 
         <div className="karta kolumna kolumna--ciasna">
-          <p className="oczko">Sufit powiadomień</p>
-          <p className="drobne">Najwyżej {SUFIT_NA_DOBE} na dobę. Pierwszeństwo: powrót po Pomocy → terminy → rytm zmiany → otoczenie → prasówka.</p>
+          <p className="oczko">Sufit powiadomień — usunięty w zmianie 1.2</p>
+          <p className="drobne">
+            Pomiar na prototypie 1.1 pokazał, że sufit trzech na dobę odrzucał 41% przypomnień, o które
+            użytkownik świadomie prosił. Zostaje sam przełącznik przy każdym budziku.
+          </p>
         </div>
       </div>
     </>

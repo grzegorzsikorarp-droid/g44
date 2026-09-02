@@ -1,4 +1,6 @@
-import type { Grafik, IdBudzika, Profil, WpisDziennika } from '../typy'
+import type {
+  Grafik, IdBudzika, OdpowiedziWarunkow, Profil, StanWyzwalaczaRytmu, WpisCzasu, WpisDziennika,
+} from '../typy'
 import { POMINIETE } from '../typy'
 
 /**
@@ -30,6 +32,14 @@ export interface StanAplikacji {
   pobraneMaterialy: string[]
   /** Data symulowana — tylko ekran deweloperski, do pokazania zasady 9. */
   dataSymulowana: string | null
+  /** Zmiana 1.2: odpowiedzi na warunki kafli — id uprawnienia → nr odpowiedzi. */
+  odpowiedziWarunkow: OdpowiedziWarunkow
+  /** Zmiana 1.2: ewidencja czasu pracy (E7). Nigdy nigdzie nie wysylana. */
+  ewidencja: WpisCzasu[]
+  /** Zmiana 1.2: stan wyzwalacza zmiany rytmu (punkt 6.5). */
+  wyzwalaczRytmu: StanWyzwalaczaRytmu
+  /** Zmiana 1.2: pakiet umowy odlozony na pozniej — kafel staly w E1.1. */
+  umowaOdlozona: boolean
 }
 
 export function pustyProfil(): Profil {
@@ -67,6 +77,10 @@ function pustyStan(): StanAplikacji {
     prasowkaOdswiezona: null,
     pobraneMaterialy: [],
     dataSymulowana: null,
+    odpowiedziWarunkow: {},
+    ewidencja: [],
+    wyzwalaczRytmu: { ostatnio_pytano: null, wyciszony_do: null },
+    umowaOdlozona: false,
   }
 }
 

@@ -7,6 +7,7 @@
       "tytul": "Procedura na wypadek agresji",
       "konkret": "Zakład ma ją mieć i Cię z nią zapoznać",
       "wyjasnienie": "Tam, gdzie zdarzają się zachowania agresywne, pracodawca ma ustalić zasady postępowania i zapewnić możliwość wezwania pomocy.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -28,6 +29,7 @@
       "tytul": "Zgłoszenie napaści i wsparcie",
       "konkret": "Napaść zgłasza się jak zdarzenie wypadkowe",
       "wyjasnienie": "Po napaści masz prawo przerwać pracę, zgłosić zdarzenie i skorzystać ze wsparcia. To nie jest „część zawodu”.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

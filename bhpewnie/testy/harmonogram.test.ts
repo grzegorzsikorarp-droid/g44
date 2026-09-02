@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nastepnePrzypomnienie, SUFIT_NA_DOBE, wyliczHarmonogram, wyliczSurowy } from '../src/silnik/harmonogram'
+import { nastepnePrzypomnienie, wyliczHarmonogram, wyliczSurowy } from '../src/silnik/harmonogram'
 import { profilBarbary } from '../src/magazyn/magazyn'
 import { maNocki, nalozWzorzec, oknoSnuPoNocce, pomalujDzien, pustyGrafik, trybZGrafiku } from '../src/silnik/grafik'
 import type { IdBudzika } from '../src/typy'
@@ -57,21 +57,38 @@ describe('harmonogram na 14 dni', () => {
     expect(lista.some((p) => p.budzik === 'cisza_po_nocce')).toBe(true)
   })
 
-  it('zasada 8: sufit 3 powiadomien na dobe jest dotrzymany', () => {
+  it('zasada 8 po zmianie 1.2: nic nie jest odrzucane — sufit nie istnieje', () => {
     const profil = profilBarbary(TERAZ)
-    const harmonogram = wyliczHarmonogram(
-      { profil, wlaczone: WSZYSTKIE, powrotPoPomocy: 'wypadek przy pracy' },
-      TERAZ,
-    )
-    const wgDnia = new Map<string, number>()
-    for (const p of harmonogram.filter((x) => !x.odrzucone)) {
-      const d = p.kiedy.slice(0, 10)
-      wgDnia.set(d, (wgDnia.get(d) ?? 0) + 1)
-    }
-    for (const [, ile] of wgDnia) expect(ile).toBeLessThanOrEqual(SUFIT_NA_DOBE)
+    const wejscie = { profil, wlaczone: WSZYSTKIE, powrotPoPomocy: 'wypadek przy pracy' }
+    const surowy = wyliczSurowy(wejscie, TERAZ)
+    const harmonogram = wyliczHarmonogram(wejscie, TERAZ)
+    expect(harmonogram.length).toBe(surowy.length)
+    expect(harmonogram.every((p) => !('odrzucone' in p))).toBe(true)
   })
 
-  it('pierwszenstwo: powrot po Pomocy wygrywa z rytmem zmiany', () => {
+  it('zasada 8: wylaczony budzik nie planuje sie wcale — przelacznik jest jedynym filtrem', () => {
+    const profil = profilBarbary(TERAZ)
+    profil.odpowiedzi.monitor = 'ponad4'
+    const bez = wyliczHarmonogram({ profil, wlaczone: { ...WSZYSTKIE, przerwa_monitor: false } }, TERAZ)
+    const z = wyliczHarmonogram({ profil, wlaczone: WSZYSTKIE }, TERAZ)
+    expect(bez.some((p) => p.budzik === 'przerwa_monitor')).toBe(false)
+    expect(z.some((p) => p.budzik === 'przerwa_monitor')).toBe(true)
+  })
+
+  it('przerwa przy monitorze przypomina co godzine, zgodnie z uprawnieniem', () => {
+    const profil = profilBarbary(TERAZ)
+    profil.odpowiedzi.monitor = 'ponad4'
+    const lista = wyliczSurowy({ profil, wlaczone: WSZYSTKIE }, TERAZ)
+    const monitorowe = lista.filter((p) => p.budzik === 'przerwa_monitor')
+    expect(monitorowe.length).toBeGreaterThan(0)
+    // W jednym dniu roboczym odstepy miedzy kolejnymi przerwami wynosza dokladnie godzine.
+    const dzien = monitorowe[0].kiedy.slice(0, 10)
+    const wDniu = monitorowe.filter((p) => p.kiedy.startsWith(dzien)).map((p) => new Date(p.kiedy).getTime())
+    expect(wDniu.length).toBeGreaterThan(1)
+    for (let i = 1; i < wDniu.length; i++) expect(wDniu[i] - wDniu[i - 1]).toBe(3600000)
+  })
+
+  it('powrot po Pomocy planuje sie nazajutrz rano', () => {
     const profil = profilBarbary(TERAZ)
     const harmonogram = wyliczHarmonogram(
       { profil, wlaczone: WSZYSTKIE, powrotPoPomocy: 'wypadek przy pracy' },
@@ -80,13 +97,6 @@ describe('harmonogram na 14 dni', () => {
     const jutro = new Date(TERAZ.getTime() + 86400000).toISOString().slice(0, 10)
     const powrot = harmonogram.find((p) => p.budzik === 'powrot_po_pomocy' && p.kiedy.startsWith(jutro))
     expect(powrot).toBeDefined()
-    expect(powrot!.odrzucone).toBeFalsy()
-  })
-
-  it('odrzucone przez sufit zostaja widoczne w podgladzie, zamiast znikac po cichu', () => {
-    const profil = profilBarbary(TERAZ)
-    const harmonogram = wyliczHarmonogram({ profil, wlaczone: WSZYSTKIE }, TERAZ)
-    expect(harmonogram.some((p) => p.odrzucone)).toBe(true)
   })
 
   it('podaje najblizsze przypomnienie do pokazania na ekranie budzikow', () => {

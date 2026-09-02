@@ -7,6 +7,7 @@
       "tytul": "Przerwy w prowadzeniu",
       "konkret": "Zasady zależą od rodzaju przewozu",
       "wyjasnienie": "Czas prowadzenia i przerwy reguluje osobno prawo o czasie pracy kierowców i przepisy unijne.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -28,6 +29,7 @@
       "tytul": "Badania kierowcy",
       "konkret": "Zakres szerszy niż zwykłe okresowe",
       "wyjasnienie": "Prowadzenie pojazdu w pracy oznacza dodatkowy zakres badań profilaktycznych.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

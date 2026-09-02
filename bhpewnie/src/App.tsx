@@ -45,7 +45,8 @@ const ZAKLADKI: { id: string; ekran: string; napis: string; ikona: string; pomoc
 ]
 
 const EKRANY_ZAKLADEK: Record<string, string> = {
-  E1: 'stanowisko', E2: 'sprawdz', E3: 'aktualnosci', E4: 'pomoc', E5: 'stanowisko', E6: 'stanowisko',
+  E1: 'stanowisko', E2: 'sprawdz', E3: 'aktualnosci', E4: 'pomoc',
+  E5: 'stanowisko', E6: 'stanowisko', E7: 'stanowisko',
 }
 
 export default function App() {

@@ -325,6 +325,86 @@ export async function kartaPrawPoZdarzeniu(dane: DaneKartyPraw): Promise<Blob> {
   return zakoncz(p)
 }
 
+/* ---------- Ewidencja czasu pracy (E7.5) ---------- */
+
+export interface WierszEwidencji {
+  data: string
+  plan: string
+  fakt: string
+  przerwy: string
+  ponad: string
+  uwagi: string
+}
+
+export interface DaneEwidencji {
+  miesiac: string
+  wiersze: WierszEwidencji[]
+  sumy: { godziny: string; ponad: string; noce: string }
+  sygnaly: string[]
+}
+
+/**
+ * Zmiana 1.2, punkt 6.3. Dokument pomocniczy — WŁASNA ewidencja pracownika,
+ * nie ewidencja pracodawcy. Pole imienia zostaje puste: aplikacja nie zna tych
+ * danych i nie zamierza o nie pytać.
+ */
+export async function ewidencjaMiesiaca(dane: DaneEwidencji): Promise<Blob> {
+  const p = await zaczniejDokument(`Moja ewidencja czasu pracy — ${dane.miesiac}`)
+
+  pisz(p, 'BHPewnie — Forum Związków Zawodowych', { rozmiar: 9, kolor: [0.42, 0.45, 0.44] })
+  pisz(p, `MOJA EWIDENCJA CZASU PRACY — ${dane.miesiac.toUpperCase()}`, { rozmiar: 15, gruby: true, odstepPo: 4 })
+  linia(p)
+
+  poleDoWpisania(p, t('pdf.imie'))
+  linia(p)
+
+  // Tabela: kolumny stałej szerokości, cyfry tabelaryczne wychodzą równo.
+  const KOLUMNY: [string, number][] = [['Dzień', 46], ['Plan', 68], ['Faktycznie', 78], ['Przerwy', 68], ['Ponad plan', 74]]
+  const naglowekTabeli = () => {
+    let x = MARGINES
+    for (const [nazwa, szerokosc] of KOLUMNY) {
+      p.strona.drawText(nazwa, { x, y: p.y, size: 9, font: p.gruby, color: rgb(0.35, 0.38, 0.37) })
+      x += szerokosc
+    }
+    p.y -= 14
+  }
+  naglowekTabeli()
+
+  for (const w of dane.wiersze) {
+    if (p.y < MARGINES + 90) { nowaStrona(p); naglowekTabeli() }
+    const dzien = `${Number(w.data.slice(8, 10))}.${w.data.slice(5, 7)}`
+    let x = MARGINES
+    for (const [wartosc, [, szerokosc]] of [dzien, w.plan, w.fakt, w.przerwy, w.ponad].map((v, i) => [v, KOLUMNY[i]] as [string, [string, number]])) {
+      p.strona.drawText(wartosc, { x, y: p.y, size: 10, font: p.zwykly, color: rgb(0.13, 0.15, 0.17) })
+      x += szerokosc
+    }
+    p.y -= 13
+    if (w.uwagi) {
+      pisz(p, `    ${w.uwagi}`, { rozmiar: 9, kolor: [0.42, 0.45, 0.44] })
+    }
+  }
+
+  if (dane.wiersze.length === 0) {
+    pisz(p, 'W tym miesiącu nie ma jeszcze żadnych wpisów.', { rozmiar: 10.5, odstepPo: 6 })
+  }
+
+  linia(p)
+  pisz(p, `Razem: ${dane.sumy.godziny}   ·   ponad plan: ${dane.sumy.ponad}   ·   w nocy: ${dane.sumy.noce}`,
+    { rozmiar: 11, gruby: true, odstepPo: 8 })
+
+  if (dane.sygnaly.length > 0) {
+    pisz(p, 'Wykaz sygnałów', { rozmiar: 12, gruby: true, odstepPo: 4 })
+    for (const s of dane.sygnaly) pisz(p, `— ${s}`, { rozmiar: 10, odstepPo: 3 })
+  }
+
+  linia(p)
+  pisz(p, 'Własna ewidencja pracownika prowadzona w aplikacji BHPewnie. '
+    + 'Dokument pomocniczy — dane nie opuszczają urządzenia.',
+    { rozmiar: 9, kolor: [0.42, 0.45, 0.44] })
+
+  return zakoncz(p)
+}
+
 /* ---------- Zapis pliku ---------- */
 
 export function zapiszPlik(blob: Blob, nazwa: string): void {

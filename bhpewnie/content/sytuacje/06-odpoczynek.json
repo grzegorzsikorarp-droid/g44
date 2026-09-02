@@ -1,0 +1,225 @@
+{
+  "id": "odpoczynek",
+  "etykieta": "Nie mam kiedy odpocząć",
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "ile_dzis",
+      "tresc": "Ile godzin pracujesz dzisiaj?",
+      "opcje": [
+        { "wartosc": "do6", "etykieta": "Mniej niż 6 godzin" },
+        { "wartosc": "do9", "etykieta": "Od 6 do 9 godzin" },
+        { "wartosc": "ponad9", "etykieta": "Powyżej 9 godzin" }
+      ]
+    },
+    {
+      "id": "przerwa",
+      "tresc": "Kiedy miałeś(-aś) dzisiaj przerwę?",
+      "opcje": [
+        { "wartosc": "byla", "etykieta": "Miałem(-am) przerwę" },
+        { "wartosc": "krotka", "etykieta": "Tylko chwilę, w biegu" },
+        { "wartosc": "brak", "etykieta": "Nie miałem(-am) wcale" }
+      ]
+    },
+    {
+      "id": "miedzy",
+      "tresc": "Ile godzin minęło od końca poprzedniej zmiany do początku dzisiejszej?",
+      "opcje": [
+        { "wartosc": "ponad11", "etykieta": "Ponad 11 godzin" },
+        { "wartosc": "ponizej11", "etykieta": "Mniej niż 11 godzin" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie liczyłem(-am)" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "umowa": ["zlecenie", "dzialalnosc"],
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Na zleceniu nie przysługuje z mocy prawa — ale sprawdź, czy to na pewno zlecenie",
+        "uzasadnienie": "Prawo do przerw oraz do odpoczynku dobowego i tygodniowego wynika z przepisów o czasie pracy, które obejmują pracowników. Przy umowie zlecenia i przy własnej działalności nie działa to z mocy prawa. Jeżeli jednak masz wyznaczone godziny, pracujesz w miejscu wskazanym przez zleceniodawcę i ktoś Cię na bieżąco rozlicza, to może być stosunek pracy, a nie zlecenie.",
+        "ile": [
+          "Zajrzyj do swojej umowy: to ona rozstrzyga, co Ci przysługuje w tej chwili.",
+          "Bezpieczne i higieniczne warunki pracy trzeba Ci zapewnić niezależnie od rodzaju umowy.",
+          "Sześć pytań z pakietu umowy pokaże, czy Twoja praca ma cechy stosunku pracy."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": {
+          "tytul": "Czy to na pewno nie powinna być umowa o pracę?",
+          "sprawdzacz": "umowa"
+        },
+        "pismo": {
+          "tytul": "Propozycja uzupełnienia umowy o zasady czasu pracy i odpoczynku",
+          "akapity": [
+            "Proszę o uzupełnienie mojej umowy o zapisy dotyczące czasu pracy oraz przerw i odpoczynku między kolejnymi dniami pracy.",
+            "Proponuję przyjąć rozwiązania odpowiadające standardom obowiązującym dla pracowników wykonujących tę samą pracę."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, pracuję na zleceniu i chciałem(-am) ustalić na piśmie zasady dotyczące odpoczynku między kolejnymi dniami pracy. Czy możemy dopisać taki punkt do umowy?",
+          "mail": {
+            "temat": "Zasady czasu pracy i odpoczynku w umowie",
+            "tresc": "Dzień dobry,\n\nproszę o rozważenie uzupełnienia mojej umowy o zapisy dotyczące czasu pracy oraz odpoczynku między kolejnymi dniami pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "miedzy": ["ponizej11"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci 11 godzin odpoczynku na dobę",
+        "uzasadnienie": "Między końcem jednej zmiany a początkiem następnej ma być co najmniej {odpoczynek_dobowy} nieprzerwanego odpoczynku. U Ciebie było mniej — to nie jest kwestia dobrej woli, tylko przepisu o czasie pracy.",
+        "ile": [
+          "Odpoczynek dobowy: {odpoczynek_dobowy} nieprzerwanie w każdej dobie.",
+          "Odpoczynek tygodniowy: {odpoczynek_tygodniowy} nieprzerwanie w każdym tygodniu.",
+          "Skrócenie odpoczynku jest dopuszczalne tylko w przypadkach wskazanych w przepisach, a równoważny odpoczynek trzeba oddać.",
+          "Zacznij notować godziny w zakładce „Mój czas pracy” — będziesz mieć dowód, a nie wspomnienie."
+        ],
+        "podstawa": "art. 132 i art. 133 Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie odpoczynku dobowego",
+          "akapity": [
+            "Wnoszę o takie ułożenie mojego grafiku, żeby zachowany był nieprzerwany odpoczynek dobowy między kolejnymi zmianami.",
+            "W ostatnim okresie odstęp między końcem jednej zmiany a początkiem następnej był krótszy niż wymagany.",
+            "Proszę o pisemną informację o sposobie zapewnienia odpoczynku oraz o rekompensacie za okresy, w których został skrócony."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że między moimi ostatnimi zmianami było mniej niż 11 godzin przerwy. Proszę o ułożenie grafiku tak, żeby ten odpoczynek był zachowany.",
+          "mail": {
+            "temat": "Odpoczynek dobowy między zmianami",
+            "tresc": "Dzień dobry,\n\nmiędzy końcem mojej poprzedniej zmiany a początkiem kolejnej upłynęło mniej niż 11 godzin.\n\nProszę o ułożenie grafiku w sposób zapewniający nieprzerwany odpoczynek dobowy oraz o informację o rekompensacie za okresy, w których został skrócony.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_dzis": ["ponad9"], "przerwa": ["brak", "krotka"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przy dniówce powyżej 9 godzin przysługują Ci dwie przerwy",
+        "uzasadnienie": "Przy dobowym wymiarze od 6 godzin przysługuje {przerwa_art134_podstawowa}, a powyżej 9 godzin — druga przerwa. Obie są wliczane do czasu pracy, więc nie wydłużają Twojego dnia.",
+        "ile": [
+          "Pierwsza przerwa: {przerwa_art134_podstawowa} przy dniówce od 6 godzin.",
+          "Druga przerwa: {przerwa_art134_druga} przy dniówce powyżej 9 godzin.",
+          "Trzecia przerwa: {przerwa_art134_trzecia} przy dniówce powyżej 16 godzin.",
+          "Przerwy są wliczane do czasu pracy — nie odrabia się ich po godzinach."
+        ],
+        "podstawa": "art. 134 Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie przerw w czasie pracy",
+          "akapity": [
+            "Wnoszę o zapewnienie przerw w czasie pracy w wymiarze wynikającym z dobowego wymiaru czasu pracy na moim stanowisku.",
+            "Przy dniówce przekraczającej 9 godzin przysługuje druga przerwa wliczana do czasu pracy.",
+            "Proszę o wskazanie, w jaki sposób przerwy mają być organizowane na moim stanowisku."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, moja dniówka przekracza 9 godzin, a nie mam kiedy zrobić przerwy. Przy takim wymiarze przysługują dwie przerwy wliczane do czasu pracy. Chciałem(-am) ustalić, jak je u nas zorganizować.",
+          "mail": {
+            "temat": "Przerwy przy dniówce powyżej 9 godzin",
+            "tresc": "Dzień dobry,\n\nmój dobowy wymiar czasu pracy przekracza 9 godzin, a organizacja pracy nie pozwala mi na wykorzystanie przerw.\n\nProszę o wskazanie sposobu zapewnienia przerw wliczanych do czasu pracy na moim stanowisku.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_dzis": ["do9", "ponad9"], "przerwa": ["brak"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługuje Ci przerwa wliczana do czasu pracy",
+        "uzasadnienie": "Jeżeli Twój dobowy wymiar czasu pracy wynosi co najmniej 6 godzin, przysługuje {przerwa_art134_podstawowa} przerwy wliczanej do czasu pracy. Nie jest to przywilej do wypracowania — to element wymiaru czasu pracy.",
+        "ile": [
+          "Pierwsza przerwa: {przerwa_art134_podstawowa} przy dniówce od 6 godzin.",
+          "Przerwa jest wliczana do czasu pracy.",
+          "Jeżeli organizacja pracy nie pozwala Ci jej wykorzystać, to jest kwestia organizacji, a nie Twojego tempa."
+        ],
+        "podstawa": "art. 134 Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie przerwy w czasie pracy",
+          "akapity": [
+            "Wnoszę o taką organizację pracy na moim stanowisku, która pozwoli mi wykorzystać przerwę wliczaną do czasu pracy.",
+            "Obecna organizacja pracy nie pozwala mi na przerwanie czynności na czas przerwy.",
+            "Proszę o pisemną informację o sposobie rozwiązania."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, dzisiaj nie miałem(-am) w ogóle przerwy, chociaż pracuję ponad 6 godzin. Przerwa jest wliczana do czasu pracy. Chciałem(-am) ustalić, jak zorganizować pracę, żeby dało się ją wykorzystać.",
+          "mail": {
+            "temat": "Przerwa wliczana do czasu pracy",
+            "tresc": "Dzień dobry,\n\npracuję ponad 6 godzin dziennie, a organizacja pracy nie pozwala mi wykorzystać przerwy wliczanej do czasu pracy.\n\nProszę o informację o sposobie zorganizowania przerw na moim stanowisku.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "miedzy": ["nie_wiem"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Bez godzin trudno to rozstrzygnąć",
+        "uzasadnienie": "Odpoczynek dobowy liczy się od końca jednej zmiany do początku następnej. Bez zapisanych godzin nie da się powiedzieć, czy {odpoczynek_dobowy} zostało zachowane — a to jest właśnie ta liczba, o którą się spiera.",
+        "ile": [
+          "Odpoczynek dobowy: {odpoczynek_dobowy}. Odpoczynek tygodniowy: {odpoczynek_tygodniowy}.",
+          "Przerwa {przerwa_art134_podstawowa} przy dniówce od 6 godzin, wliczana do czasu pracy.",
+          "W zakładce „Mój czas pracy” możesz notować godziny — aplikacja sama policzy odpoczynek i pokaże sygnał."
+        ],
+        "do_sprawdzenia": [
+          "O której faktycznie skończyłeś(-aś) poprzednią zmianę",
+          "Czy pracodawca prowadzi ewidencję czasu pracy i czy możesz do niej zajrzeć"
+        ],
+        "podstawa": "art. 132 i art. 134 Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o udostępnienie ewidencji czasu pracy",
+          "akapity": [
+            "Wnoszę o udostępnienie mi ewidencji czasu pracy prowadzonej dla mojego stanowiska za ostatni okres rozliczeniowy.",
+            "Chcę sprawdzić, czy zachowany był odpoczynek dobowy między kolejnymi zmianami.",
+            "Proszę o wskazanie terminu, w którym mogę się z nią zapoznać."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zajrzeć do ewidencji mojego czasu pracy za ostatni miesiąc. Chodzi mi o sprawdzenie odstępów między zmianami.",
+          "mail": {
+            "temat": "Prośba o wgląd do ewidencji czasu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o udostępnienie mi ewidencji czasu pracy za ostatni okres rozliczeniowy.\n\nChcę sprawdzić odstępy między kolejnymi zmianami.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przerwy i odpoczynek przysługują Ci niezależnie od dzisiejszego dnia",
+        "uzasadnienie": "Dzisiaj wygląda na to, że przerwa i odpoczynek zostały zachowane. To dobrze — poniżej masz liczby, do których możesz wrócić, gdy przestaną być zachowywane.",
+        "ile": [
+          "Przerwa {przerwa_art134_podstawowa} przy dniówce od 6 godzin, wliczana do czasu pracy.",
+          "Odpoczynek dobowy: {odpoczynek_dobowy}. Odpoczynek tygodniowy: {odpoczynek_tygodniowy}.",
+          "Notowanie godzin w zakładce „Mój czas pracy” daje Ci dowód, gdy zrobi się gorzej."
+        ],
+        "podstawa": "art. 132, art. 133 i art. 134 Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o potwierdzenie zasad przerw i odpoczynku",
+          "akapity": [
+            "Proszę o pisemne potwierdzenie zasad udzielania przerw i odpoczynku dobowego obowiązujących na moim stanowisku.",
+            "Proszę o wskazanie, kto układa grafik i do kogo mam się zwrócić, gdy odpoczynek nie będzie zachowany."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) upewnić się, jakie zasady przerw i odpoczynku obowiązują u nas na moim stanowisku i do kogo mam się zgłosić, gdyby przestały być zachowywane.",
+          "mail": {
+            "temat": "Zasady przerw i odpoczynku na stanowisku",
+            "tresc": "Dzień dobry,\n\nproszę o potwierdzenie zasad udzielania przerw i odpoczynku dobowego na moim stanowisku oraz o wskazanie osoby, do której mam się zwracać w tych sprawach.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
+    "data_opracowania": "2026-09-02",
+    "data_przegladu": "2026-12-01"
+  }
+}

@@ -4,7 +4,7 @@ import { Ikona, Logotyp, Naglowek, Przycisk } from '../komponenty/podstawowe'
 import { pytaniaKreatora, t } from '../dane/wczytaj'
 import { policzUprawnienia } from '../silnik/reguly'
 import { pustyProfil } from '../magazyn/magazyn'
-import { nalozWzorzec, pomalujDzien, pustyGrafik, trybZGrafiku, WZORCE_ROTACJI, DNI_SKROTY, iso, dodajDni, poczatekTygodnia } from '../silnik/grafik'
+import { domyslneStaleGodziny, nalozWzorzec, pomalujDzien, pustyGrafik, trybZGrafiku, WZORCE_ROTACJI, DNI_SKROTY, iso, dodajDni, poczatekTygodnia } from '../silnik/grafik'
 import type { Grafik, OdpowiedziCech, Profil } from '../typy'
 import { POMINIETE } from '../typy'
 
@@ -477,7 +477,92 @@ function EkranWyboru({ ekran }: { ekran: string }) {
   )
 }
 
-export function Umowa() { return <EkranWyboru ekran="E0.18" /> }
+/* ================= E0.18 Umowa + ekran przejściowy pakietu umowy ================= */
+
+/**
+ * Zmiana 1.2, punkt 5.1. Po wyborze zlecenia albo własnej działalności zatrzymujemy się
+ * na jeden panel. To NIE jest osobny ekran mapy — panel wchodzi w miejsce, w którym
+ * użytkownik już stoi, żeby nie rozdymać kreatora (E0 zostaje przy 23 ekranach).
+ */
+export function Umowa() {
+  const pytanie = pytanieEkranu('E0.18')!
+  const { zapiszOdpowiedz, idzDalej, wroc, nawiguj, zmienStan, chmurka } = useKreator()
+  const [pytaOPakiet, ustawPytaOPakiet] = useState(false)
+
+  const [wybrana, ustawWybrana] = useState<string | null>(null)
+
+  const wybierz = (wartosc: unknown) => {
+    zapiszOdpowiedz(pytanie.cecha!, wartosc)
+    if (wartosc === 'zlecenie' || wartosc === 'dzialalnosc') {
+      ustawWybrana(String(wartosc))
+      ustawPytaOPakiet(true)
+    } else {
+      idzDalej('E0.18')
+    }
+  }
+
+  return (
+    <>
+      <Naglowek oczko={`Pytanie ${KOLEJNOSC_KREATORA.indexOf('E0.18') + 1} z ${KOLEJNOSC_KREATORA.length}`} naWstecz={wroc} />
+      <PasekKroku ekran="E0.18" />
+      <div className="kolumna kolumna--luzna" style={{ flex: 1, paddingTop: 12 }}>
+        <h1>{pytanie.tresc}</h1>
+        <div className="kolumna">
+          {pytanie.opcje!.map((o) => (
+            <button key={String(o.wartosc)} className="odpowiedz" onClick={() => wybierz(o.wartosc)}>
+              <span className="odpowiedz__znacznik" aria-hidden="true" />
+              <span>{o.etykieta}</span>
+            </button>
+          ))}
+        </div>
+        {pytanie.mozna_pominac && (
+          <div style={{ marginTop: 'auto' }}>
+            <Przycisk odmiana="cichy" onClick={() => { zapiszOdpowiedz(pytanie.cecha!, POMINIETE); idzDalej('E0.18') }}>
+              {t('wspolne.pomin')}
+            </Przycisk>
+          </div>
+        )}
+      </div>
+
+      {pytaOPakiet && (
+        <div className="nakladka" onClick={(e) => { if (e.target === e.currentTarget) ustawPytaOPakiet(false) }}>
+          <div className="arkusz" role="dialog" aria-modal="true" aria-label="Sprawdźmy jedną rzecz o Twojej umowie" data-test="pakiet-umowy">
+            <div className="uchwyt" />
+            <div className="kolumna">
+              <h2>Ważne: sprawdźmy jedną rzecz o Twojej umowie</h2>
+              <p>
+                Sześć pytań pokaże, czy Twoja praca nie ma cech umowy o pracę. Zajmie minutę.
+              </p>
+              <Przycisk
+                onClick={() => {
+                  ustawPytaOPakiet(false)
+                  idzDalej('E0.18')
+                  nawiguj('E2.2', { sytuacja: 'umowa', umowa: wybrana })
+                }}
+              >
+                Sprawdź teraz
+              </Przycisk>
+              <Przycisk
+                odmiana="obrys"
+                onClick={() => {
+                  // „Później” zostawia ślad: kafel stały w E1.1 i przypomnienie za 3 dni.
+                  zmienStan((s) => ({ ...s, umowaOdlozona: true, budziki: { ...s.budziki, powrot_po_pomocy: true } }))
+                  chmurka('Przypomnimy za trzy dni. Kafel „Sprawdź swoją umowę” zostaje na ekranie głównym.')
+                  ustawPytaOPakiet(false)
+                  idzDalej('E0.18')
+                }}
+              >
+                Później
+              </Przycisk>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ position: 'absolute', top: 14, right: 16 }}><PrzerwijKreator /></div>
+    </>
+  )
+}
 export function PrzepisySzczegolne() { return <EkranWyboru ekran="E0.19" /> }
 export function Niepelnosprawnosc() { return <EkranWyboru ekran="E0.21" /> }
 
@@ -539,10 +624,13 @@ export function zbudujProfil(odpowiedzi: Record<string, unknown>): Profil {
 
   const grafik = odpowiedzi['grafik'] as Grafik | undefined
   if (grafik && Object.keys(grafik.kalendarz).length > 0) {
-    profil.grafik = grafik
+    profil.grafik = { ...grafik, rytm: 'zmiany' }
     profil.odpowiedzi.zmiany = trybZGrafiku(grafik) ?? POMINIETE
   } else if (odpowiedzi['tryb_pracy'] === 'stale') {
+    // Zmiana 1.2, punkt 7: stałe godziny to pełnoprawny grafik (E5.3a), nie brak grafiku.
+    // Silnik budzików i ewidencja liczą z niego tak samo jak z kalendarza zmian.
     profil.odpowiedzi.zmiany = 'stale'
+    profil.grafik = { ...pustyGrafik(), rytm: 'stale', stale: domyslneStaleGodziny() }
   } else if (odpowiedzi['tryb_pracy'] === 'zmiany') {
     // Deklaracja zmian bez grafiku: nie wiemy o nockach — wartość bezpieczna.
     profil.odpowiedzi.zmiany = POMINIETE

@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function wejdzZPrzykladem(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Zobacz, jak to działa' }).click()
-  await expect(page.getByRole('button', { name: 'Sprawdź, co Ci przysługuje', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeVisible()
 }
 
 async function otworzBudziki(page: Page) {
@@ -50,7 +50,7 @@ test('P3: zasada 8 — po instalacji żaden budzik nie jest włączony', async (
   }
 })
 
-test('P3: włączony budzik pokazuje wyliczony harmonogram z sufitem 3 na dobę', async ({ page }) => {
+test('P3: włączony budzik pokazuje wyliczony harmonogram — bez sufitu (zmiana 1.2)', async ({ page }) => {
   await wejdzZPrzykladem(page)
   await otworzBudziki(page)
 
@@ -58,7 +58,26 @@ test('P3: włączony budzik pokazuje wyliczony harmonogram z sufitem 3 na dobę'
   await expect(page.getByText('Następne przypomnienie:')).toBeVisible()
 
   await page.getByText('Co i kiedy się odezwie').click()
-  await expect(page.getByText(/Sufit: najwyżej 3 przypomnienia na dobę/)).toBeVisible()
+  await expect(page.getByText(/nic nie jest po drodze odrzucane/)).toBeVisible()
+  // Zasada 8 w nowym brzmieniu: sufit i pierwszeństwo zniknęły z interfejsu bez śladu.
+  await expect(page.getByText(/[Ss]ufit/)).toHaveCount(0)
+  await expect(page.getByText(/odłożone/)).toHaveCount(0)
+})
+
+test('zmiana 1.2: przerwa przy monitorze przypomina co godzinę', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: 'Ustawienia', exact: true }).click()
+  await page.getByRole('button', { name: /Mój profil/ }).click()
+
+  // Barbara ma monitor „do 2 h”; przełącznik trzeba wyłączyć i włączyć,
+  // żeby przyjął najwyższą wartość dopytania („ponad 4 godziny”).
+  const monitor = page.locator('[role="switch"]').filter({ hasText: /pracujesz przy komputerze/ })
+  await monitor.click()
+  await monitor.click()
+
+  await page.getByRole('button', { name: 'Wróć do poprzedniego ekranu' }).click()
+  await page.getByRole('button', { name: /Moje budziki/ }).click()
+  await expect(page.getByText('co godzinę w trakcie zmiany')).toBeVisible()
 })
 
 test('P2: zmiana grafiku natychmiast przelicza przypomnienia i potwierdza to jednym zdaniem', async ({ page }) => {
@@ -93,22 +112,25 @@ test('P9: po przejściu na zlecenie znikają uprawnienia z Kodeksu pracy', async
   await page.getByRole('button', { name: /Mój profil/ }).click()
   await page.getByRole('button', { name: 'Umowa zlecenia' }).click()
 
-  await page.getByRole('button', { name: 'Stanowisko', exact: true }).click()
+  await page.getByRole('button', { name: 'Co mi przysługuje', exact: true }).click()
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
   await expect(page.getByText(/Dodatek za pracę w nocy/)).toHaveCount(0)
   // Uprawnienia niezależne od umowy zostają.
   await expect(page.getByText(/Normy dźwigania/)).toBeVisible()
 })
 
-test('na zleceniu „Pracuję w nocy” daje uczciwy szary werdykt zamiast planszy', async ({ page }) => {
+test('na zleceniu „Nie mam kiedy odpocząć” daje szary werdykt i odsyła do pakietu umowy', async ({ page }) => {
   await wejdzZPrzykladem(page)
   await page.getByRole('button', { name: 'Ustawienia', exact: true }).click()
   await page.getByRole('button', { name: /Mój profil/ }).click()
   await page.getByRole('button', { name: 'Umowa zlecenia' }).click()
 
-  await page.getByRole('button', { name: 'Sprawdź', exact: true }).click()
-  await page.getByRole('button', { name: /Pracuję w nocy/ }).click()
+  await page.getByRole('button', { name: 'Mam sprawę', exact: true }).click()
+  await page.getByRole('button', { name: /Nie mam kiedy odpocząć/ }).click()
+  await page.getByRole('button', { name: 'Powyżej 9 godzin' }).click()
+  await page.getByRole('button', { name: 'Nie miałem(-am) wcale' }).click()
+  await page.getByRole('button', { name: 'Mniej niż 11 godzin' }).click()
 
   await expect(page.getByRole('heading', { name: /Na zleceniu nie przysługuje z mocy prawa/ })).toBeVisible()
-  await expect(page.getByText(/sprawdź swoją umowę/)).toBeVisible()
+  await expect(page.locator('[data-test="odnosnik-pakiet-umowy"]')).toBeVisible()
 })

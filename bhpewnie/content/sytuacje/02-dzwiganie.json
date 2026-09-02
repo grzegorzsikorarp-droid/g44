@@ -1,11 +1,193 @@
 {
   "id": "dzwiganie",
   "etykieta": "Każą mi dźwigać",
-  "pelna": false,
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "ile_kg",
+      "tresc": "Ile mniej więcej waży to, co podnosisz?",
+      "opcje": [
+        { "wartosc": "do12", "etykieta": "Do 12 kilogramów" },
+        { "wartosc": "do20", "etykieta": "Od 12 do 20 kilogramów" },
+        { "wartosc": "do30", "etykieta": "Od 20 do 30 kilogramów" },
+        { "wartosc": "ponad30", "etykieta": "Powyżej 30 kilogramów" }
+      ]
+    },
+    {
+      "id": "jak_czesto",
+      "tresc": "Jak często to robisz?",
+      "opcje": [
+        { "wartosc": "stale", "etykieta": "Stale — to część mojej pracy" },
+        { "wartosc": "dorywczo", "etykieta": "Dorywczo, kilka razy na zmianę" }
+      ]
+    },
+    {
+      "id": "kto",
+      "tresc": "Podnosisz sam(a) czy w zespole?",
+      "opcje": [
+        { "wartosc": "sam", "etykieta": "Sam(a)" },
+        { "wartosc": "zespol", "etykieta": "W dwie osoby albo więcej" },
+        { "wartosc": "sprzet", "etykieta": "Mam do tego sprzęt" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "gdy": { "ile_kg": ["ponad30"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Ten ciężar przekracza obie normy",
+        "uzasadnienie": "Powyżej 30 kilogramów przekroczona jest górna granica ręcznego przenoszenia zarówno dla kobiet, jak i dla mężczyzn — niezależnie od tego, czy robisz to stale, czy dorywczo. Pracę trzeba zorganizować inaczej, a nie liczyć na Twoją siłę.",
+        "ile": [
+          "Normy dla kobiet: {dzwiganie_kobiety_stale} przy pracy stałej, {dzwiganie_kobiety_dorywczo} dorywczo.",
+          "Normy dla mężczyzn: {dzwiganie_mezczyzni_stale} przy pracy stałej, {dzwiganie_mezczyzni_dorywczo} dorywczo.",
+          "Powyżej normy pracodawca ma zapewnić sprzęt pomocniczy, drugą osobę albo mniejsze partie.",
+          "Do czasu zmiany organizacji pracy masz prawo powstrzymać się od czynności, która zagraża Twojemu zdrowiu."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zmianę organizacji ręcznych prac transportowych",
+          "akapity": [
+            "Wnoszę o zmianę organizacji pracy na moim stanowisku w zakresie ręcznego przenoszenia ciężarów. Masa przenoszonych przedmiotów przekracza dopuszczalne normy.",
+            "Proszę o zapewnienie sprzętu pomocniczego, pracy w zespole albo podziału ładunku na mniejsze partie.",
+            "Proszę o pisemną informację, w jaki sposób i od kiedy praca zostanie zorganizowana zgodnie z normami."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że to, co przenosimy na moim stanowisku, waży powyżej 30 kilogramów. To przekracza normy ręcznego przenoszenia zarówno dla kobiet, jak i dla mężczyzn. Proszę o sprzęt albo o organizację pracy w dwie osoby.",
+          "mail": {
+            "temat": "Ręczne przenoszenie ciężarów — przekroczenie norm",
+            "tresc": "Dzień dobry,\n\nna moim stanowisku przenoszę ręcznie przedmioty o masie przekraczającej 30 kilogramów. Przekracza to dopuszczalne normy ręcznych prac transportowych.\n\nProszę o zapewnienie sprzętu pomocniczego, pracy w zespole albo podziału ładunku, a także o informację, od kiedy praca zostanie zorganizowana zgodnie z normami.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_kg": ["do30"], "jak_czesto": ["stale"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przy pracy stałej ten ciężar przekracza obie normy",
+        "uzasadnienie": "Przy pracy stałej granica to {dzwiganie_kobiety_stale} i {dzwiganie_mezczyzni_stale}. Ciężar od 20 do 30 kilogramów przekracza obie te wartości, jeżeli podnoszenie jest częścią Twojej codziennej pracy.",
+        "ile": [
+          "Normy dla kobiet: {dzwiganie_kobiety_stale} przy pracy stałej, {dzwiganie_kobiety_dorywczo} dorywczo.",
+          "Normy dla mężczyzn: {dzwiganie_mezczyzni_stale} przy pracy stałej, {dzwiganie_mezczyzni_dorywczo} dorywczo.",
+          "Pokazujemy obie tabele — aplikacja nie pyta o płeć i nie zamierza pytać.",
+          "Powyżej normy: sprzęt pomocniczy, druga osoba albo mniejsze partie."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zmianę organizacji ręcznych prac transportowych",
+          "akapity": [
+            "Wnoszę o zmianę organizacji pracy w zakresie ręcznego przenoszenia ciężarów. Przenoszenie jest u mnie pracą stałą, a masa przedmiotów przekracza normę dla pracy stałej.",
+            "Proszę o zapewnienie sprzętu pomocniczego albo o taki podział pracy, żeby masa mieściła się w normie.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, na moim stanowisku przenoszenie ciężarów to praca stała, a to, co podnosimy, waży ponad 20 kilogramów. Przy pracy stałej norma jest niższa niż przy dorywczej. Chciałem(-am) ustalić, jak to zorganizować inaczej.",
+          "mail": {
+            "temat": "Ręczne przenoszenie ciężarów przy pracy stałej",
+            "tresc": "Dzień dobry,\n\nprzenoszenie ciężarów jest na moim stanowisku pracą stałą, a masa przenoszonych przedmiotów przekracza normę przewidzianą dla pracy stałej.\n\nProszę o zapewnienie sprzętu pomocniczego albo o zmianę organizacji pracy oraz o pisemną odpowiedź.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_kg": ["do20", "do30"], "kto": ["sam"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "To zależy od tego, jak liczona jest Twoja praca",
+        "uzasadnienie": "Ten ciężar mieści się w normie dla mężczyzn przy pracy dorywczej, ale przekracza normę dla kobiet przy pracy stałej. Aplikacja nie pyta o płeć, więc pokazuje obie tabele — a granicę wyznacza też to, czy przenoszenie jest u Ciebie pracą stałą czy dorywczą.",
+        "ile": [
+          "Normy dla kobiet: {dzwiganie_kobiety_stale} przy pracy stałej, {dzwiganie_kobiety_dorywczo} dorywczo.",
+          "Normy dla mężczyzn: {dzwiganie_mezczyzni_stale} przy pracy stałej, {dzwiganie_mezczyzni_dorywczo} dorywczo.",
+          "Przy przekroczeniu normy pracodawca ma zapewnić sprzęt albo drugą osobę."
+        ],
+        "do_sprawdzenia": [
+          "Czy w ocenie ryzyka na Twoim stanowisku ujęto ręczne prace transportowe",
+          "Ile razy na zmianę faktycznie podnosisz — to rozstrzyga, czy praca jest stała czy dorywcza"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o ocenę ręcznych prac transportowych na stanowisku",
+          "akapity": [
+            "Wnoszę o ocenę ręcznych prac transportowych na moim stanowisku i o wskazanie, jaka norma masy ma tu zastosowanie.",
+            "Proszę o informację, czy przenoszenie na moim stanowisku jest kwalifikowane jako praca stała, czy dorywcza, oraz jakie środki pomocnicze są przewidziane.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) ustalić, jaka norma masy obowiązuje na moim stanowisku i czy przenoszenie jest u nas liczone jako praca stała, czy dorywcza. Od tego zależy, czy to, co podnoszę, mieści się w normie.",
+          "mail": {
+            "temat": "Ręczne prace transportowe — prośba o ocenę stanowiska",
+            "tresc": "Dzień dobry,\n\nproszę o wskazanie, jaka norma ręcznego przenoszenia obowiązuje na moim stanowisku i czy przenoszenie jest kwalifikowane jako praca stała, czy dorywcza.\n\nProszę też o informację o przewidzianych środkach pomocniczych.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kto": ["sprzet", "zespol"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Sprzęt i praca w zespole to właśnie to, co ma zapewnić pracodawca",
+        "uzasadnienie": "Skoro masz sprzęt albo drugą osobę, obowiązek organizacyjny jest wykonany. Warto sprawdzić, czy sprzęt jest sprawny, czy wystarcza dla całej zmiany i czy wszyscy wiedzą, jak go używać.",
+        "ile": [
+          "Normy dla kobiet: {dzwiganie_kobiety_stale} przy pracy stałej, {dzwiganie_kobiety_dorywczo} dorywczo.",
+          "Normy dla mężczyzn: {dzwiganie_mezczyzni_stale} przy pracy stałej, {dzwiganie_mezczyzni_dorywczo} dorywczo.",
+          "Sprzęt pomocniczy jest na koszt pracodawcy, razem z przeglądami i szkoleniem z obsługi."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o przegląd i uzupełnienie sprzętu do prac transportowych",
+          "akapity": [
+            "Wnoszę o przegląd sprzętu pomocniczego wykorzystywanego przy ręcznych pracach transportowych na moim stanowisku oraz o uzupełnienie go tam, gdzie liczba sztuk nie wystarcza na zmianę.",
+            "Proszę też o szkolenie z obsługi sprzętu dla osób, które go używają.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, mamy sprzęt do przenoszenia, ale chciałem(-am) zapytać o przegląd i o to, czy wystarcza go na całą zmianę. Chodzi mi też o szkolenie z obsługi dla nowych osób.",
+          "mail": {
+            "temat": "Sprzęt do ręcznych prac transportowych — przegląd i szkolenie",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd sprzętu pomocniczego używanego przy przenoszeniu ciężarów oraz o informację, czy liczba sztuk wystarcza na zmianę.\n\nProszę też o szkolenie z obsługi dla osób, które z niego korzystają.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Ten ciężar mieści się w normach — ale normy to nie wszystko",
+        "uzasadnienie": "To, co podnosisz, mieści się w obu tabelach norm. Norma masy nie jest jednak jedynym warunkiem: liczy się też odległość, wysokość podnoszenia, częstotliwość i to, czy masz gdzie postawić ładunek.",
+        "ile": [
+          "Normy dla kobiet: {dzwiganie_kobiety_stale} przy pracy stałej, {dzwiganie_kobiety_dorywczo} dorywczo.",
+          "Normy dla mężczyzn: {dzwiganie_mezczyzni_stale} przy pracy stałej, {dzwiganie_mezczyzni_dorywczo} dorywczo.",
+          "Niezależnie od masy przysługuje Ci informacja o zagrożeniach na stanowisku i szkolenie z bezpiecznej techniki."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o szkolenie z bezpiecznej techniki przenoszenia",
+          "akapity": [
+            "Wnoszę o szkolenie z bezpiecznej techniki ręcznego przenoszenia ciężarów dla osób pracujących na moim stanowisku.",
+            "Proszę też o udostępnienie oceny ryzyka zawodowego w części dotyczącej ręcznych prac transportowych.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zapytać o szkolenie z bezpiecznej techniki przenoszenia i o to, co w ocenie ryzyka na moim stanowisku zapisano o dźwiganiu.",
+          "mail": {
+            "temat": "Bezpieczna technika przenoszenia — szkolenie i ocena ryzyka",
+            "tresc": "Dzień dobry,\n\nproszę o szkolenie z bezpiecznej techniki ręcznego przenoszenia ciężarów oraz o udostępnienie oceny ryzyka zawodowego w części dotyczącej ręcznych prac transportowych.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
   "metryczka": {
     "autor": "opracowanie robocze zespołu prototypu",
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
-    "data_opracowania": "2026-09-01",
+    "data_opracowania": "2026-09-02",
     "data_przegladu": "2026-12-01"
   }
 }

@@ -141,3 +141,72 @@ describe('zasada 5: kafel bez konkretu nie istnieje', () => {
     }
   })
 })
+
+/* ---------- Zmiana 1.2: warunek rozstrzygany na kaflu ---------- */
+
+describe('zmiana 1.2: szesc stanow kafla', () => {
+  const zMonitorem = (): Profil => ({
+    ...pustyProfil(),
+    umowa: 'o_prace',
+    rocznik: 1980,
+    odpowiedzi: { ...pustyProfil().odpowiedzi, monitor: 'ponad4', odziez: true, dzwiganie: 'ludzie' },
+  })
+
+  it('uprawnienie bezwarunkowe jest od razu w stanie przysluguje', () => {
+    const kafle = policzUprawnienia(zMonitorem(), DZIEN)
+    const przerwa = kafle.find((k) => k.id === 'przerwa_monitor')!
+    expect(przerwa.warunek).toBeNull()
+    expect(przerwa.stan).toBe('przysluguje')
+  })
+
+  it('uprawnienie warunkowe bez odpowiedzi czeka w stanie sprawdz_warunek', () => {
+    const okulary = policzUprawnienia(zMonitorem(), DZIEN).find((k) => k.id === 'okulary_monitor')!
+    expect(okulary.stan).toBe('sprawdz_warunek')
+    expect(okulary.warunek?.pytanie.length).toBeGreaterThan(0)
+    expect(okulary.warunek!.odpowiedzi.length).toBeGreaterThanOrEqual(2)
+    expect(okulary.warunek!.odpowiedzi.length).toBeLessThanOrEqual(3)
+  })
+
+  it('odpowiedz na warunek przelicza kafel na zielony, bursztynowy albo szary', () => {
+    const stanDla = (nr: number) =>
+      policzUprawnienia(zMonitorem(), DZIEN, { okulary_monitor: nr }).find((k) => k.id === 'okulary_monitor')!
+    expect(stanDla(0).stan).toBe('przysluguje')
+    expect(stanDla(1).stan).toBe('zalezy')
+    expect(stanDla(1).odpowiedz?.do_sprawdzenia?.length).toBeLessThanOrEqual(2)
+  })
+
+  it('stan szary ma obowiazkowy blok „co przysluguje zamiast tego”', () => {
+    const kafel = policzUprawnienia(zMonitorem(), DZIEN, { ekwiwalent_pranie: 1 })
+      .find((k) => k.id === 'ekwiwalent_pranie')!
+    expect(kafel.stan).toBe('nie_przysluguje')
+    expect(kafel.odpowiedz?.zamiast?.length).toBeGreaterThan(0)
+  })
+
+  it('pominiete pytanie kreatora bije warunek — kafel jest niepewny, nie „do sprawdzenia”', () => {
+    const profil: Profil = { ...zMonitorem(), odpowiedzi: { ...zMonitorem().odpowiedzi, odziez: POMINIETE } }
+    const kafel = policzUprawnienia(profil, DZIEN).find((k) => k.id === 'ekwiwalent_pranie')!
+    expect(kafel.stan).toBe('niepewny')
+    expect(kafel.niepewne).toBe(true)
+  })
+
+  it('kazdy warunek ma dokladnie jedno pytanie i najwyzej trzy odpowiedzi', () => {
+    for (const kafel of policzUprawnienia(zMonitorem(), DZIEN)) {
+      if (!kafel.warunek) continue
+      expect(typeof kafel.warunek.pytanie).toBe('string')
+      expect(kafel.warunek.odpowiedzi.length).toBeLessThanOrEqual(3)
+      for (const o of kafel.warunek.odpowiedzi) {
+        expect(o.uzasadnienie.trim().length).toBeGreaterThan(0)
+        if (o.wynik === 'zalezy') expect(o.do_sprawdzenia?.length).toBeGreaterThan(0)
+        if (o.wynik === 'nie_przysluguje') expect(o.zamiast?.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('sortowanie 3.4: przysluguje przed zalezy, do sprawdzenia przed niepewnym', () => {
+    const profil: Profil = { ...zMonitorem(), odpowiedzi: { ...zMonitorem().odpowiedzi, halas: POMINIETE } }
+    const kafle = policzUprawnienia(profil, DZIEN, { okulary_monitor: 1 })
+    const waga = { przysluguje: 0, zalezy: 1, sprawdz_warunek: 2, nie_przysluguje: 3, niepewny: 4, wygaszony: 5 }
+    const kolejnosc = kafle.map((k) => waga[k.stan])
+    expect(kolejnosc).toEqual([...kolejnosc].sort((a, b) => a - b))
+  })
+})

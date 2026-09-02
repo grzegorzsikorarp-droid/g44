@@ -183,3 +183,122 @@ Prototyp miał „znaleźć miejsca, gdzie założenia się nie sprawdzają". Dw
 6. **Harmonogram pracy prawnika** — 86 pozycji do autoryzacji, w tym około 20 krytycznych przed testami z użytkownikami (wpis 8).
 7. **Sprzeczność „co godzinę / co dwie godziny"** (wpis 14).
 8. **Pliki znaków Funduszy Europejskich i godła RP** — pas oznaczeń w dokumentach ma opisane wymiary i kolejność, ale wektory muszą pochodzić z księgi wizualizacji.
+
+---
+
+# Zmiana 1.2 — wpisy 15–24
+
+Wpisy poniżej powstały przy wykonywaniu zmiany 1.2 (przegląd zespołu merytorycznego z 2 września 2026). Osiem z nich odpowiada badaniom obowiązkowym z punktu 10 tamtego dokumentu; dwa dołożyliśmy, bo wyszły przy okazji.
+
+---
+
+## 15. Ekran E2.4 „wynik pośredni": numer zarezerwowany w 1.1, opisany dopiero w 1.2
+
+- **Założenie zmiany.** Punkt 4.4: „Pytania jedno na ekran, karta wyniku w trzech stanach, **E2.4 wynik pośredni**, wniosek, skrypt, przypomnienie — jak w 1.1". Punkt 8: „w 1.1 grupa E2 miała po dodaniu E2.4 siedem ekranów".
+- **Co okazało się w praktyce.** W wydaniu 1.1 ekranu E2.4 **nie było**. Brief pierwotny przeskakiwał z E2.3 na E2.5 i nigdzie nie opisywał, czym miałby być E2.4 — rejestr ekranów odwzorowywał tę lukę wiernie (wpis 2). Zmiana 1.2 mówi o nim jak o czymś istniejącym i wlicza go do sumy 66.
+- **Skutek.** Bez tego ekranu suma nie domyka się do 66. Zbudowaliśmy go, przyjmując znaczenie wynikające z nazwy: gdy odpowiedzi udzielone do tej pory już rozstrzygają sprawę, a do końca zostały **co najmniej dwa** pytania, pokazujemy to, co już wiadomo, i pozwalamy wybrać — „Pokaż wynik teraz" albo „Odpowiedz do końca".
+- **Dlaczego dwa, a nie jedno.** Przy jednym pytaniu do końca ekran pośredni tylko wydłużałby drogę: dwa dotknięcia zamiast jednego. Przy dwóch i więcej realnie oszczędza pracę. Regułę widać w `src/ekrany/sprawdz.tsx` (`zostaloPytan < 2`).
+- **Proponowane rozstrzygnięcie.** **(C) opisać rozbieżność i zapytać.** Zespół merytoryczny ma potwierdzić, czy to jest ten ekran, który miał na myśli. Jeśli nie — treść jest w jednym komponencie i podmiana jest tania.
+- **Dowód.** `src/ekrany/sprawdz.tsx` (`WynikPosredni`, `ocenPosrednio`), `testy/sprawdzacz.test.ts` („E2.4: wynik pośredni"), `testy/e2e/p5-sprawdzacz.spec.ts`.
+
+---
+
+## 16. „Pobierz kartę widoczny bez przewijania": 347 pikseli poniżej krawędzi ekranu
+
+- **Założenie zmiany.** Punkt 3.4: „Pozostaje: »Pobierz kartę moich uprawnień« (widoczny bez przewijania — to był błąd wykryty testem)".
+- **Co okazało się w praktyce.** Zmierzone na ekranie 393 × 727 px (Pixel 5, profil przykładowy): przycisk zaczyna się **347 px poniżej dolnej krawędzi**. Sam obowiązkowy zestaw z punktu 3.4 — kafel profilu (89 px), nowy pasek aktualizacji (98 px), panel sezonowy (126 px), nagłówek listy (20 px) i **trzy kafle uprawnień (525 px)** — zajmuje 858 px, czyli o 131 px więcej, niż ekran ma wysokości. Przycisk nie mieści się, zanim jeszcze go dołożymy.
+- **Co zrobiliśmy.** Przesunęliśmy „Pobierz kartę" **przed** „Pokaż wszystkie (N)" i przed kartę aktualności — z 1163 px na 1074 px. Panel sezonowy pokazuje się teraz tylko w miesiącach maj–wrzesień (poza sezonem zdanie „Dziś 30 °C" i tak podważałoby wiarygodność aplikacji), co zdejmuje kolejne 126 px w pozostałej części roku.
+- **Czego nie zrobiliśmy.** Nie zmniejszyliśmy liczby kafli do dwóch ani nie przenieśliśmy przycisku nad kafle — jedno i drugie łamie punkt 3.4 w innym miejscu.
+- **Proponowane rozstrzygnięcie.** **(A) zmienić założenie.** Trzy drogi do wyboru: (1) uznać, że „bez przewijania" znaczy „bez przewijania do samego dołu" i zostawić jak jest; (2) skrócić kafle do dwóch wierszy (tytuł + konkret bez plakietki) — zejdzie po ~60 px z każdego; (3) zwinąć pasek aktualizacji do jednej linijki z ikoną. Test mierzy tę odległość przy każdym przebiegu, więc skutek każdej decyzji będzie widoczny w liczbach.
+- **Dowód.** `testy/e2e/p4-p6-stanowisko.spec.ts` — wypisuje zmierzoną odległość; `src/ekrany/stanowisko.tsx`.
+
+---
+
+## 17. Zniesienie sufitu: 99 przypomnień w dwa tygodnie, do 13 na dobę
+
+- **Założenie zmiany.** Punkt 1: sufit trzech powiadomień i reguła pierwszeństwa **usunięte**, budzik monitorowy przypomina **co godzinę**. Punkt 11: „Nie przywracać sufitu powiadomień w żadnej postaci".
+- **Co okazało się w praktyce.** Zrobione. Ale ta sama miara, która uzasadniała zniesienie sufitu, pokazuje teraz drugą stronę: przy profilu przykładowym z pełnym grafikiem i wszystkimi budzikami włączonymi wychodzi **99 przypomnień na 14 dni — średnio 9,9 na dobę, najwięcej 13 w jednej dobie**. W 1.1 sufit odrzucał 41% z nich; dziś nie odrzuca nic.
+- **Skutek.** Trzynaście powiadomień w ciągu jednej doby to poziom, przy którym ludzie wyłączają wszystko naraz — a wtedy nie dostają także tego jednego, na którym im zależało. Ryzyko przesunęło się z „aplikacja ucina to, o co prosiłem" na „aplikacja hałasuje".
+- **Proponowane rozstrzygnięcie.** **(C) opisać rozbieżność i zapytać** — bez przywracania sufitu w żadnej postaci. Do rozważenia dwie drogi, które nie są sufitem: (1) budzik monitorowy jako **jedno** powiadomienie na początku zmiany („dziś pamiętaj o przerwie po każdej godzinie") zamiast serii — zdejmuje 7–11 pozycji dziennie; (2) przełącznik przy każdym budziku uzupełniony o wybór „przypominaj: zawsze / raz dziennie", czyli decyzja użytkownika zamiast decyzji aplikacji. Rozstrzygnąć **przed** testami z ludźmi, bo to jest właśnie to, co wyjdzie na testach.
+- **Dowód.** `testy/pomiar-przypomnien.test.ts` — wypisuje rozkład dobowy przy każdym przebiegu.
+
+---
+
+## 18. Badanie 1: karta z dopytaniem mieści się, ale bez zapasu
+
+- **Co badaliśmy.** Punkt 10.1: czy dopytanie na kaflu (E1.2) nie wydłuża karty tak, że trzy akcje spadają poza ekran przy 16 px i przy powiększeniu 150%.
+- **Wynik.** Mieszczą się. Przy powiększeniu 150% na 393 × 727 px trzy akcje są osiągalne, a strona nie przewija się w bok. Pomogła tu konstrukcja karty: dopóki warunek nie jest rozstrzygnięty, karta pokazuje **wyłącznie** tytuł, stan i pytanie — uzasadnienie, blok „ile", podstawa prawna i akcje pojawiają się dopiero po odpowiedzi. Karta nigdy nie jest długa i pytająca jednocześnie.
+- **Zastrzeżenie.** Zapasu nie ma. Dołożenie do karty jednego bloku (np. „historia Twoich odpowiedzi") wypchnie trzecią akcję poza ekran przy 150%.
+- **Dowód.** `testy/e2e/dostepnosc.spec.ts` — „E1.2: trzy akcje są osiągalne przy powiększeniu 150%".
+
+---
+
+## 19. Badanie 2: „SPRAWDŹ JEDEN WARUNEK" — dwie alternatywy do testu z ludźmi
+
+- **Co badaliśmy.** Punkt 10.2: czy plakietka jest zrozumiała bez tłumaczenia; zaproponować dwie alternatywy.
+- **Nasza wątpliwość.** „Warunek" to słowo z rejestru prawniczego, a nie z rozmowy w szatni. Użytkownik widzi je w chwili, gdy jeszcze nie wie, że aplikacja o coś zapyta — plakietka nazywa więc mechanizm, a nie to, co ma zrobić. Wielkie litery dodatkowo czytają się jak ostrzeżenie, choć nic złego się nie stało.
+- **Dwie alternatywy do testu.**
+  1. **„ZAPYTAMY O JEDNO"** — mówi, co się stanie po dotknięciu, i nie używa słowa „warunek".
+  2. **„ZALEŻY OD JEDNEJ RZECZY"** — nazywa stan, a nie czynność; blisko brzmienia bursztynowego werdyktu („To zależy"), więc spójne z resztą aplikacji.
+- **Proponowane rozstrzygnięcie.** **(C) zapytać ludzi.** Trzy warianty, po pięć osób na wariant, pytanie kontrolne: „co się stanie, jak to dotkniesz?". Zmiana brzmienia to jedna pozycja w `content/teksty.json` (`kafel.sprawdz_warunek`) — bez dotykania kodu.
+- **Dowód.** `content/teksty.json`, `src/ekrany/stanowisko.tsx` (`ZnacznikStanu`).
+
+---
+
+## 20. Badanie 3: „Nie wiem" w pakiecie umowy zaniża wynik
+
+- **Co badaliśmy.** Punkt 10.3: czy próg 5–6 / 3–4 / 0–2 jest rozsądny przy odpowiedziach „Nie wiem".
+- **Wynik.** Zgodnie z punktem 5.2 „Nie wiem" liczy się jako zero. Konsekwencja: osoba, która sześć razy odpowie „Nie wiem", dostaje **0 punktów i werdykt szary** — „Twoja umowa wygląda na zlecenie. Nic nie musisz robić". To jest zdanie fałszywie uspokajające: aplikacja nie wie nic o tej umowie, a mówi, że wszystko w porządku.
+- **Skutek.** Najbardziej niepewny użytkownik dostaje najbardziej stanowczą odpowiedź. To odwrotność tego, co robi reszta aplikacji (wartości bezpieczne przy pominiętych pytaniach kreatora pokazują **więcej**, nie mniej).
+- **Proponowane rozstrzygnięcie.** **(A) zmienić założenie.** Trzy lub więcej odpowiedzi „Nie wiem" powinny kierować do werdyktu **bursztynowego** niezależnie od sumy punktów, z blokiem „do sprawdzenia" złożonym z tych właśnie pytań („Czyj sprzęt wykorzystujesz w pracy", „Kto rozstrzyga, jak masz wykonać zadanie"). Zdania do tego bloku są już napisane w `punktacja.opisy_braku` — brakuje wyłącznie reguły progowej. Nie wprowadziliśmy jej sami, bo punkt 5.2 podaje punktację wprost, a to rozstrzygnięcie merytoryczne, nie techniczne.
+- **Dowód.** `content/sytuacje/08-umowa.json` (`punktacja`), `testy/sprawdzacz.test.ts` — „«Nie wiem» liczy się jako zero punktów".
+
+---
+
+## 21. Badanie 4: przycisk „Zaczynam / Kończę" a zamknięcie aplikacji
+
+- **Co badaliśmy.** Punkt 10.4: czy stan „w trakcie" przeżywa zamknięcie i restart; co zrobić, gdy użytkownik zapomni nacisnąć „Kończę".
+- **Wynik części pierwszej.** Przeżywa. „Zaczynam" zapisuje wpis do pamięci urządzenia natychmiast, z pustą godziną zakończenia; po restarcie ekran E7.1 odtwarza licznik z zapisanej godziny rozpoczęcia. Nie ma tu żadnego stanu trzymanego wyłącznie w pamięci karty przeglądarki.
+- **Wynik części drugiej.** Zaproponowaliśmy i wykonaliśmy zachowanie: wpis otwarty z **wcześniejszego dnia** jest traktowany jako zapomniany, a nie jako trwający dyżur. Przy następnym otwarciu E7.1 pokazuje pas: „24 września nie zamknąłeś dnia. Zacząłeś o 07:00. O której skończyłeś?" z przejściem do edycji wpisu. Aplikacja **nie zgaduje** godziny zakończenia i nie kasuje wpisu.
+- **Czego nie rozstrzygnęliśmy.** Dyżur przekraczający dobę (24 h i dłużej) będzie tu fałszywie oznaczony jako zapomniany. W ochronie zdrowia i w służbach to nie jest przypadek teoretyczny.
+- **Dowód.** `src/silnik/ewidencja.ts` (`zapomnianyDzien`), `testy/ewidencja.test.ts`, `src/ekrany/czas-pracy.tsx` (pas `zapomniany-dzien`).
+
+---
+
+## 22. Badanie 5: zmiana czasu urzędowego skracała nockę o godzinę — błąd naprawiony
+
+- **Co badaliśmy.** Punkt 10.5: czy `fakt_min` liczy się poprawnie przy zmianie czasu urzędowego w trakcie otwartego wpisu.
+- **Co znaleźliśmy.** Nie liczył się. Wpis przechodzący przez północ domykaliśmy, dodając do godziny zakończenia **86 400 000 ms**. W nocy zmiany czasu doba ma 23 albo 25 godzin, więc nocka 22:00–06:00 z 24 na 25 października 2026 wychodziła jako **8 godzin zamiast 9**, a z 28 na 29 marca jako 8 zamiast 7. Ten sam błąd był w `ramyZmiany` w silniku grafiku, czyli dotyczył też planu i przypomnień przy nocce.
+- **Poprawka.** Koniec liczymy jako **tę samą godzinę następnego dnia kalendarzowego**, nie „plus 24 godziny". Trzy testy pilnują trzech przypadków: noc cofnięcia zegarów (9 h), noc przestawienia do przodu (7 h) i zwykła nocka (8 h).
+- **Skutek uboczny.** Testy jednostkowe chodzą teraz w strefie `Europe/Warsaw` (`vite.config.ts`). W kontenerze UTC zmiana czasu nie istnieje, więc ten błąd był tam niewykrywalny — i przez całe wydanie 1.1 pozostawał niewidoczny.
+- **Dowód.** `src/silnik/ewidencja.ts` (`ramyWpisu`), `src/silnik/grafik.ts` (`ramyZmiany`), `testy/ewidencja.test.ts` — „ewidencja a zmiana czasu urzędowego".
+
+---
+
+## 23. Badanie 6 i 7: rozmiar dokumentu miesiąca i fałszywe alarmy wyzwalacza rytmu
+
+- **Badanie 6 — rozmiar dokumentu.** Ewidencja pełnego miesiąca mieści się na **jednej lub dwóch stronach A4**; test e2e sprawdza to na wygenerowanym pliku (`getPageCount() <= 2`). Wiersz zajmuje 13 punktów, więc 31 dni to 403 punkty przy 730 punktach użytecznej wysokości strony; druga strona wchodzi dopiero przy uwagach do wpisów i wykazie sygnałów. Nagłówek tabeli powtarza się na każdej stronie.
+- **Badanie 7 — fałszywe alarmy wyzwalacza.** Wyzwalacz z punktu 6.5 **nie odpala się** przy pojedynczych nadgodzinach. Rozstrzyga to jedna decyzja konstrukcyjna: liczymy odstępstwo tylko wtedy, gdy przesunięty jest **początek** dniówki. Przesunięty sam koniec przy niezmienionym początku to nadgodziny, a nie zmianowość. Trzy dni 08:00–19:00 (trzy godziny nadliczbowe każdego dnia) dają zero odstępstw; trzy dni 14:00–22:00 dają trzy i uruchamiają pytanie.
+- **Czego nie sprawdziliśmy.** Nie mamy danych z prawdziwych grafików, więc próg „3 wpisy w 14 dni" pozostaje wartością z dokumentu, nie z pomiaru. Po pierwszych testach z ludźmi warto go przeliczyć na realnych wpisach.
+- **Dowód.** `testy/e2e/p11-p12-ewidencja.spec.ts`, `testy/ewidencja.test.ts` — „badanie 7: pojedyncze nadgodziny NIE uruchamiają pytania".
+
+---
+
+## 24. Badanie 8: pakiet umowy podnosi P1 do 22 dotknięć — dokładnie do progu
+
+- **Co badaliśmy.** Punkt 10.8: czy ekran przejściowy pakietu umowy (5.1) nie podnosi liczby dotknięć ponad 22/30.
+- **Wynik pomiaru.** Kreator bez grafiku, umowa o pracę: **21 dotknięć**. Ten sam kreator z wyborem zlecenia i ekranem przejściowym: **22 dotknięcia** — ekran przejściowy kosztuje dokładnie jedno. Pełna konfiguracja z grafikiem: **27 dotknięć** (próg 30 dotrzymany).
+- **Czyli.** Próg 22 jest dotrzymany, ale bez zapasu: dowolne dołożone pytanie go przekracza. Warto pamiętać, że próg z briefu pierwotnego brzmiał „≤17" i był nieosiągalny już w 1.1 (wpis 3) — zmiana 1.2 podnosi go do 22, co czyni go realnym, ale napiętym.
+- **Uwaga konstrukcyjna.** Ekran przejściowy jest **panelem na E0.18**, a nie osobnym ekranem mapy. Gdyby był osobnym ekranem, grupa E0 miałaby 24 pozycje i suma nie zgadzałaby się z 66.
+- **Dowód.** `testy/e2e/p1-kreator.spec.ts` — trzy pomiary wypisywane przy każdym przebiegu.
+
+---
+
+## Do rozstrzygnięcia przez zespół — po zmianie 1.2
+
+Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszły cztery:
+
+9. **Hałas po zniesieniu sufitu** — do 13 przypomnień na dobę przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem (wpis 17).
+10. **„Nie wiem" w pakiecie umowy** — czy trzy takie odpowiedzi mają kierować do bursztynu niezależnie od punktów (wpis 20).
+11. **Brzmienie plakietki „SPRAWDŹ JEDEN WARUNEK"** — trzy warianty do testu z ludźmi (wpis 19).
+12. **Znaczenie ekranu E2.4** — czy „wynik pośredni" to ten ekran, który zespół miał na myśli (wpis 15).

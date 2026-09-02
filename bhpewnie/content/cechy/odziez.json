@@ -7,6 +7,35 @@
       "tytul": "Ekwiwalent za pranie odzieży",
       "konkret": "Kwotę ustala pracodawca — masz prawo poznać wyliczenie",
       "wyjasnienie": "Jeśli pierzesz odzież roboczą we własnym zakresie, należy Ci się ekwiwalent pieniężny.",
+      "warunek": {
+        "pytanie": "Czy pracodawca pierze Twoją odzież roboczą albo daje ją do prania na swój koszt?",
+        "odpowiedzi": [
+          {
+            "tekst": "Nie, piorę sam(a) w domu",
+            "wynik": "przysluguje",
+            "uzasadnienie": "Pranie odzieży roboczej jest obowiązkiem pracodawcy. Jeśli przerzuca go na Ciebie, należy Ci się ekwiwalent pieniężny — a Ty masz prawo poznać, jak został wyliczony."
+          },
+          {
+            "tekst": "Tak, pracodawca zapewnia pranie",
+            "wynik": "nie_przysluguje",
+            "uzasadnienie": "Skoro pracodawca organizuje pranie na swój koszt, obowiązek jest wykonany i ekwiwalent się nie należy — nie ma za co.",
+            "zamiast": [
+              "Odzież i obuwie robocze na koszt pracodawcy",
+              "Wymiana odzieży, gdy przestaje chronić albo się zużyje",
+              "Osobne miejsce na odzież roboczą i własną w szatni"
+            ]
+          },
+          {
+            "tekst": "Nie wiem, jak to jest u mnie ustalone",
+            "wynik": "zalezy",
+            "uzasadnienie": "Zasady przydziału i prania odzieży roboczej pracodawca ustala w firmie na piśmie. Od tego zapisu zależy, czy ekwiwalent Ci się należy i w jakiej wysokości.",
+            "do_sprawdzenia": [
+              "Czy w regulaminie pracy albo w osobnej tabeli jest przydział odzieży dla Twojego stanowiska",
+              "Kto u Ciebie odpowiada za pranie odzieży roboczej"
+            ]
+          }
+        ]
+      },
       "podstawa": "art. 237⁹ § 3 Kodeksu pracy",
       "parametry": [],
       "gdy": {
@@ -43,6 +72,7 @@
       "tytul": "Odzież i obuwie robocze",
       "konkret": "Od pracodawcy — nieodpłatnie",
       "wyjasnienie": "Tam, gdzie ubranie niszczy się lub brudzi, odzież roboczą wydaje pracodawca. Za używanie własnej należy się ekwiwalent.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

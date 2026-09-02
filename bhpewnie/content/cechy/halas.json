@@ -7,6 +7,7 @@
       "tytul": "Ochronniki słuchu",
       "konkret": "Bezpłatnie, dobrane do poziomu hałasu",
       "wyjasnienie": "Przy przekroczeniu progów pracodawca wydaje ochronniki i ma obowiązek ograniczać hałas u źródła.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -28,6 +29,7 @@
       "tytul": "Badania słuchu",
       "konkret": "W ramach badań profilaktycznych",
       "wyjasnienie": "Przy narażeniu na hałas badania profilaktyczne obejmują ocenę słuchu.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

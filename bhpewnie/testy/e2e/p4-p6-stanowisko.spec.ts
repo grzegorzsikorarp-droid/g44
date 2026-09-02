@@ -4,20 +4,107 @@ import { expect, test, type Page } from '@playwright/test'
 async function wejdzZPrzykladem(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Zobacz, jak to działa' }).click()
-  await expect(page.getByRole('button', { name: 'Sprawdź, co Ci przysługuje', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeVisible()
 }
 
-test('P4: od kafla do wiedzy dwa dotknięcia, do dokumentu cztery', async ({ page }) => {
+/** Kafel warunkowy stoi poza pierwszą trójką (sortowanie 3.4) — najpierw rozwijamy listę. */
+async function otworzKafel(page: Page, nazwa: RegExp) {
+  const rozwin = page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ })
+  if (await rozwin.count() > 0) await rozwin.click()
+  await page.getByRole('button', { name: nazwa }).click()
+}
+
+test('zmiana 1.2: zakładki nazywają się „Co mi przysługuje” i „Mam sprawę”', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  const belka = page.getByRole('navigation', { name: 'Główne działy aplikacji' })
+  await expect(belka.getByRole('button', { name: 'Co mi przysługuje' })).toBeVisible()
+  await expect(belka.getByRole('button', { name: 'Mam sprawę' })).toBeVisible()
+  // Stare nazwy zniknęły z interfejsu.
+  await expect(belka.getByRole('button', { name: 'Stanowisko', exact: true })).toHaveCount(0)
+  await expect(belka.getByRole('button', { name: 'Sprawdź', exact: true })).toHaveCount(0)
+})
+
+test('E1.1: pasek aktualizacji prowadzi do profilu, przycisku „Sprawdź” już nie ma', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await expect(page.getByRole('button', { name: 'Sprawdź, co Ci przysługuje', exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Coś się zmieniło w Twojej pracy/ }).click()
+  await expect(page.getByRole('heading', { name: 'Mój profil' })).toBeVisible()
+})
+
+test('E1.1: „Pobierz kartę” jest osiągalne i nie zakrywa go belka nawigacji', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  const przycisk = page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })
+
+  // Ile trzeba przewinąć, żeby do niego dojść — liczba trafia do ROZBIEZNOSCI.md, wpis 16.
+  const odFalda = await przycisk.evaluate((el) => Math.round(el.getBoundingClientRect().top - window.innerHeight))
+  console.log(`E1.1: „Pobierz kartę” zaczyna się ${odFalda} px poniżej krawędzi ekranu`)
+
+  await przycisk.scrollIntoViewIfNeeded()
+  await expect(przycisk).toBeInViewport()
+
+  // Błąd z 1.1: belka nawigacji zakrywała ostatnie przyciski. Sprawdzamy, że nie wróciła.
+  const zakryty = await przycisk.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const belka = document.querySelector('nav.belka')!.getBoundingClientRect()
+    return r.bottom > belka.top
+  })
+  expect(zakryty).toBe(false)
+})
+
+test('E1.1: stały kafel „Mój czas pracy” prowadzi do ewidencji', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: /Mój czas pracy/ }).click()
+  await expect(page.getByRole('heading', { name: 'Mój czas — dziś' })).toBeVisible()
+})
+
+test('P4 (zmiana 1.2): kafel warunkowy — pytanie na karcie, przeliczenie w miejscu, trzy akcje', async ({ page }) => {
   await wejdzZPrzykladem(page)
 
-  // Dotknięcie 1: kafel na ekranie głównym → karta uprawnienia (E1.2)
-  await page.getByRole('button', { name: /Dodatek za pracę w nocy/ }).click()
-  await expect(page.getByRole('heading', { name: 'Dodatek za pracę w nocy' })).toBeVisible()
+  // Kafel czekający na rozstrzygnięcie ma plakietkę i NIE pokazuje liczby.
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+  const kafel = page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ })
+  await expect(kafel).toContainText('SPRAWDŹ JEDEN WARUNEK')
+  await kafel.click()
+
+  // Dopytanie stoi na karcie, nie na osobnym ekranie.
+  await expect(page.getByRole('heading', { name: 'Ekwiwalent za pranie odzieży' })).toBeVisible()
+  await expect(page.getByText('Jeden warunek do rozstrzygnięcia').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Czy pracodawca pierze Twoją odzież/ })).toBeVisible()
+
+  // Odpowiedź przelicza kartę w miejscu — bez zmiany ekranu.
+  await page.getByRole('button', { name: 'Nie, piorę sam(a) w domu' }).click()
+  await expect(page.getByText('Przysługuje Ci', { exact: true })).toBeVisible()
   await expect(page.getByText('Ile i co konkretnie')).toBeVisible()
 
-  // Dotknięcie 2: zwijana podstawa prawna z datą stanu prawnego
-  await page.getByRole('group').filter({ hasText: 'Podstawa prawna' }).first().click()
-  await expect(page.getByText(/Stan prawny na/)).toBeVisible()
+  // Zasada 7: trzy stałe akcje w niezmiennej kolejności — także pod kaflem.
+  const akcje = page.locator('button.przycisk').filter({ hasText: /Pobierz wniosek PDF|Jak o to poprosić|Przypomnij mi/ })
+  await expect(akcje.nth(0)).toHaveText(/Pobierz wniosek PDF/)
+  await expect(akcje.nth(1)).toHaveText(/Jak o to poprosić/)
+  await expect(akcje.nth(2)).toHaveText(/Przypomnij mi/)
+})
+
+test('P4 (zmiana 1.2): odpowiedź na warunek zostaje zapamiętana i da się ją zmienić', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzKafel(page, /Ekwiwalent za pranie odzieży/)
+  await page.getByRole('button', { name: 'Tak, pracodawca zapewnia pranie' }).click()
+
+  // Szary stan ma obowiązkowy blok „co przysługuje zamiast tego”.
+  await expect(page.getByText('Nie przysługuje', { exact: true })).toBeVisible()
+  await expect(page.getByText('Co Ci przysługuje zamiast tego', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Pobierz wniosek PDF/ })).toHaveCount(0)
+
+  // Wracamy na listę: kafel pamięta odpowiedź.
+  await page.getByRole('button', { name: 'Wróć do poprzedniego ekranu' }).click()
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+  await expect(page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ })).not.toContainText('SPRAWDŹ JEDEN WARUNEK')
+
+  // I pozwala ją zmienić.
+  await page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ }).click()
+  await expect(page.getByText('Twoja odpowiedź')).toBeVisible()
+  await page.getByRole('button', { name: 'Zmień odpowiedź' }).click()
+  await page.getByRole('button', { name: 'Nie, piorę sam(a) w domu' }).click()
+  await expect(page.getByText('Przysługuje Ci', { exact: true })).toBeVisible()
 })
 
 test('P4: kafel z konkretem — dodatek nocny pokazuje kwotę wyliczoną na dziś', async ({ page }) => {

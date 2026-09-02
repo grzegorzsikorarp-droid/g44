@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { StanKafla } from '../typy'
 import { useEffect, useRef } from 'react'
 
 /* ---------- Ikony: rysowane liniowo, zawsze z aria-hidden ---------- */
@@ -10,6 +11,11 @@ const SCIEZKI: Record<string, ReactNode> = {
   ptaszek: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   fala: <path d="M3 12c2.5-4 4.5-4 7 0s4.5 4 7 0" />,
   kreska: <path d="M5 12h14" />,
+  strzalka_w_kolo: <><path d="M20 12a8 8 0 1 1-2.6-5.9" /><path d="M20 4v4h-4" /></>,
+  start: <path d="M8 5.5v13l11-6.5z" />,
+  stop: <rect x="7" y="7" width="10" height="10" rx="2" />,
+  pauza: <><path d="M9.5 7v10" /><path d="M14.5 7v10" /></>,
+  tabela: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16M10 10v9" /></>,
   wykrzyknik: <><path d="M12 7v7" /><path d="M12 17.2v.2" /><circle cx="12" cy="12" r="9" /></>,
   kropka: <circle cx="12" cy="12" r="7" />,
   kask: <><path d="M4 15a8 8 0 0 1 16 0" /><path d="M2.5 15h19v2.6h-19z" /><path d="M10 7.2V4.8h4v2.4" /></>,
@@ -175,17 +181,29 @@ export function Naglowek({
 
 /* ---------- Kafel ---------- */
 
+/**
+ * Znak stanu kafla (zmiana 1.2, punkt 3.3). Kolor nie moze byc jedynym nosnikiem
+ * informacji (WCAG 1.4.1), wiec kazdy rozstrzygniety stan dostaje tez znak.
+ */
+const ZNAK_STANU: Partial<Record<StanKafla, { znak: string; opis: string }>> = {
+  przysluguje: { znak: '✓', opis: 'przysługuje' },
+  zalezy: { znak: '~', opis: 'zależy' },
+  nie_przysluguje: { znak: '—', opis: 'nie przysługuje' },
+}
+
 export function Kafel({
-  ikona, tytul, konkret, znacznik, niepewny, onClick, dzieci,
+  ikona, tytul, konkret, znacznik, niepewny, stan, onClick, dzieci,
 }: {
   ikona: string
   tytul: string
   konkret?: string
   znacznik?: ReactNode
   niepewny?: boolean
+  stan?: StanKafla
   onClick?: () => void
   dzieci?: ReactNode
 }) {
+  const znak = stan ? ZNAK_STANU[stan] : undefined
   const wnetrze = (
     <>
       <span className="kafel__ikona"><Ikona nazwa={ikona} /></span>
@@ -195,10 +213,12 @@ export function Kafel({
         {znacznik}
         {dzieci}
       </span>
+      {znak && <span className="kafel__stan" aria-hidden="true">{znak.znak}</span>}
+      {znak && <span className="tylko-dla-czytnika">{znak.opis}</span>}
       {onClick && <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>}
     </>
   )
-  const klasa = `kafel${niepewny ? ' kafel--niepewny' : ''}`
+  const klasa = `kafel${niepewny ? ' kafel--niepewny' : ''}${stan ? ` kafel--stan-${stan}` : ''}`
   return onClick
     ? <button className={klasa} onClick={onClick}>{wnetrze}</button>
     : <div className={klasa}>{wnetrze}</div>

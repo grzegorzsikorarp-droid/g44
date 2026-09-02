@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function wejdzZPrzykladem(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Zobacz, jak to działa' }).click()
-  await expect(page.getByRole('button', { name: 'Sprawdź, co Ci przysługuje', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeVisible()
 }
 
 async function otworzPomoc(page: Page) {

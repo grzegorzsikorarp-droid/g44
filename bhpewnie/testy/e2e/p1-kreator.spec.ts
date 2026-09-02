@@ -50,10 +50,10 @@ test('P1: pełna konfiguracja z grafikiem — liczymy dotknięcia', async ({ pag
   await page.getByRole('button', { name: 'Wolę nie odpowiadać' }).click()
 
   await expect(page.getByRole('heading', { name: /przysługuje Ci \d+/ })).toBeVisible()
-  await page.getByRole('button', { name: /Pokaż moje stanowisko/ }).click()
+  await page.getByRole('button', { name: /Pokaż, co mi przysługuje/ }).click()
   await page.getByRole('button', { name: /Zostaw bez nazwy/ }).click()
 
-  await expect(page.getByRole('button', { name: 'Sprawdź, co Ci przysługuje', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeVisible()
 
   const dotkniecia = licznik()
   console.log(`P1 pełna konfiguracja: ${dotkniecia} dotknięć (brief zakłada ≤30)`)
@@ -72,7 +72,7 @@ test('P1: konfiguracja z pominięciem grafiku — liczymy dotknięcia', async ({
   await page.getByRole('button', { name: /^Nie należę/ }).click()
   await page.getByRole('button', { name: '1974', exact: true }).click()
   await page.getByRole('button', { name: 'Wolę nie odpowiadać' }).click()
-  await page.getByRole('button', { name: /Pokaż moje stanowisko/ }).click()
+  await page.getByRole('button', { name: /Pokaż, co mi przysługuje/ }).click()
   await page.getByRole('button', { name: /Zostaw bez nazwy/ }).click()
 
   const dotkniecia = licznik()
@@ -80,6 +80,28 @@ test('P1: konfiguracja z pominięciem grafiku — liczymy dotknięcia', async ({
   // Wynik trafia do ROZBIEZNOSCI.md — progu z briefu nie da się dotrzymać
   // przy 13 pytaniach na osobnych ekranach plus 6 dalszych ekranów.
   expect(dotkniecia).toBeGreaterThan(0)
+})
+
+test('P1 (badanie 8): ekran przejściowy pakietu umowy dokłada dokładnie jedno dotknięcie', async ({ page }) => {
+  const licznik = await zliczajDotkniecia(page)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Ustaw swoją aplikację' }).click()
+  await przejdzPytaniaOCechy(page, 1)
+
+  await page.getByRole('button', { name: 'Stałe godziny' }).click()
+  await page.getByRole('button', { name: /Umowa zlecenia/ }).click()
+  // Ekran przejściowy pakietu umowy — jedno dotknięcie ponad przebieg z umową o pracę.
+  await page.getByRole('button', { name: 'Później' }).click()
+  await page.getByRole('button', { name: /^Nie należę/ }).click()
+  await page.getByRole('button', { name: '1974', exact: true }).click()
+  await page.getByRole('button', { name: 'Wolę nie odpowiadać' }).click()
+  await page.getByRole('button', { name: /Pokaż, co mi przysługuje/ }).click()
+  await page.getByRole('button', { name: /Zostaw bez nazwy/ }).click()
+
+  const dotkniecia = licznik()
+  console.log(`P1 zlecenie z ekranem przejściowym: ${dotkniecia} dotknięć (brief zakłada ≤22/30)`)
+  expect(dotkniecia).toBeLessThanOrEqual(30)
 })
 
 test('P1: pominięte pytanie ustawia wartość bezpieczną i oznacza kafle', async ({ page }) => {
@@ -97,7 +119,7 @@ test('P1: pominięte pytanie ustawia wartość bezpieczną i oznacza kafle', asy
   await page.getByRole('button', { name: 'Wolę nie odpowiadać' }).click()
 
   await expect(page.getByText(/\d+ z nich są pewne|jest pewne/)).toBeVisible()
-  await page.getByRole('button', { name: /Pokaż moje stanowisko/ }).click()
+  await page.getByRole('button', { name: /Pokaż, co mi przysługuje/ }).click()
   await page.getByRole('button', { name: /Zostaw bez nazwy/ }).click()
 
   // Kafle niepewne stoją na końcu listy, więc najpierw ją rozwijamy.

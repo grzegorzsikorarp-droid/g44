@@ -343,6 +343,43 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .kafel--niepewny .kafel__ikona { background: var(--karta); color: var(--zalezy); }
 .kafel--niepewny .kafel__konkret { color: var(--zalezy); }
 
+/*
+  Zmiana 1.2 — sześć stanów kafla. Kolor nigdy nie jest jedynym nośnikiem:
+  każdy stan ma też znak w ikonie stanu (✓ ~ —) i inny obrys.
+  Domyślny wygląd kafla to stan „przysługuje” — nie dublujemy go klasą.
+*/
+.kafel__stan {
+  flex: 0 0 auto; align-self: flex-start;
+  width: 24px; height: 24px; margin-left: var(--o2);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-plakietka);
+  font-weight: 700; font-size: 0.875rem; line-height: 1;
+}
+.kafel--stan-przysluguje .kafel__stan { background: var(--pewnosc-podklad); color: var(--pewnosc-nacisk); }
+
+.kafel--stan-sprawdz_warunek { border-color: var(--obrys-mocny); background: var(--karta-druga); }
+.kafel--stan-sprawdz_warunek .kafel__ikona { background: var(--karta); color: var(--tekst-drugi); }
+.kafel--stan-sprawdz_warunek .kafel__stan { background: var(--karta); color: var(--tekst-drugi); }
+
+.kafel--stan-zalezy { border-color: var(--zalezy-obrys); background: var(--zalezy-podklad); }
+.kafel--stan-zalezy .kafel__ikona { background: var(--karta); color: var(--zalezy); }
+.kafel--stan-zalezy .kafel__konkret { color: var(--zalezy); }
+.kafel--stan-zalezy .kafel__stan { background: var(--karta); color: var(--zalezy); }
+
+.kafel--stan-nie_przysluguje { border-color: var(--neutralny-obrys); background: var(--neutralny-podklad); }
+.kafel--stan-nie_przysluguje .kafel__ikona { background: var(--karta); color: var(--neutralny); }
+.kafel--stan-nie_przysluguje .kafel__konkret { color: var(--neutralny); font-weight: 500; }
+.kafel--stan-nie_przysluguje .kafel__stan { background: var(--karta); color: var(--neutralny); }
+
+.kafel--stan-wygaszony { border-style: dashed; border-color: var(--obrys-mocny); }
+.kafel--stan-wygaszony .kafel__konkret { color: var(--tekst-drugi); font-weight: 500; }
+
+/* Plakietka „SPRAWDŹ JEDEN WARUNEK” — neutralna, bo to jeszcze nie jest rozstrzygnięcie. */
+.znacznik--sprawdz {
+  background: var(--karta); color: var(--tekst-drugi); border-color: var(--obrys-mocny);
+  letter-spacing: 0.02em;
+}
+
 .znacznik {
   display: inline-flex; align-items: center; gap: var(--o1);
   font-size: 0.8125rem; font-weight: 600;
@@ -370,6 +407,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .werdykt--przysluguje { background: var(--pewnosc); color: var(--na-pewnosci); }
 .werdykt--zalezy { background: var(--zalezy); color: var(--na-zalezy); }
 .werdykt--nie_przysluguje { background: var(--neutralny); color: var(--na-neutralnym); }
+/* Stan nierozstrzygnięty — jeszcze nie werdykt, więc bez koloru rodziny semantycznej. */
+.werdykt--neutralny { background: var(--karta-druga); color: var(--tekst); border: 1px solid var(--obrys-mocny); }
 
 .blok-ile { background: var(--pewnosc-podklad); border: 1px solid var(--pewnosc-obrys); border-radius: var(--r-karta); padding: var(--o3) var(--o4); }
 .blok-ile ul { margin: var(--o2) 0 0 18px; display: grid; gap: var(--o2); }
@@ -563,6 +602,46 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 .pas--spokojny { background: var(--pewnosc-podklad); border-color: var(--pewnosc-obrys); color: var(--pewnosc-nacisk); }
+
+/*
+  Pas powagi — jedyne miejsce poza modułem Pomoc, w którym wolno użyć terakoty:
+  ostrzeżenie o realnym ryzyku ze strony pracodawcy (zmiana 1.2, punkt 5.3).
+*/
+.pas--powaga { background: var(--powaga-podklad); border-color: var(--powaga-obrys); color: var(--powaga-nacisk); }
+
+/*
+  Tabela porównania (E2.8). Przewija się w SWOIM pudełku — strona nigdy nie przewija się
+  w bok, także przy powiększeniu 200% (WCAG 1.4.10).
+*/
+.tabela-przewijana { overflow-x: auto; border: 1px solid var(--obrys); border-radius: var(--r-karta); background: var(--karta); }
+.tabela-przewijana:focus-visible { outline: 3px solid var(--pewnosc); outline-offset: 2px; }
+.tabela { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.9375rem; }
+.tabela th, .tabela td { text-align: left; padding: var(--o2) var(--o3); border-bottom: 1px solid var(--obrys); vertical-align: top; }
+.tabela thead th { background: var(--karta-druga); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.tabela tbody th { font-weight: 600; }
+.tabela tbody tr:last-child th, .tabela tbody tr:last-child td { border-bottom: 0; }
+.tabela td { color: var(--tekst-drugi); }
+.tabela td:last-child { color: var(--pewnosc-nacisk); font-weight: 600; }
+
+/* Cyfry tabelaryczne — kolumny godzin muszą się zgadzać w pionie. */
+.cyfry { font-variant-numeric: tabular-nums; }
+.tabela .cyfry { text-align: right; }
+
+/* Pole formularza (E7.2) — cel 48 px, obrys 1,5 px, bez cienia. */
+.pole {
+  width: 100%; min-height: var(--cel);
+  font: inherit; font-size: 1rem;
+  padding: 10px 12px;
+  border-radius: var(--r-przycisk);
+  border: 1.5px solid var(--linia-mocna);
+  background: var(--papier);
+  color: var(--atrament);
+}
+.pole:focus-visible { outline: 3px solid var(--pewnosc); outline-offset: 2px; }
+textarea.pole { resize: vertical; line-height: 1.45; }
+
+/* Karta sygnału — obrys niesie wagę, kolor tylko ją wzmacnia. */
+.karta--sygnal { border-color: var(--zalezy-obrys); border-left-width: 4px; }
 .pas--przyklad {
   flex: 0 0 auto; border-radius: 0;
   border-width: 0 0 1px; padding: var(--o2) var(--o4);

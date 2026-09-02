@@ -7,6 +7,7 @@
       "tytul": "Karty charakterystyki substancji",
       "konkret": "Dostępne na stanowisku",
       "wyjasnienie": "Masz prawo wiedzieć, czym pracujesz. Karty charakterystyki i informacja o zagrożeniach mają być dostępne na stanowisku.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -28,6 +29,7 @@
       "tytul": "Pomiary czynników szkodliwych",
       "konkret": "Wyniki na Twoje żądanie",
       "wyjasnienie": "Pracodawca prowadzi pomiary czynników szkodliwych i rejestr wyników. Możesz poprosić o wgląd do wyników ze swojego stanowiska.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

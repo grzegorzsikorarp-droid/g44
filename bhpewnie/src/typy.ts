@@ -60,11 +60,29 @@ export interface SzablonZmiany {
 /** data ISO 'RRRR-MM-DD' -> skrot szablonu; brak klucza = dzien wolny */
 export type Kalendarz = Record<string, string>
 
+/**
+ * Grafik na dwoch poziomach (zmiana 1.2, punkt 7).
+ * `stale` opisuje rytm „stale godziny” — E5.3a. `kalendarz` opisuje zmiany — E5.3b.
+ * Przy przejsciu ze zmian na stale godziny kalendarza NIE KASUJEMY: uzytkownik moze wrocic.
+ */
+export interface StaleGodziny {
+  od: string                 // 'HH:MM'
+  do: string                 // 'HH:MM'
+  /** Dni tygodnia, w ktore pracujesz: 1 = poniedzialek ... 7 = niedziela. */
+  dni: number[]
+  /** Odstepstwa: data ISO -> inne godziny albo dzien wolny. */
+  odstepstwa: Record<string, { od: string; do: string } | 'wolne'>
+}
+
 export interface Grafik {
   szablony: SzablonZmiany[]
   kalendarz: Kalendarz
   /** Okno snu po nocce: od konca zmiany N + opoznienie, przez ilosc godzin. */
   snoPoNocce: { opoznienieMin: number; dlugoscH: number }
+  /** Ktory poziom grafiku obowiazuje. Domyslnie 'zmiany' — tak dzialalo wydanie 1.1. */
+  rytm?: 'stale' | 'zmiany'
+  /** Wypelnione, gdy rytm = 'stale'. */
+  stale?: StaleGodziny
 }
 
 /* ---------- Profil ---------- */
@@ -140,6 +158,26 @@ export interface WariantUprawnienia {
   wyjasnienie?: string
 }
 
+/**
+ * Dopytanie o JEDEN warunek, rozstrzygane na kaflu (zmiana 1.2, punkt 3.2).
+ * Zawsze jedno pytanie. Jesli warunek wymaga dwoch pytan, to nie jest kafel,
+ * tylko sytuacja z zakladki „Mam sprawe”.
+ */
+export interface OdpowiedzWarunku {
+  tekst: string
+  wynik: 'przysluguje' | 'zalezy' | 'nie_przysluguje'
+  uzasadnienie: string
+  /** Bursztyn: najwyzej dwie rzeczy do sprawdzenia. */
+  do_sprawdzenia?: string[]
+  /** Szary: co przysluguje zamiast tego — blok obowiazkowy. */
+  zamiast?: string[]
+}
+
+export interface WarunekKafla {
+  pytanie: string
+  odpowiedzi: OdpowiedzWarunku[]
+}
+
 export interface Uprawnienie {
   id: string
   tytul: string
@@ -152,6 +190,11 @@ export interface Uprawnienie {
   warianty?: Partial<Record<Umowa | Status, WariantUprawnienia>>
   /** Uprawnienie plynie z Kodeksu pracy — u funkcjonariusza nie obowiazuje wprost. */
   zrodlo_kp?: boolean
+  /**
+   * Jedno pytanie rozstrzygajace warunek. `null` (albo brak pola) = uprawnienie
+   * bezwarunkowe, kafel od razu zielony.
+   */
+  warunek?: WarunekKafla | null
   /** Id sprawdzacza, do ktorego prowadzi kafel. */
   sprawdzacz?: string
   /** Grupa tematyczna na ekranie glownym — metadana redakcyjna. */
@@ -209,6 +252,18 @@ export interface PytanieKreatora {
 
 /* ---------- Wynik silnika ---------- */
 
+/**
+ * Szesc stanow kafla (zmiana 1.2, punkt 3.3). Kolejnosc ma znaczenie w sortowaniu:
+ * najpierw to, co przysluguje, potem to, co wymaga jednego dotkniecia.
+ */
+export type StanKafla =
+  | 'przysluguje'      // warunek null albo rozstrzygniety na „tak”
+  | 'sprawdz_warunek'  // warunek istnieje, nierozstrzygniety
+  | 'zalezy'           // rozstrzygniety na „zalezy”
+  | 'nie_przysluguje'  // rozstrzygniety na „nie”
+  | 'niepewny'         // wynika z pominietego pytania kreatora
+  | 'wygaszony'        // parametr po dacie obowiazuje_do bez nastepcy
+
 export interface KafelUprawnienia {
   id: string
   tytul: string
@@ -224,7 +279,16 @@ export interface KafelUprawnienia {
   sprawdzacz?: string
   grupa: GrupaKafli
   ikona?: string
+  /** Wyliczony stan kafla — z warunku, pominiec i dat parametrow. */
+  stan: StanKafla
+  /** Pytanie do rozstrzygniecia na karcie E1.2, gdy stan = sprawdz_warunek. */
+  warunek?: WarunekKafla | null
+  /** Odpowiedz uzytkownika na warunek — indeks w `warunek.odpowiedzi`. */
+  odpowiedz?: OdpowiedzWarunku | null
 }
+
+/** Odpowiedzi na warunki kafli: id uprawnienia -> indeks wybranej odpowiedzi. */
+export type OdpowiedziWarunkow = Record<string, number>
 
 /* ---------- Sprawdzacze (E2) ---------- */
 
@@ -248,6 +312,42 @@ export interface Werdykt {
   pokrewne?: { tytul: string; sprawdzacz?: string }
   pismo: { tytul: string; akapity: string[] }
   skrypt: { ustny: string; mail: { temat: string; tresc: string } }
+  /**
+   * Zmiana 1.2: ostrzezenie nad akcjami. Uzyte w pakiecie umowy — konsultacja
+   * PRZED konfrontacja z pracodawcem jest zasada, nie sugestia.
+   */
+  ostrzezenie?: string
+  /** Zmiana 1.2: trzy akcje wlasne zamiast standardowych (punkt 5.5). */
+  akcje_wlasne?: AkcjaWerdyktu[]
+  /** Zmiana 1.2: odnosnik do ekranu porownania E2.8. */
+  porownanie?: string
+  /** Zdanie dodatkowe pod akcjami — np. o pozwie wolnym od oplat. */
+  informacja?: string
+}
+
+export type RodzajAkcji = 'telefon' | 'kontakt' | 'przypomnienie' | 'ekran'
+
+export interface AkcjaWerdyktu {
+  rodzaj: RodzajAkcji
+  etykieta: string
+  /** Numer telefonu, ekran docelowy albo liczba dni do przypomnienia. */
+  wartosc?: string
+  opis?: string
+  ikona?: string
+}
+
+/**
+ * Zmiana 1.2, punkt 5.2: sytuacja rozstrzygana punktacja, a nie pojedyncza regula.
+ * Silnik liczy, ile cech stosunku pracy zaszlo, i wstawia wynik jako pseudo-odpowiedz
+ * `_punkty`, na ktora reaguja zwykle reguly. Dzieki temu tresc zostaje w danych.
+ */
+export interface PunktacjaSytuacji {
+  /** id pytania -> wartosc odpowiedzi, ktora WSKAZUJE na cechy stosunku pracy. */
+  cechy: Record<string, string>
+  /** id pytania -> zdanie do wyliczenia w uzasadnieniu. */
+  opisy: Record<string, string>
+  /** Zdanie o braku danej cechy — do bloku „do sprawdzenia” przy bursztynie. */
+  opisy_braku?: Record<string, string>
 }
 
 export interface Sytuacja {
@@ -256,6 +356,9 @@ export interface Sytuacja {
   pelna: boolean
   sezonowa?: 'lato' | 'zima'
   pytania?: PytanieSprawdzacza[]
+  punktacja?: PunktacjaSytuacji
+  /** Ekran informacyjny zamiast pytan, gdy sytuacja nie dotyczy tego uzytkownika. */
+  nie_dotyczy?: { gdy_umowa: Umowa[]; naglowek: string; tresc: string }
   metryczka?: Metryczka
 }
 
@@ -296,8 +399,6 @@ export interface DefinicjaBudzika {
   /** Cisza po nocce nie ma przelacznika — liczy sie sama z grafiku. */
   automatyczny?: boolean
   widoczny_gdy?: WarunekZlozony
-  /** Pierwszenstwo przy sufcie 3 powiadomien na dobe (mniejsza liczba = wazniejsze). */
-  pierwszenstwo: number
 }
 
 export interface ZaplanowanePrzypomnienie {
@@ -305,8 +406,6 @@ export interface ZaplanowanePrzypomnienie {
   nazwa: string
   kiedy: string              // ISO z godzina
   powod: string
-  /** Odrzucone przez sufit 3/dobe — pokazujemy to w podgladzie harmonogramu. */
-  odrzucone?: boolean
 }
 
 /* ---------- Dzienniki (E4.7-E4.9) ---------- */
@@ -321,4 +420,56 @@ export interface WpisDziennika {
   /** Tylko dla prawie-wypadku: co moglo sie stac. */
   co_moglo?: string
   utworzony: string
+}
+
+/* ---------- 6.2. Ewidencja czasu pracy (E7) ---------- */
+
+export interface PrzerwaWpisu {
+  od: string                 // 'HH:MM' czasu lokalnego
+  do: string | null          // null = przerwa trwa
+}
+
+export interface WpisCzasu {
+  id: string
+  data: string               // ISO 'RRRR-MM-DD'
+  od: string                 // 'HH:MM'
+  do: string | null          // null = dzien jeszcze otwarty („Zaczynam” bez „Koncze”)
+  przerwy: PrzerwaWpisu[]
+  uwagi: string
+  zrodlo: 'przycisk' | 'reczny'
+  utworzono: string
+  zmieniono: string
+}
+
+/** Wyliczane z wpisu i grafiku — NIGDY nie zapisywane. */
+export interface WyliczenieWpisu {
+  fakt_min: number
+  plan_min: number | null    // null = brak grafiku na ten dzien (B13)
+  roznica_min: number | null
+  noce_min: number
+  przerwy_min: number
+  odpoczynek_od_poprzedniego_min: number | null
+}
+
+export type RodzajSygnalu =
+  | 'odpoczynek_dobowy' | 'odpoczynek_tygodniowy' | 'brak_przerwy'
+  | 'brak_drugiej_przerwy' | 'brak_trzeciej_przerwy' | 'tydzien_ponad_48'
+  | 'ponad_plan'
+
+export interface Sygnal {
+  rodzaj: RodzajSygnalu
+  data: string
+  opis: string
+  podstawa: string
+  /** Informacja, nie naruszenie — np. godziny ponad plan. */
+  informacyjny?: boolean
+}
+
+/* ---------- 6.5. Wyzwalacz zmiany rytmu ---------- */
+
+export interface StanWyzwalaczaRytmu {
+  /** ISO dnia ostatniego zapytania — nie pytamy czesciej niz co 30 dni. */
+  ostatnio_pytano: string | null
+  /** Uzytkownik powiedzial „Zostaw jak jest”. */
+  wyciszony_do: string | null
 }

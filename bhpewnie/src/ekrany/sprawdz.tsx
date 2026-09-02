@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
 import { Ikona, Naglowek, PlanszaPelnejWersji, PodstawaPrawna, Przycisk } from '../komponenty/podstawowe'
 import { t, sytuacja as znajdzSytuacje } from '../dane/wczytaj'
-import { doSprawdzenia, ocen, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
-import { STAN_PRAWNY } from '../silnik/parametry'
+import { doSprawdzenia, ocen, ocenPosrednio, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
+import { STAN_PRAWNY, wypelnij } from '../silnik/parametry'
 import { rozwiazProfil } from '../silnik/reguly'
 import { pustyProfil } from '../magazyn/magazyn'
-import type { Werdykt } from '../typy'
+import type { AkcjaWerdyktu, Umowa, Werdykt } from '../typy'
+import porownanie from '../../content/porownanie-umow.json'
 
 /* ================= E2.1 Lista sytuacji ================= */
 
@@ -44,17 +45,42 @@ export function ListaSytuacji() {
 /* ================= E2.2 Pytania sprawdzacza ================= */
 
 export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) {
-  const { stan, wroc, zastapWidok, dzis } = useAplikacja()
+  const { stan, wroc, nawiguj, zastapWidok, dzis } = useAplikacja()
   const id = dane.sytuacja as string
   const sytuacja = znajdzSytuacje(id)
   const profil = stan.profil ?? pustyProfil()
-  const umowa = rozwiazProfil(profil, dzis).umowa
+  /*
+    W kreatorze profilu jeszcze nie ma — odpowiedź o umowie leży dopiero w szkicu.
+    Bez tego pakiet umowy uruchomiony z kreatora widziałby wartość bezpieczną
+    („umowa o pracę”) i pokazałby ekran informacyjny zamiast pytań.
+  */
+  const umowa = (dane.umowa as Umowa | undefined) ?? rozwiazProfil(profil, dzis).umowa
 
   const [nr, ustawNr] = useState(0)
   const [odpowiedzi, ustawOdpowiedzi] = useState<Record<string, string>>({})
   const [pytaOWyjscie, ustawPytaOWyjscie] = useState(false)
+  const [pokazanoPosredni, ustawPokazanoPosredni] = useState(false)
 
   if (!sytuacja) return null
+
+  // Zmiana 1.2, punkt 4.3: pozycja widoczna dla wszystkich, ale przy umowie o pracę
+  // zamiast pytań pokazujemy krótki ekran informacyjny.
+  if (sytuacja.nie_dotyczy?.gdy_umowa.includes(umowa)) {
+    return (
+      <>
+        <Naglowek naWstecz={wroc} oczko={sytuacja.etykieta} />
+        <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
+          <h1>{sytuacja.nie_dotyczy.naglowek}</h1>
+          <p style={{ fontSize: '1.0625rem' }}>{sytuacja.nie_dotyczy.tresc}</p>
+          <Przycisk odmiana="drugi" ikona="tabela" onClick={() => nawiguj('E2.8')}>
+            Zobacz porównanie form zatrudnienia
+          </Przycisk>
+          <Przycisk odmiana="obrys" onClick={wroc}>Wróć do listy spraw</Przycisk>
+          <p className="stopka-edu">{t('wspolne.edukacyjna')}</p>
+        </div>
+      </>
+    )
+  }
 
   // Sytuacje niepełne: albo uczciwy werdykt od razu (zlecenie), albo plansza.
   if (!sytuacja.pelna) {
@@ -77,7 +103,23 @@ export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) 
     const nowe = { ...odpowiedzi, [pytanie.id]: wartosc }
     ustawOdpowiedzi(nowe)
     if (nr + 1 < pytania.length) {
+      /*
+        E2.4 — wynik pośredni. Pokazujemy go tylko wtedy, gdy naprawdę oszczędza pracę:
+        sprawa jest już rozstrzygnięta, a do końca zostały CO NAJMNIEJ dwa pytania.
+        Przy jednym pytaniu do końca ekran pośredni tylko wydłużałby drogę.
+        Najwyżej raz na przebieg.
+      */
+      const zostaloPytan = pytania.length - nr - 1
+      const posredni = pokazanoPosredni || zostaloPytan < 2
+        ? null
+        : ocenPosrednio(sytuacja, nowe, umowa, dzis)
       ustawNr(nr + 1)
+      if (posredni) {
+        ustawPokazanoPosredni(true)
+        nawiguj('E2.4', {
+          sytuacja: id, werdykt: posredni, odpowiedzi: nowe, zostalo: zostaloPytan,
+        })
+      }
     } else {
       const werdykt = ocen(sytuacja, nowe, umowa, dzis)
       zastapWidok('E2.3', { sytuacja: id, werdykt, odpowiedzi: nowe })
@@ -144,10 +186,11 @@ const NAGLOWKI_STANU: Record<string, { napis: string; ikona: string }> = {
 }
 
 export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
-  const { nawiguj, wrocDoZakladki, dzis } = useAplikacja()
+  const { nawiguj, wrocDoZakladki, dzis, stan } = useAplikacja()
   const werdykt = dane.werdykt as Werdykt | null
   const idSytuacji = dane.sytuacja as string
   const sytuacja = znajdzSytuacje(idSytuacji)
+  const umowa = rozwiazProfil(stan.profil ?? pustyProfil(), dzis).umowa
 
   if (!werdykt) {
     return (
@@ -203,6 +246,27 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
           </div>
         )}
 
+        {/*
+          Zmiana 1.2, punkt 5.1: z każdej szarej karty, której powodem jest umowa
+          cywilnoprawna, prowadzi odnośnik do pakietu umowy. Odmowa nie może kończyć się
+          zdaniem „bo masz zlecenie” bez pokazania, że to bywa do podważenia.
+        */}
+        {werdykt.stan === 'nie_przysluguje' && idSytuacji !== 'umowa'
+          && (umowa === 'zlecenie' || umowa === 'dzialalnosc') && (
+          <button
+            className="kafel"
+            data-test="odnosnik-pakiet-umowy"
+            onClick={() => nawiguj('E2.2', { sytuacja: 'umowa' })}
+          >
+            <span className="kafel__ikona"><Ikona nazwa="dokument" /></span>
+            <span className="kafel__tresc">
+              <b style={{ display: 'block' }}>Sprawdź, czy Twoja umowa nie powinna być umową o pracę</b>
+              <span className="drobne">Sześć pytań, minuta</span>
+            </span>
+            <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
+          </button>
+        )}
+
         {/* Reguła nienegocjowalna: karta „nie przysługuje” zawsze kończy się tym blokiem.
             Aplikacja nie zostawia użytkownika z samą odmową. */}
         {(werdykt.pokrewne || werdykt.stan === 'nie_przysluguje') && (
@@ -235,14 +299,208 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
           </div>
         )}
 
+        {/* Zmiana 1.2, punkt 5.4: porównanie form zatrudnienia. */}
+        {werdykt.porownanie && (
+          <Przycisk odmiana="drugi" ikona="tabela" onClick={() => nawiguj(werdykt.porownanie!)}>
+            Porównaj: co masz teraz, a co miałbyś na umowie o pracę
+          </Przycisk>
+        )}
+
+        {/* Punkt 6.4: z sytuacji „Nie mam kiedy odpocząć” prowadzimy do ewidencji. */}
+        {idSytuacji === 'odpoczynek' && (
+          <button className="kafel" data-test="odnosnik-ewidencja" onClick={() => nawiguj('E7.1')}>
+            <span className="kafel__ikona"><Ikona nazwa="zegar" /></span>
+            <span className="kafel__tresc">
+              <b style={{ display: 'block' }}>Zacznij notować czas, żeby mieć dowód</b>
+              <span className="drobne">Godziny zostają na tym telefonie</span>
+            </span>
+            <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
+          </button>
+        )}
+
         <PodstawaPrawna tresc={werdykt.podstawa} stanPrawny={STAN_PRAWNY} />
 
-        {/* Trzy stałe akcje — ZAWSZE w tej kolejności (zasada 7). */}
-        <div className="kolumna">
-          <Przycisk ikona="dokument" onClick={() => nawiguj('E2.5', { werdykt })}>{t('wynik.pdf')}</Przycisk>
-          <Przycisk odmiana="drugi" ikona="mowa" onClick={() => nawiguj('E2.6', { werdykt })}>{t('wynik.skrypt')}</Przycisk>
-          <Przycisk odmiana="obrys" ikona="dzwonek" onClick={() => nawiguj('E2.7', { werdykt, sytuacja: idSytuacji })}>{t('wynik.przypomnij')}</Przycisk>
+        {/*
+          Ostrzeżenie stoi NAD akcjami, nie pod nimi (zmiana 1.2, punkt 5.3).
+          Konsultacja przed konfrontacją jest zasadą, a nie sugestią do przeczytania później.
+        */}
+        {werdykt.ostrzezenie && (
+          <div className="pas pas--powaga" data-test="ostrzezenie">
+            <Ikona nazwa="wykrzyknik" rozmiar={22} />
+            <p>{werdykt.ostrzezenie}</p>
+          </div>
+        )}
+
+        {werdykt.akcje_wlasne
+          ? <AkcjeWlasne akcje={werdykt.akcje_wlasne} idSytuacji={idSytuacji} />
+          : (
+            /* Trzy stałe akcje — ZAWSZE w tej kolejności (zasada 7). */
+            <div className="kolumna">
+              <Przycisk ikona="dokument" onClick={() => nawiguj('E2.5', { werdykt })}>{t('wynik.pdf')}</Przycisk>
+              <Przycisk odmiana="drugi" ikona="mowa" onClick={() => nawiguj('E2.6', { werdykt })}>{t('wynik.skrypt')}</Przycisk>
+              <Przycisk odmiana="obrys" ikona="dzwonek" onClick={() => nawiguj('E2.7', { werdykt, sytuacja: idSytuacji })}>{t('wynik.przypomnij')}</Przycisk>
+            </div>
+          )}
+
+        {werdykt.informacja && (
+          <div className="karta kolumna kolumna--ciasna">
+            <p className="drobne">{werdykt.informacja}</p>
+          </div>
+        )}
+
+        <p className="stopka-edu">{t('wspolne.edukacyjna')}</p>
+      </div>
+    </>
+  )
+}
+
+/**
+ * Trzy akcje własne zamiast standardowych (zmiana 1.2, punkt 5.5).
+ * Nie ma tu „Pobierz wniosek” — celowo: pismo do pracodawcy w sprawie ustalenia
+ * stosunku pracy, bez wcześniejszej konsultacji, jest ryzykowne dla użytkownika.
+ */
+function AkcjeWlasne({ akcje, idSytuacji }: { akcje: AkcjaWerdyktu[]; idSytuacji: string }) {
+  const { nawiguj, zmienStan, chmurka } = useAplikacja()
+
+  return (
+    <div className="kolumna" data-test="akcje-wlasne">
+      {akcje.map((a, i) => (
+        <div key={i} className="karta kolumna kolumna--ciasna">
+          <Przycisk
+            odmiana={i === 0 ? 'glowny' : i === 1 ? 'drugi' : 'obrys'}
+            ikona={a.ikona}
+            onClick={() => {
+              if (a.rodzaj === 'przypomnienie') {
+                zmienStan((s) => ({
+                  ...s,
+                  budziki: { ...s.budziki, powrot_po_pomocy: true },
+                  przerwane: {
+                    ...s.przerwane,
+                    [`przypomnienie-${idSytuacji}`]: { krok: `za ${a.wartosc} dni`, kiedy: new Date().toISOString() },
+                  },
+                }))
+                chmurka('Przypomnimy za tydzień. Zobaczysz to w „Moje budziki”.')
+              } else if (a.rodzaj === 'ekran' && a.wartosc) {
+                nawiguj(a.wartosc)
+              } else {
+                // Numer i kontakt czekają na uzupełnienie — nie udajemy, że działają.
+                chmurka('Ten kontakt czeka na uzupełnienie przez zespół projektu.')
+              }
+            }}
+          >
+            {a.etykieta}
+          </Przycisk>
+          {a.opis && <p className="drobne">{a.opis}</p>}
         </div>
+      ))}
+    </div>
+  )
+}
+
+/* ================= E2.4 Wynik pośredni ================= */
+
+/**
+ * Ekran, którego brief 1.1 nie opisał, mimo że numer E2.4 był w numeracji zarezerwowany
+ * (patrz ROZBIEZNOSCI.md, wpisy 2 i 15). Zmiana 1.2 wymienia go wprost jako „wynik pośredni”.
+ *
+ * Rola: gdy odpowiedzi udzielone do tej pory już rozstrzygają sprawę, a pytania jeszcze
+ * zostały, pokazujemy to, co już wiadomo, i pozwalamy wybrać — zobaczyć wynik teraz
+ * albo doprecyzować go do końca.
+ */
+export function WynikPosredni({ dane }: { dane: Record<string, unknown> }) {
+  const { wroc, zastapWidok } = useAplikacja()
+  const werdykt = dane.werdykt as Werdykt | null
+  const idSytuacji = dane.sytuacja as string
+  const odpowiedzi = (dane.odpowiedzi ?? {}) as Record<string, string>
+  const zostalo = Number(dane.zostalo ?? 0)
+  const sytuacja = znajdzSytuacje(idSytuacji)
+
+  if (!werdykt) return null
+  const stanNaglowek = NAGLOWKI_STANU[werdykt.stan]
+
+  return (
+    <>
+      <Naglowek naWstecz={wroc} oczko={sytuacja?.etykieta} />
+      <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
+        <p className="oczko">Tyle już wiemy</p>
+        <div className={`werdykt werdykt--${werdykt.stan}`}>
+          <span className="werdykt__ikona"><Ikona nazwa={stanNaglowek.ikona} rozmiar={30} /></span>
+          <div>
+            <p className="oczko" style={{ color: 'inherit', opacity: 0.85 }}>{stanNaglowek.napis}</p>
+            <h1 style={{ color: 'inherit', margin: '2px 0 0' }}>{werdykt.naglowek}</h1>
+          </div>
+        </div>
+
+        <p style={{ fontSize: '1.0625rem' }}>{werdykt.uzasadnienie}</p>
+
+        <p className="opis">
+          {zostalo === 1
+            ? 'Zostało jeszcze jedno pytanie, które to doprecyzuje.'
+            : `Zostały jeszcze ${zostalo} pytania, które to doprecyzują.`}
+        </p>
+
+        <div className="kolumna">
+          <Przycisk onClick={() => zastapWidok('E2.3', { sytuacja: idSytuacji, werdykt, odpowiedzi })}>
+            Pokaż wynik teraz
+          </Przycisk>
+          <Przycisk odmiana="obrys" onClick={wroc}>Odpowiedz do końca</Przycisk>
+        </div>
+
+        <p className="stopka-edu">{t('wspolne.edukacyjna')}</p>
+      </div>
+    </>
+  )
+}
+
+/* ================= E2.8 Porównanie form zatrudnienia ================= */
+
+export function PorownanieUmow() {
+  const { wroc, dzis } = useAplikacja()
+  const wiersze = porownanie.wiersze.map((w) => ({
+    cecha: wypelnij(w.cecha, dzis).tekst,
+    cywilna: wypelnij(w.cywilna, dzis).tekst,
+    etat: wypelnij(w.etat, dzis).tekst,
+  }))
+
+  return (
+    <>
+      <Naglowek naWstecz={wroc} oczko="Porównanie" tytul={porownanie.tytul} />
+      <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
+        <p className="opis">
+          W tabeli jest wyłącznie to, co aplikacja zna z własnych modułów wiedzy.
+        </p>
+
+        {/*
+          Tabela przewija się w swoim pudełku — strona nigdy nie przewija się w bok.
+          Pudełko musi być osiągalne z klawiatury, inaczej treść poza kadrem jest
+          niedostępna dla osoby bez myszy (axe: scrollable-region-focusable).
+        */}
+        <div className="tabela-przewijana" tabIndex={0} role="region" aria-label="Porównanie form zatrudnienia">
+          <table className="tabela">
+            <thead>
+              <tr>
+                <th scope="col">{porownanie.naglowki.cecha || 'Uprawnienie'}</th>
+                <th scope="col">{porownanie.naglowki.cywilna}</th>
+                <th scope="col">{porownanie.naglowki.etat}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wiersze.map((w, i) => (
+                <tr key={i}>
+                  <th scope="row">{w.cecha}</th>
+                  <td>{w.cywilna}</td>
+                  <td>{w.etat}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p>{porownanie.pod_tabela}</p>
+
+        <PodstawaPrawna tresc={porownanie.podstawa} stanPrawny={STAN_PRAWNY} />
+
+        <Przycisk odmiana="obrys" onClick={wroc}>{t('wspolne.zamknij')}</Przycisk>
 
         <p className="stopka-edu">{t('wspolne.edukacyjna')}</p>
       </div>
@@ -424,7 +682,8 @@ export function PanelPrzypomnienia({ dane }: { dane: Record<string, unknown> }) 
         </Przycisk>
 
         <p className="drobne">
-          Aplikacja ma sufit trzech przypomnień na dobę. Jeśli tego dnia będzie ich więcej, pokażemy, które odłożyliśmy.
+          Dostaniesz dokładnie te przypomnienia, które włączysz — nic nie jest po drodze odrzucane.
+          Wyłączyć możesz je w każdej chwili w „Moje budziki”.
         </p>
       </div>
     </>

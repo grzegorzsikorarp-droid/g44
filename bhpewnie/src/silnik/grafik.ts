@@ -1,4 +1,4 @@
-import type { Grafik, SzablonZmiany } from '../typy'
+import type { Grafik, StaleGodziny, SzablonZmiany } from '../typy'
 
 export const DNI_SKROTY = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd']
 
@@ -33,7 +33,32 @@ export function poczatekTygodnia(data: Date): Date {
   return new Date(Date.UTC(poniedzialek.getFullYear(), poniedzialek.getMonth(), poniedzialek.getDate()))
 }
 
+/** Domyślne stałe godziny — 8:00–16:00 od poniedziałku do piątku. */
+export function domyslneStaleGodziny(): StaleGodziny {
+  return { od: '08:00', do: '16:00', dni: [1, 2, 3, 4, 5], odstepstwa: {} }
+}
+
+/**
+ * Zmiana 1.2, punkt 7: silnik budzików korzysta z E5.3a tak samo jak z E5.3b.
+ * „W trakcie zmiany” znaczy „w zadeklarowanych godzinach”, więc stałe godziny
+ * zamieniamy na taki sam szablon zmiany, jakiego używa kalendarz.
+ */
+function szablonZeStalychGodzin(stale: StaleGodziny, dzien: string): SzablonZmiany | null {
+  const odstepstwo = stale.odstepstwa[dzien]
+  if (odstepstwo === 'wolne') return null
+
+  // getDay(): 0 = niedziela. W modelu 1 = poniedziałek ... 7 = niedziela.
+  const dzienTygodnia = new Date(dzien + 'T12:00:00').getDay() || 7
+  if (!odstepstwo && !stale.dni.includes(dzienTygodnia)) return null
+
+  const od = odstepstwo ? odstepstwo.od : stale.od
+  const doGodz = odstepstwo ? odstepstwo.do : stale.do
+  const nocna = Number(doGodz.slice(0, 2)) <= Number(od.slice(0, 2)) || Number(od.slice(0, 2)) >= 21
+  return { skrot: 'P', nazwa: 'Praca', od, do: doGodz, kolor: '#0F6B63', nocna }
+}
+
 export function szablonDnia(grafik: Grafik | null, dzien: string): SzablonZmiany | null {
+  if (grafik?.rytm === 'stale' && grafik.stale) return szablonZeStalychGodzin(grafik.stale, dzien)
   if (!grafik) return null
   const skrot = grafik.kalendarz[dzien]
   if (!skrot) return null
@@ -84,11 +109,15 @@ export function polaczDateIGodzine(dzien: string, godzina: string): Date {
   return d
 }
 
-/** Początek i koniec zmiany; nocka kończy się nazajutrz. */
+/**
+ * Początek i koniec zmiany; nocka kończy się nazajutrz.
+ * Koniec liczymy jako tę samą godzinę następnego dnia, nie „plus 24 godziny” —
+ * w nocy zmiany czasu urzędowego doba ma 23 albo 25 godzin (badanie 5 ze zmiany 1.2).
+ */
 export function ramyZmiany(dzien: string, szablon: SzablonZmiany): { start: Date; koniec: Date } {
   const start = polaczDateIGodzine(dzien, szablon.od)
   let koniec = polaczDateIGodzine(dzien, szablon.do)
-  if (koniec <= start) koniec = new Date(koniec.getTime() + 86400000)
+  if (koniec <= start) koniec = polaczDateIGodzine(iso(dodajDni(new Date(dzien + 'T12:00:00'), 1)), szablon.do)
   return { start, koniec }
 }
 

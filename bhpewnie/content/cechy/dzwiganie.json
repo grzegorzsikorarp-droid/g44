@@ -7,6 +7,7 @@
       "tytul": "Normy dźwigania",
       "konkret": "Kobiety {dzwiganie_kobiety_stale} stale / {dzwiganie_kobiety_dorywczo} dorywczo · mężczyźni {dzwiganie_mezczyzni_stale} / {dzwiganie_mezczyzni_dorywczo}",
       "wyjasnienie": "To górne granice przy ręcznym przenoszeniu. Powyżej nich pracę trzeba zorganizować inaczej: sprzęt pomocniczy, druga osoba, mniejsze partie.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [
         "dzwiganie_kobiety_stale",
@@ -35,6 +36,35 @@
       "tytul": "Przemieszczanie pacjenta lub podopiecznego",
       "konkret": "Sprzęt pomocniczy to obowiązek pracodawcy",
       "wyjasnienie": "Przy przemieszczaniu człowieka norm kilogramowych nie da się utrzymać. Pracodawca ma zapewnić sprzęt — podnośnik, matę ślizgową, pas — albo pracę w dwie osoby.",
+      "warunek": {
+        "pytanie": "Czy masz na miejscu sprzęt do przemieszczania — podnośnik, matę ślizgową, pas — i czy da się z niego skorzystać?",
+        "odpowiedzi": [
+          {
+            "tekst": "Nie, nie ma takiego sprzętu",
+            "wynik": "przysluguje",
+            "uzasadnienie": "Przy przemieszczaniu człowieka norm kilogramowych nie da się utrzymać, więc obowiązek zorganizowania pracy inaczej spoczywa na pracodawcy: sprzęt albo praca w dwie osoby."
+          },
+          {
+            "tekst": "Sprzęt jest, ale nie da się go użyć",
+            "wynik": "zalezy",
+            "uzasadnienie": "Sprzęt, do którego nie ma dostępu, jest zepsuty albo nikt nie pokazał, jak go używać, nie wypełnia obowiązku pracodawcy. To jednak wymaga ustalenia, na czym dokładnie polega przeszkoda.",
+            "do_sprawdzenia": [
+              "Czy przeszkodą jest brak przeszkolenia, awaria, czy zbyt mała liczba sprzętu",
+              "Czy zgłoszenie tego zostało gdzieś zapisane"
+            ]
+          },
+          {
+            "tekst": "Tak, sprzęt jest i korzystam z niego",
+            "wynik": "nie_przysluguje",
+            "uzasadnienie": "Obowiązek jest wykonany — nie ma o co występować. Wróć tutaj, jeśli sprzęt się zepsuje, zniknie albo przestanie wystarczać.",
+            "zamiast": [
+              "Szkolenie z bezpiecznej techniki przemieszczania",
+              "Przegląd i konserwacja sprzętu na koszt pracodawcy",
+              "Zgłoszenie w dzienniku zdarzeń, gdy sprzęt zawiedzie"
+            ]
+          }
+        ]
+      },
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

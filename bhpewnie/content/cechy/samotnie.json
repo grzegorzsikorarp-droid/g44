@@ -7,6 +7,7 @@
       "tytul": "Możliwość wezwania pomocy",
       "konkret": "Łączność i ustalony sposób kontaktu",
       "wyjasnienie": "Przy pracy w pojedynkę pracodawca ma zapewnić sposób wezwania pomocy i ustalić zasady kontaktu.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
@@ -27,6 +28,7 @@
       "tytul": "Dostęp do pierwszej pomocy",
       "konkret": "Apteczka i wyznaczone osoby",
       "wyjasnienie": "W zakładzie mają być wyznaczone osoby do udzielania pierwszej pomocy i sprawna apteczka.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {

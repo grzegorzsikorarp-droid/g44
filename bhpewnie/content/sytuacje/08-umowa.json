@@ -1,0 +1,258 @@
+{
+  "id": "umowa",
+  "etykieta": "Czy to na pewno nie powinna być umowa o pracę?",
+  "pelna": true,
+  "nie_dotyczy": {
+    "gdy_umowa": ["o_prace"],
+    "naglowek": "Masz umowę o pracę",
+    "tresc": "Ten sprawdzacz jest dla osób na zleceniu i na własnej działalności. Możesz go pokazać komuś, kogo to dotyczy — u siebie nie masz tu nic do sprawdzania."
+  },
+  "pytania": [
+    {
+      "id": "godziny",
+      "tresc": "Czy masz wyznaczone godziny pracy, których musisz się trzymać?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "miejsce",
+      "tresc": "Czy pracujesz w miejscu wskazanym przez zleceniodawcę — w biurze, sklepie, hali, na jego terenie?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "nadzor",
+      "tresc": "Czy ktoś na bieżąco mówi Ci, co i jak robić, i sprawdza wykonanie?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "zastepstwo",
+      "tresc": "Czy możesz wysłać kogoś za siebie, gdy nie możesz przyjść?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "sprzet",
+      "tresc": "Czy pracujesz na sprzęcie, materiałach i narzędziach firmy?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "wylacznosc",
+      "tresc": "Czy to Twój jedyny zleceniodawca albo klient?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak" },
+        { "wartosc": "nie", "etykieta": "Nie" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    }
+  ],
+  "punktacja": {
+    "cechy": {
+      "godziny": "tak",
+      "miejsce": "tak",
+      "nadzor": "tak",
+      "zastepstwo": "nie",
+      "sprzet": "tak",
+      "wylacznosc": "tak"
+    },
+    "opisy": {
+      "godziny": "masz wyznaczone godziny pracy",
+      "miejsce": "pracujesz w miejscu wskazanym przez zleceniodawcę",
+      "nadzor": "ktoś na bieżąco kieruje Twoją pracą i ją sprawdza",
+      "zastepstwo": "musisz pracę wykonać osobiście",
+      "sprzet": "pracujesz na sprzęcie i materiałach firmy",
+      "wylacznosc": "to Twój jedyny zleceniodawca"
+    },
+    "opisy_braku": {
+      "godziny": "Czy godziny są rzeczywiście do Twojego wyboru, czy tylko formalnie",
+      "miejsce": "Gdzie faktycznie wykonujesz pracę przez większość czasu",
+      "nadzor": "Kto rozstrzyga, jak masz wykonać zadanie",
+      "zastepstwo": "Czy umowa dopuszcza zastępstwo i czy kiedykolwiek z tego korzystałeś(-aś)",
+      "sprzet": "Czyj sprzęt i materiały wykorzystujesz w pracy",
+      "wylacznosc": "Ilu masz zleceniodawców w ciągu roku"
+    }
+  },
+  "reguly": [
+    {
+      "gdy": { "_punkty": ["5", "6"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Twoja umowa ma cechy umowy o pracę",
+        "uzasadnienie": "Z sześciu cech stosunku pracy w Twoim przypadku zaszło {punkty}: {cechy_stwierdzone}. Prawdopodobnie przysługuje Ci umowa o pracę — a wraz z nią przerwy, odpoczynek, badania i szkolenia na koszt pracodawcy.",
+        "ile": [
+          "Nie wolno zastąpić umowy o pracę umową cywilnoprawną przy zachowaniu warunków wykonywania pracy właściwych dla stosunku pracy.",
+          "O tym, czy istnieje stosunek pracy, decyduje sposób wykonywania pracy, a nie nazwa umowy.",
+          "Ustalenia istnienia stosunku pracy może żądać zarówno pracownik, jak i inspektor pracy.",
+          "Porównaj, co dokładnie by się zmieniło — przycisk poniżej."
+        ],
+        "podstawa": "art. 22 § 1¹ i § 1² Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "ostrzezenie": "Zanim porozmawiasz z pracodawcą, porozmawiaj z kimś, kto zna Twoją sytuację. Ryzyko, że pracodawca zareaguje źle, jest realne.",
+        "porownanie": "E2.8",
+        "akcje_wlasne": [
+          {
+            "rodzaj": "telefon",
+            "etykieta": "Zadzwoń po bezpłatną poradę do inspekcji pracy",
+            "wartosc": "[do potwierdzenia]",
+            "opis": "Inspekcja może wystąpić do sądu o ustalenie, że masz umowę o pracę — bez Twojego kosztu. Numer i godziny: [do potwierdzenia].",
+            "ikona": "telefon"
+          },
+          {
+            "rodzaj": "kontakt",
+            "etykieta": "Punkt konsultacyjny projektu",
+            "wartosc": "[do uzupełnienia]",
+            "opis": "Kontakt: [do uzupełnienia].",
+            "ikona": "dlon"
+          },
+          {
+            "rodzaj": "przypomnienie",
+            "etykieta": "Przypomnij mi za tydzień",
+            "wartosc": "7",
+            "opis": "Wrócimy do sprawy za tydzień — bez pośpiechu.",
+            "ikona": "dzwonek"
+          }
+        ],
+        "informacja": "Możesz też sam(a) złożyć do sądu pracy pozew o ustalenie istnienia stosunku pracy — dla pracownika jest wolny od opłat sądowych przy wartości sprawy do 50 000 zł [do potwierdzenia przez specjalistę].",
+        "pismo": {
+          "tytul": "Pisma w tej sprawie nie generujemy",
+          "akapity": [
+            "Pismo do pracodawcy w sprawie ustalenia stosunku pracy bez wcześniejszej konsultacji jest ryzykowne. Najpierw rozmowa z kimś, kto zna Twoją sytuację."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Chciałem(-am) porozmawiać o mojej umowie. Pracuję w wyznaczonych godzinach, w Waszym miejscu i na Waszym sprzęcie. Zastanawiam się, czy nie powinna to być umowa o pracę.",
+          "mail": {
+            "temat": "Rozmowa o formie mojej umowy",
+            "tresc": "Dzień dobry,\n\nchciałem(-am) umówić się na rozmowę o formie mojej umowy i o warunkach, w jakich wykonuję pracę.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "_punkty": ["3", "4"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Część cech wskazuje na stosunek pracy",
+        "uzasadnienie": "Z sześciu cech zaszło {punkty}: {cechy_stwierdzone}. To za mało, żeby powiedzieć „na pewno”, i za dużo, żeby machnąć ręką. Warto to sprawdzić z kimś, kto zna Twoją sytuację.",
+        "ile": [
+          "O istnieniu stosunku pracy decyduje sposób wykonywania pracy, a nie nazwa umowy.",
+          "Żadna z cech osobno nie przesądza sprawy — liczy się całość obrazu.",
+          "Porównanie poniżej pokazuje, co konkretnie by się zmieniło."
+        ],
+        "podstawa": "art. 22 § 1¹ i § 1² Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "ostrzezenie": "Zanim porozmawiasz z pracodawcą, porozmawiaj z kimś, kto zna Twoją sytuację. Ryzyko, że pracodawca zareaguje źle, jest realne.",
+        "porownanie": "E2.8",
+        "akcje_wlasne": [
+          {
+            "rodzaj": "telefon",
+            "etykieta": "Zadzwoń po bezpłatną poradę do inspekcji pracy",
+            "wartosc": "[do potwierdzenia]",
+            "opis": "Inspekcja może wystąpić do sądu o ustalenie, że masz umowę o pracę — bez Twojego kosztu. Numer i godziny: [do potwierdzenia].",
+            "ikona": "telefon"
+          },
+          {
+            "rodzaj": "kontakt",
+            "etykieta": "Punkt konsultacyjny projektu",
+            "wartosc": "[do uzupełnienia]",
+            "opis": "Kontakt: [do uzupełnienia].",
+            "ikona": "dlon"
+          },
+          {
+            "rodzaj": "przypomnienie",
+            "etykieta": "Przypomnij mi za tydzień",
+            "wartosc": "7",
+            "opis": "Wrócimy do sprawy za tydzień — bez pośpiechu.",
+            "ikona": "dzwonek"
+          }
+        ],
+        "informacja": "Możesz też sam(a) złożyć do sądu pracy pozew o ustalenie istnienia stosunku pracy — dla pracownika jest wolny od opłat sądowych przy wartości sprawy do 50 000 zł [do potwierdzenia przez specjalistę].",
+        "pismo": {
+          "tytul": "Pisma w tej sprawie nie generujemy",
+          "akapity": [
+            "Pismo do pracodawcy w sprawie ustalenia stosunku pracy bez wcześniejszej konsultacji jest ryzykowne. Najpierw rozmowa z kimś, kto zna Twoją sytuację."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Chciałem(-am) zapytać o kilka rzeczy dotyczących mojej umowy i warunków, w jakich pracuję.",
+          "mail": {
+            "temat": "Pytanie o warunki mojej umowy",
+            "tresc": "Dzień dobry,\n\nchciałem(-am) porozmawiać o warunkach, w jakich wykonuję pracę na podstawie mojej umowy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Twoja umowa wygląda na zlecenie",
+        "uzasadnienie": "Z sześciu cech stosunku pracy zaszło {punkty}. Nic nie musisz robić — wróć tu, jeśli warunki się zmienią: zaczną wyznaczać Ci godziny, przypiszą stałe miejsce albo ktoś zacznie na bieżąco rozliczać sposób wykonania.",
+        "ile": [
+          "Nawet na zleceniu organizujący pracę ma obowiązek zapewnić bezpieczne i higieniczne warunki.",
+          "Jeżeli podlegasz ubezpieczeniu wypadkowemu, przysługują Ci świadczenia po wypadku przy pracy.",
+          "Umowa może przyznać Ci więcej, niż daje prawo — warto zajrzeć, co w niej stoi."
+        ],
+        "podstawa": "art. 22 § 1¹ i § 1² Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "porownanie": "E2.8",
+        "akcje_wlasne": [
+          {
+            "rodzaj": "telefon",
+            "etykieta": "Zadzwoń po bezpłatną poradę do inspekcji pracy",
+            "wartosc": "[do potwierdzenia]",
+            "opis": "Bezpłatna porada także dla osób na umowach cywilnoprawnych. Numer i godziny: [do potwierdzenia].",
+            "ikona": "telefon"
+          },
+          {
+            "rodzaj": "kontakt",
+            "etykieta": "Punkt konsultacyjny projektu",
+            "wartosc": "[do uzupełnienia]",
+            "opis": "Kontakt: [do uzupełnienia].",
+            "ikona": "dlon"
+          },
+          {
+            "rodzaj": "przypomnienie",
+            "etykieta": "Przypomnij mi za tydzień",
+            "wartosc": "7",
+            "opis": "Wrócimy do sprawy za tydzień — bez pośpiechu.",
+            "ikona": "dzwonek"
+          }
+        ],
+        "pismo": {
+          "tytul": "Pisma w tej sprawie nie generujemy",
+          "akapity": [
+            "Pismo do pracodawcy w sprawie ustalenia stosunku pracy bez wcześniejszej konsultacji jest ryzykowne."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Chciałem(-am) upewnić się, na jakich zasadach u nas pracuję i co obejmuje moja umowa.",
+          "mail": {
+            "temat": "Pytanie o zakres mojej umowy",
+            "tresc": "Dzień dobry,\n\nchciałem(-am) upewnić się, co obejmuje moja umowa, w szczególności w zakresie bezpiecznych warunków wykonywania pracy.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
+  "metryczka": {
+    "autor": "opracowanie robocze zespołu prototypu",
+    "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty od prawa pracy)",
+    "data_opracowania": "2026-09-02",
+    "data_przegladu": "2026-12-01"
+  }
+}

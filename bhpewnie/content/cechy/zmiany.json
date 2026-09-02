@@ -7,6 +7,7 @@
       "tytul": "Dodatek za pracę w nocy",
       "konkret": "{dodatek_nocny_stawka} za każdą godzinę pracy w nocy",
       "wyjasnienie": "Za każdą godzinę pracy w porze nocnej należy Ci się dodatek — 20% stawki godzinowej liczonej z minimalnego wynagrodzenia. Stawka zmienia się co miesiąc razem z wymiarem czasu pracy.",
+      "warunek": null,
       "podstawa": "art. 151⁸ Kodeksu pracy",
       "parametry": [
         "dodatek_nocny_stawka"
@@ -48,6 +49,7 @@
       "tytul": "Odpoczynek między zmianami",
       "konkret": "{odpoczynek_dobowy} na dobę i {odpoczynek_tygodniowy} raz w tygodniu",
       "wyjasnienie": "Po zmianie należy Ci się nieprzerwany odpoczynek dobowy, a raz w tygodniu — dłuższy odpoczynek tygodniowy.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [
         "odpoczynek_dobowy",
@@ -88,6 +90,7 @@
       "tytul": "Badania przy pracy w nocy",
       "konkret": "Na Twój wniosek — przed przejściem na nocki i okresowo",
       "wyjasnienie": "Praca w nocy uprawnia do dodatkowych badań profilaktycznych. Jeśli lekarz stwierdzi przeciwwskazania, pracodawca ma przenieść Cię do pracy dziennej.",
+      "warunek": null,
       "podstawa": "[do uzupełnienia przez specjalistę]",
       "parametry": [],
       "gdy": {
