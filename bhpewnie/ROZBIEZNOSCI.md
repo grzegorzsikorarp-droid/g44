@@ -294,6 +294,17 @@ Wpisy poniżej powstały przy wykonywaniu zmiany 1.2 (przegląd zespołu merytor
 
 ---
 
+## 25. Cztery pozostałe sytuacje domknięte — i dwie liczby, których nie wpisaliśmy
+
+- **Założenie zmiany.** Punkt 4.4: „Zaimplementuj w pełni sytuacje 1, 2, 6 i 8; pozostałe jako plansze »w pełnej wersji«, **jeśli czas nie pozwoli na więcej**".
+- **Co zrobiliśmy.** Czas pozwolił. Sytuacje 3 (środki ochrony), 4 (badania okresowe), 5 (szkolenie BHP) i 7 (zimno i ciasnota) mają pełne ścieżki z pytaniami i regułami wprost z tabeli 4.3. W zakładce „Mam sprawę" nie ma już ani jednej planszy „w pełnej wersji" — osiem pozycji, osiem werdyktów.
+- **Nowy mechanizm redakcyjny.** Tabela 4.3 przy sytuacji 3 mówi: „czego brakuje (**lista z cech profilu**)". Silnik sprawdzaczy miał dotąd wyłącznie opcje wpisane na sztywno. Dołożyliśmy pole `zrodlo_opcji: "cechy_profilu"` — pytanie buduje wtedy listę z cech aktywnych na TYM stanowisku, a etykiety leżą w `etykiety_cech` sytuacji, więc treść zostaje w danych. Cecha pominięta w kreatorze zostaje na liście, bo wartość bezpieczna każe pokazywać więcej, nie mniej. Profil przykładowy (chemia, biologia) widzi dwie pozycje zamiast jedenastu.
+- **Czego NIE wpisaliśmy.** Punkt 4.3 przy sytuacji 7 wymienia „min. 18 °C / 14 °C, **kubatura**" — podaje temperatury, ale nie podaje liczby dla kubatury ani wolnej powierzchni. Temperatury weszły jako parametry z datami obowiązywania (`temperatura_min_biurowa`, `temperatura_min_fizyczna`), oba ze źródłem oznaczonym `[do potwierdzenia przez specjalistę]`. Normy kubatury **nie zostały wymyślone**: werdykt o ciasnocie mówi wprost „[do uzupełnienia przez specjalistę]" i prowadzi do przeglądu stanowiska, zamiast podawać liczbę, której dokument nie zawiera.
+- **Poprawka przy okazji.** Podstawianie parametrów obejmowało uzasadnienie, blok „ile" i „do sprawdzenia", ale **nie nagłówek**. Nagłówek „Przy pracy biurowej przysługuje Ci {temperatura_min_biurowa}" pokazywałby surowy nawias. Naprawione — nagłówek też jest wypełniany.
+- **Dowód.** `content/sytuacje/03-srodki.json`, `04-badania.json`, `05-szkolenie.json`, `07-zimno.json`; `src/silnik/sprawdzacz.ts` (`opcjeZCech`, `wypelnijWerdykt`); `testy/sprawdzacz.test.ts` (cztery bloki „sytuacja 3/4/5/7"); `testy/e2e/p5-sprawdzacz.spec.ts`.
+
+---
+
 ## Do rozstrzygnięcia przez zespół — po zmianie 1.2
 
 Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszły cztery:
@@ -302,3 +313,4 @@ Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozs
 10. **„Nie wiem" w pakiecie umowy** — czy trzy takie odpowiedzi mają kierować do bursztynu niezależnie od punktów (wpis 20).
 11. **Brzmienie plakietki „SPRAWDŹ JEDEN WARUNEK"** — trzy warianty do testu z ludźmi (wpis 19).
 12. **Znaczenie ekranu E2.4** — czy „wynik pośredni" to ten ekran, który zespół miał na myśli (wpis 15).
+13. **Normy kubatury i wolnej powierzchni** w sytuacji „Jest zimno albo ciasno" — dokument zmiany mówi „kubatura", ale nie podaje liczby (wpis 25).

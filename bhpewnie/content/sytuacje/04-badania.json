@@ -1,11 +1,225 @@
 {
   "id": "badania",
   "etykieta": "Mam badania okresowe",
-  "pelna": false,
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "kiedy",
+      "tresc": "Kiedy masz umówione badanie?",
+      "opcje": [
+        { "wartosc": "w_pracy", "etykieta": "W godzinach mojej pracy" },
+        { "wartosc": "po_pracy", "etykieta": "Po pracy albo w dzień wolny" },
+        { "wartosc": "nie_wiem", "etykieta": "Jeszcze nie mam terminu" }
+      ]
+    },
+    {
+      "id": "kto_placi",
+      "tresc": "Kto płaci za badanie?",
+      "opcje": [
+        { "wartosc": "pracodawca", "etykieta": "Pracodawca — mam skierowanie" },
+        { "wartosc": "ja", "etykieta": "Kazano mi zapłacić samemu" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    },
+    {
+      "id": "dojazd",
+      "tresc": "Jak daleko jest do przychodni?",
+      "opcje": [
+        { "wartosc": "blisko", "etykieta": "Na miejscu albo w pobliżu" },
+        { "wartosc": "daleko", "etykieta": "Muszę dojechać do innej miejscowości" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "umowa": ["zlecenie", "dzialalnosc"],
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Badania profilaktyczne na koszt zleceniodawcy nie wynikają z mocy prawa",
+        "uzasadnienie": "Obowiązek kierowania na badania profilaktyczne i pokrywania ich kosztu dotyczy pracowników. Przy zleceniu i własnej działalności zleceniodawca może to zapewnić, ale nie musi — chyba że rodzaj pracy wymaga badań na innej podstawie.",
+        "ile": [
+          "Zajrzyj do umowy: czasem badania są w niej zapisane.",
+          "Bezpieczne i higieniczne warunki pracy organizujący pracę ma zapewnić niezależnie od rodzaju umowy.",
+          "Jeżeli wykonujesz pracę tego samego rodzaju co pracownicy, warto sprawdzić formę umowy."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": {
+          "tytul": "Czy to na pewno nie powinna być umowa o pracę?",
+          "sprawdzacz": "umowa"
+        },
+        "pismo": {
+          "tytul": "Propozycja uzupełnienia umowy o badania profilaktyczne",
+          "akapity": [
+            "Proszę o rozważenie uzupełnienia mojej umowy o zapis dotyczący badań profilaktycznych związanych z wykonywaną pracą.",
+            "Proponuję przyjąć rozwiązania odpowiadające standardom obowiązującym dla pracowników wykonujących tę samą pracę."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, pracuję na zleceniu i chciałem(-am) zapytać o badania związane z tą pracą — czy jest możliwość, żeby były po Waszej stronie.",
+          "mail": {
+            "temat": "Badania profilaktyczne przy umowie zlecenia",
+            "tresc": "Dzień dobry,\n\nproszę o informację, czy w związku z wykonywaną przeze mnie pracą przewidziane są badania profilaktyczne i na czyj koszt.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kto_placi": ["ja"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Badania okresowe są na koszt pracodawcy",
+        "uzasadnienie": "Badania profilaktyczne wykonuje się na podstawie skierowania od pracodawcy i na jego koszt. Żądanie, żebyś zapłacił(a) sam(a), nie ma podstawy — niezależnie od tego, jak jest to u Was zorganizowane.",
+        "ile": [
+          "Koszt badania pokrywa pracodawca — łącznie z badaniami specjalistycznymi wskazanymi w skierowaniu.",
+          "Badanie odbywa się w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia.",
+          "Za czas niezdolności do pracy z powodu badań nie tracisz wynagrodzenia.",
+          "Jeżeli badanie wypada poza Twoją miejscowością, przysługuje zwrot kosztów przejazdu według zasad przy podróżach służbowych."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o skierowanie na badania okresowe i pokrycie ich kosztu",
+          "akapity": [
+            "Wnoszę o wydanie mi skierowania na badania profilaktyczne oraz o pokrycie ich kosztu przez pracodawcę.",
+            "Badania profilaktyczne wykonuje się na podstawie skierowania pracodawcy i na jego koszt.",
+            "Proszę o wskazanie jednostki, w której mam wykonać badanie, oraz terminu, w którym mam się zgłosić."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, dostałem(-am) informację, że mam sam(a) opłacić badania okresowe. Badania profilaktyczne są na koszt pracodawcy, na podstawie skierowania. Proszę o skierowanie i o ustalenie, gdzie mam się zgłosić.",
+          "mail": {
+            "temat": "Skierowanie na badania okresowe i koszt badania",
+            "tresc": "Dzień dobry,\n\nproszę o wydanie skierowania na badania profilaktyczne oraz o pokrycie ich kosztu.\n\nProszę też o wskazanie jednostki, w której mam wykonać badanie.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kiedy": ["po_pracy"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Badanie ma się odbyć w godzinach pracy",
+        "uzasadnienie": "Badania profilaktyczne przeprowadza się w miarę możliwości w godzinach pracy, a za czas ich wykonania zachowujesz prawo do wynagrodzenia. Termin po pracy albo w dzień wolny to wyjątek, a nie zasada — i wtedy tym bardziej rozliczenie czasu wymaga ustalenia.",
+        "ile": [
+          "Badanie w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia.",
+          "Koszt badania pokrywa pracodawca.",
+          "Przy dojeździe poza miejscowość pracy — zwrot kosztów przejazdu według zasad przy podróżach służbowych.",
+          "Notuj godziny w zakładce „Mój czas pracy” — czas poświęcony na badanie też jest czasem, który da się pokazać."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o wyznaczenie badania okresowego w godzinach pracy",
+          "akapity": [
+            "Wnoszę o wyznaczenie terminu badania profilaktycznego w godzinach mojej pracy.",
+            "Badania profilaktyczne przeprowadza się w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia za czas ich wykonania.",
+            "Jeżeli termin w godzinach pracy nie jest możliwy, proszę o wskazanie sposobu rozliczenia czasu poświęconego na badanie."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, mam wyznaczone badania okresowe po godzinach. Badania robi się w miarę możliwości w czasie pracy, z zachowaniem wynagrodzenia. Czy da się przenieść termin, a jeśli nie — jak rozliczymy ten czas?",
+          "mail": {
+            "temat": "Termin badania okresowego",
+            "tresc": "Dzień dobry,\n\nmoje badanie profilaktyczne wyznaczono poza godzinami pracy.\n\nProszę o wyznaczenie terminu w godzinach pracy albo o wskazanie sposobu rozliczenia czasu poświęconego na badanie.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "dojazd": ["daleko"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przy dojeździe poza miejscowość przysługuje zwrot kosztów",
+        "uzasadnienie": "Badanie jest w godzinach pracy i na koszt pracodawcy, a jeżeli trzeba na nie dojechać poza miejscowość, w której pracujesz, przysługuje zwrot kosztów przejazdu według zasad obowiązujących przy podróżach służbowych.",
+        "ile": [
+          "Zwrot kosztów przejazdu według zasad przy podróżach służbowych.",
+          "Koszt samego badania pokrywa pracodawca.",
+          "Badanie w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia.",
+          "Zachowaj bilety albo zapisz przebieg — zwrot rozlicza się na podstawie dokumentów."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zwrot kosztów przejazdu na badania profilaktyczne",
+          "akapity": [
+            "Wnoszę o zwrot kosztów przejazdu na badania profilaktyczne wykonywane poza miejscowością, w której wykonuję pracę.",
+            "Do wniosku dołączam dokumenty potwierdzające poniesione koszty.",
+            "Proszę o informację o terminie i sposobie rozliczenia."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, na badania muszę dojechać do innej miejscowości. Przy takim dojeździe przysługuje zwrot kosztów przejazdu. Chciałem(-am) ustalić, komu przekazać bilety.",
+          "mail": {
+            "temat": "Zwrot kosztów przejazdu na badania profilaktyczne",
+            "tresc": "Dzień dobry,\n\nbadanie profilaktyczne odbywa się poza miejscowością, w której wykonuję pracę.\n\nProszę o informację, w jaki sposób rozliczyć zwrot kosztów przejazdu i komu przekazać dokumenty.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kiedy": ["nie_wiem"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Bez terminu trudno cokolwiek ustalić",
+        "uzasadnienie": "To, co Ci przysługuje, jest jasne: skierowanie, koszt po stronie pracodawcy i badanie w miarę możliwości w godzinach pracy. Nie wiadomo jednak, kiedy Twoje badanie ma się odbyć — a od tego zależy, o co dokładnie prosić.",
+        "ile": [
+          "Skierowanie wydaje pracodawca; koszt badania jest po jego stronie.",
+          "Badanie w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia.",
+          "Termin następnego badania wpisany jest w Twoim ostatnim orzeczeniu."
+        ],
+        "do_sprawdzenia": [
+          "Jaka data widnieje w Twoim ostatnim orzeczeniu lekarskim",
+          "Kto u Was wydaje skierowania na badania"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o wydanie skierowania na badania okresowe",
+          "akapity": [
+            "Wnoszę o wydanie mi skierowania na badania profilaktyczne oraz o wskazanie terminu, w którym mam się zgłosić.",
+            "Proszę o informację, w której jednostce mam wykonać badanie."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zapytać o termin moich badań okresowych i o skierowanie. Nie wiem, kiedy mi się kończą.",
+          "mail": {
+            "temat": "Termin badań okresowych i skierowanie",
+            "tresc": "Dzień dobry,\n\nproszę o informację o terminie moich badań profilaktycznych oraz o wydanie skierowania.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Wszystko jest tak, jak powinno",
+        "uzasadnienie": "Badanie w godzinach pracy, na skierowanie i na koszt pracodawcy — dokładnie to Ci przysługuje. Poniżej masz liczby i zasady, do których możesz wrócić, gdyby coś się zmieniło.",
+        "ile": [
+          "Koszt badania pokrywa pracodawca, łącznie z badaniami specjalistycznymi ze skierowania.",
+          "Badanie w miarę możliwości w godzinach pracy, z zachowaniem prawa do wynagrodzenia.",
+          "Przy dojeździe poza miejscowość pracy — zwrot kosztów przejazdu.",
+          "Datę następnego badania możesz wpisać w „Moje terminy” — przypomnimy 30 i 7 dni wcześniej."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o potwierdzenie terminu następnego badania",
+          "akapity": [
+            "Proszę o pisemne potwierdzenie terminu mojego następnego badania profilaktycznego.",
+            "Proszę też o wskazanie osoby, która wydaje skierowania."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) potwierdzić termin mojego następnego badania okresowego, żeby wpisać go sobie do kalendarza.",
+          "mail": {
+            "temat": "Termin następnego badania profilaktycznego",
+            "tresc": "Dzień dobry,\n\nproszę o potwierdzenie terminu mojego następnego badania profilaktycznego.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
   "metryczka": {
     "autor": "opracowanie robocze zespołu prototypu",
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
-    "data_opracowania": "2026-09-01",
+    "data_opracowania": "2026-09-03",
     "data_przegladu": "2026-12-01"
   }
 }

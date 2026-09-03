@@ -298,6 +298,13 @@ export interface PytanieSprawdzacza {
   id: string
   tresc: string
   opcje: { wartosc: string; etykieta: string }[]
+  /**
+   * Zmiana 1.2, punkt 4.3, sytuacja 3: opcje budowane z CECH PROFILU, a nie wpisane
+   * na sztywno. Uzytkownik ma wybierac z tego, co go faktycznie dotyczy — lista
+   * pytan o narazenia, ktorych na jego stanowisku nie ma, jest szumem.
+   * Etykiety leza w `etykiety_cech` sytuacji, wiec tresc zostaje w danych.
+   */
+  zrodlo_opcji?: 'cechy_profilu'
 }
 
 export interface Werdykt {
@@ -357,6 +364,8 @@ export interface Sytuacja {
   sezonowa?: 'lato' | 'zima'
   pytania?: PytanieSprawdzacza[]
   punktacja?: PunktacjaSytuacji
+  /** Etykiety opcji budowanych z cech profilu — klucz to id cechy. */
+  etykiety_cech?: Partial<Record<IdCechy, string>>
   /** Ekran informacyjny zamiast pytan, gdy sytuacja nie dotyczy tego uzytkownika. */
   nie_dotyczy?: { gdy_umowa: Umowa[]; naglowek: string; tresc: string }
   metryczka?: Metryczka

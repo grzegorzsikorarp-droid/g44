@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { doSprawdzenia, ocen, ocenPosrednio, policzPunkty, sytuacjeWKolejnosci } from '../src/silnik/sprawdzacz'
+import { doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, policzPunkty, sytuacjeWKolejnosci } from '../src/silnik/sprawdzacz'
+import { rozwiazProfil } from '../src/silnik/reguly'
+import { pustyProfil } from '../src/magazyn/magazyn'
 import { sytuacja as znajdz, sytuacje } from '../src/dane/wczytaj'
+import { POMINIETE, type Profil } from '../src/typy'
 
 const DZIEN = '2026-09-02'
 
@@ -16,9 +19,18 @@ describe('zmiana 1.2: lista „Mam sprawę”', () => {
     }
   })
 
-  it('cztery sytuacje są pełne: upał, dźwiganie, odpoczynek i umowa', () => {
-    const pelne = sytuacje().filter((s) => s.pelna).map((s) => s.id).sort()
-    expect(pelne).toEqual(['dzwiganie', 'odpoczynek', 'umowa', 'upal'])
+  it('wszystkie osiem sytuacji jest pełnych — żadnej planszy „w pełnej wersji”', () => {
+    expect(sytuacje().filter((s) => !s.pelna)).toEqual([])
+    expect(sytuacje().map((s) => s.id).sort())
+      .toEqual(['badania', 'dzwiganie', 'odpoczynek', 'srodki', 'szkolenie', 'umowa', 'upal', 'zimno'])
+  })
+
+  it('każda sytuacja ma regułę zbiorczą — żaden zestaw odpowiedzi nie kończy się pustką', () => {
+    for (const s of sytuacje()) {
+      const reguly = (s as unknown as { reguly?: { gdy?: Record<string, string[]> }[] }).reguly ?? []
+      const zbiorcza = reguly.some((r) => Object.keys(r.gdy ?? {}).length === 0)
+      expect(zbiorcza, `sytuacja ${s.id} bez reguły zbiorczej`).toBe(true)
+    }
   })
 
   it('sezonowa idzie na górę w sezonie', () => {
@@ -188,5 +200,130 @@ describe('zasady, których treść musi dotrzymać', () => {
 
   it('każda sytuacja ma metryczkę', () => {
     for (const s of sytuacje()) expect(s.metryczka?.autor).toBeTruthy()
+  })
+})
+
+/* ---------- Cztery sytuacje domknięte po zmianie 1.2 ---------- */
+
+describe('sytuacja 3: środki ochrony — opcje budowane z cech profilu', () => {
+  const srodki = znajdz('srodki')!
+
+  it('pyta wyłącznie o narażenia, które na tym stanowisku występują', () => {
+    const profil: Profil = {
+      ...pustyProfil(),
+      umowa: 'o_prace',
+      odpowiedzi: { ...pustyProfil().odpowiedzi, chemia: true, halas: true, biologia: false, odziez: false, teren: false, dzwiganie: 'brak', monitor: 'brak', glos: false, pojazd: false, samotnie: false, urazowe: false },
+    }
+    const opcje = opcjeZCech(srodki, srodki.pytania![0], rozwiazProfil(profil, DZIEN))
+    const wartosci = opcje.map((o) => o.wartosc)
+    expect(wartosci).toContain('chemia')
+    expect(wartosci).toContain('halas')
+    expect(wartosci).not.toContain('biologia')
+    // Opcja własna sytuacji zamyka listę.
+    expect(wartosci[wartosci.length - 1]).toBe('inne')
+  })
+
+  it('pominięte pytanie kreatora zostawia opcję na liście — wartość bezpieczna pokazuje więcej', () => {
+    const profil: Profil = {
+      ...pustyProfil(),
+      odpowiedzi: { ...pustyProfil().odpowiedzi, chemia: POMINIETE },
+    }
+    const opcje = opcjeZCech(srodki, srodki.pytania![0], rozwiazProfil(profil, DZIEN))
+    expect(opcje.map((o) => o.wartosc)).toContain('chemia')
+  })
+
+  it('powtórne zgłoszenie bez skutku daje zielony werdykt z prawem powstrzymania się', () => {
+    const w = ocen(srodki, { czego_brakuje: 'chemia', czy_wie: 'zglaszalem' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('przysluguje')
+    expect(w.ile.join(' ')).toContain('powstrzymać się od pracy')
+  })
+
+  it('pytanie bez `zrodlo_opcji` zwraca swoje własne opcje bez zmian', () => {
+    const drugie = srodki.pytania![1]
+    expect(opcjeZCech(srodki, drugie, rozwiazProfil(pustyProfil(), DZIEN))).toEqual(drugie.opcje)
+  })
+})
+
+describe('sytuacja 4: badania okresowe', () => {
+  const badania = znajdz('badania')!
+
+  it('żądanie zapłaty od pracownika daje zielony werdykt', () => {
+    const w = ocen(badania, { kiedy: 'w_pracy', kto_placi: 'ja', dojazd: 'blisko' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('przysluguje')
+    expect(w.naglowek).toContain('koszt pracodawcy')
+  })
+
+  it('badanie po godzinach kieruje do reguły o godzinach pracy', () => {
+    const w = ocen(badania, { kiedy: 'po_pracy', kto_placi: 'pracodawca', dojazd: 'blisko' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('przysluguje')
+    expect(w.ile.join(' ')).toContain('w godzinach pracy')
+  })
+
+  it('dojazd do innej miejscowości daje regułę o zwrocie kosztów', () => {
+    const w = ocen(badania, { kiedy: 'w_pracy', kto_placi: 'pracodawca', dojazd: 'daleko' }, 'o_prace', DZIEN)!
+    expect(w.ile.join(' ')).toContain('Zwrot kosztów przejazdu')
+  })
+
+  it('na zleceniu werdykt jest szary i odsyła do pakietu umowy', () => {
+    const w = ocen(badania, { kiedy: 'w_pracy', kto_placi: 'ja', dojazd: 'blisko' }, 'zlecenie', DZIEN)!
+    expect(w.stan).toBe('nie_przysluguje')
+    expect(w.pokrewne?.sprawdzacz).toBe('umowa')
+  })
+})
+
+describe('sytuacja 5: szkolenie BHP', () => {
+  const szkolenie = znajdz('szkolenie')!
+
+  it('żądanie zapłaty daje zielony werdykt o koszcie pracodawcy', () => {
+    const w = ocen(szkolenie, { kiedy: 'w_pracy', kto_placi: 'ja' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('przysluguje')
+    expect(w.naglowek).toContain('koszt pracodawcy')
+  })
+
+  it('szkolenie po godzinach odsyła do ewidencji czasu pracy', () => {
+    const w = ocen(szkolenie, { kiedy: 'po_pracy', kto_placi: 'pracodawca' }, 'o_prace', DZIEN)!
+    expect(w.ile.join(' ')).toContain('Mój czas pracy')
+  })
+
+  it('na zleceniu werdykt jest bursztynowy, nie szary — instruktaż bywa obowiązkiem', () => {
+    const w = ocen(szkolenie, { kiedy: 'w_pracy', kto_placi: 'pracodawca' }, 'zlecenie', DZIEN)!
+    expect(w.stan).toBe('zalezy')
+    expect(doSprawdzenia(w).length).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('sytuacja 7: zimno i ciasnota', () => {
+  const zimno = znajdz('zimno')!
+
+  it('poniżej 14 °C werdykt jest zielony niezależnie od rodzaju pracy', () => {
+    for (const praca of ['biurowa', 'fizyczna']) {
+      const w = ocen(zimno, { ile_stopni: 'ponizej14', jaka_praca: praca, ciasno: 'nie' }, 'o_prace', DZIEN)!
+      expect(w.stan).toBe('przysluguje')
+    }
+  })
+
+  it('16 °C przy pracy biurowej jest poniżej progu, przy fizycznej już nie', () => {
+    const biuro = ocen(zimno, { ile_stopni: 'do18', jaka_praca: 'biurowa', ciasno: 'nie' }, 'o_prace', DZIEN)!
+    expect(biuro.stan).toBe('przysluguje')
+    const fizyczna = ocen(zimno, { ile_stopni: 'do18', jaka_praca: 'fizyczna', ciasno: 'nie' }, 'o_prace', DZIEN)!
+    expect(fizyczna.stan).toBe('nie_przysluguje')
+  })
+
+  it('progi podstawiają się z parametrów, a nie z liczb w tekście', () => {
+    const w = ocen(zimno, { ile_stopni: 'ponizej14', jaka_praca: 'fizyczna', ciasno: 'nie' }, 'o_prace', DZIEN)!
+    expect(w.ile.join(' ')).toContain('18 °C')
+    expect(w.ile.join(' ')).toContain('14 °C')
+  })
+
+  it('ciasnota bez przekroczonej temperatury daje bursztyn, a kubatura czeka na specjalistę', () => {
+    const w = ocen(zimno, { ile_stopni: 'powyzej18', jaka_praca: 'biurowa', ciasno: 'tak' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('zalezy')
+    expect(w.ile.join(' ')).toContain('[do uzupełnienia przez specjalistę]')
+  })
+
+  it('brak termometru daje bursztyn z prośbą o pomiar', () => {
+    const w = ocen(zimno, { ile_stopni: 'nie_wiem', jaka_praca: 'biurowa', ciasno: 'nie' }, 'o_prace', DZIEN)!
+    expect(w.stan).toBe('zalezy')
+    expect(w.pismo.tytul).toContain('pomiar')
   })
 })

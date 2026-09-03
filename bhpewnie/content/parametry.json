@@ -146,6 +146,22 @@
       "obowiazuje_od": "2026-01-01",
       "obowiazuje_do": null,
       "zrodlo": "[do uzupełnienia przez specjalistę]"
+    },
+    {
+      "id": "temperatura_min_biurowa",
+      "wartosc": 18,
+      "jednostka": "°C",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "minimalna temperatura w pomieszczeniu przy pracy lekkiej i biurowej [do potwierdzenia przez specjalistę]"
+    },
+    {
+      "id": "temperatura_min_fizyczna",
+      "wartosc": 14,
+      "jednostka": "°C",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "minimalna temperatura w pomieszczeniu przy pracy fizycznej [do potwierdzenia przez specjalistę]"
     }
   ]
 }

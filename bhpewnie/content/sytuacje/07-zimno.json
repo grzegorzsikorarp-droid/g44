@@ -1,12 +1,197 @@
 {
   "id": "zimno",
-  "etykieta": "Jest za zimno albo za ciasno w pomieszczeniu",
-  "pelna": false,
+  "etykieta": "Jest zimno albo ciasno w pomieszczeniu",
+  "pelna": true,
+  "sezonowa": "zima",
+  "pytania": [
+    {
+      "id": "ile_stopni",
+      "tresc": "Ile stopni pokazuje termometr w pomieszczeniu, w którym pracujesz?",
+      "opcje": [
+        { "wartosc": "ponizej14", "etykieta": "Poniżej 14 °C" },
+        { "wartosc": "do18", "etykieta": "Od 14 do 18 °C" },
+        { "wartosc": "powyzej18", "etykieta": "Powyżej 18 °C" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie ma termometru" }
+      ]
+    },
+    {
+      "id": "jaka_praca",
+      "tresc": "Jaka to praca?",
+      "opcje": [
+        { "wartosc": "biurowa", "etykieta": "Siedząca albo lekka" },
+        { "wartosc": "fizyczna", "etykieta": "Fizyczna — ruch, wysiłek" }
+      ]
+    },
+    {
+      "id": "ciasno",
+      "tresc": "Czy w tym pomieszczeniu jest ciasno?",
+      "opcje": [
+        { "wartosc": "tak", "etykieta": "Tak, ledwo się mieścimy" },
+        { "wartosc": "nie", "etykieta": "Nie, miejsca wystarcza" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "gdy": { "ile_stopni": ["ponizej14"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Ta temperatura jest poniżej minimum przy każdej pracy",
+        "uzasadnienie": "Poniżej {temperatura_min_fizyczna} nie wolno pracować w pomieszczeniu nawet przy pracy fizycznej. To nie jest kwestia hartu ani przyzwyczajenia — pracodawca ma zapewnić temperaturę odpowiednią do rodzaju pracy.",
+        "ile": [
+          "Przy pracy lekkiej i biurowej: co najmniej {temperatura_min_biurowa}.",
+          "Przy pracy fizycznej: co najmniej {temperatura_min_fizyczna}.",
+          "Przy pracy w chłodzie przysługują też napoje ciepłe i miejsce do ogrzania się.",
+          "Jeżeli warunki bezpośrednio zagrażają Twojemu zdrowiu, masz prawo powstrzymać się od pracy — po zawiadomieniu przełożonego."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Miejsce do ogrzania się i zjedzenia", "sprawdzacz": "upal" },
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie właściwej temperatury w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o zapewnienie w pomieszczeniu, w którym wykonuję pracę, temperatury odpowiedniej do rodzaju wykonywanej pracy.",
+            "Temperatura mierzona na moim stanowisku jest niższa od minimum przewidzianego przepisami.",
+            "Proszę o pisemną informację o podjętych działaniach oraz o wskazanie miejsca, w którym mogę się ogrzać do czasu ich wykonania."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, w naszym pomieszczeniu jest dziś poniżej 14 stopni. To jest poniżej minimum przy każdej pracy. Proszę o ogrzanie pomieszczenia albo o wskazanie, gdzie mamy pracować do czasu naprawy.",
+          "mail": {
+            "temat": "Temperatura w pomieszczeniu pracy poniżej minimum",
+            "tresc": "Dzień dobry,\n\ntemperatura w pomieszczeniu, w którym pracuję, jest niższa od minimum przewidzianego przepisami dla rodzaju wykonywanej pracy.\n\nProszę o zapewnienie właściwej temperatury oraz o informację, gdzie mam wykonywać pracę do czasu usunięcia problemu.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_stopni": ["do18"], "jaka_praca": ["biurowa"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przy pracy biurowej przysługuje Ci {temperatura_min_biurowa}",
+        "uzasadnienie": "Przy pracy siedzącej i lekkiej minimum wynosi {temperatura_min_biurowa}. Twoje pomieszczenie jest poniżej tego progu — nawet jeśli mieści się w minimum dla pracy fizycznej.",
+        "ile": [
+          "Przy pracy lekkiej i biurowej: co najmniej {temperatura_min_biurowa}.",
+          "Przy pracy fizycznej: co najmniej {temperatura_min_fizyczna}.",
+          "Ogrzewanie pomieszczenia to obowiązek pracodawcy, a nie sprawa własnych grzejników i koców."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zapewnienie temperatury właściwej dla pracy biurowej",
+          "akapity": [
+            "Wnoszę o zapewnienie w pomieszczeniu, w którym wykonuję pracę biurową, temperatury nie niższej niż wymagana dla tego rodzaju pracy.",
+            "Obecna temperatura na moim stanowisku jest niższa od tego minimum.",
+            "Proszę o pisemną informację o terminie usunięcia problemu."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, w naszym pokoju jest teraz około 16 stopni. Przy pracy biurowej minimum to 18. Chciałem(-am) zapytać, czy da się poprawić ogrzewanie.",
+          "mail": {
+            "temat": "Temperatura w pomieszczeniu biurowym",
+            "tresc": "Dzień dobry,\n\ntemperatura w pomieszczeniu, w którym wykonuję pracę biurową, jest niższa niż minimum przewidziane dla tego rodzaju pracy.\n\nProszę o zapewnienie właściwej temperatury i o informację o terminie.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ile_stopni": ["nie_wiem"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Bez pomiaru trudno to rozstrzygnąć",
+        "uzasadnienie": "Minimum zależy od rodzaju pracy: {temperatura_min_biurowa} przy pracy lekkiej, {temperatura_min_fizyczna} przy fizycznej. Bez termometru nie da się powiedzieć, po której stronie progu jesteś — a to właśnie ta liczba rozstrzyga sprawę.",
+        "ile": [
+          "Przy pracy lekkiej i biurowej: co najmniej {temperatura_min_biurowa}.",
+          "Przy pracy fizycznej: co najmniej {temperatura_min_fizyczna}.",
+          "Możesz poprosić o pomiar — należy on do obowiązków pracodawcy, nie do Twoich."
+        ],
+        "do_sprawdzenia": [
+          "Czy w pomieszczeniu jest termometr i kto go odczytuje",
+          "Czy ktoś zgłaszał już temperaturę i co odpowiedziano"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o pomiar temperatury w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o wykonanie pomiaru temperatury w pomieszczeniu, w którym wykonuję pracę, oraz o udostępnienie mi wyniku.",
+            "W pomieszczeniu nie ma termometru, więc nie mam możliwości samodzielnego sprawdzenia, czy warunki odpowiadają wymaganiom.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, u nas w pomieszczeniu nie ma termometru, a bywa chłodno. Chciałem(-am) poprosić o pomiar temperatury i o informację, ile wyszło.",
+          "mail": {
+            "temat": "Prośba o pomiar temperatury w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nw pomieszczeniu, w którym pracuję, nie ma termometru. Proszę o wykonanie pomiaru temperatury i udostępnienie mi wyniku.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "ciasno": ["tak"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Ciasnota ma swoje normy, ale liczy się je inaczej niż stopnie",
+        "uzasadnienie": "Temperatura mieści się w minimum, ale zgłaszasz ciasnotę. Przepisy określają minimalną kubaturę i wolną powierzchnię podłogi na jednego pracownika — z wyłączeniami dla pomieszczeń o określonej wysokości. Bez wymiarów pomieszczenia i liczby osób nie da się tego przeliczyć.",
+        "ile": [
+          "Minimalna kubatura i wolna powierzchnia podłogi na pracownika: [do uzupełnienia przez specjalistę].",
+          "Przy pracy w pomieszczeniu przysługuje też wymiana powietrza i oświetlenie odpowiednie do rodzaju pracy.",
+          "Zgłoszenie ciasnoty jest podstawą do przeglądu stanowiska przez służbę BHP."
+        ],
+        "do_sprawdzenia": [
+          "Jakie są wymiary pomieszczenia i ile osób pracuje w nim jednocześnie",
+          "Co o tym pomieszczeniu mówi ocena ryzyka zawodowego"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o przegląd warunków w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o przegląd pomieszczenia, w którym wykonuję pracę, pod kątem kubatury i wolnej powierzchni przypadającej na jednego pracownika.",
+            "W pomieszczeniu pracuje jednocześnie tyle osób, że warunki wydają mi się poniżej wymaganych.",
+            "Proszę o udostępnienie wyniku przeglądu oraz odpowiedniej części oceny ryzyka zawodowego."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że w naszym pomieszczeniu pracuje nas tyle osób, że robi się ciasno. Proszę o przegląd stanowiska przez służbę BHP.",
+          "mail": {
+            "temat": "Prośba o przegląd warunków w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd pomieszczenia, w którym pracuję, pod kątem powierzchni i kubatury przypadającej na jednego pracownika.\n\nProszę też o udostępnienie odpowiedniej części oceny ryzyka zawodowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Dziś progi nie są przekroczone",
+        "uzasadnienie": "Temperatura mieści się w minimum dla Twojego rodzaju pracy, a miejsca wystarcza. To nie znaczy, że warunki są dobre — znaczy, że nie ma tu przepisu, na który mógłbyś się dziś powołać.",
+        "ile": [
+          "Przy pracy lekkiej i biurowej: co najmniej {temperatura_min_biurowa}.",
+          "Przy pracy fizycznej: co najmniej {temperatura_min_fizyczna}.",
+          "Niezależnie od temperatury przysługuje Ci wymiana powietrza, oświetlenie odpowiednie do pracy i pomieszczenie do zjedzenia posiłku, gdy pracuje więcej niż 20 osób."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Napoje i posiłek profilaktyczny", "sprawdzacz": "upal" },
+        "pismo": {
+          "tytul": "Wniosek o informację o warunkach w pomieszczeniu pracy",
+          "akapity": [
+            "Proszę o udostępnienie mi informacji o warunkach w pomieszczeniu, w którym wykonuję pracę: temperaturze, wymianie powietrza i oświetleniu.",
+            "Proszę też o wskazanie osoby, do której mam się zwracać w tych sprawach."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) się dowiedzieć, jakie warunki są przewidziane dla naszego pomieszczenia i do kogo mam się zgłaszać, gdyby coś się pogorszyło.",
+          "mail": {
+            "temat": "Warunki w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o informację o warunkach przewidzianych dla pomieszczenia, w którym pracuję, oraz o wskazanie osoby właściwej w tych sprawach.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
   "metryczka": {
     "autor": "opracowanie robocze zespołu prototypu",
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
-    "data_opracowania": "2026-09-01",
+    "data_opracowania": "2026-09-03",
     "data_przegladu": "2026-12-01"
-  },
-  "sezonowa": "zima"
+  }
 }

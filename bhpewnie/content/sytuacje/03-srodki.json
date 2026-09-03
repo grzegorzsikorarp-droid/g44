@@ -1,11 +1,134 @@
 {
   "id": "srodki",
   "etykieta": "Nie dostałem środków ochrony",
-  "pelna": false,
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "czego_brakuje",
+      "tresc": "Czego Ci brakuje?",
+      "zrodlo_opcji": "cechy_profilu",
+      "opcje": [
+        { "wartosc": "inne", "etykieta": "Czegoś innego" }
+      ]
+    },
+    {
+      "id": "czy_wie",
+      "tresc": "Czy pracodawca wie, że tego brakuje?",
+      "opcje": [
+        { "wartosc": "zglaszalem", "etykieta": "Zgłaszałem(-am) i nic się nie zmieniło" },
+        { "wartosc": "wie_ustnie", "etykieta": "Mówiłem(-am), ale nie na piśmie" },
+        { "wartosc": "nie_wie", "etykieta": "Chyba nie wie" }
+      ]
+    }
+  ],
+  "etykiety_cech": {
+    "chemia": "Ochrony przy substancjach chemicznych — rękawic, okularów, masek",
+    "biologia": "Ochrony przy materiale zakaźnym — rękawic, fartuchów, ochrony oczu",
+    "halas": "Ochronników słuchu",
+    "urazowe": "Ochrony przy maszynach albo pracy na wysokości — kasku, szelek, osłon",
+    "odziez": "Odzieży i obuwia roboczego",
+    "teren": "Ochrony przy pracy na dworze — odzieży przeciwdeszczowej, ciepłej, odblaskowej",
+    "dzwiganie": "Sprzętu do przemieszczania — podnośnika, maty, pasa",
+    "monitor": "Wyposażenia stanowiska z ekranem — podnóżka, uchwytu, właściwego oświetlenia",
+    "glos": "Wsparcia przy pracy głosem — nagłośnienia, wody, przerw",
+    "pojazd": "Wyposażenia przy prowadzeniu pojazdu — kamizelki, apteczki, gaśnicy",
+    "samotnie": "Środków łączności do wezwania pomocy przy pracy w pojedynkę"
+  },
+  "reguly": [
+    {
+      "gdy": { "czy_wie": ["zglaszalem"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Środki ochrony to obowiązek pracodawcy, nie prośba",
+        "uzasadnienie": "Środki ochrony indywidualnej dobiera się do zagrożeń na stanowisku i wydaje nieodpłatnie. Zgłaszałeś(-aś) brak i nic się nie zmieniło — to nie jest już kwestia niedopatrzenia, tylko niewykonanego obowiązku.",
+        "ile": [
+          "Środki ochrony wydaje pracodawca nieodpłatnie, wraz z informacją, jak ich używać.",
+          "Do pracy bez wymaganych środków ochrony nie wolno Cię dopuścić.",
+          "Gdy brak środków bezpośrednio zagraża Twojemu zdrowiu, masz prawo powstrzymać się od pracy — po zawiadomieniu przełożonego, z zachowaniem prawa do wynagrodzenia.",
+          "Zgłoszenie na piśmie zostawia ślad; ustne rozmowy znikają razem ze zmianą."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": { "tytul": "Prawo powstrzymania się od pracy", "sprawdzacz": "odpoczynek" },
+        "pismo": {
+          "tytul": "Wniosek o wydanie środków ochrony indywidualnej",
+          "akapity": [
+            "Wnoszę o wydanie mi środków ochrony indywidualnej wymaganych na moim stanowisku pracy.",
+            "Brak tych środków zgłaszałem(-am) już wcześniej; do dziś nie zostały wydane.",
+            "Proszę o pisemną informację o terminie wydania oraz o wskazanie, w jaki sposób mam wykonywać pracę do tego czasu."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, zgłaszałem(-am) już, że brakuje nam środków ochrony na stanowisku, i nic się nie zmieniło. Chciałem(-am) zgłosić to na piśmie i ustalić termin. Do tego czasu proszę o wskazanie, jak mam pracować.",
+          "mail": {
+            "temat": "Brak środków ochrony indywidualnej — ponowne zgłoszenie",
+            "tresc": "Dzień dobry,\n\nna moim stanowisku brakuje wymaganych środków ochrony indywidualnej. Zgłaszałem(-am) to już wcześniej.\n\nProszę o wydanie środków i o informację o terminie, a także o wskazanie sposobu wykonywania pracy do tego czasu.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "czy_wie": ["nie_wie", "wie_ustnie"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługują Ci środki ochrony — zacznij od zgłoszenia na piśmie",
+        "uzasadnienie": "Środki ochrony indywidualnej dobiera się do zagrożeń występujących na stanowisku i wydaje nieodpłatnie. Zgłoszenie na piśmie jest pierwszym krokiem: uruchamia obowiązek i zostawia ślad, do którego można wrócić.",
+        "ile": [
+          "Środki ochrony wydaje pracodawca nieodpłatnie, wraz z informacją, jak ich używać.",
+          "Rodzaj środków wynika z oceny ryzyka zawodowego dla Twojego stanowiska — masz prawo ją poznać.",
+          "Do pracy bez wymaganych środków ochrony nie wolno Cię dopuścić.",
+          "Zapisz zgłoszenie w dzienniku zdarzeń w zakładce Pomoc — data i treść bywają później rozstrzygające."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o wydanie środków ochrony indywidualnej",
+          "akapity": [
+            "Wnoszę o wydanie mi środków ochrony indywidualnej wymaganych na moim stanowisku pracy.",
+            "Proszę też o udostępnienie oceny ryzyka zawodowego w części dotyczącej środków ochrony przewidzianych dla tego stanowiska.",
+            "Proszę o pisemną odpowiedź."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że na moim stanowisku brakuje środków ochrony. Proszę o ich wydanie i o informację, co przewiduje dla nas ocena ryzyka.",
+          "mail": {
+            "temat": "Wniosek o wydanie środków ochrony indywidualnej",
+            "tresc": "Dzień dobry,\n\nna moim stanowisku brakuje wymaganych środków ochrony indywidualnej.\n\nProszę o ich wydanie oraz o udostępnienie oceny ryzyka zawodowego w części dotyczącej środków przewidzianych dla tego stanowiska.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Przysługują Ci środki ochrony dobrane do zagrożeń",
+        "uzasadnienie": "Rodzaj środków ochrony wynika z zagrożeń występujących na Twoim stanowisku, spisanych w ocenie ryzyka zawodowego. To ona rozstrzyga, co dokładnie ma Ci zostać wydane.",
+        "ile": [
+          "Środki ochrony wydaje pracodawca nieodpłatnie.",
+          "Masz prawo poznać ocenę ryzyka zawodowego dla swojego stanowiska.",
+          "Do pracy bez wymaganych środków ochrony nie wolno Cię dopuścić."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o udostępnienie oceny ryzyka i wydanie środków ochrony",
+          "akapity": [
+            "Proszę o udostępnienie oceny ryzyka zawodowego dla mojego stanowiska w części dotyczącej środków ochrony indywidualnej.",
+            "Wnoszę o wydanie mi środków przewidzianych dla tego stanowiska."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zapytać, jakie środki ochrony są przewidziane dla mojego stanowiska i gdzie mogę zajrzeć do oceny ryzyka.",
+          "mail": {
+            "temat": "Środki ochrony przewidziane dla stanowiska",
+            "tresc": "Dzień dobry,\n\nproszę o informację, jakie środki ochrony indywidualnej przewidziano dla mojego stanowiska, oraz o udostępnienie odpowiedniej części oceny ryzyka zawodowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
   "metryczka": {
     "autor": "opracowanie robocze zespołu prototypu",
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
-    "data_opracowania": "2026-09-01",
+    "data_opracowania": "2026-09-03",
     "data_przegladu": "2026-12-01"
   }
 }

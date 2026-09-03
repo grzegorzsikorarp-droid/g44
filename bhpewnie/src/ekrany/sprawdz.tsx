@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
 import { Ikona, Naglowek, PlanszaPelnejWersji, PodstawaPrawna, Przycisk } from '../komponenty/podstawowe'
 import { t, sytuacja as znajdzSytuacje } from '../dane/wczytaj'
-import { doSprawdzenia, ocen, ocenPosrednio, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
+import { doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
 import { STAN_PRAWNY, wypelnij } from '../silnik/parametry'
 import { rozwiazProfil } from '../silnik/reguly'
 import { pustyProfil } from '../magazyn/magazyn'
@@ -98,6 +98,7 @@ export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) 
 
   const pytania = sytuacja.pytania ?? []
   const pytanie = pytania[nr]
+  const opcje = opcjeZCech(sytuacja, pytanie, rozwiazProfil(profil, dzis))
 
   const odpowiedz = (wartosc: string) => {
     const nowe = { ...odpowiedzi, [pytanie.id]: wartosc }
@@ -150,7 +151,7 @@ export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) 
         <p className="oczko">Pytanie {nr + 1} z {pytania.length}</p>
         <h1>{pytanie.tresc}</h1>
         <div className="kolumna">
-          {pytanie.opcje.map((o) => (
+          {opcje.map((o) => (
             <button key={o.wartosc} className="odpowiedz" onClick={() => odpowiedz(o.wartosc)}>
               <span className="odpowiedz__znacznik" aria-hidden="true" />
               <span>{o.etykieta}</span>

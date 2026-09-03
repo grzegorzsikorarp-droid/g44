@@ -144,10 +144,57 @@ test('E2.6: skrypt rozmowy ma wersję ustną i mailową z tematem', async ({ pag
   await expect(page.getByText(/Temat wiadomości:/)).toBeVisible()
 })
 
-test('sytuacja spoza prototypu pokazuje planszę, a nie ślepy zaułek', async ({ page }) => {
+test('wszystkie osiem sytuacji prowadzi do werdyktu, żadna do planszy', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: 'Mam sprawę', exact: true }).click()
+  // Plansza „w pełnej wersji” zniknęła z listy razem z ostatnią niepełną sytuacją.
+  await expect(page.getByText('W pełnej wersji')).toHaveCount(0)
+})
+
+test('sytuacja 5: szkolenie BHP po godzinach odsyła do ewidencji czasu', async ({ page }) => {
   await wejdzZPrzykladem(page)
   await otworzSprawe(page, /Wysyłają mnie na szkolenie BHP/)
-  await expect(page.getByText('W pełnej wersji').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Wróć do listy' }).click()
-  await expect(page.getByRole('heading', { name: 'Mam sprawę' })).toBeVisible()
+  await page.getByRole('button', { name: 'Po pracy albo w dzień wolny' }).click()
+  await page.getByRole('button', { name: 'Pracodawca', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: /Szkolenie odbywa się w czasie pracy/ })).toBeVisible()
+  await expect(page.getByText(/Mój czas pracy/).first()).toBeVisible()
+})
+
+test('sytuacja 3: środki ochrony pytają tylko o narażenia z profilu', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Nie dostałem środków ochrony/)
+
+  // Barbara ma chemię i biologię, nie ma hałasu ani pracy w terenie.
+  await expect(page.getByRole('button', { name: /substancjach chemicznych/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /materiale zakaźnym/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Ochronników słuchu/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /pracy na dworze/ })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /materiale zakaźnym/ }).click()
+  await page.getByRole('button', { name: /Zgłaszałem\(-am\) i nic się nie zmieniło/ }).click()
+  await expect(page.getByRole('heading', { name: /obowiązek pracodawcy, nie prośba/ })).toBeVisible()
+})
+
+test('sytuacja 7: zimno — 16 °C przy pracy biurowej przekracza próg', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Jest zimno albo ciasno/)
+  await page.getByRole('button', { name: 'Od 14 do 18 °C' }).click()
+  await page.getByRole('button', { name: 'Siedząca albo lekka' }).click()
+  await page.getByRole('button', { name: 'Nie, miejsca wystarcza' }).click()
+
+  await expect(page.getByRole('heading', { name: /Przy pracy biurowej przysługuje Ci 18 °C/ })).toBeVisible()
+  await expect(page.getByText(/co najmniej 14 °C/)).toBeVisible()
+})
+
+test('sytuacja 4: badania — żądanie zapłaty od pracownika daje zielony werdykt', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Mam badania okresowe/)
+  await page.getByRole('button', { name: 'W godzinach mojej pracy' }).click()
+  await page.getByRole('button', { name: 'Kazano mi zapłacić samemu' }).click()
+  // Zostało jedno pytanie, więc wynik pośredni się nie pokazuje — droga byłaby dłuższa, nie krótsza.
+  await expect(page.getByText('Tyle już wiemy')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Na miejscu albo w pobliżu' }).click()
+
+  await expect(page.getByRole('heading', { name: /Badania okresowe są na koszt pracodawcy/ })).toBeVisible()
 })

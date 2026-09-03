@@ -1,4 +1,5 @@
-import type { Sytuacja, Umowa, Werdykt } from '../typy'
+import type { PytanieSprawdzacza, Sytuacja, Umowa, Werdykt } from '../typy'
+import type { RozwiazanyProfil } from './reguly'
 import { wypelnij } from './parametry'
 import { sytuacje } from '../dane/wczytaj'
 
@@ -42,10 +43,14 @@ function pasuje(regula: Regula, odpowiedzi: Record<string, string>, umowa: Umowa
   return true
 }
 
-/** Wstawia wartości parametrów do wszystkich tekstów werdyktu. */
+/**
+ * Wstawia wartości parametrów do wszystkich tekstów werdyktu — nagłówek włącznie,
+ * bo próg bywa tym, co w nagłówku ma stać („Przysługuje Ci {temperatura_min_biurowa}”).
+ */
 function wypelnijWerdykt(w: Werdykt, dzien: string): Werdykt {
   return {
     ...w,
+    naglowek: wypelnij(w.naglowek, dzien).tekst,
     uzasadnienie: wypelnij(w.uzasadnienie, dzien).tekst,
     ile: w.ile.map((x) => wypelnij(x, dzien).tekst),
     do_sprawdzenia: w.do_sprawdzenia?.map((x) => wypelnij(x, dzien).tekst),
@@ -150,6 +155,29 @@ export function ocenPosrednio(
 export function werdyktBezPytan(sytuacja: Sytuacja, umowa: Umowa, dzien: string): Werdykt | null {
   if (sytuacja.pelna) return null
   return ocen(sytuacja, {}, umowa, dzien)
+}
+
+/**
+ * Buduje opcje pytania z cech, które na TYM stanowisku są aktywne (punkt 4.3, sytuacja 3).
+ * Cecha nieaktywna („nie pracuję z chemią”) nie ma po co stać na liście — a pominięta
+ * w kreatorze zostaje, bo wartość bezpieczna każe pokazywać więcej, nie mniej.
+ *
+ * Opcje własne sytuacji (np. „Czegoś innego”) zawsze zamykają listę.
+ */
+export function opcjeZCech(
+  sytuacja: Sytuacja,
+  pytanie: PytanieSprawdzacza,
+  profil: RozwiazanyProfil,
+): { wartosc: string; etykieta: string }[] {
+  if (pytanie.zrodlo_opcji !== 'cechy_profilu') return pytanie.opcje
+  const etykiety = sytuacja.etykiety_cech ?? {}
+  const zCech = (Object.keys(etykiety) as (keyof typeof etykiety)[])
+    .filter((cecha) => {
+      const wartosc = profil.wektor[cecha as keyof typeof profil.wektor]
+      return wartosc !== false && wartosc !== 'brak'
+    })
+    .map((cecha) => ({ wartosc: String(cecha), etykieta: etykiety[cecha]! }))
+  return [...zCech, ...pytanie.opcje]
 }
 
 /** P5: bursztyn ma najwyżej dwie rzeczy do sprawdzenia — pilnujemy tego w kodzie. */

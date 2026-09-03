@@ -1,11 +1,191 @@
 {
   "id": "szkolenie",
   "etykieta": "Wysyłają mnie na szkolenie BHP",
-  "pelna": false,
+  "pelna": true,
+  "pytania": [
+    {
+      "id": "kiedy",
+      "tresc": "Kiedy ma się odbyć szkolenie?",
+      "opcje": [
+        { "wartosc": "w_pracy", "etykieta": "W godzinach mojej pracy" },
+        { "wartosc": "po_pracy", "etykieta": "Po pracy albo w dzień wolny" },
+        { "wartosc": "nie_wiem", "etykieta": "Jeszcze nie wiem" }
+      ]
+    },
+    {
+      "id": "kto_placi",
+      "tresc": "Kto płaci za szkolenie?",
+      "opcje": [
+        { "wartosc": "pracodawca", "etykieta": "Pracodawca" },
+        { "wartosc": "ja", "etykieta": "Kazano mi zapłacić samemu" },
+        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+      ]
+    }
+  ],
+  "reguly": [
+    {
+      "umowa": ["zlecenie", "dzialalnosc"],
+      "gdy": {},
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Na zleceniu szkolenie zależy od tego, kto organizuje pracę",
+        "uzasadnienie": "Obowiązek szkolenia w czasie pracy i na koszt pracodawcy dotyczy pracowników. Organizujący pracę ma jednak zapewnić bezpieczne i higieniczne warunki także osobom na umowach cywilnoprawnych — a instruktaż na stanowisku bywa właśnie tego częścią.",
+        "ile": [
+          "Zajrzyj do umowy: to ona rozstrzyga, co zostało ustalone o szkoleniach.",
+          "Bezpieczne warunki pracy przysługują Ci niezależnie od rodzaju umowy.",
+          "Jeżeli pracujesz jak pracownik, warto sprawdzić formę umowy — sześć pytań poniżej."
+        ],
+        "do_sprawdzenia": [
+          "Czy w umowie jest mowa o szkoleniach albo instruktażu",
+          "Kto u Was faktycznie organizuje pracę na Twoim stanowisku"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pokrewne": {
+          "tytul": "Czy to na pewno nie powinna być umowa o pracę?",
+          "sprawdzacz": "umowa"
+        },
+        "pismo": {
+          "tytul": "Zapytanie o szkolenie i instruktaż stanowiskowy",
+          "akapity": [
+            "Proszę o informację, jakie szkolenie albo instruktaż przewidziano dla mojego stanowiska i na czyj koszt się odbywa.",
+            "Proszę też o wskazanie, kto odpowiada za bezpieczne warunki wykonywania przeze mnie pracy."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, pracuję na zleceniu i chciałem(-am) zapytać, jakie szkolenie albo instruktaż jest przewidziany na moim stanowisku i kto to organizuje.",
+          "mail": {
+            "temat": "Szkolenie i instruktaż na stanowisku",
+            "tresc": "Dzień dobry,\n\nproszę o informację, jakie szkolenie albo instruktaż przewidziano dla mojego stanowiska i na czyj koszt.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kto_placi": ["ja"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Szkolenie BHP jest na koszt pracodawcy",
+        "uzasadnienie": "Szkolenia w dziedzinie bezpieczeństwa i higieny pracy odbywają się na koszt pracodawcy. Nie wolno ich finansować z Twojego wynagrodzenia ani żądać, żebyś zapłacił(a) sam(a) — to obowiązek, a nie świadczenie dodatkowe.",
+        "ile": [
+          "Szkolenie odbywa się w czasie pracy i na koszt pracodawcy.",
+          "Za czas szkolenia zachowujesz prawo do wynagrodzenia.",
+          "Do pracy na stanowisku, do którego nie masz szkolenia, nie wolno Cię dopuścić — to działa także na Twoją korzyść.",
+          "Szkolenie okresowe powtarza się w terminach zależnych od rodzaju stanowiska."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o zorganizowanie szkolenia BHP na koszt pracodawcy",
+          "akapity": [
+            "Wnoszę o zorganizowanie szkolenia w dziedzinie bezpieczeństwa i higieny pracy w czasie pracy i na koszt pracodawcy.",
+            "Otrzymałem(-am) informację, że mam pokryć koszt szkolenia samodzielnie. Szkolenia BHP odbywają się na koszt pracodawcy.",
+            "Proszę o pisemną informację o terminie szkolenia."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, dostałem(-am) informację, że mam sam(a) zapłacić za szkolenie BHP. Szkolenia BHP są w czasie pracy i na koszt pracodawcy. Proszę o ustalenie terminu.",
+          "mail": {
+            "temat": "Koszt szkolenia BHP",
+            "tresc": "Dzień dobry,\n\notrzymałem(-am) informację, że mam samodzielnie pokryć koszt szkolenia BHP.\n\nSzkolenia w dziedzinie bezpieczeństwa i higieny pracy odbywają się w czasie pracy i na koszt pracodawcy. Proszę o ustalenie terminu szkolenia.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kiedy": ["po_pracy"] },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Szkolenie odbywa się w czasie pracy",
+        "uzasadnienie": "Szkolenie BHP przeprowadza się w czasie pracy. Jeżeli wypada poza Twoim rozkładem, ten czas i tak jest czasem pracy — a nie prywatnym wieczorem poświęconym firmie.",
+        "ile": [
+          "Szkolenie odbywa się w czasie pracy i na koszt pracodawcy.",
+          "Za czas szkolenia zachowujesz prawo do wynagrodzenia.",
+          "Godziny szkolenia poza rozkładem wymagają rozliczenia jak każdy inny czas pracy.",
+          "Zapisz je w zakładce „Mój czas pracy” — będziesz mieć dowód, a nie wspomnienie."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o wyznaczenie szkolenia BHP w czasie pracy",
+          "akapity": [
+            "Wnoszę o wyznaczenie szkolenia w dziedzinie bezpieczeństwa i higieny pracy w moim rozkładzie czasu pracy.",
+            "Szkolenia BHP odbywają się w czasie pracy i na koszt pracodawcy.",
+            "Jeżeli termin w rozkładzie nie jest możliwy, proszę o wskazanie sposobu rozliczenia godzin szkolenia."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, szkolenie BHP wypada mi po godzinach. Szkolenia odbywają się w czasie pracy. Czy możemy przenieść termin, a jeśli nie — jak rozliczymy te godziny?",
+          "mail": {
+            "temat": "Termin szkolenia BHP poza rozkładem czasu pracy",
+            "tresc": "Dzień dobry,\n\nszkolenie BHP wyznaczono poza moim rozkładem czasu pracy.\n\nProszę o wyznaczenie terminu w czasie pracy albo o wskazanie sposobu rozliczenia godzin szkolenia.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": { "kiedy": ["nie_wiem"], "kto_placi": ["nie_wiem"] },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Zasady są jasne, brakuje szczegółów Twojego szkolenia",
+        "uzasadnienie": "Szkolenie BHP odbywa się w czasie pracy i na koszt pracodawcy — to nie zależy od ustaleń w firmie. Nie wiadomo natomiast, kiedy Twoje szkolenie ma być i jak zostało zorganizowane.",
+        "ile": [
+          "Szkolenie w czasie pracy i na koszt pracodawcy.",
+          "Za czas szkolenia zachowujesz prawo do wynagrodzenia.",
+          "Szkolenie okresowe powtarza się w terminach zależnych od rodzaju stanowiska."
+        ],
+        "do_sprawdzenia": [
+          "Kiedy odbyło się Twoje ostatnie szkolenie okresowe",
+          "Kto u Was organizuje szkolenia i wydaje zaświadczenia"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Zapytanie o termin i organizację szkolenia BHP",
+          "akapity": [
+            "Proszę o informację o terminie mojego szkolenia okresowego w dziedzinie bezpieczeństwa i higieny pracy.",
+            "Proszę też o potwierdzenie, że szkolenie odbędzie się w czasie pracy i na koszt pracodawcy."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zapytać o termin mojego szkolenia okresowego BHP i o to, jak jest zorganizowane.",
+          "mail": {
+            "temat": "Termin szkolenia okresowego BHP",
+            "tresc": "Dzień dobry,\n\nproszę o informację o terminie mojego szkolenia okresowego BHP oraz o potwierdzenie, że odbędzie się ono w czasie pracy i na koszt pracodawcy.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {},
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Szkolenie jest zorganizowane tak, jak powinno",
+        "uzasadnienie": "W czasie pracy i na koszt pracodawcy — dokładnie tak ma to wyglądać. Warto po szkoleniu zadbać o zaświadczenie: to ono liczy się przy następnym terminie.",
+        "ile": [
+          "Szkolenie w czasie pracy i na koszt pracodawcy.",
+          "Za czas szkolenia zachowujesz prawo do wynagrodzenia.",
+          "Po szkoleniu dostajesz zaświadczenie — jego kopia trafia do Twoich akt.",
+          "Datę następnego szkolenia możesz wpisać w „Moje terminy” — przypomnimy 30 dni wcześniej."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o wydanie zaświadczenia o ukończeniu szkolenia BHP",
+          "akapity": [
+            "Proszę o wydanie mi zaświadczenia o ukończeniu szkolenia w dziedzinie bezpieczeństwa i higieny pracy.",
+            "Proszę też o informację o dacie następnego szkolenia okresowego."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) poprosić o zaświadczenie ze szkolenia BHP i o informację, kiedy wypada następne.",
+          "mail": {
+            "temat": "Zaświadczenie ze szkolenia BHP",
+            "tresc": "Dzień dobry,\n\nproszę o wydanie zaświadczenia o ukończeniu szkolenia BHP oraz o informację o dacie następnego szkolenia okresowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    }
+  ],
   "metryczka": {
     "autor": "opracowanie robocze zespołu prototypu",
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
-    "data_opracowania": "2026-09-01",
+    "data_opracowania": "2026-09-03",
     "data_przegladu": "2026-12-01"
   }
 }

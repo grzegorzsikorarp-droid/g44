@@ -22,8 +22,8 @@ npm run preview      # podgląd zbudowanej paczki, port 4173
 Testy:
 
 ```bash
-npm test             # 94 testy jednostkowe: reguły, parametry, harmonogram, ewidencja, sprawdzacze
-npm run test:e2e     # 87 testów e2e: przebiegi P1–P12, sytuacje brzegowe, dostępność
+npm test             # 111 testów jednostkowych: reguły, parametry, harmonogram, ewidencja, sprawdzacze
+npm run test:e2e     # 91 testów e2e: przebiegi P1–P12, sytuacje brzegowe, dostępność
 npm run ekrany       # eksport listy ekranów i porównanie z mapą (66)
 ```
 
@@ -56,10 +56,11 @@ zmiana czasu urzędowego, która rozstrzyga długość nocki, byłaby niewykrywa
 | 1.2 D | Ewidencja czasu pracy — nowa grupa E7 (5 ekranów) | gotowe |
 | 1.2 E | Grafik na dwóch poziomach E5.3a/E5.3b, wyzwalacz zmiany rytmu | gotowe |
 | 1.2 F | Testy P10–P12, B13, axe na nowych ekranach, rejestr 66 ekranów, rozbieżności 15–24 | gotowe |
+| 1.2 G | Cztery pozostałe sytuacje domknięte; opcje pytania budowane z cech profilu | gotowe |
 
 Zaimplementowano **66 ekranów** — dokładnie tyle, ile podaje punkt 8 zmiany 1.2 (`npm run ekrany` porównuje rejestr z mapą i kończy się zerem tylko przy pełnej zgodności).
 
-Cztery pełne sytuacje w „Mam sprawę": **upał → napoje**, **dźwiganie → obie normy bez pytania o płeć**, **odpoczynek → przerwy i 11 h**, **umowa → sześć pytań i punktacja**. Cztery pozostałe pokazują planszę „w pełnej wersji". Warunki, które da się rozstrzygnąć jednym pytaniem, przeniesiono na kafle w zakładce pierwszej — aplikacja nie pyta dwa razy o to samo.
+Wszystkie osiem sytuacji w „Mam sprawę" jest pełnych — żadnej planszy „w pełnej wersji": upał, dźwiganie (obie normy, bez pytania o płeć), środki ochrony, badania okresowe, szkolenie BHP, odpoczynek, zimno i ciasnota, umowa. Warunki, które da się rozstrzygnąć jednym pytaniem, przeniesiono na kafle w zakładce pierwszej — aplikacja nie pyta dwa razy o to samo.
 
 ---
 
@@ -126,6 +127,8 @@ Moduły w `content/cechy/` mają jednakową budowę:
 Plik w `content/sytuacje/` z listą `pytania` i listą `reguly`. Wygrywa **pierwsza pasująca reguła**, więc kolejność ma znaczenie: od najbardziej szczegółowej do najogólniejszej. Reguła bez `gdy` łapie wszystko, co zostało.
 
 Test przy każdej nowej sytuacji: „czy aplikacja mogłaby to wiedzieć z kreatora?". Jeśli tak — to nie jest sprawa, tylko kafel z warunkiem.
+
+Pytanie z polem `zrodlo_opcji: "cechy_profilu"` buduje listę odpowiedzi z cech aktywnych na danym stanowisku; etykiety leżą w `etykiety_cech` tej samej sytuacji. Dzięki temu „Nie dostałem środków ochrony" pyta wyłącznie o narażenia, które użytkownika faktycznie dotyczą.
 
 Sytuacja może też mieć `punktacja` (jak pakiet umowy): silnik liczy, ile cech zaszło, i wstawia wynik jako pseudo-odpowiedź `_punkty`, na którą reagują zwykłe reguły. Werdykt może wtedy użyć `{punkty}`, `{cechy_stwierdzone}` i `{cechy_brakujace}`.
 
