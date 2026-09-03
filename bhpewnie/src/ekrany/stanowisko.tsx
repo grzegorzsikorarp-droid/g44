@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useAplikacja } from '../App'
 import { Ikona, Kafel, Naglowek, PodstawaPrawna, Przycisk, ZnakWerdyktu } from '../komponenty/podstawowe'
 import { policzLuki, policzUprawnienia, rozwiazProfil } from '../silnik/reguly'
@@ -70,6 +71,28 @@ export function MojeStanowisko() {
   const luki = useMemo(() => policzLuki(profil, dzis), [profil, dzis])
   const [rozwiniete, ustawRozwiniete] = useState(false)
   const aktualnosc = AKTUALNOSCI_WBUDOWANE[0]
+
+  /*
+    Wysokość wygaszenia dobiera się do PRZEŚWITU nad krawędzią, nie do motywu
+    (ROZBIEZNOSCI_DESIGN.md, wpis s). Gdy treść urywa się w połowie elementu, gradient
+    tłumaczy cięcie i ma 40 px; gdy stos wypełnia pole dokładnie, ma 12 px i nie zasłania
+    plakietki ostatniego kafla — jedynego nośnika tekstowego swojego stanu.
+  */
+  const pole = useRef<HTMLDivElement>(null)
+  const [wysokoscWygaszenia, ustawWysokoscWygaszenia] = useState(12)
+  useEffect(() => {
+    const el = pole.current
+    if (!el) return
+    const przelicz = () => {
+      const nadmiar = el.scrollHeight - el.clientHeight - el.scrollTop
+      ustawWysokoscWygaszenia(nadmiar > 24 ? 40 : nadmiar > 2 ? 12 : 0)
+    }
+    przelicz()
+    el.addEventListener('scroll', przelicz, { passive: true })
+    const obserwator = new ResizeObserver(przelicz)
+    obserwator.observe(el)
+    return () => { el.removeEventListener('scroll', przelicz); obserwator.disconnect() }
+  }, [kafle.length, rozwiniete])
 
   // Kafel stały „Mój czas pracy” (punkt 3.4) — liczony z ewidencji, nie z grafiku.
   const czasPracy = useMemo(() => {
@@ -165,7 +188,7 @@ export function MojeStanowisko() {
       </div>
 
       {/* WARSTWA 2 — pole kafli. Jedyny element, który rośnie i kurczy się. */}
-      <div className="warstwa-pole">
+      <div className="warstwa-pole" ref={pole}>
         <ul className="lista-czysta">
           {(rozwiniete ? kafle : kafle.slice(0, 3)).map((k) => (
             <li key={k.id}>
@@ -241,7 +264,7 @@ export function MojeStanowisko() {
           )}
         </div>
 
-        <div className="wygaszenie" aria-hidden="true" />
+        <div className="wygaszenie" aria-hidden="true" style={{ '--wysokosc-wygaszenia': `${wysokoscWygaszenia}px` } as CSSProperties} />
       </div>
 
       {/*
@@ -329,6 +352,18 @@ export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
                   <span>{o.tekst}</span>
                 </button>
               ))}
+              {/*
+                Trzecia droga: wyjście bez odpowiedzi (design 1.2, §8.3). Kafel zostaje
+                w stanie „zapytamy”, a użytkownik nie musi zgadywać, żeby ruszyć dalej.
+                Przycisk tekstowy, nie kolejna odpowiedź — bo to nie jest odpowiedź.
+              */}
+              <button
+                className="odnosnik"
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => { ustawZmienia(false); wroc() }}
+              >
+                Nie wiem — zapytam później
+              </button>
             </div>
           </div>
         )}

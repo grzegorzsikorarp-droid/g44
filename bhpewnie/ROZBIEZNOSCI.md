@@ -360,35 +360,62 @@ Projekt nie złamał żadnej z ośmiu reguł, ale trzy przepisał tak, żeby roz
 
 ---
 
-## 30. Dwie rzeczy z pakietu projektowego, których NIE wdrożyliśmy
+## 30. Dwa miejsca, w których pakiet projektowy rozjechał się z aplikacją
 
-### 30a. Belka nawigacji w makietach ma inne zakładki niż aplikacja
+### 30a. Belka nawigacji w makietach cofa nazwy zakładek ze zmiany 1.2
 
 - **Co pokazuje projekt.** Wszystkie makiety §8 mają na dole **„Moje · Sprawdź · Mój czas · Pomoc”**.
 - **Co to zmienia.** Po pierwsze cofa nazwy zakładek, które zmiana 1.2 wprowadza w punkcie 2 wraz z uzasadnieniem („Moje stanowisko” → **Co mi przysługuje**, „Sprawdź” → **Mam sprawę**). Po drugie **usuwa z nawigacji Aktualności** (grupa E3, trzy ekrany) i wstawia w to miejsce Mój czas, czyli podnosi grupę E7 do rangi zakładki. Mapa ekranów z punktu 8 zmiany 1.2 tego nie przewiduje.
-- **Dlaczego nie wdrożyliśmy.** To jest **decyzja produktowa**, nie szczegół wizualny: zmienia strukturę aplikacji i wycina grupę ekranów z głównej nawigacji. Żadne z dziewiętnastu rozstrzygnięć w `ROZBIEZNOSCI_DESIGN.md` jej nie dotyczy, więc najpewniej etykiety w makietach są skrótem rysunkowym, a nie propozycją. Nazwy zakładek zostają takie, jak w zmianie 1.2.
-- **Do rozstrzygnięcia przez zespół.** Jeżeli Aktualności mają zniknąć z belki, a Mój czas ma się w niej pojawić, potrzebna jest decyzja i korekta mapy ekranów — nie zmiana w CSS.
+- **Rozstrzygnięcie zamawiającego (3 września 2026).** „Cofa, bo Claude Design nie wie co my tu robiliśmy, może mu za mało dałeś informacji”. Czyli: to **nie jest propozycja projektowa, tylko luka w moim zleceniu**. `ZLECENIE_DESIGN_1_2.md` opisywało pojedyncze ekrany do poprawienia (E1.1, E1.2, grupa E7) i nie zawierało ani mapy ekranów, ani nazw zakładek, ani listy decyzji produktowych, których zmiana 1.2 już dokonała. Projektant rysował belkę z tego, co widział — czyli z niczego.
+- **Wniosek dla trybu pracy, nie dla CSS.** Rysunek, który cofa decyzję nieopisaną w zleceniu, jest **wadą zlecenia**, a nie propozycją do rozważenia. Nie ma czego rozstrzygać po stronie produktu: nazwy zakładek ze zmiany 1.2 zostają, Aktualności zostają w belce, a zlecenie dostało brakujący kontekst (sekcja 0 w `ZLECENIE_DESIGN_1_2.md`: mapa 66 ekranów w skrócie, cztery zakładki z nazwami i uzasadnieniem, sześć decyzji produktowych zamkniętych zmianą 1.2, oraz zdanie o tym, co robić przy rysunku wykraczającym poza zamówiony zakres).
+- **Co przenosimy do następnej rundy.** Każde kolejne zlecenie projektowe zaczyna się od tej sekcji. Koszt to jedna strona tekstu; koszt jej braku to runda rysunków, z której trzeba ręcznie wyławiać, co jest propozycją, a co przypadkiem.
+- **Dowód.** `dokumentacja/ZLECENIE_DESIGN_1_2.md` sekcja 0; `testy/e2e/p4-p6-stanowisko.spec.ts` — test „zakładki nazywają się «Co mi przysługuje» i «Mam sprawę»” pilnuje nazw od zmiany 1.2 i przeszedłby na czerwono, gdyby makieta weszła dosłownie.
 
-### 30b. „Wersaliki w jednym miejscu” przeczy własnym makietom pakietu
+### 30b. „Wersaliki w jednym miejscu” przeczyło własnym makietom pakietu — rozstrzygnięte
 
 - **Co pisze pakiet.** „Wersaliki: w całej aplikacji **jedno** miejsce — plakietka ostrzeżenia o ryzyku”.
 - **Co pokazują jego makiety.** Wersaliki w małych etykietach: „Ile to jest”, „Przepracowane”, „Nad planem”, „Podgląd dokumentu”, „Do sprawdzenia” — czyli w całym wzorcu `.oczko`, którym aplikacja posługuje się od 1.1.
-- **Co zrobiliśmy.** Zdjęliśmy wersaliki z **dwóch miejsc, które projekt wskazał wprost jako błąd**: plakietki stanu kafla (razem ze zmianą brzmienia na „Zapytamy o jedno”) i nagłówka tabeli. Wzorzec `.oczko` zostaje bez zmian, bo makiety pakietu same go używają.
-- **Do rozstrzygnięcia.** Czy zdanie z pakietu jest regułą do wprowadzenia w całej aplikacji, czy opisem dwóch konkretnych poprawek. Test pilnuje dziś wersji drugiej.
+- **Rozstrzygnięcie zamawiającego (3 września 2026).** „Zasięg wersalików — zdecyduj za mnie”. Poniżej decyzja i jej powód.
+- **Decyzja: zasięg liczy się formą, nie miejscem.** Wersaliki wolno stosować wyłącznie tam, gdzie tekst jest **plakietką — etykietą nazywającą kategorię, nie zdaniem do przeczytania**. To pięć wzorców i ani jednego więcej:
+
+| wzorzec | co to jest | dlaczego wolno |
+|---|---|---|
+| `.oczko` | etykieta nad daną („ILE TO JEST”) | nazywa kategorię danej; makiety pakietu same jej używają |
+| `.plakietka-auto` | „SAMO SIĘ USTAWIA” przy budziku | ta sama forma, inne miejsce |
+| `.ostrzezenie-ryzyka__plakietka` | plakietka ostrzeżenia | jedyne miejsce wskazane przez pakiet wprost |
+| `.sygnal__naglowek` | nazwa sygnału na karcie E7.4 | nazywa rodzaj sygnału, nie opisuje go |
+| `.dokument h4` | nagłówek karty i wniosku A4 | konwencja druku urzędowego — to **nie jest interfejs aplikacji** |
+
+- **Czego wersaliki nie dotykają.** Plakietek stanu kafla, nagłówków tabel, przycisków, nagłówków ekranów i jakiegokolwiek zdania. Dwie poprawki, które pakiet wskazał wprost jako błąd, zostały wykonane: plakietka stanu kafla mówi teraz „Zapytamy o jedno” małymi literami zamiast „SPRAWDŹ JEDEN WARUNEK”, a nagłówki tabeli ewidencji straciły wersaliki.
+- **Dlaczego tak, a nie dosłownie „jedno miejsce”.** Wersaliki w plakietce robią robotę, której nie zrobi nic innego: odróżniają **etykietę od treści** przy różnicy rozmiaru zaledwie 2–3 px, bez dokładania koloru ani ramki. Zdjęcie ich z `.oczko` w całej aplikacji kosztowałoby albo dodatkowy kolor, albo dodatkową kreskę — czyli więcej hałasu, nie mniej. Zdanie z pakietu czytamy więc jako opis **dwóch konkretnych poprawek**, którymi w istocie było; makiety tego samego pakietu potwierdzają to mocniej niż jego własne zdanie podsumowujące.
+- **Jak to jest pilnowane.** Test przechodzi przez **cztery ekrany** (E1.1, E1.3, budziki, E7.3 z tabelą i E7.5) i zbiera każdy element z `text-transform: uppercase`, którego klasa nie należy do piątki powyżej. Lista musi być pusta. Ekrany dobrane tak, żeby każdy niósł inny wzorzec wersalikowy — inaczej test pilnowałby jednej strony i przepuszczał resztę.
+- **Dowód.** `src/style/globalne.css` (pięć reguł `text-transform: uppercase`, nagłówek pliku), `testy/e2e/p4-p6-stanowisko.spec.ts` — „wersaliki tylko w plakietkach i w nagłówku dokumentu”.
+
+---
+
+## 31. Sześć pozostałych elementów pakietu — i wygaszenie, które kłamało
+
+Pierwsza tura wdrożenia (wpisy 26–30) objęła fundament: warstwy, kafel 104 px, dwie osie stanu, znaki werdyktu, tabela na telefonie. Ta domyka pakiet.
+
+- **Przełącznik zakresu i blok sumy (E7.3).** Tydzień i miesiąc przełącza się torem segmentów (`aria-pressed`), a nie dwoma przyciskami. Sumy stoją w bloku dwóch liczb po 28 px rozdzielonych pionową kreską: „Przepracowane” i „Ponad plan”. Wcześniej były wierszami listy, przez co godzina przepracowana wyglądała tak samo jak liczba dni z sygnałem.
+- **Karta sygnału (E7.4).** Nagłówek 19 px nazywa sygnał słowami („Doba bez 11 godzin odpoczynku”), pod nim kreska, data pismem tabelarycznym i zdanie „Co mogę z tym zrobić”. Nazwa sygnału była dotąd wyłącznie w treści opisu, więc lista czterech sygnałów czytała się jak cztery akapity.
+- **Miniatura A4 (E7.5).** Podgląd ma proporcję `210 / 297` i pismo 8 px — pokazuje **ile z miesiąca wejdzie na stronę**, a nie treść do czytania. Pełny podgląd w rozmiarze ekranu udawał dokument, którym nie był. Dla czytnika ekranu miniatura jest `aria-hidden`, a obok stoi ten sam zestaw danych zdaniami.
+- **Plakietka kolumny w E2.8.** Porównanie form zatrudnienia oznacza kolumnę odpowiadającą umowie użytkownika („to Twoja obecna umowa”). Bez tego obie kolumny były równorzędne i nie było wiadomo, która jest „teraz”.
+- **Trzecia odpowiedź na E1.2.** „Nie wiem — zapytam później” zostawia warunek nierozstrzygnięty i wraca do listy. Dwie odpowiedzi zmuszały do zgadywania, a zgadnięta odpowiedź trafiała do wyliczeń tak samo jak znana.
+- **Wygaszenie liczone z treści, nie z motywu.** Gradient na dole pola kafli miał stałą wysokość i stał także wtedy, gdy nie było czego wygaszać — czyli sugerował treść pod krawędzią tam, gdzie jej nie było. Teraz liczy się z faktycznego nadmiaru (`scrollHeight − clientHeight − scrollTop`) przez `ResizeObserver`: **40 px** przy dużym nadmiarze, **12 px** przy małym, **0 px** gdy lista się mieści. To był jedyny element pakietu, który wprowadzał użytkownika w błąd, a nie tylko wyglądał gorzej.
+- **Dowód.** `src/ekrany/czas-pracy.tsx`, `src/ekrany/sprawdz.tsx`, `src/ekrany/stanowisko.tsx`, `src/style/globalne.css` (`.tor-segmentow`, `.blok-sumy`, `.miniatura-a4`, `.wygaszenie`); `testy/e2e/p11-p12-ewidencja.spec.ts`, `testy/e2e/p10-umowa.spec.ts`, `testy/e2e/p4-p6-stanowisko.spec.ts`.
 
 ---
 
 ## Do rozstrzygnięcia przez zespół — po zmianie 1.2
 
-Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszły cztery:
+Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszło osiem, z czego dwa zamknęliśmy sami — zasięg wersalików decyzją zamawiającego „zdecyduj za mnie" (wpis 30b), a zakładki w belce ustaleniem, że rysunek wynikał z luki w zleceniu, nie z propozycji (wpis 30a). Zostaje sześć:
 
 9. **Hałas po zniesieniu sufitu** — do 13 przypomnień na dobę przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem (wpis 17).
 10. **„Nie wiem" w pakiecie umowy** — czy trzy takie odpowiedzi mają kierować do bursztynu niezależnie od punktów (wpis 20).
-11. **Brzmienie plakietki „SPRAWDŹ JEDEN WARUNEK"** — trzy warianty do testu z ludźmi (wpis 19).
+11. **Brzmienie plakietki kafla warunkowego** — dziś „Zapytamy o jedno" (design 1.2 zdjął wersaliki i skrócił brzmienie); trzy warianty wciąż czekają na test z ludźmi (wpis 19, wpis 30b).
 12. **Znaczenie ekranu E2.4** — czy „wynik pośredni" to ten ekran, który zespół miał na myśli (wpis 15).
 13. **Normy kubatury i wolnej powierzchni** w sytuacji „Jest zimno albo ciasno" — dokument zmiany mówi „kubatura", ale nie podaje liczby (wpis 25).
-14. **Zakładki w belce nawigacji** — makiety projektowe pokazują „Moje · Sprawdź · Mój czas · Pomoc", co cofa nazwy ze zmiany 1.2 i wycina Aktualności z nawigacji. Decyzja produktowa, nie wizualna (wpis 30a).
-15. **Zasięg zakazu wersalików** — reguła dla całej aplikacji czy dwie konkretne poprawki (wpis 30b).
-16. **Kafel przy powiększeniu 200%** — rośnie do 148 px i wypycha dokument pod zgięcie; czy dokument zostaje nad zgięciem, czy ustępuje kaflom (pakiet projektowy, „Zachowanie i stany").
-17. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack.
-18. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą i czy potrzebuje adnotacji, że jest zapisem własnym pracownika. Pytanie do prawników.
+14. **Kafel przy powiększeniu 200%** — rośnie do 148 px i wypycha dokument pod zgięcie; czy dokument zostaje nad zgięciem, czy ustępuje kaflom (pakiet projektowy, „Zachowanie i stany").
+15. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack.
+16. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą i czy potrzebuje adnotacji, że jest zapisem własnym pracownika. Pytanie do prawników.

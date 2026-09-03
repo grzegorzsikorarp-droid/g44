@@ -14,6 +14,21 @@ async function otworzKafel(page: Page, nazwa: RegExp) {
   await page.getByRole('button', { name: nazwa }).click()
 }
 
+/**
+ * Wzorce, w których wersaliki są dozwolone (ROZBIEZNOSCI.md, wpis 30b).
+ * Cztery plakietki — etykieta nazywająca kategorię — oraz nagłówek dokumentu A4,
+ * który jest typografią druku urzędowego, a nie interfejsu aplikacji.
+ */
+const WERSALIKI_WOLNO = ['oczko', 'plakietka-auto', 'ostrzezenie-ryzyka__plakietka', 'sygnal__naglowek']
+
+async function zamiecWersaliki(page: Page) {
+  const obce = await page.locator('.ekran *').evaluateAll((ns, wolno) => ns
+    .filter((n) => getComputedStyle(n).textTransform === 'uppercase' && (n.textContent ?? '').trim())
+    .filter((n) => !wolno.some((k) => n.classList.contains(k)) && !n.closest('.dokument'))
+    .map((n) => `${n.className} — ${(n.textContent ?? '').trim().slice(0, 24)}`), WERSALIKI_WOLNO)
+  expect(obce, obce.join(' | ')).toEqual([])
+}
+
 test('zmiana 1.2: zakładki nazywają się „Co mi przysługuje” i „Mam sprawę”', async ({ page }) => {
   await wejdzZPrzykladem(page)
   const belka = page.getByRole('navigation', { name: 'Główne działy aplikacji' })
@@ -85,12 +100,14 @@ test('design 1.2: cztery stany werdyktu, znacznik świeżości na osobnej osi', 
   }
 })
 
-test('design 1.2: plakietka stanu i nagłówek tabeli tracą wersaliki', async ({ page }) => {
+test('design 1.2: wersaliki tylko w plakietkach i w nagłówku dokumentu', async ({ page }) => {
   /*
-    Pakiet projektowy pisze, że wersaliki zostają w aplikacji w jednym miejscu, ale
-    jego własne makiety pokazują je w małych etykietach („Ile to jest”, „Przepracowane”,
-    „Do sprawdzenia”). Sprzeczność opisana w ROZBIEZNOSCI.md, wpis 30 — wersaliki
-    zdejmujemy z dwóch miejsc, w których projekt wskazał je wprost jako błąd.
+    Rozstrzygnięcie zasięgu (ROZBIEZNOSCI.md, wpis 30b): pakiet projektowy pisał
+    „jedno miejsce w całej aplikacji”, ale jego własne makiety używały wersalików
+    w małych etykietach. Zasięg rozstrzygnięty na formę, nie na miejsce: wersaliki
+    zostają wyłącznie w plakietkach (etykieta nazywająca kategorię, nie zdanie)
+    oraz w nagłówku dokumentu A4, gdzie to konwencja druku, a nie interfejsu.
+    Znikają z plakietek stanu, nagłówków tabel, przycisków i nagłówków ekranów.
   */
   await wejdzZPrzykladem(page)
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
@@ -98,6 +115,38 @@ test('design 1.2: plakietka stanu i nagłówek tabeli tracą wersaliki', async (
   const plakietka = page.locator('.znacznik--sprawdz').first()
   expect(await plakietka.evaluate((n) => getComputedStyle(n).textTransform)).toBe('none')
   await expect(plakietka).toHaveText(/Zapytamy o jedno/)
+
+  // Ten sam zamiatacz przechodzi przez cztery ekrany, bo każdy niesie inny wzorzec
+  // wersalikowy: E1.1 plakietki stanu, E1.3 nagłówek dokumentu A4,
+  // budziki `.plakietka-auto`, E7.3 nagłówki tabeli i `.oczko`.
+  await zamiecWersaliki(page)
+
+  await page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Karta moich uprawnień' })).toBeVisible()
+  // Nagłówek dokumentu wersaliki zachowuje — konwencja druku urzędowego, nie interfejsu.
+  const naglowekDokumentu = page.locator('.dokument h4').first()
+  expect(await naglowekDokumentu.evaluate((n) => getComputedStyle(n).textTransform)).toBe('uppercase')
+  await zamiecWersaliki(page)
+
+  await page.getByRole('button', { name: 'Wróć do poprzedniego ekranu' }).click()
+  await page.getByRole('button', { name: 'Ustawienia', exact: true }).click()
+  await page.getByRole('button', { name: /Moje budziki/ }).click()
+  await expect(page.getByRole('heading', { name: 'Moje budziki' })).toBeVisible()
+  // Plakietka „samo się ustawia” zostaje wersalikami — to jedna z czterech dozwolonych form.
+  await expect(page.locator('.plakietka-auto').first()).toBeVisible()
+  await zamiecWersaliki(page)
+
+  await page.getByRole('button', { name: 'Co mi przysługuje' }).click()
+  await page.getByRole('button', { name: /Mój czas pracy/ }).click()
+  await page.getByRole('button', { name: 'Ten tydzień' }).click()
+  await page.getByRole('button', { name: 'Zobacz tabelę' }).click()
+  // Nagłówki tabeli wersalików już nie mają — to jedna z dwóch poprawek wskazanych wprost.
+  await expect(page.getByRole('table')).toBeVisible()
+  await zamiecWersaliki(page)
+
+  await page.getByRole('button', { name: /Eksport miesiąca/ }).click()
+  await expect(page.getByRole('heading', { name: 'Eksport ewidencji' })).toBeVisible()
+  await zamiecWersaliki(page)
 })
 
 test('E1.1: stały kafel „Mój czas pracy” prowadzi do ewidencji', async ({ page }) => {

@@ -13,7 +13,14 @@
   8. Warstwy rozdziela obrys; cień jest dopuszczalny wyłącznie jako 1 px podniesienia
      karty nad tłem i nigdy jako źródło hierarchii.
 
-  Trzy z nich zmieniły BRZMIENIE w wydaniu design 1.2 — nazywają powód zamiast miejsca.
+  WERSALIKI występują w DWÓCH wzorcach i nigdzie indziej: `.oczko` (mała etykieta bloku,
+  wzorzec z wydania 1.1, używany też w makietach projektowych) oraz plakietka ostrzeżenia
+  o ryzyku. Zakazane w plakietkach stanu, nagłówkach tabel, przyciskach i nagłówkach ekranów
+  — tam czytają się jak alarm, choć nic złego się nie stało. Pakiet projektowy pisał
+  „jedno miejsce w całej aplikacji”, ale jego własne makiety używały `.oczko`;
+  rozstrzygnięcie i powód: ROZBIEZNOSCI.md, wpis 30b.
+
+  Trzy reguły zmieniły BRZMIENIE w wydaniu design 1.2 — nazywają powód zamiast miejsca.
   Powody i warunki odwrócenia: dokumentacja/ROZBIEZNOSCI_DESIGN.md, wpisy (l), (p), (q).
   - Reguła 3: „72 px w Pomocy” → „72 px w pośpiechu lub w rękawicy”.
   - Reguła 8: zakaz cieni → jeden piksel podniesienia, bez hierarchii.
@@ -403,20 +410,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 /*
-  Wygaszenie krawędzi pola przewijanego. Wysokość dobiera się do prześwitu między
-  dolną krawędzią treści a krawędzią pola, nigdy odwrotnie (ROZBIEZNOSCI_DESIGN, wpis s):
-  40 px tam, gdzie treść urywa się w połowie elementu, 12 px tam, gdzie stos wypełnia
-  pole dokładnie — plakietka na ostatnim kaflu nie może zostać zasłonięta, bo jest
-  jedynym nośnikiem tekstowym swojego stanu.
+  Wygaszenie krawędzi pola przewijanego (ROZBIEZNOSCI_DESIGN, wpis s).
+  Wysokość dobiera się do PRZEŚWITU nad krawędzią, nie do motywu: 40 px tam, gdzie treść
+  urywa się w połowie elementu, 12 px tam, gdzie stos wypełnia pole dokładnie — plakietka
+  na ostatnim kaflu nie może zostać zasłonięta, bo jest jedynym nośnikiem tekstowym
+  swojego stanu. Wysokość ustawia komponent przez `--wysokosc-wygaszenia`, licząc
+  faktyczny nadmiar treści; klasa zna tylko wartość domyślną.
 */
 .wygaszenie {
   position: absolute; left: 0; right: 0; bottom: 0;
-  height: 12px;
+  height: var(--wysokosc-wygaszenia, 12px);
   pointer-events: none;
-  background: linear-gradient(to bottom, rgba(250, 248, 245, 0), var(--tlo));
-}
-@media (prefers-color-scheme: dark) {
-  .wygaszenie { height: 40px; background: linear-gradient(to bottom, rgba(26, 25, 23, 0), var(--tlo)); }
+  background: linear-gradient(to bottom, transparent, var(--tlo));
 }
 
 /*
@@ -882,6 +887,37 @@ textarea.pole { resize: vertical; line-height: 1.45; }
 .roznica--zero { color: var(--tekst-trzeci); }
 
 /*
+  PRZEŁĄCZNIK ZAKRESU (E7.3) — tor z wyściółką 4 px, segmenty o promieniu 8.
+  Promień segmentu = promień toru minus wyściółka rodzica: 12 − 4 = 8.
+*/
+.tor-segmentow {
+  display: flex; gap: var(--o1);
+  padding: var(--o1);
+  border: 1px solid var(--obrys);
+  border-radius: var(--r-wiersz);
+  background: var(--karta-druga);
+}
+.tor-segmentow__segment {
+  flex: 1; min-height: var(--cel);
+  border-radius: var(--r-wewnetrzny);
+  font-weight: 600;
+  color: var(--tekst-drugi);
+}
+.tor-segmentow__segment[aria-pressed='true'] {
+  background: var(--karta); color: var(--tekst);
+  border: 1px solid var(--obrys);
+}
+
+/* Blok sumy — dwie liczby obok siebie, rozdzielone kreską pionową. */
+.blok-sumy { display: flex; align-items: stretch; gap: var(--o4); }
+.blok-sumy__pozycja { flex: 1; min-width: 0; }
+.blok-sumy__pozycja + .blok-sumy__pozycja { border-left: 1px solid var(--obrys); padding-left: var(--o4); }
+.blok-sumy__liczba {
+  display: block; font-size: 1.75rem; font-weight: 700; line-height: 1.1;
+  font-variant-numeric: tabular-nums; margin-top: 2px;
+}
+
+/*
   KARTA PARY (E2.8) — 93 px. Nagłówek stoi PRZY DANEJ, nie 300 px wyżej w wierszu tabeli.
   Obie wartości niosą te same trzy znaki co kafle: „Nie” bez znaku byłoby jedynym
   miejscem w aplikacji, gdzie odmowa nie ma kształtu.
@@ -897,6 +933,27 @@ textarea.pole { resize: vertical; line-height: 1.45; }
 .para__kolumna + .para__kolumna { border-left: 1px solid var(--obrys); padding-left: var(--o3); }
 .para__etykieta { display: block; font-size: 0.8125rem; color: var(--tekst-trzeci); }
 .para__wartosc { display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; font-weight: 600; margin-top: 2px; }
+
+/*
+  MINIATURA DOKUMENTU A4 (E7.5). To podgląd, nie dokument do czytania — pismo 4,5–8 px.
+  Proporcja trzyma się arkusza, żeby użytkownik widział, ile z miesiąca wejdzie na stronę.
+*/
+.miniatura-a4 {
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  background: #FFFFFF;
+  color: #22262B;
+  border: 1px solid var(--obrys);
+  border-radius: var(--r-wewnetrzny);
+  padding: 14px 16px;
+  font-size: 8px; line-height: 1.35;
+}
+.miniatura-a4 h4 { font-size: 11px; margin: 0; letter-spacing: -0.01em; }
+.miniatura-a4 table { width: 100%; border-collapse: collapse; font-size: 7px; }
+.miniatura-a4 th, .miniatura-a4 td { padding: 1.5px 0; text-align: right; border-bottom: 0.5px solid #E0D9CD; }
+.miniatura-a4 th:first-child, .miniatura-a4 td:first-child { text-align: left; }
+.miniatura-a4 .kreska { border-top: 1px solid #22262B; margin: 4px 0; }
+.miniatura-a4 .pole-imienia { border-bottom: 0.5px solid #B9B0A3; margin: 6px 0; padding-bottom: 2px; font-size: 7px; color: #5A6068; }
 
 /*
   STAN BŁĘDU FORMULARZA — BEZ TERAKOTY (design 1.2, §8.4).

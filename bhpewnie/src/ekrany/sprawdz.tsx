@@ -476,7 +476,11 @@ function stanWartosci(wartosc: string): StanKafla {
 }
 
 export function PorownanieUmow() {
-  const { wroc, dzis } = useAplikacja()
+  const { wroc, nawiguj, stan, dzis } = useAplikacja()
+  // Którą kolumnę oznaczyć jako „Ty” — to jedyne miejsce w aplikacji, gdzie dwie wartości
+  // stoją obok siebie, więc trzeba powiedzieć, która jest jego (design 1.2, §8.6).
+  const umowaUzytkownika = rozwiazProfil(stan.profil ?? pustyProfil(), dzis).umowa
+  const mojaKolumna: 'cywilna' | 'etat' = umowaUzytkownika === 'o_prace' ? 'etat' : 'cywilna'
   const wiersze = porownanie.wiersze.map((w) => ({
     cecha: wypelnij(w.cecha, dzis).tekst,
     cywilna: wypelnij(w.cywilna, dzis).tekst,
@@ -486,10 +490,20 @@ export function PorownanieUmow() {
   return (
     <>
       <Naglowek naWstecz={wroc} oczko="Porównanie" tytul={porownanie.tytul} />
-      <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
+      <div className="kolumna kolumna--luzna warstwa-pole" style={{ flex: 1 }}>
         <p className="opis">
-          W tabeli jest wyłącznie to, co aplikacja zna z własnych modułów wiedzy.
+          Co się zmienia w Twoich uprawnieniach, jeśli forma zatrudnienia jest inna.
+          Wyłącznie to, co aplikacja zna z własnych modułów wiedzy.
         </p>
+
+        <div className="rzad">
+          <span className={`znacznik${mojaKolumna === 'cywilna' ? ' znacznik--spokojny' : ' znacznik--szary'}`}>
+            {porownanie.naglowki.cywilna}{mojaKolumna === 'cywilna' ? ' — Ty' : ''}
+          </span>
+          <span className={`znacznik${mojaKolumna === 'etat' ? ' znacznik--spokojny' : ' znacznik--szary'}`}>
+            {porownanie.naglowki.etat}{mojaKolumna === 'etat' ? ' — Ty' : ''}
+          </span>
+        </div>
 
         {/*
           LISTA PAR na telefonie, tabela dopiero od 600 px (design 1.2, §8.6).
@@ -548,9 +562,17 @@ export function PorownanieUmow() {
 
         <PodstawaPrawna tresc={porownanie.podstawa} stanPrawny={STAN_PRAWNY} />
 
-        <Przycisk odmiana="obrys" onClick={wroc}>{t('wspolne.zamknij')}</Przycisk>
-
         <p className="stopka-edu">{t('wspolne.edukacyjna')}</p>
+      </div>
+
+      {/*
+        Wyjście z ekranu w stałym pasie — jak dokument w E1.1 i z tego samego powodu:
+        to jedyne wyjście z ekranu, który sam niczego nie rozstrzyga (design 1.2, §8.6).
+      */}
+      <div className="warstwa-pas">
+        <Przycisk odmiana="drugi" ikona="lupa" onClick={() => nawiguj('E2.2', { sytuacja: 'umowa' })}>
+          Co zrobić, jeśli to moja sytuacja
+        </Przycisk>
       </div>
     </>
   )

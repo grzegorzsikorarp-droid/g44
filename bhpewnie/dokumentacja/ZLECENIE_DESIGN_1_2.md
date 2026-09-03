@@ -6,21 +6,81 @@ Wszystkie liczby poniżej są **zmierzone w przeglądarce**, nie oszacowane. Wid
 
 Stan na 3 września 2026. Kod: gałąź `claude/bhp-worker-demo-app-ra14t3`, katalog `bhpewnie/`.
 
+**Stan realizacji.** Runda pierwsza (pakiet `PRZEKAZANIE_DESIGN_1_2.md` + kanwa `System BHPewnie v2.dc.html` + 19 rozstrzygnięć w `ROZBIEZNOSCI_DESIGN.md`) domknęła sekcje 1–8 w całości; wdrożenie opisują wpisy 26–31 w `ROZBIEZNOSCI.md`. Sekcje 1–8 zostawiam jako **zapis problemu i pomiarów**, żeby następna runda widziała, skąd wzięły się dzisiejsze rozwiązania. Do rysowania obowiązuje **sekcja 0** — jest nowa i opisuje kontekst, którego rundzie pierwszej zabrakło.
+
 ---
 
-## 0. Czego NIE zmieniać
+## 0. Kontekst, bez którego nie da się rysować
+
+> **Dopisane 3 września 2026, po pierwszej rundzie.** Runda pierwsza wróciła z makietami, w których belka nawigacji ma zakładki „Moje · Sprawdź · Mój czas · Pomoc" — czyli stare nazwy sprzed zmiany 1.2 i bez Aktualności. To **nie był błąd projektanta, tylko brak w tym zleceniu**: opisywałem pojedyncze ekrany do poprawienia i ani razu nie napisałem, jak aplikacja jest zbudowana ani jakich decyzji już dokonano. Sekcja 0.1–0.4 uzupełnia to raz na zawsze i otwiera każde następne zlecenie projektowe.
+
+### 0.1 Czym jest aplikacja i dla kogo
+
+BHPewnie to **aplikacja instalowana na telefonie (PWA)** dla pracowników w Polsce, wydawana przez Forum Związków Zawodowych. Odpowiada na jedno pytanie: *co mi się na moim stanowisku należy i co mam zrobić, żeby to dostać*. Użytkownik odniesienia to osoba pracująca fizycznie lub zmianowo, sięgająca po telefon **w przerwie, w rękawicy, przy złym świetle** — nie osoba czytająca aplikację przy biurku.
+
+Trzy rzeczy, które wynikają z tego dla rysunku:
+
+- **Żadne dane nie opuszczają urządzenia.** Nie ma konta, logowania, chmury, synchronizacji ani eksportu do systemu pracodawcy. Nie rysuj niczego, co je zakłada (awatarów, „udostępnij", „zaproś").
+- **Zero grywalizacji.** Bez punktów, poziomów, rankingów, odznak i pasków postępu do zdobycia. Sprawdzian wiedzy (E6) też nie ma wyniku punktowego.
+- **Zero słów angielskich w interfejsie.** Także w nazwach komponentów widocznych dla użytkownika.
+
+### 0.2 Mapa aplikacji — 66 ekranów w ośmiu grupach
+
+Źródłem prawdy jest `src/rejestr-ekranow.ts`; test porównuje z nim mapę przy każdym przebiegu.
+
+| grupa | ile | co to jest | belka nawigacji |
+|---|---|---|---|
+| **E0** | 24 | kreator wejściowy: 13 pytań o warunki pracy, tryb pracy, grafik, umowa, rocznik | ukryta |
+| **E1** | 4 | **Co mi przysługuje** — kafle uprawnień, karta uprawnienia, dokument A4, terminy | widoczna |
+| **E2** | 8 | **Mam sprawę** — 8 sytuacji, sprawdzacz, werdykt, porównanie form zatrudnienia | ukryta po rozpoczęciu pytań |
+| **E3** | 3 | **Aktualności** — zmiany w przepisach dotyczące tego stanowiska | widoczna |
+| **E4** | 13 | **Pomoc** — ścieżka wypadkowa, ekran kryzysowy, gdzie szukać wsparcia | ukryta |
+| **E5** | 9 | grafik, szablony zmian, kalendarz, budziki | widoczna |
+| **E6** | 2 | sprawdzian wiedzy | widoczna |
+| **E7** | 5 | **Mój czas** — ewidencja czasu pracy (nowa grupa w 1.2) | widoczna |
+
+### 0.3 Cztery zakładki w belce — nazwy są rozstrzygnięte
+
+Belka ma **dokładnie cztery pozycje** i **te nazwy**:
+
+| ikona | napis | prowadzi do | dlaczego tak |
+|---|---|---|---|
+| kask | **Co mi przysługuje** | E1.1 | zmiana 1.2 punkt 2: „Moje stanowisko" opisywało **miejsce**, a użytkownik szuka **swojego uprawnienia** |
+| lupa | **Mam sprawę** | E2.1 | „Sprawdź" było poleceniem dla użytkownika; „Mam sprawę" jest jego własnym zdaniem |
+| gazeta | **Aktualności** | E3.1 | grupa E3 zostaje w nawigacji |
+| ratunek | **Pomoc** | E4.1 | jedyne miejsce z terakotą |
+
+**Mój czas (E7) nie jest zakładką** — wchodzi się do niego stałym kaflem na E1.1. Gdyby miał być piątą zakładką albo zastąpić Aktualności, to jest **decyzja produktowa** wymagająca korekty mapy ekranów, a nie zmiana w rysunku belki.
+
+### 0.4 Sześć decyzji, które zmiana 1.2 już zamknęła
+
+Rysunek cofający którąkolwiek z nich będzie odrzucony — nie dlatego, że jest gorszy, tylko dlatego, że te decyzje mają uzasadnienie poza kanwą.
+
+1. **Nazwy zakładek** — tabela 0.3 powyżej.
+2. **Brak sufitu powiadomień.** Aplikacja nie ma i nie będzie miała limitu „najwyżej N przypomnień dziennie" w żadnej postaci. Jeśli rysunek zakłada, że powiadomień jest mało — nie jest; przy pełnym grafiku bywa ich kilkanaście na dobę.
+3. **Trzy stałe akcje pod każdym rozstrzygnięciem**, w stałej kolejności (punkt 4 w sekcji 0.5).
+4. **Kafel niesie dwie osie, nie jedną** — werdykt (4 stany) i wiek odpowiedzi (znacznik „Do odświeżenia"). Znacznik nie podmienia znaku werdyktu.
+5. **Osiem sytuacji w „Mam sprawę"**, każda z pełną ścieżką. Nie ma już plansz „w pełnej wersji".
+6. **Nigdy nie wymyślamy liczb ani podstaw prawnych.** Gdzie dokument zmiany nie podał wartości, w interfejsie stoi `[do uzupełnienia przez specjalistę]`. Rysunek nie może tego miejsca „wypełnić przykładową kwotą" — przykładowa kwota w tym miejscu wygląda jak informacja prawna.
+
+### 0.5 Czego NIE zmieniać
 
 To jest ważniejsze niż lista zadań. Poniższe rzeczy są przetestowane, opisane i mają za sobą decyzje zespołu — zmiana któregokolwiek z nich wywraca coś, czego z kanwy nie widać.
 
-1. **Osiem reguł nienegocjowalnych** z nagłówka `src/style/globalne.css`. W szczególności: zero czerwieni w interfejsie, żadna informacja nie niesiona samym kolorem, cienie nie istnieją (warstwy rozdziela obrys 1 px i zmiana tła), brak animacji przejść między ekranami.
-2. **Sześć rodzin semantycznych** i ich role: pewność (zieleń morska) = „przysługuje", zależy (bursztyn) = „to zależy", neutralny (szarość) = „nie przysługuje", powaga (terakota) = **wyłącznie moduł Pomoc**, tła, tekst. Nazwy zmiennych CSS zostają — kod się do nich odwołuje.
-3. **Cele dotykowe**: 48 px zwykłe, 56 px główne, **72 px w Pomocy**. Pismo bazowe 16 px. Testy dostępności mierzą to przy każdym przebiegu i przewracają się przy naruszeniu.
+1. **Osiem reguł nienegocjowalnych** z nagłówka `src/style/globalne.css`. W szczególności: zero czerwieni w interfejsie, żadna informacja nie niesiona samym kolorem, brak animacji przejść między ekranami. *(Runda pierwsza przepisała trzy z nich — brzmienie aktualne w punktach 2 i 3 poniżej oraz w nagłówku pliku CSS. Cień **jest** dopuszczalny, ale wyłącznie jako 1 px podniesienia karty w trybie jasnym, nigdy jako źródło hierarchii.)*
+2. **Sześć rodzin semantycznych** i ich role: pewność (zieleń morska) = „przysługuje", zależy (bursztyn) = „to zależy", neutralny (szarość) = „nie przysługuje", powaga (terakota) = **ryzyko, które stwarza drugi człowiek** (Pomoc oraz ostrzeżenie przed konfrontacją z pracodawcą — nie błędy formularza), tła, tekst. Nazwy zmiennych CSS zostają — kod się do nich odwołuje.
+3. **Cele dotykowe**: 48 px zwykłe, 56 px główne, **72 px dla czynności wykonywanej w pośpiechu lub w rękawicy** (Pomoc, „Zaczynam pracę" w E7.1). Pismo bazowe 16 px. Testy dostępności mierzą to przy każdym przebiegu i przewracają się przy naruszeniu.
+   **Wersaliki** wolno stosować wyłącznie w pięciu wzorcach plakietkowych: `.oczko`, `.plakietka-auto`, `.ostrzezenie-ryzyka__plakietka`, `.sygnal__naglowek` i `.dokument h4` (nagłówek druku A4). Nigdy w plakietce stanu kafla, nagłówku tabeli, przycisku, nagłówku ekranu ani w zdaniu.
 4. **Trzy stałe akcje pod każdym rozstrzygnięciem**, zawsze w tej kolejności: Pobierz wniosek PDF · Jak o to poprosić · Przypomnij mi. Kolejność jest regułą, nie układem.
 5. **Karta „nie przysługuje" kończy się blokiem „co Ci przysługuje zamiast tego"** — bez wyjątków.
 6. **Logotyp** w wariancie „Zawias" i czerwień FZZ wyłącznie w blokach nadawcy (stopka „O aplikacji", pas oznaczeń w dokumentach A4). Nigdy w interfejsie.
 7. **IBM Plex Sans z plików lokalnych**, cyfry tabelaryczne w tabelach i sumach. Fontów z sieci nie ma i nie może być.
 
 Jeżeli projekt wymaga złamania którejś z tych reguł, potrzebny jest **wpis w `ROZBIEZNOSCI_DESIGN.md`** w tym samym pięcioczęściowym układzie co dotychczasowe: brief / kolizja / decyzja / dlaczego / żeby zdecydować inaczej. Nie „poprawka w kanwie".
+
+### 0.6 Co zrobić z rysunkiem wychodzącym poza zamówiony zakres
+
+Zlecenie wymienia konkretne ekrany i komponenty. Jeżeli przy okazji trzeba narysować coś spoza tej listy — belkę, nagłówek, ekran, którego zlecenie nie opisuje — obowiązuje jedna zasada: **rysuj to, co jest w aplikacji dziś, i oznacz jako „stan istniejący, nie przedmiot zlecenia"**. Element narysowany inaczej niż w aplikacji, bez wpisu w `ROZBIEZNOSCI_DESIGN.md`, jest nie do odróżnienia od propozycji zmiany i kosztuje rundę ustaleń. Jeżeli coś spoza zakresu wygląda na wadę — napisz o tym zdanie w rozbieżnościach, zamiast poprawiać to milcząco w makiecie.
 
 ---
 

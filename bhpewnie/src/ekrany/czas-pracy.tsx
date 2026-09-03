@@ -442,13 +442,17 @@ export function TydzienIMiesiac() {
     <>
       <Naglowek naWstecz={wroc} oczko="Ewidencja" tytul="Tydzień i miesiąc" />
       <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
-        <div className="rzad" role="group" aria-label="Zakres">
-          <Przycisk odmiana={zakresNazwa === 'tydzien' ? 'glowny' : 'obrys'} onClick={() => ustawZakres('tydzien')}>
-            Tydzień
-          </Przycisk>
-          <Przycisk odmiana={zakresNazwa === 'miesiac' ? 'glowny' : 'obrys'} onClick={() => ustawZakres('miesiac')}>
-            Miesiąc
-          </Przycisk>
+        <div className="tor-segmentow" role="group" aria-label="Zakres">
+          {(['tydzien', 'miesiac'] as const).map((z) => (
+            <button
+              key={z}
+              className="tor-segmentow__segment"
+              aria-pressed={zakresNazwa === z}
+              onClick={() => ustawZakres(z)}
+            >
+              {z === 'tydzien' ? 'Tydzień' : 'Miesiąc'}
+            </button>
+          ))}
         </div>
 
         <p className="opis">{datePoPolsku(zakres.od)} – {datePoPolsku(zakres.do)}</p>
@@ -543,13 +547,23 @@ export function TydzienIMiesiac() {
           </p>
         )}
 
+        {/* Dwie liczby, po które się tu przychodzi — reszta pod nimi, drobniej. */}
         <div className="karta kolumna kolumna--ciasna">
-          <p className="oczko">Razem w tym zakresie</p>
-          <Wiersz nazwa="Godziny łącznie" wartosc={opiszCzas(podsumowanie.fakt_min)} />
-          <Wiersz
-            nazwa="Ponad plan"
-            wartosc={podsumowanie.ponad_plan_min === null ? 'ustaw grafik, żeby porównać' : opiszCzas(podsumowanie.ponad_plan_min)}
-          />
+          <div className="blok-sumy">
+            <div className="blok-sumy__pozycja">
+              <span className="oczko">Przepracowane</span>
+              <b className="blok-sumy__liczba">{opiszCzas(podsumowanie.fakt_min)}</b>
+            </div>
+            <div className="blok-sumy__pozycja">
+              <span className="oczko">Ponad plan</span>
+              <b className="blok-sumy__liczba roznica--ponad">
+                {podsumowanie.ponad_plan_min === null ? '—' : `+${opiszCzas(podsumowanie.ponad_plan_min)}`}
+              </b>
+            </div>
+          </div>
+          {podsumowanie.ponad_plan_min === null && (
+            <p className="drobne">Ustaw grafik, żeby porównać fakt z planem.</p>
+          )}
           <Wiersz nazwa="W nocy" wartosc={opiszCzas(podsumowanie.noce_min)} />
           <Wiersz nazwa="Dni z sygnałem" wartosc={String(podsumowanie.dni_z_sygnalem)} />
         </div>
@@ -621,6 +635,17 @@ export function SygnalyCzasu({ dane }: { dane: Record<string, unknown> }) {
   )
 }
 
+/** Krótki tytuł sygnału — zdanie opisowe zostaje pod nim (design 1.2, §8.4). */
+const TYTULY_SYGNALOW: Record<Sygnal['rodzaj'], string> = {
+  odpoczynek_dobowy: 'Odpoczynek krótszy niż 11 godzin',
+  odpoczynek_tygodniowy: 'Odpoczynek tygodniowy krótszy niż 35 godzin',
+  brak_przerwy: 'Dniówka od 6 godzin bez zapisanej przerwy',
+  brak_drugiej_przerwy: 'Dniówka powyżej 9 godzin bez drugiej przerwy',
+  brak_trzeciej_przerwy: 'Dniówka powyżej 16 godzin bez trzeciej przerwy',
+  tydzien_ponad_48: 'Tydzień powyżej 48 godzin',
+  ponad_plan: 'Godziny ponad plan z grafiku',
+}
+
 function KartaSygnalu({
   sygnal, naSkrypt, naPrzypomnienie,
 }: { sygnal: Sygnal; naSkrypt: () => void; naPrzypomnienie: () => void }) {
@@ -633,12 +658,14 @@ function KartaSygnalu({
             ? `Informacja · ${datePoPolsku(sygnal.data)}`
             : <><ZnakWerdyktu stan="zalezy" rozmiar={20} /> Do sprawdzenia</>}
         </p>
+        <h2 style={{ fontSize: '1.1875rem', margin: 0 }}>{TYTULY_SYGNALOW[sygnal.rodzaj]}</h2>
         <p>{sygnal.opis}</p>
-        <p className="drobne">{datePoPolsku(sygnal.data)}</p>
+        <hr style={{ border: 0, borderTop: '1px solid var(--obrys)', margin: '2px 0' }} />
+        <p className="drobne cyfry">{datePoPolsku(sygnal.data)}</p>
         <PodstawaPrawna tresc={sygnal.podstawa} stanPrawny={STAN_PRAWNY} />
         {!sygnal.informacyjny && (
           <div className="rzad">
-            <Przycisk odmiana="drugi" ikona="mowa" onClick={naSkrypt}>Jak o to poprosić</Przycisk>
+            <Przycisk odmiana="drugi" ikona="mowa" onClick={naSkrypt}>Co mogę z tym zrobić</Przycisk>
             <Przycisk odmiana="obrys" ikona="dzwonek" onClick={naPrzypomnienie}>Przypomnij mi</Przycisk>
           </div>
         )}
@@ -697,82 +724,72 @@ export function EksportEwidencji() {
     <>
       <Naglowek naWstecz={wroc} oczko={t('pdf.podglad')} tytul="Eksport ewidencji" />
       <div className="kolumna" style={{ flex: 1 }}>
-        <div className="dokument">
-          <p style={{ fontSize: '0.8125rem', color: '#555' }}>BHPewnie — Forum Związków Zawodowych</p>
-          <h4>Moja ewidencja czasu pracy — {miesiacNazwa}</h4>
-          <div className="dokument__pole">{t('pdf.imie')}: ……………………………………………</div>
+        <p className="opis">
+          {miesiacNazwa} · {wpisy.length} {wpisy.length === 1 ? 'dzień' : 'dni'} z wpisami ·{' '}
+          {opiszCzas(podsumowanie.fakt_min)}
+        </p>
 
-          <table className="tabela" style={{ marginTop: 12, minWidth: 0 }}>
+        <p className="oczko">Podgląd dokumentu</p>
+
+        {/*
+          Miniatura A4 (design 1.2, §8.5). To podgląd, nie dokument do czytania — pismo
+          jest małe celowo, żeby widać było, ile z miesiąca wejdzie na stronę.
+          Pełną treść użytkownik dostaje w pliku PDF.
+        */}
+        <div className="miniatura-a4" aria-hidden="true">
+          <h4>EWIDENCJA CZASU PRACY</h4>
+          <p>{miesiacNazwa}</p>
+          <div className="pole-imienia">Imię i nazwisko: ……………………………</div>
+          <table>
             <thead>
-              <tr>
-                <th scope="col">Dzień</th>
-                <th scope="col">Plan</th>
-                <th scope="col">Faktycznie</th>
-                <th scope="col">Przerwy</th>
-                <th scope="col">Ponad plan</th>
-              </tr>
+              <tr><th>Dzień</th><th>Plan</th><th>Fakt</th><th>Różnica</th></tr>
             </thead>
             <tbody>
-              {wpisy.map((w) => {
+              {wpisy.slice(0, 14).map((w) => {
                 const wy = wyliczWpis(w, profil?.grafik ?? null, null)
+                const roznica = wy.roznica_min
                 return (
                   <tr key={w.id}>
-                    <th scope="row">{Number(w.data.slice(8, 10))}.{w.data.slice(5, 7)}</th>
+                    <td>{Number(w.data.slice(8, 10))} {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][Number(w.data.slice(5, 7)) - 1]}</td>
                     <td>{wy.plan_min === null ? '—' : opiszCzas(wy.plan_min)}</td>
                     <td>{opiszCzas(wy.fakt_min)}</td>
-                    <td>{opiszCzas(wy.przerwy_min)}</td>
-                    <td>{wy.roznica_min === null ? '—' : opiszCzas(Math.max(0, wy.roznica_min))}</td>
+                    <td>{roznica === null ? '—' : `${roznica > 0 ? '+' : ''}${opiszCzas(roznica)}`}</td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
-
-          {wpisy.length === 0 && <p style={{ marginTop: 10 }}>W tym miesiącu nie ma jeszcze żadnych wpisów.</p>}
-
-          <p style={{ marginTop: 10 }}>
-            <b>Razem:</b> {opiszCzas(podsumowanie.fakt_min)} ·{' '}
-            <b>ponad plan:</b> {podsumowanie.ponad_plan_min === null ? '—' : opiszCzas(podsumowanie.ponad_plan_min)} ·{' '}
-            <b>w nocy:</b> {opiszCzas(podsumowanie.noce_min)}
+          <div className="kreska" />
+          <p>
+            <b>Razem {opiszCzas(podsumowanie.fakt_min)}</b>
+            {podsumowanie.ponad_plan_min !== null && ` · ponad plan +${opiszCzas(podsumowanie.ponad_plan_min)}`}
+            {` · w nocy ${opiszCzas(podsumowanie.noce_min)}`}
           </p>
-
-          {sygnaly.length > 0 && (
-            <>
-              <p style={{ marginTop: 10 }}><b>Wykaz sygnałów</b></p>
-              <ul style={{ margin: '4px 0 0 18px' }}>
-                {sygnaly.map((s, i) => <li key={i}>{datePoPolsku(s.data)}: {s.opis}</li>)}
-              </ul>
-            </>
-          )}
-
-          <p style={{ fontSize: '0.8125rem', color: '#555', marginTop: 12 }}>
+          {sygnaly.length > 0 && <p>Wykaz sygnałów: {sygnaly.length}</p>}
+          <p style={{ marginTop: 6, color: '#5A6068' }}>
             Własna ewidencja pracownika prowadzona w aplikacji BHPewnie.
             Dokument pomocniczy — dane nie opuszczają urządzenia.
           </p>
-
-          <div className="pas-oznaczen">
-            <span className="pas-oznaczen__miejsce">Znak Funduszy Europejskich<br />— plik źródłowy</span>
-            <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ display: 'block', width: 52, height: 32, border: '1px solid #D9D2C8' }}>
-                <span style={{ display: 'block', height: 16, background: '#FFFFFF' }} />
-                <span style={{ display: 'block', height: 16, background: '#D4213D' }} />
-              </span>
-              <span style={{ fontSize: 10, color: '#5A6068' }}>Rzeczpospolita Polska</span>
-            </span>
-            <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ display: 'block', width: 48, height: 32, background: '#003399' }} />
-              <span style={{ fontSize: 10, color: '#5A6068' }}>Dofinansowane przez<br />Unię Europejską</span>
-            </span>
-            <span style={{ fontSize: 11, color: '#22262B', fontWeight: 600 }}>
-              Forum Związków<br />Zawodowych
-            </span>
-          </div>
+          <p style={{ marginTop: 4, color: '#5A6068' }}>
+            Fundusze Europejskie dla Rozwoju Społecznego 2021–2027 · Rzeczpospolita Polska ·
+            Dofinansowane przez Unię Europejską · Forum Związków Zawodowych
+          </p>
         </div>
 
+        {/* Treść miniatury powtórzona dla czytnika ekranu — obrazek nie zastępuje danych. */}
+        <p className="tylko-dla-czytnika">
+          Dokument: Moja ewidencja czasu pracy — {miesiacNazwa}. Puste pole „Imię i nazwisko”.
+          Razem {opiszCzas(podsumowanie.fakt_min)}, w nocy {opiszCzas(podsumowanie.noce_min)}.
+          {sygnaly.length > 0 && ` Wykaz sygnałów: ${sygnaly.length}.`}
+          {' '}Własna ewidencja pracownika. Dane nie opuszczają urządzenia.
+          Pas oznaczeń: Fundusze Europejskie, Rzeczpospolita Polska, Unia Europejska,
+          Forum Związków Zawodowych.
+        </p>
+
         <Przycisk ikona="dokument" onClick={zapisz} wylaczony={zapisuje}>
-          {zapisuje ? 'Składamy dokument…' : t('pdf.zapisz')}
+          {zapisuje ? 'Składamy dokument…' : 'Pobierz PDF'}
         </Przycisk>
-        <Przycisk odmiana="obrys" onClick={wroc}>{t('wspolne.zamknij')}</Przycisk>
+        <Przycisk odmiana="obrys" ikona="kalendarz" onClick={wroc}>Zmień miesiąc</Przycisk>
       </div>
     </>
   )

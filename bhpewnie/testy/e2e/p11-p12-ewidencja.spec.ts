@@ -132,8 +132,16 @@ test('P11: tydzień pokazuje plan z grafiku i sumy', async ({ page }) => {
   await page.getByRole('button', { name: 'Zobacz tabelę' }).click()
   await expect(page.getByRole('table')).toBeVisible()
   await page.getByRole('button', { name: 'Wróć do listy' }).click()
-  await expect(page.getByText('Razem w tym zakresie')).toBeVisible()
-  await expect(page.getByText('Godziny łącznie')).toBeVisible()
+
+  // Blok sumy: dwie liczby, po które się tu przychodzi.
+  await expect(page.getByText('Przepracowane')).toBeVisible()
+  await expect(page.getByText('Ponad plan', { exact: true })).toBeVisible()
+
+  // Przełącznik zakresu jest torem segmentów, nie parą przycisków.
+  const tor = page.getByRole('group', { name: 'Zakres' })
+  await expect(tor.getByRole('button', { name: 'Tydzień' })).toHaveAttribute('aria-pressed', 'true')
+  await tor.getByRole('button', { name: 'Miesiąc' }).click()
+  await expect(tor.getByRole('button', { name: 'Miesiąc' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('P11: sygnał odpoczynku poniżej 11 h zostaje wykryty i podaje podstawę', async ({ page }) => {
@@ -152,7 +160,9 @@ test('P11: sygnał odpoczynku poniżej 11 h zostaje wykryty i podaje podstawę',
   const karta = page.locator('.karta--sygnal').filter({ hasText: 'Przysługuje 11 h' })
   await karta.getByText('Podstawa prawna').click()
   await expect(karta.getByText('art. 132 Kodeksu pracy')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Jak o to poprosić/ }).first()).toBeVisible()
+  // Karta sygnału ma tytuł, znak stanu i akcję — nie samą lewą listwę.
+  await expect(karta.getByRole('heading', { name: 'Odpoczynek krótszy niż 11 godzin' })).toBeVisible()
+  await expect(karta.getByRole('button', { name: /Co mogę z tym zrobić/ })).toBeVisible()
 })
 
 test('P11: funkcjonariusz — sygnały kodeksowe wyłączone, godziny ponad plan zostają', async ({ page }) => {
@@ -178,14 +188,23 @@ test('P11: eksport miesiąca ma puste pole imienia, stopkę i pas oznaczeń', as
   await page.getByRole('button', { name: 'Ten tydzień' }).click()
   await page.getByRole('button', { name: /Eksport miesiąca/ }).click()
 
-  await expect(page.getByRole('heading', { name: /Moja ewidencja czasu pracy/ })).toBeVisible()
-  await expect(page.getByText(/Imię i nazwisko: …/)).toBeVisible()
-  await expect(page.getByText(/Własna ewidencja pracownika/)).toBeVisible()
-  await expect(page.getByText(/dane nie opuszczają urządzenia/)).toBeVisible()
-  await expect(page.getByText(/Znak Funduszy Europejskich/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Eksport ewidencji' })).toBeVisible()
+  // Miniatura A4: puste pole imienia, stopka i pas oznaczeń.
+  const miniatura = page.locator('.miniatura-a4')
+  await expect(miniatura).toBeVisible()
+  await expect(miniatura).toContainText('Imię i nazwisko')
+  await expect(miniatura).toContainText('Własna ewidencja pracownika')
+  await expect(miniatura).toContainText('dane nie opuszczają urządzenia')
+  await expect(miniatura).toContainText('Fundusze Europejskie')
+  // Proporcja arkusza — podgląd pokazuje, ile z miesiąca wejdzie na stronę.
+  const proporcja = await miniatura.evaluate((n) => {
+    const r = n.getBoundingClientRect()
+    return Math.abs(r.height / r.width - 297 / 210)
+  })
+  expect(proporcja).toBeLessThan(0.02)
 
   const pobranie = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Zapisz plik PDF' }).click()
+  await page.getByRole('button', { name: 'Pobierz PDF' }).click()
   const plik = await pobranie
   expect(plik.suggestedFilename()).toMatch(/^ewidencja-\d{4}-\d{2}\.pdf$/)
 

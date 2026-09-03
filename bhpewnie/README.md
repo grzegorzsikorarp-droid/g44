@@ -58,6 +58,7 @@ zmiana czasu urzędowego, która rozstrzyga długość nocki, byłaby niewykrywa
 | 1.2 F | Testy P10–P12, B13, axe na nowych ekranach, rejestr 66 ekranów, rozbieżności 15–24 | gotowe |
 | 1.2 G | Cztery pozostałe sytuacje domknięte; opcje pytania budowane z cech profilu | gotowe |
 | 1.2 H | Wdrożenie odpowiedzi projektowej: kafel 104 px, cztery stany, listy zamiast tabel | gotowe |
+| 1.2 I | Domknięcie pakietu: tor segmentów, blok sumy, karta sygnału, miniatura A4, zasięg wersalików | gotowe |
 
 Zaimplementowano **66 ekranów** — dokładnie tyle, ile podaje punkt 8 zmiany 1.2 (`npm run ekrany` porównuje rejestr z mapą i kończy się zerem tylko przy pełnej zgodności).
 
@@ -203,10 +204,13 @@ Warstwa wizualna pochodzi z kanwy projektowej „System BHPewnie" (`dokumentacja
 - **Kolor niesie znaczenie, nie dekorację** — sześć rodzin: pewność (zieleń morska), zależy (bursztyn, potomek żółci FZZ), neutralny (odmowa), powaga (terakota, wyłącznie Pomoc), tła, tekst.
 - **Czerwień FZZ występuje wyłącznie w blokach nadawcy** — stopka „O aplikacji" i pas oznaczeń w dokumentach A4. Nigdy w interfejsie.
 - **Pismo** — IBM Plex Sans, licencja OFL, pliki lokalne w paczce (nie z sieci). Cyfry tabelaryczne.
-- **Cieni nie ma** — warstwy rozdziela obrys 1 px i zmiana tła.
+- **Cień tylko jako podniesienie karty** — 1 px w trybie jasnym, w ciemnym żaden. Hierarchię niesie obrys 1 px i zmiana tła, nigdy cień.
+- **Wersaliki tylko w pięciu wzorcach plakietkowych** — `.oczko`, `.plakietka-auto`, plakietka ostrzeżenia, nagłówek sygnału, nagłówek druku A4. Nigdy w plakietce stanu, nagłówku tabeli, przycisku ani w zdaniu (`ROZBIEZNOSCI.md`, wpis 30b).
 - **Brak animacji przejść** — ekran zmienia się natychmiast.
 
 Rozstrzygnięcia projektowe, w których brief kolidował sam ze sobą, opisuje `dokumentacja/ROZBIEZNOSCI_DESIGN.md` — 19 wpisów w układzie brief / kolizja / decyzja / dlaczego / żeby zdecydować inaczej. Zlecenie, na które odpowiada wydanie design 1.2, to `dokumentacja/ZLECENIE_DESIGN_1_2.md`; odpowiedź projektowa — `dokumentacja/PRZEKAZANIE_DESIGN_1_2.md`.
+
+Zlecenie ma **sekcję 0 pisaną po pierwszej rundzie**: mapa 66 ekranów, cztery zakładki z nazwami i uzasadnieniem, sześć decyzji produktowych już zamkniętych oraz zasada, co robić z rysunkiem wychodzącym poza zamówiony zakres. Powód jest zapisany we wpisie 30a: rundzie pierwszej tego kontekstu zabrakło i wróciła z belką nawigacji sprzed zmiany 1.2. Każde następne zlecenie projektowe zaczyna się od tej sekcji.
 
 ---
 
