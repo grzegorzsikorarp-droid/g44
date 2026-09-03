@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
-import { Ikona, Kafel, Naglowek, PodstawaPrawna, Przycisk } from '../komponenty/podstawowe'
+import { Ikona, Kafel, Naglowek, PodstawaPrawna, Przycisk, ZnakWerdyktu } from '../komponenty/podstawowe'
 import { policzLuki, policzUprawnienia, rozwiazProfil } from '../silnik/reguly'
 import { STAN_PRAWNY, datePoPolsku, parametr } from '../silnik/parametry'
 import { opiszCzas, otwartyWpis, podsumuj, wpisyDnia, wpisyOd, zakresTygodnia } from '../silnik/ewidencja'
@@ -10,16 +10,28 @@ import type { KafelUprawnienia, Profil, StanKafla } from '../typy'
 import { AKTUALNOSCI_WBUDOWANE } from './aktualnosci'
 import { pismoZKafla, skryptZKafla } from '../silnik/dokumenty-uprawnien'
 
-/** Plakietka stanu kafla — słowo, nie sam kolor (zmiana 1.2, punkt 3.3). */
-function ZnacznikStanu({ stan }: { stan: StanKafla }) {
-  if (stan === 'sprawdz_warunek') {
-    return <span className="znacznik znacznik--sprawdz" style={{ marginTop: 6 }}>{t('kafel.sprawdz_warunek')}</span>
+/**
+ * Konkret kafla albo plakietka — nigdy oba naraz (design 1.2, §8.1).
+ * Stan „zapytamy” nie pokazuje liczby, bo jej jeszcze nie zna; w jej miejscu
+ * staje plakietka ze słowem. Znacznik świeżości jest osobną osią i dokłada się
+ * do każdego z czterech stanów, nie podmieniając znaku werdyktu.
+ */
+function PlakietkaKafla({ kafel }: { kafel: KafelUprawnienia }) {
+  if (kafel.stan === 'zapytamy') {
+    return (
+      <span className="znacznik znacznik--sprawdz">
+        <Ikona nazwa="lupa" rozmiar={16} />
+        {t('kafel.sprawdz_warunek')}
+      </span>
+    )
   }
-  if (stan === 'niepewny') {
-    return <span className="znacznik" style={{ marginTop: 6 }}>{t('wspolne.niepewne')}</span>
-  }
-  if (stan === 'wygaszony') {
-    return <span className="znacznik" style={{ marginTop: 6 }}>Czekamy na nową wartość</span>
+  if (kafel.swiezosc === 'do_odswiezenia') {
+    return (
+      <span className="znacznik znacznik--odswiez">
+        <Ikona nazwa="strzalka_w_kolo" rozmiar={16} />
+        {t('kafel.do_odswiezenia')}
+      </span>
+    )
   }
   return null
 }
@@ -90,172 +102,170 @@ export function MojeStanowisko() {
   const naZleceniu = profil.umowa === 'zlecenie' || profil.umowa === 'dzialalnosc'
 
   return (
-    <>
-      <button className="kafel" onClick={() => nawiguj('E5.2')} style={{ marginTop: 14 }}>
-        <span className="kafel__ikona"><Ikona nazwa="osoba" /></span>
-        <span className="kafel__tresc">
-          <b style={{ fontSize: '1.0625rem' }}>{profil.etykieta ?? t('stanowisko.naglowek')}</b>
-          <span className="drobne" style={{ display: 'block' }}>
-            {bezProfilu ? 'Profil jeszcze nieustawiony' : opisStanowiska(profil, dzis)}
-          </span>
-        </span>
-        <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
-      </button>
-
+    <div className="ekran--warstwowy" style={{ display: 'contents' }}>
       {/*
-        Stały pasek aktualizacji (punkt 3.4). Warunki pracy zmieniają się częściej niż
-        użytkownik o tym pamięta — droga powrotna do kreatora musi być na wierzchu,
-        a nie schowana w ustawieniach.
+        WARSTWA 1 — nagłówek stały (design 1.2, §8.2). Nie kurczy się i nie przewija.
+        Kafel profilu, pasek aktualizacji, panel sezonowy i nagłówek listy: 223 px.
       */}
-      {!bezProfilu && (
-        <button className="pas pas--spokojny" style={{ textAlign: 'left', width: '100%' }} onClick={() => nawiguj('E5.2')}>
-          <Ikona nazwa="strzalka_w_kolo" rozmiar={22} />
-          <span style={{ flex: 1, fontWeight: 600 }}>{t('stanowisko.aktualizuj')}</span>
-          <Ikona nazwa="dalej" rozmiar={20} />
+      <div className="warstwa-stala kolumna kolumna--ciasna" style={{ padding: '10px 16px 0' }}>
+        <button className="kafel kafel--swobodny" onClick={() => nawiguj('E5.2')} style={{ minHeight: 80 }}>
+          <span className="kafel__ikona"><Ikona nazwa="osoba" /></span>
+          <span className="kafel__tresc">
+            <b style={{ fontSize: '1.0625rem' }}>{profil.etykieta ?? t('stanowisko.naglowek')}</b>
+            <span className="drobne" style={{ display: 'block' }}>
+              {bezProfilu ? 'Profil jeszcze nieustawiony' : opisStanowiska(profil, dzis)}
+            </span>
+          </span>
+          <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
         </button>
-      )}
 
-      <div className="kolumna" style={{ paddingTop: 12 }}>
+        {/* Pasek aktualizacji w jednej linijce — 56 px zamiast 98 px. */}
+        {!bezProfilu && (
+          <button className="pas pas--spokojny pasek-jednolinijkowy" onClick={() => nawiguj('E5.2')}>
+            <Ikona nazwa="strzalka_w_kolo" rozmiar={24} />
+            <span className="pasek-jednolinijkowy__tekst">{t('stanowisko.aktualizuj')}</span>
+            <Ikona nazwa="dalej" rozmiar={20} />
+          </button>
+        )}
+
         {bezProfilu && (
           <div className="pas pas--spokojny">
             <Ikona nazwa="wykrzyknik" rozmiar={22} />
             <div className="kolumna kolumna--ciasna">
               <p>{t('stanowisko.bez_profilu')}</p>
-              <button onClick={() => nawiguj('E0.2')} style={{ fontWeight: 700, textDecoration: 'underline', textAlign: 'left' }}>
+              <button onClick={() => nawiguj('E0.2')} className="odnosnik">
                 {t('stanowisko.bez_profilu_przycisk')}
               </button>
             </div>
           </div>
         )}
 
+        {/*
+          Panel sezonowy zwinięty do jednej linii, 126 → 48 px. Cały jest przyciskiem,
+          bo cel dotykowy nie może być mniejszy od reguły. Pełna treść — napoje, przerwy,
+          obowiązki pracodawcy — stoi na karcie, do której ten pasek prowadzi.
+        */}
         {pokazUpal && (
           <button
-            className="pas"
-            style={{ textAlign: 'left', width: '100%' }}
+            className="pas pasek-jednolinijkowy pasek-sezonowy"
             onClick={() => nawiguj('E2.2', { sytuacja: 'upal' })}
           >
             <Ikona nazwa="slonce" rozmiar={24} />
-            <span>
-              <b>Dziś {TEMPERATURA_SYMULOWANA} °C w Twojej okolicy (symulacja).</b>{' '}
-              Pracodawca ma obowiązek zapewnić napoje.
-              <span style={{ display: 'block', fontWeight: 700, marginTop: 4, textDecoration: 'underline' }}>
-                Zobacz, co z tego wynika
-              </span>
+            <span className="pasek-jednolinijkowy__tekst">
+              Dziś {TEMPERATURA_SYMULOWANA} °C — napoje i przerwy
             </span>
+            <Ikona nazwa="dalej" rozmiar={20} />
           </button>
         )}
 
-        <div className="rzad" style={{ justifyContent: 'space-between' }}>
+        <div className="rzad" style={{ justifyContent: 'space-between', marginTop: 2 }}>
           <p className="oczko">{t('stanowisko.najwazniejsze')}</p>
           <span className="drobne">{kafle.length} {kafle.length === 1 ? 'uprawnienie' : 'uprawnień'}</span>
         </div>
+      </div>
 
-        {/*
-          Trzy kafle, potem kafel stały czasu pracy, potem przyciski. Wzrok nie odczytuje
-          czterech dużych liczb naraz — trzy mają hierarchię, cztery mają szum. Przycisk
-          „Pobierz kartę” musi być widoczny bez przewijania, bo to jedyna droga do dokumentu,
-          który użytkownik zaniesie pracodawcy (błąd wykryty testem w 1.1).
-        */}
+      {/* WARSTWA 2 — pole kafli. Jedyny element, który rośnie i kurczy się. */}
+      <div className="warstwa-pole">
         <ul className="lista-czysta">
           {(rozwiniete ? kafle : kafle.slice(0, 3)).map((k) => (
             <li key={k.id}>
               <Kafel
                 ikona={k.ikona ?? IKONY_CECH[k.cecha] ?? 'tarcza'}
                 tytul={k.tytul}
-                konkret={k.stan === 'sprawdz_warunek' ? undefined : k.konkret}
-                niepewny={k.stan === 'niepewny'}
+                konkret={k.stan === 'zapytamy' ? undefined : k.konkret}
                 stan={k.stan}
+                doOdswiezenia={k.swiezosc === 'do_odswiezenia'}
                 onClick={() => nawiguj('E1.2', { kafel: k })}
-                znacznik={<ZnacznikStanu stan={k.stan} />}
+                znacznik={<PlakietkaKafla kafel={k} />}
               />
             </li>
           ))}
         </ul>
 
-        {/* Kafel stały, poza sortowaniem — ewidencja czasu pracy (punkt 3.4). */}
-        <Kafel
-          ikona="zegar"
-          tytul={t('stanowisko.czas_pracy')}
-          konkret={
-            czasPracy
-              ? `dziś ${opiszCzas(czasPracy.dzis)} · w tym tygodniu ${opiszCzas(czasPracy.tydzien)}`
-              : t('stanowisko.czas_pracy_pusty')
-          }
-          znacznik={czasPracy?.trwa
-            ? <span className="znacznik znacznik--spokojny" style={{ marginTop: 6 }}>dzień otwarty</span>
-            : undefined}
-          onClick={() => nawiguj('E7.1')}
-        />
+        <div className="kolumna" style={{ paddingTop: 12, paddingBottom: 16 }}>
+          {kafle.length > 3 && (
+            <Przycisk
+              odmiana="obrys"
+              ikona={rozwiniete ? 'gora' : 'dalej'}
+              onClick={() => ustawRozwiniete(!rozwiniete)}
+            >
+              {rozwiniete ? 'Pokaż tylko najważniejsze' : t('stanowisko.pokaz_wszystkie').replace('{n}', String(kafle.length))}
+            </Przycisk>
+          )}
 
-        {/* Pakiet umowy odłożony na później (punkt 5.1) — kafel stały do powrotu. */}
-        {naZleceniu && stan.umowaOdlozona && (
+          {/* Kafel stały, poza sortowaniem — ewidencja czasu pracy (punkt 3.4). */}
           <Kafel
-            ikona="dokument"
-            tytul={t('stanowisko.umowa_kafel')}
-            konkret={t('stanowisko.umowa_kafel_konkret')}
-            onClick={() => nawiguj('E2.2', { sytuacja: 'umowa' })}
+            ikona="zegar"
+            tytul={t('stanowisko.czas_pracy')}
+            konkret={
+              czasPracy
+                ? `dziś ${opiszCzas(czasPracy.dzis)} · w tym tygodniu ${opiszCzas(czasPracy.tydzien)}`
+                : t('stanowisko.czas_pracy_pusty')
+            }
+            znacznik={czasPracy?.trwa
+              ? <span className="znacznik znacznik--spokojny">dzień otwarty</span>
+              : undefined}
+            onClick={() => nawiguj('E7.1')}
           />
-        )}
 
-        {/*
-          „Pobierz kartę” stoi zaraz pod kaflami, przed rozwinięciem pełnej listy:
-          to jedyna droga do dokumentu, który użytkownik zaniesie pracodawcy,
-          i ma być jak najbliżej pierwszego ekranu (patrz ROZBIEZNOSCI.md, wpis 16).
-        */}
-        <Przycisk odmiana="drugi" ikona="dokument" onClick={() => nawiguj('E1.3')}>{t('stanowisko.karta_pdf')}</Przycisk>
+          {/* Pakiet umowy odłożony na później (punkt 5.1) — kafel stały do powrotu. */}
+          {naZleceniu && stan.umowaOdlozona && (
+            <Kafel
+              ikona="dokument"
+              tytul={t('stanowisko.umowa_kafel')}
+              konkret={t('stanowisko.umowa_kafel_konkret')}
+              onClick={() => nawiguj('E2.2', { sytuacja: 'umowa' })}
+            />
+          )}
 
-        {kafle.length > 3 && (
-          <Przycisk
-            odmiana="obrys"
-            ikona={rozwiniete ? 'gora' : 'dalej'}
-            onClick={() => ustawRozwiniete(!rozwiniete)}
-          >
-            {rozwiniete ? 'Pokaż tylko najważniejsze' : t('stanowisko.pokaz_wszystkie').replace('{n}', String(kafle.length))}
-          </Przycisk>
-        )}
+          {luki > 0 && (
+            <div className="pas">
+              <Ikona nazwa="wykrzyknik" rozmiar={22} />
+              <p>{t('stanowisko.luka')}</p>
+            </div>
+          )}
 
-        {luki > 0 && (
-          <div className="pas">
-            <Ikona nazwa="wykrzyknik" rozmiar={22} />
-            <p>{t('stanowisko.luka')}</p>
-          </div>
-        )}
+          <button className="karta kolumna kolumna--ciasna" style={{ textAlign: 'left' }} onClick={() => nawiguj('E3.2', { id: aktualnosc.id })}>
+            <span className="oczko">Ostatnia aktualność</span>
+            <b style={{ fontSize: '1.0625rem' }}>{aktualnosc.tytul}</b>
+            <span className="drobne">{aktualnosc.zrodlo} · {aktualnosc.data}</span>
+          </button>
 
-        <button className="karta kolumna kolumna--ciasna" style={{ textAlign: 'left' }} onClick={() => nawiguj('E3.2', { id: aktualnosc.id })}>
-          <span className="oczko">Ostatnia aktualność</span>
-          <b style={{ fontSize: '1.0625rem' }}>{aktualnosc.tytul}</b>
-          <span className="drobne">{aktualnosc.zrodlo} · {aktualnosc.data}</span>
-        </button>
+          <Przycisk odmiana="obrys" ikona="kalendarz" onClick={() => nawiguj('E1.4')}>{t('stanowisko.terminy')}</Przycisk>
+          <Przycisk odmiana="obrys" ikona="koło_zebate" onClick={() => nawiguj('E5.1')}>{t('ustawienia.naglowek')}</Przycisk>
 
-        <Przycisk odmiana="obrys" ikona="kalendarz" onClick={() => nawiguj('E1.4')}>{t('stanowisko.terminy')}</Przycisk>
-        <Przycisk odmiana="obrys" ikona="koło_zebate" onClick={() => nawiguj('E5.1')}>{t('ustawienia.naglowek')}</Przycisk>
+          {przyklad && (
+            <p className="drobne" style={{ textAlign: 'center' }}>
+              Oglądasz przykład. Twój własny profil jest nietknięty — trzymamy go osobno.
+            </p>
+          )}
+        </div>
 
-        {przyklad && (
-          <p className="drobne" style={{ textAlign: 'center' }}>
-            Oglądasz przykład. Twój własny profil jest nietknięty — trzymamy go osobno.
-          </p>
-        )}
+        <div className="wygaszenie" aria-hidden="true" />
       </div>
-    </>
+
+      {/*
+        WARSTWA 3 — pas akcji z dokumentem. Stały, nad nawigacją.
+        To jedyna droga do dokumentu, który użytkownik zaniesie pracodawcy, więc
+        nie może zależeć od tego, ile treści jest wyżej (ROZBIEZNOSCI.md, wpis 16).
+      */}
+      <div className="warstwa-pas">
+        <Przycisk odmiana="drugi" ikona="dokument" onClick={() => nawiguj('E1.3')}>
+          {t('stanowisko.karta_pdf')}
+        </Przycisk>
+      </div>
+    </div>
   )
 }
 
 /* ================= E1.2 Karta uprawnienia z dopytaniem ================= */
 
-const NAGLOWEK_STANU: Record<StanKafla, { napis: string; ikona: string }> = {
-  przysluguje: { napis: 'Przysługuje Ci', ikona: 'ptaszek' },
-  zalezy: { napis: 'To zależy', ikona: 'fala' },
-  nie_przysluguje: { napis: 'Nie przysługuje', ikona: 'kreska' },
-  sprawdz_warunek: { napis: 'Jeden warunek do rozstrzygnięcia', ikona: 'lupa' },
-  niepewny: { napis: 'Zależy od pominiętej odpowiedzi', ikona: 'fala' },
-  wygaszony: { napis: 'Czekamy na nową wartość', ikona: 'fala' },
-}
-
-/** Do klasy werdyktu mapujemy tylko trzy stany rozstrzygnięte; reszta jest neutralna. */
-const KLASA_WERDYKTU: Partial<Record<StanKafla, string>> = {
-  przysluguje: 'werdykt--przysluguje',
-  zalezy: 'werdykt--zalezy',
-  nie_przysluguje: 'werdykt--nie_przysluguje',
+const NAGLOWEK_STANU: Record<StanKafla, { napis: string; klasa: string }> = {
+  przysluguje: { napis: 'Przysługuje Ci', klasa: 'werdykt--przysluguje' },
+  zalezy: { napis: 'To zależy', klasa: 'werdykt--zalezy' },
+  nie_przysluguje: { napis: 'Nie przysługuje', klasa: 'werdykt--nie_przysluguje' },
+  // Stan nierozstrzygnięty NIE jest werdyktem, więc nie dostaje koloru rodziny.
+  zapytamy: { napis: 'Zapytamy o jedno', klasa: 'blok-pytanie__stan' },
 }
 
 export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
@@ -276,7 +286,7 @@ export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
   if (!kafel) return null
 
   const naglowek = NAGLOWEK_STANU[kafel.stan]
-  const pytaOWarunek = kafel.warunek && (kafel.stan === 'sprawdz_warunek' || zmieniaOdpowiedz)
+  const pytaOWarunek = kafel.warunek && (kafel.stan === 'zapytamy' || zmieniaOdpowiedz)
   const szary = kafel.stan === 'nie_przysluguje'
 
   const odpowiedzNaWarunek = (nr: number) => {
@@ -288,18 +298,28 @@ export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
     <>
       <Naglowek naWstecz={wroc} oczko="Uprawnienie" />
       <div className="kolumna kolumna--luzna" style={{ flex: 1 }}>
-        {/* 1. Tytuł i stan. */}
-        <div className={`werdykt ${KLASA_WERDYKTU[kafel.stan] ?? 'werdykt--neutralny'}`}>
-          <span className="werdykt__ikona"><Ikona nazwa={naglowek.ikona} rozmiar={30} /></span>
+        {/*
+          1. Tytuł i stan. Nierozstrzygnięte NIE wygląda jak rozstrzygnięte:
+          komponent werdyktu ma kolor rodziny, znak i zdanie orzekające — trzy rzeczy,
+          których stan „zapytamy” nie ma prawa mieć (design 1.2, §8.3).
+          Po odpowiedzi ten blok zostaje ZASTĄPIONY werdyktem, nie dołożony obok.
+        */}
+        <div className={`werdykt ${naglowek.klasa}`}>
+          <span className="werdykt__ikona"><ZnakWerdyktu stan={kafel.stan} rozmiar={30} /></span>
           <div>
             <p className="oczko" style={{ color: 'inherit', opacity: 0.85 }}>{naglowek.napis}</p>
             <h1 style={{ color: 'inherit', margin: '2px 0 0' }}>{kafel.tytul}</h1>
+            {kafel.stan === 'zapytamy' && (
+              <p style={{ color: 'inherit', marginTop: 6 }}>
+                Nie wiemy jeszcze, czy Ci przysługuje. Wystarczy jedna odpowiedź.
+              </p>
+            )}
           </div>
         </div>
 
         {/* 2. Jedno pytanie, rozstrzygane w miejscu. */}
         {pytaOWarunek && (
-          <div className="karta kolumna" data-test="dopytanie">
+          <div className="karta kolumna blok-pytanie" data-test="dopytanie">
             <p className="oczko">{t('kafel.pytanie_oczko')}</p>
             <h2 style={{ margin: 0 }}>{kafel.warunek!.pytanie}</h2>
             <div className="kolumna">
@@ -321,15 +341,12 @@ export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
             )}
             <p>{kafel.wyjasnienie}</p>
 
-            {kafel.stan === 'niepewny' && (
+            {kafel.swiezosc === 'do_odswiezenia' && (
               <div className="pas">
-                <Ikona nazwa="wykrzyknik" rozmiar={22} />
+                <Ikona nazwa="strzalka_w_kolo" rozmiar={22} />
                 <div className="kolumna kolumna--ciasna">
                   <p>{t('kafel.niepewny_dopisek')}</p>
-                  <button
-                    onClick={() => nawiguj('E5.2')}
-                    style={{ fontWeight: 700, textDecoration: 'underline', textAlign: 'left' }}
-                  >
+                  <button onClick={() => nawiguj('E5.2')} className="odnosnik">
                     {t('kafel.uzupelnij_odpowiedz')}
                   </button>
                 </div>
@@ -394,17 +411,17 @@ export function KartaUprawnienia({ dane }: { dane: Record<string, unknown> }) {
               </Przycisk>
             </div>
 
-            {/* 8. Zmiana odpowiedzi — odpowiedź jest zapisana lokalnie i można ją cofnąć. */}
+            {/*
+              8. Ślad odpowiedzi — 118 → 48 px (design 1.2, §8.3). To nie jest treść,
+              do której się wraca, tylko ślad, że coś się wybrało. Zaoszczędzone 70 px
+              trafia do trzech akcji, dzięki czemu trzecia mieści się także przy 150%.
+            */}
             {kafel.warunek && kafel.odpowiedz && (
-              <div className="karta kolumna kolumna--ciasna">
-                <p className="oczko">{t('kafel.twoja_odpowiedz')}</p>
-                <p>{kafel.odpowiedz.tekst}</p>
-                <button
-                  onClick={() => ustawZmienia(true)}
-                  style={{ fontWeight: 700, textDecoration: 'underline', textAlign: 'left' }}
-                >
-                  {t('kafel.zmien_odpowiedz')}
-                </button>
+              <div className="slad-odpowiedzi">
+                <span className="drobne">
+                  {t('kafel.twoja_odpowiedz')}: <b>{kafel.odpowiedz.tekst}</b>
+                </span>
+                <button onClick={() => ustawZmienia(true)} className="odnosnik">Zmień</button>
               </div>
             )}
           </>

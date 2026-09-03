@@ -305,6 +305,79 @@ Wpisy poniżej powstały przy wykonywaniu zmiany 1.2 (przegląd zespołu merytor
 
 ---
 
+# Wdrożenie designu 1.2 — wpisy 26–30
+
+3 września 2026 wróciła odpowiedź projektowa na `dokumentacja/ZLECENIE_DESIGN_1_2.md` (pakiet `PRZEKAZANIE_DESIGN_1_2.md`, kanwa `System BHPewnie v2.dc.html`, 19 rozstrzygnięć w `dokumentacja/ROZBIEZNOSCI_DESIGN.md`). Wpisy poniżej opisują, co z niej weszło do kodu i gdzie kod z nią się rozjechał.
+
+---
+
+## 26. Wpis 16 zamknięty: „Pobierz kartę” 347 px pod zgięciem → 214 px nad nim
+
+- **Co było.** Zestaw obowiązkowy z punktu 3.4 zmiany 1.2 zajmował 858 px przy ekranie 727 px. Przycisk do dokumentu zaczynał się **347 px poniżej krawędzi**. Wpis 16 stawiał zespołowi wybór: trzy kafle albo droga do dokumentu.
+- **Co zrobił projekt.** Zdjął wybór, zamiast go rozstrzygać. Ekran ma teraz **cztery warstwy**: nagłówek stały (223 px), pole kafli (`flex: 1; min-height: 0`), stały pas akcji z dokumentem (68 px), pas nawigacji. Rozciąga się **wyłącznie pole kafli**, więc żadna treść nie może wypchnąć dokumentu.
+- **Drugi zabieg — kafel.** Wysokość zewnętrzna **104 px** zamiast 127–247 px: tytuł do dwóch linii, konkret do jednej z obcięciem. Trzy kafle zajmują **328 px** zamiast 525 px. Pełna treść konkretu stoi na karcie uprawnienia — i tak było od 1.1.
+- **Zmierzone po wdrożeniu.** Przycisk zaczyna się **214 px NAD** dolną krawędzią. Test nie sprawdza już osiągalności po przewinięciu, tylko widoczność bez przewijania, i osobno to, że rozwinięcie pełnej listy 27 kafli nic nie zmienia.
+- **Pułapka warta zapamiętania.** Blok bez `min-height: 0` w kolumnie flex ma `min-height: auto` i nie kurczy się poniżej swojej zawartości. To był pierwotny powód, dla którego przyciski uciekały pod belkę.
+- **Dowód.** `src/style/globalne.css` (`.ekran--warstwowy`, `.warstwa-*`, `.kafel`), `testy/e2e/p4-p6-stanowisko.spec.ts` — cztery testy, w tym pomiar wypisywany przy każdym przebiegu.
+
+---
+
+## 27. Sześć stanów kafla rozdzielone na dwie osie — cztery stany i znacznik
+
+- **Co było.** Sześć stanów na jednej osi: `przysluguje`, `sprawdz_warunek`, `zalezy`, `nie_przysluguje`, `niepewny`, `wygaszony`.
+- **Co znalazł projekt.** Na jednej osi siedziały **dwie różne rzeczy**. `niepewny` i `wygaszony` nie były stanami werdyktu — mówiły o **wieku odpowiedzi**, i różniły się między sobą wyłącznie kolorem obrysu przerywanego, czyli w praktyce niczym.
+- **Co zrobiliśmy.** Werdykt ma **cztery stany**; wiek odpowiedzi to osobna oś (`swiezosc`) z jednym znacznikiem „Do odświeżenia”, który staje na każdym z czterech i **nie podmienia znaku werdyktu**. Kafel po dacie ważności parametru dalej mówi, czy uprawnienie przysługuje, zamiast tracić werdykt.
+- **Skutek w sortowaniu.** „Do odświeżenia” idzie na koniec **swojego stanu**, nie na koniec listy. Kafel „przysługuje” oparty na starszej odpowiedzi stoi przed kaflem „nie przysługuje”, bo nadal mówi użytkownikowi, że coś mu się należy. Test sortowania przepisany z jednej osi na dwie.
+- **Zasada 9 działa niezależnie.** Nieaktualna liczba nie pokaże się w żadnym stanie, bo podmienia ją `wypelnij()` na poziomie tekstu, a nie stanu kafla.
+- **Dowód.** `src/typy.ts` (`StanKafla`, `Swiezosc`), `src/silnik/reguly.ts` (`stanKafla`), `testy/silnik.test.ts`, `testy/e2e/p4-p6-stanowisko.spec.ts`.
+
+---
+
+## 28. Znaki ✓ ~ — wycofane; tabela na telefonie zastąpiona listą
+
+- **Znaki.** Myślnik czytał się jak interpunkcja, a fala jak literówka. Trzy nowe znaki są rysowane jako SVG i różnią się **konturem**: pełna krzywa, koło wypełnione do połowy, koło przekreślone. Doszedł czwarty — znak zapytania dla stanu nierozstrzygniętego, który **nie jest** znakiem werdyktu, bo werdyktu jeszcze nie ma.
+- **Tabela.** Na telefonie nie występuje. Ewidencja (E7.3) to **lista dni**: wiersz 62 px z datą, faktem i różnicą w pierwszej linii, planem i przerwami w drugiej jako zdanie. Porównanie form zatrudnienia (E2.8) to **lista ośmiu par**, w której nagłówek stoi przy danej, a nie 300 px wyżej w wierszu tabeli. Tabela zostaje komponentem systemu i wchodzi od **600 px** oraz do dokumentów A4.
+- **Odnośnik „Zobacz tabelę”** w E7.3 pokazuje pełną pięciokolumnową siatkę tym, którzy jej chcą. Przewijane pudełko zachowuje osiągalność z klawiatury i obrys skupienia — to była realna wada dostępności znaleziona testem axe w 1.2.
+- **Wartości w liście par też niosą znak.** „Nie” bez znaku byłoby jedynym miejscem w aplikacji, gdzie odmowa nie ma kształtu.
+- **Dowód.** `src/komponenty/podstawowe.tsx` (`ZnakWerdyktu`), `src/ekrany/czas-pracy.tsx` (`.wiersz-dnia`), `src/ekrany/sprawdz.tsx` (`.para`), `testy/e2e/p10-umowa.spec.ts`, `testy/e2e/p11-p12-ewidencja.spec.ts`.
+
+---
+
+## 29. Trzy reguły zmieniły brzmienie — nazywają powód zamiast miejsca
+
+Projekt nie złamał żadnej z ośmiu reguł, ale trzy przepisał tak, żeby rozstrzygały same przy następnym module.
+
+| reguła | było | jest |
+|---|---|---|
+| 3 — cele dotykowe | „72 px **w Pomocy**” | „72 px **dla czynności wykonywanej w pośpiechu lub w rękawicy**” |
+| 8 — cienie | „cieni nie ma” | „cień dopuszczalny wyłącznie jako **1 px podniesienia karty**, nigdy jako źródło hierarchii” |
+| terakota | „wyłącznie moduł Pomoc” | „**ryzyko, które stwarza drugi człowiek**” |
+
+- **Co z tego wynika w kodzie.** Przycisk „Zaczynam pracę” w E7.1 zostaje przy 72 px i **testy dostępności obejmują go tak samo jak Pomoc**, zamiast być o niego osłabione. Karty dostają `box-shadow: 0 1px 2px rgba(20,22,26,0.05)` w trybie jasnym; w ciemnym cienia nie ma. Promienie to 8 / 12 / 14 / 999 zamiast 6 / 10 / 14 / 999.
+- **Moje złamanie reguły terakoty rozstrzygnięte na pół.** Ostrzeżenie w pakiecie umowy (E2.3) **dostaje** terakotę i nazwaną formę „ostrzeżenie o ryzyku ze strony drugiej osoby”: obrys 2 px, plakietka wersalikami, **jedno** wyjście do Pomocy. Błędy walidacji formularza terakoty **nie dostają** — mają własny, cichszy stan: obrys 2,5 px atramentowy, znak wykrzyknika przy polu, zdanie pod polem. Różnica jest funkcjonalna: Pomoc **daje wyjście**, ostrzeżenie **wstrzymuje krok**, a pomyłka we wpisie nie jest ryzykiem ze strony człowieka.
+- **Poprawka dostępności przy okazji.** Zdanie o błędzie musiało wyjść poza `<label>`: wewnątrz zmieniało dostępną nazwę pola, więc czytnik ekranu odczytywałby „Do, przerwa wychodzi poza godziny wpisu” zamiast nazwy pola. Jest podpięte przez `aria-describedby`.
+- **Dowód.** Nagłówek `src/style/globalne.css` (osiem reguł w nowym brzmieniu), `dokumentacja/ROZBIEZNOSCI_DESIGN.md` wpisy (l), (p), (q).
+
+---
+
+## 30. Dwie rzeczy z pakietu projektowego, których NIE wdrożyliśmy
+
+### 30a. Belka nawigacji w makietach ma inne zakładki niż aplikacja
+
+- **Co pokazuje projekt.** Wszystkie makiety §8 mają na dole **„Moje · Sprawdź · Mój czas · Pomoc”**.
+- **Co to zmienia.** Po pierwsze cofa nazwy zakładek, które zmiana 1.2 wprowadza w punkcie 2 wraz z uzasadnieniem („Moje stanowisko” → **Co mi przysługuje**, „Sprawdź” → **Mam sprawę**). Po drugie **usuwa z nawigacji Aktualności** (grupa E3, trzy ekrany) i wstawia w to miejsce Mój czas, czyli podnosi grupę E7 do rangi zakładki. Mapa ekranów z punktu 8 zmiany 1.2 tego nie przewiduje.
+- **Dlaczego nie wdrożyliśmy.** To jest **decyzja produktowa**, nie szczegół wizualny: zmienia strukturę aplikacji i wycina grupę ekranów z głównej nawigacji. Żadne z dziewiętnastu rozstrzygnięć w `ROZBIEZNOSCI_DESIGN.md` jej nie dotyczy, więc najpewniej etykiety w makietach są skrótem rysunkowym, a nie propozycją. Nazwy zakładek zostają takie, jak w zmianie 1.2.
+- **Do rozstrzygnięcia przez zespół.** Jeżeli Aktualności mają zniknąć z belki, a Mój czas ma się w niej pojawić, potrzebna jest decyzja i korekta mapy ekranów — nie zmiana w CSS.
+
+### 30b. „Wersaliki w jednym miejscu” przeczy własnym makietom pakietu
+
+- **Co pisze pakiet.** „Wersaliki: w całej aplikacji **jedno** miejsce — plakietka ostrzeżenia o ryzyku”.
+- **Co pokazują jego makiety.** Wersaliki w małych etykietach: „Ile to jest”, „Przepracowane”, „Nad planem”, „Podgląd dokumentu”, „Do sprawdzenia” — czyli w całym wzorcu `.oczko`, którym aplikacja posługuje się od 1.1.
+- **Co zrobiliśmy.** Zdjęliśmy wersaliki z **dwóch miejsc, które projekt wskazał wprost jako błąd**: plakietki stanu kafla (razem ze zmianą brzmienia na „Zapytamy o jedno”) i nagłówka tabeli. Wzorzec `.oczko` zostaje bez zmian, bo makiety pakietu same go używają.
+- **Do rozstrzygnięcia.** Czy zdanie z pakietu jest regułą do wprowadzenia w całej aplikacji, czy opisem dwóch konkretnych poprawek. Test pilnuje dziś wersji drugiej.
+
+---
+
 ## Do rozstrzygnięcia przez zespół — po zmianie 1.2
 
 Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszły cztery:
@@ -314,3 +387,8 @@ Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozs
 11. **Brzmienie plakietki „SPRAWDŹ JEDEN WARUNEK"** — trzy warianty do testu z ludźmi (wpis 19).
 12. **Znaczenie ekranu E2.4** — czy „wynik pośredni" to ten ekran, który zespół miał na myśli (wpis 15).
 13. **Normy kubatury i wolnej powierzchni** w sytuacji „Jest zimno albo ciasno" — dokument zmiany mówi „kubatura", ale nie podaje liczby (wpis 25).
+14. **Zakładki w belce nawigacji** — makiety projektowe pokazują „Moje · Sprawdź · Mój czas · Pomoc", co cofa nazwy ze zmiany 1.2 i wycina Aktualności z nawigacji. Decyzja produktowa, nie wizualna (wpis 30a).
+15. **Zasięg zakazu wersalików** — reguła dla całej aplikacji czy dwie konkretne poprawki (wpis 30b).
+16. **Kafel przy powiększeniu 200%** — rośnie do 148 px i wypycha dokument pod zgięcie; czy dokument zostaje nad zgięciem, czy ustępuje kaflom (pakiet projektowy, „Zachowanie i stany").
+17. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack.
+18. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą i czy potrzebuje adnotacji, że jest zapisem własnym pracownika. Pytanie do prawników.

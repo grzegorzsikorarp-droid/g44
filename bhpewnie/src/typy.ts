@@ -253,16 +253,26 @@ export interface PytanieKreatora {
 /* ---------- Wynik silnika ---------- */
 
 /**
- * Szesc stanow kafla (zmiana 1.2, punkt 3.3). Kolejnosc ma znaczenie w sortowaniu:
- * najpierw to, co przysluguje, potem to, co wymaga jednego dotkniecia.
+ * CZTERY stany werdyktu na kaflu (design 1.2, rozstrzygniecie 02).
+ *
+ * W wydaniu 1.2 stanow bylo szesc, ale na jednej osi siedzialy DWIE ROZNE RZECZY:
+ * cztery stany werdyktu oraz `niepewny` i `wygaszony`, ktore mowily o WIEKU odpowiedzi.
+ * Te dwa rozdzielono na osobna os — patrz `swiezosc` nizej. Szesc stanow po scaleniu
+ * dawaloby osiem, potem dwanascie (ROZBIEZNOSCI_DESIGN.md, wpis (m)).
  */
 export type StanKafla =
   | 'przysluguje'      // warunek null albo rozstrzygniety na „tak”
-  | 'sprawdz_warunek'  // warunek istnieje, nierozstrzygniety
+  | 'zapytamy'         // warunek istnieje, nierozstrzygniety — jeszcze NIE werdykt
   | 'zalezy'           // rozstrzygniety na „zalezy”
   | 'nie_przysluguje'  // rozstrzygniety na „nie”
-  | 'niepewny'         // wynika z pominietego pytania kreatora
-  | 'wygaszony'        // parametr po dacie obowiazuje_do bez nastepcy
+
+/**
+ * Druga os: wiek odpowiedzi. Znacznik „Do odswiezenia” staje na KAZDYM z czterech
+ * stanow i nigdy nie podmienia znaku werdyktu.
+ */
+export type Swiezosc =
+  | 'aktualne'
+  | 'do_odswiezenia'   // pominiete pytanie kreatora albo parametr po dacie waznosci
 
 export interface KafelUprawnienia {
   id: string
@@ -279,9 +289,11 @@ export interface KafelUprawnienia {
   sprawdzacz?: string
   grupa: GrupaKafli
   ikona?: string
-  /** Wyliczony stan kafla — z warunku, pominiec i dat parametrow. */
+  /** Wyliczony stan werdyktu — z warunku i odpowiedzi uzytkownika. */
   stan: StanKafla
-  /** Pytanie do rozstrzygniecia na karcie E1.2, gdy stan = sprawdz_warunek. */
+  /** Druga os: czy odpowiedz albo parametr wymagaja odswiezenia. */
+  swiezosc: Swiezosc
+  /** Pytanie do rozstrzygniecia na karcie E1.2, gdy stan = zapytamy. */
   warunek?: WarunekKafla | null
   /** Odpowiedz uzytkownika na warunek — indeks w `warunek.odpowiedzi`. */
   odpowiedz?: OdpowiedzWarunku | null

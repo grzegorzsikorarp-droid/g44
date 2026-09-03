@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
-import { Ikona, Naglowek, PodstawaPrawna, Przycisk } from '../komponenty/podstawowe'
+import { Ikona, Naglowek, PodstawaPrawna, Przycisk, ZnakWerdyktu } from '../komponenty/podstawowe'
 import { t } from '../dane/wczytaj'
 import { STAN_PRAWNY, datePoPolsku } from '../silnik/parametry'
 import {
@@ -20,6 +20,15 @@ import type { Sygnal, WpisCzasu } from '../typy'
  *
  * Świadomie NIE liczymy wynagrodzenia ani stawek za nadgodziny: tylko godziny (punkt 11).
  */
+
+const DNI_KROTKIE = ['nd', 'pon', 'wt', 'śr', 'czw', 'pt', 'sob']
+const MIESIACE_RZYMSKIE = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']
+
+/** „pon 1 IX” — zapis dnia w liście ewidencji. */
+function opiszDzien(dzien: string): string {
+  const d = new Date(dzien + 'T12:00:00')
+  return `${DNI_KROTKIE[d.getDay()]} ${Number(dzien.slice(8, 10))} ${MIESIACE_RZYMSKIE[Number(dzien.slice(5, 7)) - 1]}`
+}
 
 /** „08:00” z bieżącej chwili — zapisujemy czas lokalny, nie UTC. */
 function terazHHMM(teraz: Date = new Date()): string {
@@ -163,21 +172,29 @@ export function MojCzasDzis() {
         <div className="kolumna">
           {otwarty && otwarty.data === dzis ? (
             <>
-              <div className="blok-ile" data-test="licznik">
-                <p className="oczko">Dzień otwarty od {otwarty.od}</p>
-                <p style={{ fontSize: '2rem', fontWeight: 700, marginTop: 4 }}>
+              <div className="licznik" data-test="licznik">
+                <div className="rzad" style={{ justifyContent: 'space-between' }}>
+                  <p className="oczko">Pracujesz od {otwarty.od}</p>
+                  <span className="znacznik znacznik--spokojny">dzień otwarty</span>
+                </div>
+                <p className="licznik__liczba">
                   {opiszCzas(naZywo)}
                   {tik === -1 && ''}
                 </p>
-                {przerwaTrwa && <p className="drobne">Przerwa trwa — czas przerwy nie jest liczony.</p>}
+                <p className="drobne">
+                  {przerwaTrwa
+                    ? 'Przerwa trwa — czas przerwy nie jest liczony.'
+                    : `w tym ${opiszCzas(podsumowanie.przerwy_min)} przerwy`}
+                  {podsumowanie.plan_min !== null && ` · plan ${opiszCzas(podsumowanie.plan_min)}`}
+                </p>
               </div>
-              <Przycisk wielki ikona="stop" onClick={zakoncz}>Kończę</Przycisk>
+              <Przycisk wielki ikona="stop" onClick={zakoncz}>Kończę pracę</Przycisk>
               <Przycisk odmiana={przerwaTrwa ? 'drugi' : 'obrys'} ikona={przerwaTrwa ? 'start' : 'pauza'} onClick={przelaczPrzerwe}>
-                {przerwaTrwa ? 'Wracam z przerwy' : 'Przerwa'}
+                {przerwaTrwa ? 'Kończę przerwę' : 'Zaczynam przerwę'}
               </Przycisk>
             </>
           ) : (
-            <Przycisk wielki ikona="start" onClick={zacznij}>Zaczynam</Przycisk>
+            <Przycisk wielki ikona="start" onClick={zacznij}>Zaczynam pracę</Przycisk>
           )}
         </div>
 
@@ -190,7 +207,7 @@ export function MojCzasDzis() {
                 const wy = wyliczWpis(w, profil?.grafik ?? null, null)
                 return (
                   <li key={w.id}>
-                    <button className="kafel" onClick={() => nawiguj('E7.2', { id: w.id })}>
+                    <button className="kafel kafel--swobodny" onClick={() => nawiguj('E7.2', { id: w.id })}>
                       <span className="kafel__ikona"><Ikona nazwa="zegar" /></span>
                       <span className="kafel__tresc">
                         <b style={{ display: 'block' }}>{w.od}–{w.do ?? '…'}</b>
@@ -286,7 +303,11 @@ export function WpisCzasuEkran({ dane }: { dane: Record<string, unknown> }) {
 
         <div className="rzad">
           <Pole etykieta="Od" typ="time" wartosc={wpis.od} naZmiane={(v) => zmien({ od: v })} />
-          <Pole etykieta="Do" typ="time" wartosc={wpis.do ?? ''} naZmiane={(v) => zmien({ do: v || null })} />
+          <Pole
+            etykieta="Do" typ="time" wartosc={wpis.do ?? ''}
+            naZmiane={(v) => zmien({ do: v || null })}
+            blad={proba ? wynik.bledy.find((b) => b.includes('zakończenia')) : undefined}
+          />
         </div>
 
         <div className="karta kolumna kolumna--ciasna">
@@ -301,6 +322,7 @@ export function WpisCzasuEkran({ dane }: { dane: Record<string, unknown> }) {
               <Pole
                 etykieta="Do" typ="time" wartosc={p.do ?? ''}
                 naZmiane={(v) => zmien({ przerwy: wpis.przerwy.map((x, j) => (j === i ? { ...x, do: v || null } : x)) })}
+                blad={proba ? wynik.bledy.find((b) => b.includes(`${p.od}–${p.do}`)) : undefined}
               />
               <Przycisk
                 odmiana="obrys" ikona="minus"
@@ -330,10 +352,20 @@ export function WpisCzasuEkran({ dane }: { dane: Record<string, unknown> }) {
           />
         </label>
 
+        {/*
+          Pas zbiorczy mówi ILE PÓL wymaga poprawy, nie co w nich jest — konkret stoi
+          przy polu (design 1.2, §8.4). Bez terakoty: pomyłka we wpisie nie jest
+          ryzykiem ze strony drugiego człowieka.
+        */}
         {proba && wynik.bledy.length > 0 && (
-          <div className="pas pas--powaga" role="alert" data-test="bledy-wpisu">
+          <div className="pas pas--uwaga" role="alert" data-test="bledy-wpisu">
             <Ikona nazwa="wykrzyknik" rozmiar={22} />
-            <ul style={{ margin: '0 0 0 18px' }}>{wynik.bledy.map((b, i) => <li key={i}>{b}</li>)}</ul>
+            <div className="kolumna kolumna--ciasna">
+              <b>
+                {wynik.bledy.length === 1 ? 'Jedno pole wymaga poprawy' : `${wynik.bledy.length} pola wymagają poprawy`}
+              </b>
+              <ul style={{ margin: '0 0 0 18px' }}>{wynik.bledy.map((b, i) => <li key={i}>{b}</li>)}</ul>
+            </div>
           </div>
         )}
 
@@ -351,14 +383,36 @@ export function WpisCzasuEkran({ dane }: { dane: Record<string, unknown> }) {
   )
 }
 
+/**
+ * Pole z nazwanym stanem błędu (design 1.2, §8.4).
+ *
+ * Zdanie o błędzie stoi POZA elementem `<label>` i jest podpięte przez `aria-describedby`.
+ * Wewnątrz etykiety zmieniałoby dostępną nazwę pola: czytnik ekranu odczytywałby
+ * „Do, przerwa wychodzi poza godziny wpisu” zamiast nazwy pola.
+ */
 function Pole({
-  etykieta, typ, wartosc, naZmiane,
-}: { etykieta: string; typ: string; wartosc: string; naZmiane: (v: string) => void }) {
+  etykieta, typ, wartosc, naZmiane, blad,
+}: { etykieta: string; typ: string; wartosc: string; naZmiane: (v: string) => void; blad?: string }) {
+  const id = useId()
   return (
-    <label className="kolumna kolumna--ciasna" style={{ flex: 1, minWidth: 120 }}>
-      <span className="oczko">{etykieta}</span>
-      <input className="pole" type={typ} value={wartosc} onChange={(e) => naZmiane(e.target.value)} />
-    </label>
+    <div className="kolumna kolumna--ciasna" style={{ flex: 1, minWidth: 120 }}>
+      <label className="oczko" htmlFor={id}>{etykieta}</label>
+      <input
+        id={id}
+        className={`pole${blad ? ' pole--blad' : ''}`}
+        type={typ}
+        value={wartosc}
+        aria-invalid={blad ? true : undefined}
+        aria-describedby={blad ? `${id}-blad` : undefined}
+        onChange={(e) => naZmiane(e.target.value)}
+      />
+      {blad && (
+        <span className="pole-blad__zdanie" id={`${id}-blad`}>
+          <Ikona nazwa="wykrzyknik" rozmiar={16} />
+          {blad}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -368,6 +422,8 @@ export function TydzienIMiesiac() {
   const { stan, nawiguj, wroc, dzis } = useAplikacja()
   const profil = stan.profil
   const [zakresNazwa, ustawZakres] = useState<'tydzien' | 'miesiac'>('tydzien')
+  // Pełna siatka na życzenie — dla tych, którzy chcą wszystkich pięciu kolumn.
+  const [tabela, ustawTabela] = useState(false)
 
   const zakres = zakresNazwa === 'tydzien' ? zakresTygodnia(dzis) : zakresMiesiaca(dzis)
   const wpisy = wpisyOd(stan.ewidencja, zakres.od, zakres.do)
@@ -398,41 +454,88 @@ export function TydzienIMiesiac() {
         <p className="opis">{datePoPolsku(zakres.od)} – {datePoPolsku(zakres.do)}</p>
 
         {/* Przewijane pudełko z dostępem z klawiatury — jak w E2.8. */}
-        <div className="tabela-przewijana" tabIndex={0} role="region" aria-label="Ewidencja dzień po dniu">
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Plan</th>
-                <th scope="col">Fakt</th>
-                <th scope="col">Przerwy</th>
-                <th scope="col">Różnica</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dni.map((d) => {
-                const wDniu = wpisyDnia(stan.ewidencja, d)
-                const p = podsumuj(wDniu, profil?.grafik ?? null)
-                const maSygnal = dniZSygnalem.has(d)
-                return (
-                  <tr key={d}>
-                    <th scope="row">
-                      {maSygnal && <span aria-hidden="true" style={{ marginRight: 6 }}>!</span>}
-                      {Number(d.slice(8, 10))}.{d.slice(5, 7)}
-                      {maSygnal && <span className="tylko-dla-czytnika"> — dzień z sygnałem</span>}
-                    </th>
-                    <td className="cyfry">{p.plan_min === null ? '—' : opiszCzas(p.plan_min)}</td>
-                    <td className="cyfry">{wDniu.length === 0 ? '—' : opiszCzas(p.fakt_min)}</td>
-                    <td className="cyfry">{wDniu.length === 0 ? '—' : opiszCzas(p.przerwy_min)}</td>
-                    <td className="cyfry">
-                      {p.plan_min === null || wDniu.length === 0 ? '—' : opiszCzas(p.fakt_min - p.plan_min)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        {/*
+          LISTA DNI, nie tabela (design 1.2, §8.4). Pięć kolumn schodzi do trzech
+          widocznych: data, fakt i różnica w pierwszej linii, plan i przerwy w drugiej
+          jako zdanie. Plan i przerwy nie znikają — przestają być kolumnami.
+          Wiersz jest celem dotykowym prowadzącym do szczegółu dnia.
+        */}
+        <div className="rzad" style={{ justifyContent: 'space-between' }}>
+          <p className="oczko">Dzień po dniu</p>
+          <button className="odnosnik drobne" onClick={() => ustawTabela(!tabela)}>
+            {tabela ? 'Wróć do listy' : 'Zobacz tabelę'}
+          </button>
         </div>
+
+        {tabela ? (
+          <div className="tabela-przewijana" tabIndex={0} role="region" aria-label="Ewidencja dzień po dniu">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Data</th>
+                  <th scope="col">Plan</th>
+                  <th scope="col">Fakt</th>
+                  <th scope="col">Przerwy</th>
+                  <th scope="col">Różnica</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dni.map((d) => {
+                  const wDniu = wpisyDnia(stan.ewidencja, d)
+                  const p = podsumuj(wDniu, profil?.grafik ?? null)
+                  return (
+                    <tr key={d}>
+                      <th scope="row">{Number(d.slice(8, 10))}.{d.slice(5, 7)}</th>
+                      <td className="cyfry">{p.plan_min === null ? '—' : opiszCzas(p.plan_min)}</td>
+                      <td className="cyfry">{wDniu.length === 0 ? '—' : opiszCzas(p.fakt_min)}</td>
+                      <td className="cyfry">{wDniu.length === 0 ? '—' : opiszCzas(p.przerwy_min)}</td>
+                      <td className="cyfry">
+                        {p.plan_min === null || wDniu.length === 0 ? '—' : opiszCzas(p.fakt_min - p.plan_min)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <ul className="lista-czysta">
+            {dni.map((d) => {
+              const wDniu = wpisyDnia(stan.ewidencja, d)
+              const p = podsumuj(wDniu, profil?.grafik ?? null)
+              const maSygnal = dniZSygnalem.has(d)
+              const roznica = p.plan_min === null || wDniu.length === 0 ? null : p.fakt_min - p.plan_min
+              const klasaRoznicy = roznica === null ? '' : roznica > 0 ? 'roznica--ponad' : roznica < 0 ? 'roznica--nad' : 'roznica--zero'
+              return (
+                <li key={d}>
+                  <button className="wiersz-dnia" onClick={() => nawiguj('E7.2', { data: d })}>
+                    <span className="wiersz-dnia__gora">
+                      <span className="wiersz-dnia__data">
+                        {maSygnal && <Ikona nazwa="wykrzyknik" rozmiar={16} />}
+                        {' '}{opiszDzien(d)}
+                        {maSygnal && <span className="tylko-dla-czytnika"> — dzień z sygnałem</span>}
+                      </span>
+                      <span className="wiersz-dnia__liczby">
+                        <b>{wDniu.length === 0 ? '—' : opiszCzas(p.fakt_min)}</b>
+                        {roznica !== null && (
+                          <span className={klasaRoznicy}>
+                            {roznica > 0 ? '+' : ''}{opiszCzas(roznica)}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="wiersz-dnia__dol">
+                      {p.plan_min === null
+                        ? 'ustaw grafik, żeby porównać'
+                        : `plan ${opiszCzas(p.plan_min)}`}
+                      {wDniu.length > 0 && ` · przerwy ${opiszCzas(p.przerwy_min)}`}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
         {podsumowanie.plan_min === null && (
           <p className="drobne" data-test="brak-grafiku">
@@ -524,17 +627,14 @@ function KartaSygnalu({
   return (
     <li>
       <div className={`karta kolumna kolumna--ciasna${sygnal.informacyjny ? '' : ' karta--sygnal'}`}>
-        <div className="rzad">
-          <span className="kafel__ikona">
-            <Ikona nazwa={sygnal.informacyjny ? 'zegar' : 'wykrzyknik'} />
-          </span>
-          <div style={{ flex: 1 }}>
-            <p className="oczko">
-              {sygnal.informacyjny ? 'Informacja' : 'Sygnał'} · {datePoPolsku(sygnal.data)}
-            </p>
-            <p>{sygnal.opis}</p>
-          </div>
-        </div>
+        {/* Nagłówek stanu ze znakiem i słowem — jak na kartach werdyktu (design 1.2, §8.4). */}
+        <p className={sygnal.informacyjny ? 'oczko' : 'sygnal__naglowek'}>
+          {sygnal.informacyjny
+            ? `Informacja · ${datePoPolsku(sygnal.data)}`
+            : <><ZnakWerdyktu stan="zalezy" rozmiar={20} /> Do sprawdzenia</>}
+        </p>
+        <p>{sygnal.opis}</p>
+        <p className="drobne">{datePoPolsku(sygnal.data)}</p>
         <PodstawaPrawna tresc={sygnal.podstawa} stanPrawny={STAN_PRAWNY} />
         {!sygnal.informacyjny && (
           <div className="rzad">

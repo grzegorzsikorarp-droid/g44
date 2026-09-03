@@ -79,15 +79,15 @@ test('P11: „Zaczynam” otwiera dzień, „Przerwa” zatrzymuje licznik, „K
   await page.getByRole('button', { name: /Mój czas pracy/ }).click()
   await expect(page.getByRole('heading', { name: 'Mój czas — dziś' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Zaczynam' }).click()
+  await page.getByRole('button', { name: 'Zaczynam pracę' }).click()
   await expect(page.locator('[data-test="licznik"]')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Przerwa', exact: true }).click()
+  await page.getByRole('button', { name: 'Zaczynam przerwę' }).click()
   await expect(page.getByText(/Przerwa trwa/)).toBeVisible()
-  await page.getByRole('button', { name: 'Wracam z przerwy' }).click()
+  await page.getByRole('button', { name: 'Kończę przerwę' }).click()
 
-  await page.getByRole('button', { name: 'Kończę' }).click()
-  await expect(page.getByRole('button', { name: 'Zaczynam' })).toBeVisible()
+  await page.getByRole('button', { name: 'Kończę pracę' }).click()
+  await expect(page.getByRole('button', { name: 'Zaczynam pracę' })).toBeVisible()
   await expect(page.getByText('Dzisiejsze wpisy')).toBeVisible()
 })
 
@@ -126,8 +126,12 @@ test('P11: tydzień pokazuje plan z grafiku i sumy', async ({ page }) => {
   await page.getByRole('button', { name: 'Ten tydzień' }).click()
 
   await expect(page.getByRole('heading', { name: 'Tydzień i miesiąc' })).toBeVisible()
-  const tabela = page.getByRole('table')
-  await expect(tabela).toBeVisible()
+  // Design 1.2: na telefonie lista dni, nie tabela. Tabela na życzenie.
+  await expect(page.locator('.wiersz-dnia')).toHaveCount(7)
+  await expect(page.getByRole('table')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Zobacz tabelę' }).click()
+  await expect(page.getByRole('table')).toBeVisible()
+  await page.getByRole('button', { name: 'Wróć do listy' }).click()
   await expect(page.getByText('Razem w tym zakresie')).toBeVisible()
   await expect(page.getByText('Godziny łącznie')).toBeVisible()
 })

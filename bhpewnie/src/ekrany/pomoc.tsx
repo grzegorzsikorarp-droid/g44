@@ -106,7 +106,7 @@ export function PomocWejscie() {
         )}
 
         {/* Dwa rozdzielone wejścia — kroki albo od razu rozmowa z człowiekiem. */}
-        <button className="kafel" style={{ minHeight: 84 }} onClick={() => nawiguj('E4.2')}>
+        <button className="kafel kafel--swobodny" style={{ minHeight: 84 }} onClick={() => nawiguj('E4.2')}>
           <span className="kafel__ikona" style={{ background: 'var(--ceglasty-tlo)', color: 'var(--ceglasty-ciemny)' }}>
             <Ikona nazwa="ratunek" />
           </span>
@@ -118,7 +118,7 @@ export function PomocWejscie() {
         </button>
 
         <button
-          className="kafel"
+          className="kafel kafel--swobodny"
           style={{ minHeight: 84, background: 'var(--ceglasty)', borderColor: 'var(--ceglasty)' }}
           onClick={() => nawiguj('E4.10')}
         >
@@ -133,13 +133,13 @@ export function PomocWejscie() {
         </button>
 
         <p className="oczko" style={{ marginTop: 8 }}>Po zdarzeniu</p>
-        <button className="kafel" onClick={() => nawiguj('E4.7')}>
+        <button className="kafel kafel--swobodny" onClick={() => nawiguj('E4.7')}>
           <span className="kafel__ikona"><Ikona nazwa="notatnik" /></span>
           <span className="kafel__tresc"><b>{t('dziennik.naglowek')}</b>
             <span className="drobne" style={{ display: 'block' }}>zapisz, co się stało — zanim się zatrze</span></span>
           <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
         </button>
-        <button className="kafel" onClick={() => nawiguj('E4.9')}>
+        <button className="kafel kafel--swobodny" onClick={() => nawiguj('E4.9')}>
           <span className="kafel__ikona"><Ikona nazwa="wykrzyknik" /></span>
           <span className="kafel__tresc"><b>{t('dziennik.prawie')}</b>
             <span className="drobne" style={{ display: 'block' }}>omal się nie stało — warto to zgłosić</span></span>
@@ -147,13 +147,13 @@ export function PomocWejscie() {
         </button>
 
         <p className="oczko" style={{ marginTop: 8 }}>Do przeczytania</p>
-        <button className="kafel" onClick={() => nawiguj('E4.11')}>
+        <button className="kafel kafel--swobodny" onClick={() => nawiguj('E4.11')}>
           <span className="kafel__ikona"><Ikona nazwa="ksiazka" /></span>
           <span className="kafel__tresc"><b>{t('pomoc.biblioteka')}</b>
             <span className="drobne" style={{ display: 'block' }}>materiały od specjalistów</span></span>
           <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
         </button>
-        <button className="kafel" onClick={() => nawiguj('E4.13')}>
+        <button className="kafel kafel--swobodny" onClick={() => nawiguj('E4.13')}>
           <span className="kafel__ikona"><Ikona nazwa="osoba" /></span>
           <span className="kafel__tresc"><b>{t('pomoc.gdzie_szukac')}</b>
             <span className="drobne" style={{ display: 'block' }}>kto pomaga, kiedy i czy anonimowo</span></span>
@@ -176,7 +176,7 @@ export function WyborSytuacji() {
         <ul className="lista-czysta">
           {sciezki().map((s) => (
             <li key={s.id}>
-              <button className="kafel" style={{ minHeight: 72 }} onClick={() => nawiguj('E4.3', { sciezka: s.id, krok: s.kroki[0]?.id })}>
+              <button className="kafel kafel--swobodny" style={{ minHeight: 72 }} onClick={() => nawiguj('E4.3', { sciezka: s.id, krok: s.kroki[0]?.id })}>
                 <span className="kafel__ikona" style={{ background: 'var(--ceglasty-tlo)', color: 'var(--ceglasty-ciemny)' }}>
                   <Ikona nazwa={s.ikona === 'krzyz' ? 'ratunek' : s.ikona} />
                 </span>

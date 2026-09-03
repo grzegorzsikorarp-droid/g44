@@ -132,11 +132,12 @@
   "stanowisko.czas_pracy_pusty": "zacznij notować",
   "stanowisko.umowa_kafel": "Sprawdź swoją umowę",
   "stanowisko.umowa_kafel_konkret": "Zacząłeś to sprawdzać — zostało sześć pytań",
-  "kafel.sprawdz_warunek": "SPRAWDŹ JEDEN WARUNEK",
+  "kafel.sprawdz_warunek": "Zapytamy o jedno",
   "kafel.pytanie_oczko": "Jeden warunek do rozstrzygnięcia",
   "kafel.zmien_odpowiedz": "Zmień odpowiedź",
   "kafel.twoja_odpowiedz": "Twoja odpowiedź",
   "kafel.zamiast_szary": "Zobacz, co Ci przysługuje zamiast tego",
-  "kafel.niepewny_dopisek": "Zależy od odpowiedzi, którą pominąłeś",
-  "kafel.uzupelnij_odpowiedz": "Uzupełnij odpowiedź"
+  "kafel.niepewny_dopisek": "To zależy od odpowiedzi, której jeszcze nie mamy — albo od wartości, która się zmieniła.",
+  "kafel.uzupelnij_odpowiedz": "Uzupełnij odpowiedź",
+  "kafel.do_odswiezenia": "Do odświeżenia"
 }

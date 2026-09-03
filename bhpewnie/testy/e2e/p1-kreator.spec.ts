@@ -122,9 +122,9 @@ test('P1: pominięte pytanie ustawia wartość bezpieczną i oznacza kafle', asy
   await page.getByRole('button', { name: /Pokaż, co mi przysługuje/ }).click()
   await page.getByRole('button', { name: /Zostaw bez nazwy/ }).click()
 
-  // Kafle niepewne stoją na końcu listy, więc najpierw ją rozwijamy.
+  // Design 1.2: wiek odpowiedzi to osobna oś — znacznik „Do odświeżenia”, nie stan werdyktu.
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
-  await expect(page.getByText('Zależy od pytania, które pominięto').first()).toBeVisible()
+  await expect(page.getByText('Do odświeżenia').first()).toBeVisible()
 })
 
 test('B7: przerwanie kreatora pyta o potwierdzenie, bo kasuje odpowiedzi', async ({ page }) => {

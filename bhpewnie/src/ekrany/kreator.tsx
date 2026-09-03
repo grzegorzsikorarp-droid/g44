@@ -391,7 +391,7 @@ export function KalendarzGrafiku() {
           <p className="oczko">Szybkie ułożenie</p>
           <div className="kolumna kolumna--ciasna">
             {WZORCE_ROTACJI.map((w) => (
-              <button key={w.id} className="kafel" onClick={() => zapisz(nalozWzorzec(grafik, poczatek, w.id, 28))}>
+              <button key={w.id} className="kafel kafel--swobodny" onClick={() => zapisz(nalozWzorzec(grafik, poczatek, w.id, 28))}>
                 <span className="kafel__ikona"><Ikona nazwa="kalendarz" /></span>
                 <span className="kafel__tresc">
                   <b>{w.nazwa}</b>
@@ -679,7 +679,7 @@ export function WynikKreatora() {
       <ul className="lista-czysta">
         {kafle.map((k, i) => (
           <li key={k.id} style={{ animation: 'odsloniecie .45s ease both', animationDelay: `${0.15 + i * 0.09}s` }}>
-            <div className={`kafel${k.niepewne ? ' kafel--niepewny' : ''}`}>
+            <div className={`kafel kafel--swobodny${k.niepewne ? ' kafel--niepewny' : ''}`}>
               <span className="kafel__ikona"><Ikona nazwa={k.niepewne ? 'wykrzyknik' : 'ptaszek'} /></span>
               <span className="kafel__tresc">
                 <b>{k.tytul}</b>

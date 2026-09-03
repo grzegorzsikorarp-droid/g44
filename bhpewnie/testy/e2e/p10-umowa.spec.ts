@@ -96,13 +96,15 @@ test('P10: E2.8 — tabela porównania form zatrudnienia', async ({ page }) => {
   await page.getByRole('button', { name: /Porównaj: co masz teraz/ }).click()
   await expect(page.getByRole('heading', { name: /Co masz teraz, a co miałbyś na umowie o pracę/ })).toBeVisible()
 
-  const tabela = page.getByRole('table')
-  await expect(tabela.getByRole('columnheader', { name: /zlecenie \/ działalność/ })).toBeVisible()
-  await expect(tabela.getByRole('columnheader', { name: 'umowa o pracę' })).toBeVisible()
-  await expect(tabela.getByRole('row')).toHaveCount(9)   // nagłówek + osiem wierszy
+  // Design 1.2: na telefonie tabeli nie ma — osiem par, nagłówek przy danej.
+  const pary = page.locator('.para')
+  await expect(pary).toHaveCount(8)
+  await expect(pary.first()).toContainText('zlecenie / działalność')
+  await expect(pary.first()).toContainText('umowa o pracę')
+  await expect(page.getByRole('table')).toBeHidden()
   await expect(page.getByText(/tego aplikacja nie liczy, ale doradca tak/)).toBeVisible()
 
-  // Tabela przewija się w swoim pudełku — strona nie przewija się w bok.
+  // Strona nie przewija się w bok — to była przyczyna zamiany tabeli na listę.
   const przewijaSieWBok = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
   expect(przewijaSieWBok).toBe(false)
 })
@@ -142,5 +144,5 @@ test('P10: przy umowie o pracę pakiet pokazuje ekran informacyjny zamiast pyta�
   await expect(page.getByText(/Możesz go pokazać komuś, kogo to dotyczy/)).toBeVisible()
   await expect(page.getByRole('heading', { name: /Czy masz wyznaczone godziny pracy/ })).toHaveCount(0)
   await page.getByRole('button', { name: /Zobacz porównanie form zatrudnienia/ }).click()
-  await expect(page.getByRole('table')).toBeVisible()
+  await expect(page.locator('.para')).toHaveCount(8)
 })

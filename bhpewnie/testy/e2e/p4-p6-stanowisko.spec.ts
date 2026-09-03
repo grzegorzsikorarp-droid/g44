@@ -32,24 +32,72 @@ test('E1.1: pasek aktualizacji prowadzi do profilu, przycisku „Sprawdź” ju�
   await expect(page.getByRole('heading', { name: 'Mój profil' })).toBeVisible()
 })
 
-test('E1.1: „Pobierz kartę” jest osiągalne i nie zakrywa go belka nawigacji', async ({ page }) => {
+test('E1.1: „Pobierz kartę” jest widoczne BEZ przewijania (wpis 16 zamknięty)', async ({ page }) => {
   await wejdzZPrzykladem(page)
   const przycisk = page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })
 
-  // Ile trzeba przewinąć, żeby do niego dojść — liczba trafia do ROZBIEZNOSCI.md, wpis 16.
+  // Design 1.2: dokument leży w stałym pasie nad nawigacją, więc treść go nie wypycha.
   const odFalda = await przycisk.evaluate((el) => Math.round(el.getBoundingClientRect().top - window.innerHeight))
   console.log(`E1.1: „Pobierz kartę” zaczyna się ${odFalda} px poniżej krawędzi ekranu`)
-
-  await przycisk.scrollIntoViewIfNeeded()
+  expect(odFalda).toBeLessThan(0)
   await expect(przycisk).toBeInViewport()
 
-  // Błąd z 1.1: belka nawigacji zakrywała ostatnie przyciski. Sprawdzamy, że nie wróciła.
+  // Belka nawigacji nie zakrywa przycisku — błąd z 1.1 nie wrócił.
   const zakryty = await przycisk.evaluate((el) => {
     const r = el.getBoundingClientRect()
     const belka = document.querySelector('nav.belka')!.getBoundingClientRect()
     return r.bottom > belka.top
   })
   expect(zakryty).toBe(false)
+})
+
+test('E1.1: rozwinięcie pełnej listy nie wypycha dokumentu spod zgięcia', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+  // 27 kafli w polu przewijanym — pas akcji ma zostać na miejscu.
+  await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeInViewport()
+})
+
+test('design 1.2: kafel uprawnienia ma dokładnie 104 px, niezależnie od długości treści', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+  const wysokosci = await page.locator('.warstwa-pole .lista-czysta .kafel:not(.kafel--swobodny)')
+    .evaluateAll((ns) => ns.map((n) => Math.round(n.getBoundingClientRect().height)))
+  expect(wysokosci.length).toBeGreaterThan(10)
+  expect([...new Set(wysokosci)]).toEqual([104])
+})
+
+test('design 1.2: cztery stany werdyktu, znacznik świeżości na osobnej osi', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+
+  const klasy = await page.locator('.warstwa-pole .kafel').evaluateAll(
+    (ns) => ns.flatMap((n) => [...n.classList].filter((k) => k.startsWith('kafel--stan-'))),
+  )
+  const stany = [...new Set(klasy)].sort()
+  // Stany z wydania 1.2 zniknęły bez śladu.
+  expect(stany).not.toContain('kafel--stan-sprawdz_warunek')
+  expect(stany).not.toContain('kafel--stan-niepewny')
+  expect(stany).not.toContain('kafel--stan-wygaszony')
+  for (const s of stany) {
+    expect(['kafel--stan-przysluguje', 'kafel--stan-zapytamy', 'kafel--stan-zalezy', 'kafel--stan-nie_przysluguje'])
+      .toContain(s)
+  }
+})
+
+test('design 1.2: plakietka stanu i nagłówek tabeli tracą wersaliki', async ({ page }) => {
+  /*
+    Pakiet projektowy pisze, że wersaliki zostają w aplikacji w jednym miejscu, ale
+    jego własne makiety pokazują je w małych etykietach („Ile to jest”, „Przepracowane”,
+    „Do sprawdzenia”). Sprzeczność opisana w ROZBIEZNOSCI.md, wpis 30 — wersaliki
+    zdejmujemy z dwóch miejsc, w których projekt wskazał je wprost jako błąd.
+  */
+  await wejdzZPrzykladem(page)
+  await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
+
+  const plakietka = page.locator('.znacznik--sprawdz').first()
+  expect(await plakietka.evaluate((n) => getComputedStyle(n).textTransform)).toBe('none')
+  await expect(plakietka).toHaveText(/Zapytamy o jedno/)
 })
 
 test('E1.1: stały kafel „Mój czas pracy” prowadzi do ewidencji', async ({ page }) => {
@@ -64,12 +112,12 @@ test('P4 (zmiana 1.2): kafel warunkowy — pytanie na karcie, przeliczenie w mie
   // Kafel czekający na rozstrzygnięcie ma plakietkę i NIE pokazuje liczby.
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
   const kafel = page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ })
-  await expect(kafel).toContainText('SPRAWDŹ JEDEN WARUNEK')
+  await expect(kafel).toContainText('Zapytamy o jedno')
   await kafel.click()
 
   // Dopytanie stoi na karcie, nie na osobnym ekranie.
   await expect(page.getByRole('heading', { name: 'Ekwiwalent za pranie odzieży' })).toBeVisible()
-  await expect(page.getByText('Jeden warunek do rozstrzygnięcia').first()).toBeVisible()
+  await expect(page.getByText('Zapytamy o jedno').first()).toBeVisible()
   await expect(page.getByRole('heading', { name: /Czy pracodawca pierze Twoją odzież/ })).toBeVisible()
 
   // Odpowiedź przelicza kartę w miejscu — bez zmiany ekranu.
@@ -97,12 +145,12 @@ test('P4 (zmiana 1.2): odpowiedź na warunek zostaje zapamiętana i da się ją 
   // Wracamy na listę: kafel pamięta odpowiedź.
   await page.getByRole('button', { name: 'Wróć do poprzedniego ekranu' }).click()
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()
-  await expect(page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ })).not.toContainText('SPRAWDŹ JEDEN WARUNEK')
+  await expect(page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ })).not.toContainText('Zapytamy o jedno')
 
   // I pozwala ją zmienić.
   await page.getByRole('button', { name: /Ekwiwalent za pranie odzieży/ }).click()
-  await expect(page.getByText('Twoja odpowiedź')).toBeVisible()
-  await page.getByRole('button', { name: 'Zmień odpowiedź' }).click()
+  await expect(page.getByText(/Twoja odpowiedź/)).toBeVisible()
+  await page.getByRole('button', { name: 'Zmień', exact: true }).click()
   await page.getByRole('button', { name: 'Nie, piorę sam(a) w domu' }).click()
   await expect(page.getByText('Przysługuje Ci', { exact: true })).toBeVisible()
 })

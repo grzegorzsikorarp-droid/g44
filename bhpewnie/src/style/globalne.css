@@ -2,17 +2,28 @@
   BHPewnie — warstwa wizualna wg systemu z kanwy projektowej („System BHPewnie").
 
   Osiem reguł nienegocjowalnych, które ten plik realizuje:
-  1. Czerwień nie występuje w interfejsie (odmowa szara, ostrzeżenie bursztynowe, Pomoc terakotowa).
+  1. Czerwień nie występuje w interfejsie (odmowa szara, ostrzeżenie bursztynowe).
   2. Żadna informacja nie jest niesiona samym kolorem — kolor + kształt + słowo.
-  3. Pismo bazowe 16 px, cele dotykowe 48 px, w Pomocy 72 px.
+  3. Pismo bazowe 16 px, cele dotykowe 48 px, 72 px dla czynności wykonywanej
+     w pośpiechu lub w rękawicy (Pomoc i rejestracja czasu pracy).
   4. Metryczka stanu prawnego przy każdej liczbie.
   5. Karta „nie przysługuje” kończy się blokiem „co Ci przysługuje zamiast tego”.
   6. Ekran kryzysowy bez belki i nagłówka.
   7. Dane nie opuszczają urządzenia — mówimy o tym przy polach, nie w regulaminie.
-  8. Cieni nie ma. Warstwy rozdziela obrys 1 px i zmiana tła.
+  8. Warstwy rozdziela obrys; cień jest dopuszczalny wyłącznie jako 1 px podniesienia
+     karty nad tłem i nigdy jako źródło hierarchii.
+
+  Trzy z nich zmieniły BRZMIENIE w wydaniu design 1.2 — nazywają powód zamiast miejsca.
+  Powody i warunki odwrócenia: dokumentacja/ROZBIEZNOSCI_DESIGN.md, wpisy (l), (p), (q).
+  - Reguła 3: „72 px w Pomocy” → „72 px w pośpiechu lub w rękawicy”.
+  - Reguła 8: zakaz cieni → jeden piksel podniesienia, bez hierarchii.
+  - Terakota (rodzina powagi) nie należy do modułu Pomoc, tylko do RYZYKA,
+    KTÓRE STWARZA DRUGI CZŁOWIEK. Dziś dwa miejsca: Pomoc i ostrzeżenie w E2.3.
+    Błąd formularza terakoty NIE dostaje — ma własny, cichszy stan.
 
   Dodatkowo: brak animacji przejść między ekranami — użytkownik często patrzy
-  w telefon przez pół sekundy między jednym a drugim zadaniem.
+  w telefon przez pół sekundy między jednym a drugim zadaniem. Licznik na żywo
+  w E7.1 to ODŚWIEŻENIE TREŚCI, nie animacja: podmiana węzła tekstowego bez przejścia.
 */
 
 /* ---------- Pismo: pliki lokalne, nigdy z sieci ---------- */
@@ -65,7 +76,7 @@
   /* Powaga — wyłącznie moduł Pomoc */
   --powaga: #9A3B28;
   --powaga-nacisk: #7E2E1E;
-  --powaga-podklad: #F7E9E4;
+  --powaga-podklad: #FBEDE9;
   --powaga-obrys: #DDB0A3;
   --na-powadze: #FFFFFF;
 
@@ -73,12 +84,16 @@
   --tlo: #FAF8F5;
   --karta: #FFFFFF;
   --karta-druga: #F2EEE8;
-  --obrys: #D9D2C8;
+  --obrys: #E0D9CD;
   --obrys-mocny: #B9B0A3;
+
+  /* Podniesienie karty nad tłem — jeden piksel, bez hierarchii (reguła 8). */
+  --cien-karty: 0 1px 2px rgba(20, 22, 26, 0.05);
 
   /* Tekst — grafit na ciepłej bieli, nie czysta czerń na czystej bieli */
   --tekst: #22262B;
-  --tekst-drugi: #5A6068;
+  --tekst-drugi: #3D434A;
+  --tekst-trzeci: #5A6068;
 
   /* Nocka w kalendarzu grafiku: fiolet spoza palety semantycznej.
      Nie może być zielona — zieleń w tym systemie znaczy „przysługuje”. */
@@ -93,11 +108,18 @@
   /* Skala odstępów 4 */
   --o1: 4px; --o2: 8px; --o3: 12px; --o4: 16px; --o6: 24px; --o8: 32px;
 
-  /* Promienie */
-  --r-pole: 6px;
-  --r-przycisk: 10px;
-  --r-karta: 14px;
-  --r-plakietka: 999px;
+  /*
+    Promienie. Zagnieżdżenie liczy się jako promień rodzica minus jego wyściółka:
+    element w wyściółce 4 px w torze o promieniu 12 ma 8.
+  */
+  --r-wewnetrzny: 8px;    /* element wewnątrz innego elementu */
+  --r-wiersz: 12px;       /* wiersze list, pola, pastylki */
+  --r-karta: 14px;        /* karty, przyciski, pola formularza */
+  --r-plakietka: 999px;   /* wskaźniki i kropki */
+
+  /* Nazwy z wydania 1.1 — zostawione, żeby nie przepisywać stu miejsc naraz. */
+  --r-pole: var(--r-wewnetrzny);
+  --r-przycisk: var(--r-karta);
 
   /* Cele dotykowe */
   --cel: 48px;
@@ -115,9 +137,9 @@
     --pewnosc-obrys: #2C5C55;
     --na-pewnosci: #06211E;
 
-    --zalezy: #E8B45C;
+    --zalezy: #E8C572;
     --zalezy-podklad: #33290F;
-    --zalezy-obrys: #6B5520;
+    --zalezy-obrys: #8A6A2A;
     --na-zalezy: #221A06;
 
     --neutralny: #B0AAA1;
@@ -131,14 +153,18 @@
     --powaga-obrys: #6E3A2C;
     --na-powadze: #2A1009;
 
+    /* W trybie ciemnym cienia nie ma — warstwy rozdziela sam obrys. */
+    --cien-karty: none;
+
     --tlo: #1A1917;
     --karta: #232220;
     --karta-druga: #2C2B28;
-    --obrys: #45433E;
+    --obrys: #35322D;
     --obrys-mocny: #5F5C55;
 
     --tekst: #EDE9E3;
     --tekst-drugi: #B0AAA1;
+    --tekst-trzeci: #96908A;
 
     --nocka: #9A8AC9;
     --nocka-tekst: #17122B;
@@ -266,7 +292,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .przycisk--pomoc:active { background: var(--powaga-nacisk); }
 .przycisk--pomoc-jasny { background: var(--karta); color: var(--powaga); border: 2px solid var(--powaga-obrys); min-height: var(--cel-pomoc); }
 .przycisk--cichy { background: transparent; color: var(--tekst-drugi); font-weight: 500; min-height: var(--cel); }
-.przycisk--wielki { min-height: var(--cel-pomoc); font-size: 1.125rem; }
+/*
+  72 px — dla czynności wykonywanej w pośpiechu lub w rękawicy (reguła 3 po zmianie
+  brzmienia). Dziś dwa miejsca: moduł Pomoc i rejestracja czasu pracy w E7.1.
+  Nowe użycie wymaga wykazania, że czynność spełnia ten warunek.
+*/
+.przycisk--wielki { min-height: var(--cel-pomoc); font-size: 1.25rem; font-weight: 600; }
 .przycisk[disabled] { opacity: 0.45; cursor: not-allowed; }
 
 /* Obwódka skupienia — widoczna w obu trybach. */
@@ -304,6 +335,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: var(--karta);
   border: 1px solid var(--obrys);
   border-radius: var(--r-karta);
+  box-shadow: var(--cien-karty);
   padding: var(--o4);
 }
 
@@ -312,73 +344,167 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .kolumna--luzna { gap: var(--o6); }
 .rzad { display: flex; flex-wrap: wrap; gap: var(--o2); align-items: center; }
 
+/*
+  KAFEL UPRAWNIENIA — wysokość ZEWNĘTRZNA 104 px (design 1.2, §8.1).
+
+  W wydaniu 1.2 kafel rozjeżdżał się od 127 do 247 px: tytuł zawijał się bez ograniczenia,
+  a „konkret” bywał całym zdaniem. Trzy kafle zajmowały 525 px z 727 px ekranu.
+  Teraz zajmują 328 px, bo kafel NIE ROŚNIE: tytuł do dwóch linii, konkret do jednej.
+  Pełna treść konkretu istnieje wyłącznie na karcie uprawnienia — i tak było od 1.1.
+
+  Wysokość działa dzięki `box-sizing: border-box` z resetu. Bez niego 104 px
+  renderuje się jako 130 px i cały budżet ekranu głównego się rozsypuje.
+*/
 .kafel {
   display: flex;
   gap: var(--o3);
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
+  height: 104px;
   text-align: left;
   background: var(--karta);
   border: 1px solid var(--obrys);
   border-radius: var(--r-karta);
-  padding: var(--o3) var(--o4);
-  min-height: var(--cel);
+  box-shadow: var(--cien-karty);
+  padding: var(--o3) 14px;
 }
+
+/* Kafel w listach, które nie są listą uprawnień (Pomoc, aktualności, ustawienia). */
+.kafel--swobodny { height: auto; min-height: var(--cel); align-items: flex-start; }
+
+/*
+  UKŁAD EKRANU GŁÓWNEGO — cztery warstwy (design 1.2, §8.2).
+
+  W wydaniu 1.2 przyciski akcji siedziały wewnątrz przewijanego pola, więc nadmiar
+  treści wypychał je pod pas nawigacji: najważniejsza akcja ekranu chowała się przed
+  użytkownikiem. Teraz JEDYNYM elementem rozciągliwym jest pole kafli.
+
+  Pułapka, przez którą to nie działało wcześniej: blok bez `min-height: 0`
+  w kolumnie flex ma `min-height: auto` i nie kurczy się poniżej swojej zawartości.
+*/
+.ekran--warstwowy { display: flex; flex-direction: column; gap: 0; padding: 0; }
+
+.warstwa-stala { flex: 0 0 auto; }
+
+.warstwa-pole {
+  flex: 1 1 auto;
+  min-height: 0;                 /* bez tego pole nie kurczy się i wypycha resztę */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  position: relative;
+  padding: var(--o2) var(--o4) 0;
+}
+
+.warstwa-pas {
+  flex: 0 0 auto;
+  padding: var(--o1) var(--o4) var(--o2);
+  background: var(--tlo);
+  border-top: 1px solid var(--obrys);
+}
+
+/*
+  Wygaszenie krawędzi pola przewijanego. Wysokość dobiera się do prześwitu między
+  dolną krawędzią treści a krawędzią pola, nigdy odwrotnie (ROZBIEZNOSCI_DESIGN, wpis s):
+  40 px tam, gdzie treść urywa się w połowie elementu, 12 px tam, gdzie stos wypełnia
+  pole dokładnie — plakietka na ostatnim kaflu nie może zostać zasłonięta, bo jest
+  jedynym nośnikiem tekstowym swojego stanu.
+*/
+.wygaszenie {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 12px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(250, 248, 245, 0), var(--tlo));
+}
+@media (prefers-color-scheme: dark) {
+  .wygaszenie { height: 40px; background: linear-gradient(to bottom, rgba(26, 25, 23, 0), var(--tlo)); }
+}
+
+/*
+  Pasek „Coś się zmieniło w Twojej pracy?” — 98 → 56 px.
+  Treść zostaje w całości; ikona i strzałka wychodzą z toku tekstu, tekst dostaje
+  jedną linię z obcięciem, a całość jest przyciskiem, nie kartą z przyciskiem w środku.
+  Przy 200% powiększenia tekst zawija się i pasek rośnie — powiększenie ma prawo
+  zmieniać układ, byle nic nie ginęło.
+*/
+.pasek-jednolinijkowy {
+  display: flex; align-items: center; gap: var(--o2);
+  width: 100%; min-height: var(--cel-glowny);
+  padding: var(--o2) var(--o3);
+  text-align: left;
+  border-radius: var(--r-karta);
+}
+.pasek-jednolinijkowy__tekst {
+  flex: 1; min-width: 0;
+  font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (min-resolution: 1.5dppx), (max-width: 0px) { /* miejsce na przyszłe warunki */ }
+
+/* Panel sezonowy zwinięty do jednej linii — cały jest przyciskiem, więc 48 px. */
+.pasek-sezonowy { min-height: var(--cel); }
 
 .kafel__ikona {
   flex: 0 0 auto;
   width: 40px; height: 40px;
-  border-radius: var(--r-przycisk);
+  border-radius: var(--r-wewnetrzny);
   display: flex; align-items: center; justify-content: center;
   background: var(--pewnosc-podklad);
   color: var(--pewnosc-nacisk);
 }
 
-.kafel__tresc { flex: 1; min-width: 0; }
-.kafel__konkret { color: var(--pewnosc-nacisk); font-weight: 600; margin-top: 2px; }
+/* Tytuł u góry, konkret u dołu — reszta wysokości rozkłada się między nie. */
+.kafel__tresc {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.kafel--swobodny .kafel__tresc { display: block; }
+
+.kafel__tytul {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 1.0625rem; font-weight: 600; line-height: 1.24;
+}
+
+/* Konkret zawsze w jednej linii. Zdanie urywa się, kafel nie rośnie. */
+.kafel__konkret {
+  display: block;
+  font-size: 0.9375rem; font-weight: 400; line-height: 1.3;
+  color: var(--pewnosc-nacisk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kafel--swobodny .kafel__konkret { white-space: normal; font-weight: 600; margin-top: 2px; }
+
 .kafel__strzalka { flex: 0 0 auto; align-self: center; color: var(--tekst-drugi); }
 
-/* Kafel niepewny — obrys przerywany niesie tę informację bez udziału koloru. */
-.kafel--niepewny { border-style: dashed; border-color: var(--zalezy-obrys); background: var(--zalezy-podklad); }
-.kafel--niepewny .kafel__ikona { background: var(--karta); color: var(--zalezy); }
-.kafel--niepewny .kafel__konkret { color: var(--zalezy); }
+/* Znak werdyktu — 24 × 24 px w prawym górnym rogu, nigdy sam. */
+.kafel__stan { flex: 0 0 24px; align-self: flex-start; display: flex; }
 
 /*
-  Zmiana 1.2 — sześć stanów kafla. Kolor nigdy nie jest jedynym nośnikiem:
-  każdy stan ma też znak w ikonie stanu (✓ ~ —) i inny obrys.
-  Domyślny wygląd kafla to stan „przysługuje” — nie dublujemy go klasą.
+  CZTERY STANY WERDYKTU. Każdy niesie kolor, znak i słowo — żadne z nich osobno.
+  „Przysługuje” jest wyglądem domyślnym, więc nie dubluje się klasą.
 */
-.kafel__stan {
-  flex: 0 0 auto; align-self: flex-start;
-  width: 24px; height: 24px; margin-left: var(--o2);
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--r-plakietka);
-  font-weight: 700; font-size: 0.875rem; line-height: 1;
-}
-.kafel--stan-przysluguje .kafel__stan { background: var(--pewnosc-podklad); color: var(--pewnosc-nacisk); }
+.kafel--stan-przysluguje .kafel__stan { color: var(--pewnosc-nacisk); }
 
-.kafel--stan-sprawdz_warunek { border-color: var(--obrys-mocny); background: var(--karta-druga); }
-.kafel--stan-sprawdz_warunek .kafel__ikona { background: var(--karta); color: var(--tekst-drugi); }
-.kafel--stan-sprawdz_warunek .kafel__stan { background: var(--karta); color: var(--tekst-drugi); }
+/* Zapytamy o jedno — jeszcze NIE werdykt, więc bez koloru rodziny i bez liczby. */
+.kafel--stan-zapytamy { background: var(--karta-druga); border-color: var(--obrys-mocny); }
+.kafel--stan-zapytamy .kafel__ikona { background: var(--karta); color: var(--tekst-drugi); }
+.kafel--stan-zapytamy .kafel__stan { color: var(--tekst-drugi); }
 
-.kafel--stan-zalezy { border-color: var(--zalezy-obrys); background: var(--zalezy-podklad); }
-.kafel--stan-zalezy .kafel__ikona { background: var(--karta); color: var(--zalezy); }
+.kafel--stan-zalezy { border-color: var(--zalezy-obrys); }
+.kafel--stan-zalezy .kafel__ikona { background: var(--zalezy-podklad); color: var(--zalezy); }
 .kafel--stan-zalezy .kafel__konkret { color: var(--zalezy); }
-.kafel--stan-zalezy .kafel__stan { background: var(--karta); color: var(--zalezy); }
+.kafel--stan-zalezy .kafel__stan { color: var(--zalezy); }
 
-.kafel--stan-nie_przysluguje { border-color: var(--neutralny-obrys); background: var(--neutralny-podklad); }
-.kafel--stan-nie_przysluguje .kafel__ikona { background: var(--karta); color: var(--neutralny); }
-.kafel--stan-nie_przysluguje .kafel__konkret { color: var(--neutralny); font-weight: 500; }
-.kafel--stan-nie_przysluguje .kafel__stan { background: var(--karta); color: var(--neutralny); }
+.kafel--stan-nie_przysluguje { background: var(--karta-druga); }
+.kafel--stan-nie_przysluguje .kafel__ikona { background: var(--karta); color: var(--tekst-trzeci); }
+.kafel--stan-nie_przysluguje .kafel__konkret { color: var(--tekst-trzeci); }
+.kafel--stan-nie_przysluguje .kafel__stan { color: var(--tekst-trzeci); }
 
-.kafel--stan-wygaszony { border-style: dashed; border-color: var(--obrys-mocny); }
-.kafel--stan-wygaszony .kafel__konkret { color: var(--tekst-drugi); font-weight: 500; }
-
-/* Plakietka „SPRAWDŹ JEDEN WARUNEK” — neutralna, bo to jeszcze nie jest rozstrzygnięcie. */
-.znacznik--sprawdz {
-  background: var(--karta); color: var(--tekst-drugi); border-color: var(--obrys-mocny);
-  letter-spacing: 0.02em;
-}
+/*
+  DRUGA OŚ: wiek odpowiedzi. Znacznik staje na każdym z czterech stanów
+  i NIE podmienia znaku werdyktu — kafel dalej mówi, czy uprawnienie przysługuje.
+*/
+.kafel--do-odswiezenia { border-style: dashed; border-color: var(--obrys-mocny); }
 
 .znacznik {
   display: inline-flex; align-items: center; gap: var(--o1);
@@ -407,8 +533,40 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .werdykt--przysluguje { background: var(--pewnosc); color: var(--na-pewnosci); }
 .werdykt--zalezy { background: var(--zalezy); color: var(--na-zalezy); }
 .werdykt--nie_przysluguje { background: var(--neutralny); color: var(--na-neutralnym); }
-/* Stan nierozstrzygnięty — jeszcze nie werdykt, więc bez koloru rodziny semantycznej. */
-.werdykt--neutralny { background: var(--karta-druga); color: var(--tekst); border: 1px solid var(--obrys-mocny); }
+
+/*
+  Stan „zapytamy o jedno” — WŁASNA forma, nie wariant werdyktu (design 1.2, §8.3).
+  Komponent werdyktu ma kolor rodziny, znak i zdanie orzekające; stan nierozstrzygnięty
+  nie ma prawa żadnej z tych trzech rzeczy mieć.
+*/
+.blok-pytanie__stan {
+  background: var(--karta-druga); color: var(--tekst);
+  border: 1px solid var(--obrys-mocny);
+}
+
+/* Pytanie na karcie stoi we własnym pudełku — problemem nie był przycisk, tylko brak ramy. */
+.blok-pytanie { border-color: var(--obrys-mocny); }
+
+/* Ślad odpowiedzi: jedna linia 48 px, nie karta. */
+.slad-odpowiedzi {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--o2);
+  min-height: var(--cel);
+  padding: 0 var(--o3);
+  border: 1px solid var(--obrys);
+  border-radius: var(--r-wiersz);
+  background: var(--karta-druga);
+}
+
+/*
+  Odnośnik tekstowy też jest celem dotykowym. Wyrównanie rodzica NIE powiększa dziecka:
+  rodzic 48 px z `align-items: center` daje odnośnikowi 19 px, jeśli sam go nie ma.
+*/
+.odnosnik {
+  display: inline-flex; align-items: center;
+  min-height: var(--cel); padding: 0 var(--o1);
+  font-weight: 700; text-decoration: underline; text-align: left;
+  color: inherit;
+}
 
 .blok-ile { background: var(--pewnosc-podklad); border: 1px solid var(--pewnosc-obrys); border-radius: var(--r-karta); padding: var(--o3) var(--o4); }
 .blok-ile ul { margin: var(--o2) 0 0 18px; display: grid; gap: var(--o2); }
@@ -604,20 +762,67 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .pas--spokojny { background: var(--pewnosc-podklad); border-color: var(--pewnosc-obrys); color: var(--pewnosc-nacisk); }
 
 /*
-  Pas powagi — jedyne miejsce poza modułem Pomoc, w którym wolno użyć terakoty:
-  ostrzeżenie o realnym ryzyku ze strony pracodawcy (zmiana 1.2, punkt 5.3).
+  OSTRZEŻENIE O RYZYKU ZE STRONY DRUGIEJ OSOBY — nazwany wariant rodziny powagi
+  (design 1.2, §8.5). Terakota nie należy do modułu Pomoc, tylko do tego ryzyka;
+  Pomoc była dotąd jej jedynym domem, bo tylko tam takie ryzyko występowało.
+
+  Wersaliki plakietki to JEDYNE wersaliki w całej aplikacji.
 */
 .pas--powaga { background: var(--powaga-podklad); border-color: var(--powaga-obrys); color: var(--powaga-nacisk); }
 
+.ostrzezenie-ryzyka {
+  display: flex; flex-direction: column; gap: var(--o2);
+  background: var(--powaga-podklad);
+  border: 2px solid var(--powaga);
+  border-radius: var(--r-karta);
+  padding: var(--o3) var(--o4);
+  color: var(--powaga-nacisk);
+}
+.ostrzezenie-ryzyka__plakietka {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8125rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ostrzezenie-ryzyka p { color: var(--tekst); }
+.ostrzezenie-ryzyka .odnosnik { color: var(--powaga-nacisk); }
+
 /*
-  Tabela porównania (E2.8). Przewija się w SWOIM pudełku — strona nigdy nie przewija się
-  w bok, także przy powiększeniu 200% (WCAG 1.4.10).
+  Licznik na żywo (E7.1). ODŚWIEŻENIE TREŚCI, nie animacja: liczba podmienia się raz
+  na minutę, bez przejścia i bez ruchu. Zakaz animacji dotyczy przejść między stanami,
+  nie zmiany wartości — dlatego tu nie ma i nie może być `transition`.
+*/
+.licznik {
+  border: 1px solid var(--pewnosc);
+  border-radius: var(--r-karta);
+  background: var(--karta);
+  padding: var(--o3) var(--o4);
+}
+.licznik__liczba {
+  font-size: 2.75rem; font-weight: 700; line-height: 1.05;
+  color: var(--pewnosc-nacisk);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+/*
+  TABELA — komponent systemu, ale NA TELEFONIE NIE WYSTĘPUJE (design 1.2, §8.5).
+  Pięć kolumn na 393 px daje 60 px na kolumnę: mniej niż cel dotykowy i mniej,
+  niż potrzebuje liczba z cyframi tabelarycznymi. Wchodzi od 600 px i do dokumentów A4,
+  gdzie siatka jest naturalna. Na telefonie zastępuje ją lista dni (E7.3)
+  i lista par (E2.8) — ROZBIEZNOSCI_DESIGN.md, wpis (r).
 */
 .tabela-przewijana { overflow-x: auto; border: 1px solid var(--obrys); border-radius: var(--r-karta); background: var(--karta); }
 .tabela-przewijana:focus-visible { outline: 3px solid var(--pewnosc); outline-offset: 2px; }
+
+/* Tabela wchodzi dopiero od 600 px; na telefonie stoi lista par albo lista dni. */
+.od-tabletu { display: none; }
+@media (min-width: 600px) {
+  .od-tabletu { display: block; }
+  .tylko-telefon { display: none; }
+}
 .tabela { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 0.9375rem; }
 .tabela th, .tabela td { text-align: left; padding: var(--o2) var(--o3); border-bottom: 1px solid var(--obrys); vertical-align: top; }
-.tabela thead th { background: var(--karta-druga); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.tabela thead th { background: var(--karta-druga); font-size: 0.8125rem; font-weight: 600; }
 .tabela tbody th { font-weight: 600; }
 .tabela tbody tr:last-child th, .tabela tbody tr:last-child td { border-bottom: 0; }
 .tabela td { color: var(--tekst-drugi); }
@@ -640,8 +845,75 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .pole:focus-visible { outline: 3px solid var(--pewnosc); outline-offset: 2px; }
 textarea.pole { resize: vertical; line-height: 1.45; }
 
-/* Karta sygnału — obrys niesie wagę, kolor tylko ją wzmacnia. */
-.karta--sygnal { border-color: var(--zalezy-obrys); border-left-width: 4px; }
+/*
+  KARTA SYGNAŁU (design 1.2, §8.4). Lewa listwa 4 px wzięła się z niczego i nie miała
+  odpowiednika w systemie. Zastąpiona rzeczą, którą system już zna: obrys w kolorze
+  rodziny plus nagłówek stanu ze znakiem i słowem — tak samo jak na kartach werdyktu.
+  Sygnał to bursztyn, nie terakota: naruszenie przepisu to „sprawdź to”,
+  a nie „grozi Ci niebezpieczeństwo”.
+*/
+.karta--sygnal { border-color: var(--zalezy-obrys); }
+.sygnal__naglowek {
+  display: flex; align-items: center; gap: var(--o2);
+  color: var(--zalezy); font-size: 0.8125rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/*
+  WIERSZ DNIA w ewidencji — 62 px, dwie linie (design 1.2, §8.4).
+  Pięć kolumn schodzi do trzech widocznych: data, fakt i różnica w pierwszej linii,
+  plan i przerwy w drugiej jako ZDANIE. Nie znikają — przestają być kolumnami.
+*/
+.wiersz-dnia {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  width: 100%; min-height: 62px;
+  padding: var(--o2) var(--o3);
+  text-align: left;
+  border: 1px solid var(--obrys);
+  border-radius: var(--r-wiersz);
+  background: var(--karta);
+}
+.wiersz-dnia__gora { display: flex; align-items: baseline; justify-content: space-between; gap: var(--o2); }
+.wiersz-dnia__data { font-size: 1rem; font-weight: 600; }
+.wiersz-dnia__liczby { display: flex; gap: var(--o3); font-variant-numeric: tabular-nums; }
+.wiersz-dnia__dol { font-size: 0.875rem; color: var(--tekst-trzeci); }
+.roznica--nad { color: var(--pewnosc-nacisk); font-weight: 600; }
+.roznica--ponad { color: var(--zalezy); font-weight: 600; }
+.roznica--zero { color: var(--tekst-trzeci); }
+
+/*
+  KARTA PARY (E2.8) — 93 px. Nagłówek stoi PRZY DANEJ, nie 300 px wyżej w wierszu tabeli.
+  Obie wartości niosą te same trzy znaki co kafle: „Nie” bez znaku byłoby jedynym
+  miejscem w aplikacji, gdzie odmowa nie ma kształtu.
+*/
+.para {
+  border: 1px solid var(--obrys); border-radius: var(--r-karta);
+  background: var(--karta); box-shadow: var(--cien-karty);
+  padding: var(--o3) var(--o4);
+}
+.para__nazwa { font-size: 1.0625rem; font-weight: 600; line-height: 1.24; }
+.para__wartosci { display: flex; align-items: stretch; gap: var(--o3); margin-top: var(--o2); }
+.para__kolumna { flex: 1; min-width: 0; }
+.para__kolumna + .para__kolumna { border-left: 1px solid var(--obrys); padding-left: var(--o3); }
+.para__etykieta { display: block; font-size: 0.8125rem; color: var(--tekst-trzeci); }
+.para__wartosc { display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; font-weight: 600; margin-top: 2px; }
+
+/*
+  STAN BŁĘDU FORMULARZA — BEZ TERAKOTY (design 1.2, §8.4).
+  Terakota należy do ryzyka, które stwarza drugi człowiek. Pomyłka we wpisie
+  nim nie jest, a terakota w tym miejscu przyzwyczajałaby użytkownika,
+  że kolor powagi nic nie znaczy. Trzy nośniki, żaden nie jest kolorem rodziny:
+  obrys 2,5 px atramentowy, znak wykrzyknika przy polu, zdanie pod polem.
+*/
+.pole--blad { border-width: 2.5px; border-color: var(--tekst); }
+.pole-blad__zdanie {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 0.875rem; font-weight: 500; color: var(--tekst);
+  margin-top: var(--o1);
+}
+.pas--uwaga {
+  background: var(--karta); border: 2px solid var(--tekst); color: var(--tekst);
+}
 .pas--przyklad {
   flex: 0 0 auto; border-radius: 0;
   border-width: 0 0 1px; padding: var(--o2) var(--o4);

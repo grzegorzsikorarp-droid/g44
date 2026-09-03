@@ -31,7 +31,7 @@ export function MenuUstawien() {
       <Naglowek naWstecz={wroc} tytul={t('ustawienia.naglowek')} />
       <div className="kolumna" style={{ flex: 1 }}>
         {pozycje.map((p) => (
-          <button key={p.ekran} className="kafel" onClick={() => nawiguj(p.ekran)}>
+          <button key={p.ekran} className="kafel kafel--swobodny" onClick={() => nawiguj(p.ekran)}>
             <span className="kafel__ikona"><Ikona nazwa={p.ikona} /></span>
             <span className="kafel__tresc">
               <b style={{ fontSize: '1.0625rem' }}>{p.napis}</b>

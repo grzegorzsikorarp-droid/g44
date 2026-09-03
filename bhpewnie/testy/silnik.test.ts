@@ -110,12 +110,17 @@ describe('wartosci bezpieczne przy pominietych pytaniach', () => {
     expect(zalezneOdCech.every((k) => k.niepewne)).toBe(true)
   })
 
-  it('kafle pewne sa przed niepewnymi', () => {
+  it('do odswiezenia idzie na koniec SWOJEGO stanu, nie na koniec listy', () => {
+    /*
+      Design 1.2, rozstrzygniecie 02: swiezosc to druga os. Kafel „przysluguje”
+      oparty na starszej odpowiedzi dalej stoi przed kaflem „nie przysluguje”,
+      bo nadal mowi uzytkownikowi, ze cos mu sie nalezy.
+    */
     const profil: Profil = { ...pustyProfil(), umowa: 'o_prace', rocznik: 1974, odpowiedzi: { ...pustyProfil().odpowiedzi, odziez: true } }
     const kafle = policzUprawnienia(profil, DZIEN)
-    const pierwszyNiepewny = kafle.findIndex((k) => k.niepewne)
-    const ostatniPewny = kafle.map((k) => k.niepewne).lastIndexOf(false)
-    if (pierwszyNiepewny !== -1) expect(ostatniPewny).toBeLessThan(pierwszyNiepewny)
+    const WAGA = { przysluguje: 0, zalezy: 1, zapytamy: 2, nie_przysluguje: 3 }
+    const klucze = kafle.map((k) => WAGA[k.stan] * 2 + (k.swiezosc === 'aktualne' ? 0 : 1))
+    expect(klucze).toEqual([...klucze].sort((a, b) => a - b))
   })
 
   it('B8: odpowiedzi sprzeczne nie blokuja — obie cechy zostaja wlaczone', () => {
@@ -161,7 +166,7 @@ describe('zmiana 1.2: szesc stanow kafla', () => {
 
   it('uprawnienie warunkowe bez odpowiedzi czeka w stanie sprawdz_warunek', () => {
     const okulary = policzUprawnienia(zMonitorem(), DZIEN).find((k) => k.id === 'okulary_monitor')!
-    expect(okulary.stan).toBe('sprawdz_warunek')
+    expect(okulary.stan).toBe('zapytamy')
     expect(okulary.warunek?.pytanie.length).toBeGreaterThan(0)
     expect(okulary.warunek!.odpowiedzi.length).toBeGreaterThanOrEqual(2)
     expect(okulary.warunek!.odpowiedzi.length).toBeLessThanOrEqual(3)
@@ -182,11 +187,20 @@ describe('zmiana 1.2: szesc stanow kafla', () => {
     expect(kafel.odpowiedz?.zamiast?.length).toBeGreaterThan(0)
   })
 
-  it('pominiete pytanie kreatora bije warunek — kafel jest niepewny, nie „do sprawdzenia”', () => {
+  it('pominiete pytanie kreatora to DRUGA OS: werdykt zostaje, dochodzi znacznik swiezosci', () => {
     const profil: Profil = { ...zMonitorem(), odpowiedzi: { ...zMonitorem().odpowiedzi, odziez: POMINIETE } }
     const kafel = policzUprawnienia(profil, DZIEN).find((k) => k.id === 'ekwiwalent_pranie')!
-    expect(kafel.stan).toBe('niepewny')
+    // Design 1.2, rozstrzygniecie 02: wiek odpowiedzi nie zabiera kaflowi werdyktu.
+    expect(kafel.stan).toBe('zapytamy')
+    expect(kafel.swiezosc).toBe('do_odswiezenia')
     expect(kafel.niepewne).toBe(true)
+  })
+
+  it('znacznik swiezosci staje na kazdym z czterech stanow, nie zastepuje zadnego', () => {
+    const profil: Profil = { ...zMonitorem(), odpowiedzi: { ...zMonitorem().odpowiedzi, odziez: POMINIETE } }
+    const kafel = policzUprawnienia(profil, DZIEN, { ekwiwalent_pranie: 0 }).find((k) => k.id === 'ekwiwalent_pranie')!
+    expect(kafel.stan).toBe('przysluguje')
+    expect(kafel.swiezosc).toBe('do_odswiezenia')
   })
 
   it('kazdy warunek ma dokladnie jedno pytanie i najwyzej trzy odpowiedzi', () => {
@@ -205,7 +219,7 @@ describe('zmiana 1.2: szesc stanow kafla', () => {
   it('sortowanie 3.4: przysluguje przed zalezy, do sprawdzenia przed niepewnym', () => {
     const profil: Profil = { ...zMonitorem(), odpowiedzi: { ...zMonitorem().odpowiedzi, halas: POMINIETE } }
     const kafle = policzUprawnienia(profil, DZIEN, { okulary_monitor: 1 })
-    const waga = { przysluguje: 0, zalezy: 1, sprawdz_warunek: 2, nie_przysluguje: 3, niepewny: 4, wygaszony: 5 }
+    const waga = { przysluguje: 0, zalezy: 1, zapytamy: 2, nie_przysluguje: 3 }
     const kolejnosc = kafle.map((k) => waga[k.stan])
     expect(kolejnosc).toEqual([...kolejnosc].sort((a, b) => a - b))
   })

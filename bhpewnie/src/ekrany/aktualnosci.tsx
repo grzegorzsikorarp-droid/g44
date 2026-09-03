@@ -169,7 +169,7 @@ export function ArchiwumAktualnosci() {
         <ul className="lista-czysta">
           {AKTUALNOSCI_WBUDOWANE.map((w) => (
             <li key={w.id}>
-              <button className="kafel" onClick={() => nawiguj('E3.2', { id: w.id })}>
+              <button className="kafel kafel--swobodny" onClick={() => nawiguj('E3.2', { id: w.id })}>
                 <span className="kafel__ikona"><Ikona nazwa="gazeta" /></span>
                 <span className="kafel__tresc">
                   <b>{w.tytul}</b>

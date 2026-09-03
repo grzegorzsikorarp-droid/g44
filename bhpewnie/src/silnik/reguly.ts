@@ -1,5 +1,5 @@
 import type {
-  KafelUprawnienia, OdpowiedziCech, OdpowiedziWarunkow, Profil, StanKafla, Status, Umowa,
+  KafelUprawnienia, OdpowiedziCech, OdpowiedziWarunkow, Profil, StanKafla, Status, Swiezosc, Umowa,
   Uprawnienie, Warunek, WarunekZlozony, WektorCech,
 } from '../typy'
 import { POMINIETE } from '../typy'
@@ -136,20 +136,21 @@ function zastosujWariant(u: Uprawnienie, p: RozwiazanyProfil): Uprawnienie | nul
 /* ---------- Glowna funkcja silnika ---------- */
 
 /**
- * Stan kafla (zmiana 1.2, punkt 3.3). Kolejnosc rozstrzygania jest istotna:
- * wygasly parametr bije wszystko (zasada 9), potem pominiete pytanie kreatora,
- * potem warunek — rozstrzygniety albo czekajacy na jedno dotkniecie.
+ * Stan WERDYKTU (design 1.2, rozstrzygniecie 02). Cztery stany, jedna os.
+ *
+ * Wiek odpowiedzi NIE wchodzi tutaj — to druga os, `swiezosc`. Dzieki temu kafel
+ * po dacie waznosci parametru dalej mowi, czy uprawnienie przysluguje, i dokłada
+ * do tego znacznik „Do odswiezenia”, zamiast tracic werdykt.
+ *
+ * Zasada 9 dziala niezaleznie: `wypelnij()` podmienia sam tekst wygaslej liczby
+ * na komunikat zastepczy, wiec nieaktualna liczba nie pokaze sie w zadnym stanie.
  */
 function stanKafla(
   warunek: Uprawnienie['warunek'],
   odpowiedz: number | undefined,
-  niepewne: boolean,
-  wygasly: boolean,
 ): StanKafla {
-  if (wygasly) return 'wygaszony'
-  if (niepewne) return 'niepewny'
   if (!warunek) return 'przysluguje'
-  if (odpowiedz === undefined || !warunek.odpowiedzi[odpowiedz]) return 'sprawdz_warunek'
+  if (odpowiedz === undefined || !warunek.odpowiedzi[odpowiedz]) return 'zapytamy'
   return warunek.odpowiedzi[odpowiedz].wynik
 }
 
@@ -172,7 +173,8 @@ export function policzUprawnienia(
       const niepewne = cechyWarunku(uprawnienie.gdy).some((c) => p.pominiete.has(c))
       const warunek = zwariantem.warunek ?? null
       const nrOdpowiedzi = odpowiedziWarunkow[zwariantem.id]
-      const stan = stanKafla(warunek, nrOdpowiedzi, niepewne, konkret.wygasly)
+      const stan = stanKafla(warunek, nrOdpowiedzi)
+      const swiezosc: Swiezosc = niepewne || konkret.wygasly ? 'do_odswiezenia' : 'aktualne'
 
       kafle.push({
         id: zwariantem.id,
@@ -188,6 +190,7 @@ export function policzUprawnienia(
         grupa: zwariantem.grupa ?? 'zasady',
         ikona: zwariantem.ikona,
         stan,
+        swiezosc,
         warunek,
         odpowiedz: warunek && nrOdpowiedzi !== undefined ? warunek.odpowiedzi[nrOdpowiedzi] ?? null : null,
       })
@@ -200,11 +203,15 @@ export function policzUprawnienia(
     pieniadze: 0, czas: 1, zdrowie: 2, ochrona: 3, zasady: 4, grupa: 5,
   }
   const WAGA_STANU: Record<StanKafla, number> = {
-    przysluguje: 0, zalezy: 1, sprawdz_warunek: 2, nie_przysluguje: 3, niepewny: 4, wygaszony: 5,
+    przysluguje: 0, zalezy: 1, zapytamy: 2, nie_przysluguje: 3,
   }
   return kafle.sort((a, b) => {
     const roznicaStanu = WAGA_STANU[a.stan] - WAGA_STANU[b.stan]
     if (roznicaStanu !== 0) return roznicaStanu
+    // Do odświeżenia idzie na koniec swojej grupy stanu, nie na koniec listy:
+    // to nadal jest werdykt, tylko oparty na starszej odpowiedzi.
+    const roznicaSwiezosci = Number(a.swiezosc !== 'aktualne') - Number(b.swiezosc !== 'aktualne')
+    if (roznicaSwiezosci !== 0) return roznicaSwiezosci
     return (WAGA_GRUPY[a.grupa] ?? 9) - (WAGA_GRUPY[b.grupa] ?? 9)
   })
 }

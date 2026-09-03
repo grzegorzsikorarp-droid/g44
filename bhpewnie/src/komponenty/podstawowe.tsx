@@ -12,8 +12,8 @@ const SCIEZKI: Record<string, ReactNode> = {
   fala: <path d="M3 12c2.5-4 4.5-4 7 0s4.5 4 7 0" />,
   kreska: <path d="M5 12h14" />,
   strzalka_w_kolo: <><path d="M20 12a8 8 0 1 1-2.6-5.9" /><path d="M20 4v4h-4" /></>,
-  start: <path d="M8 5.5v13l11-6.5z" />,
-  stop: <rect x="7" y="7" width="10" height="10" rx="2" />,
+  start: <path d="M8.5 5.8v12.4l10-6.2z" />,
+  stop: <rect x="6.8" y="6.8" width="10.4" height="10.4" rx="1.5" />,
   pauza: <><path d="M9.5 7v10" /><path d="M14.5 7v10" /></>,
   tabela: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="M4 10h16M10 10v9" /></>,
   wykrzyknik: <><path d="M12 7v7" /><path d="M12 17.2v.2" /><circle cx="12" cy="12" r="9" /></>,
@@ -182,43 +182,81 @@ export function Naglowek({
 /* ---------- Kafel ---------- */
 
 /**
- * Znak stanu kafla (zmiana 1.2, punkt 3.3). Kolor nie moze byc jedynym nosnikiem
- * informacji (WCAG 1.4.1), wiec kazdy rozstrzygniety stan dostaje tez znak.
+ * ZNAKI WERDYKTU (design 1.2, rozstrzygnięcie 02).
+ *
+ * Znaki `✓ ~ —` z wydania 1.2 są wycofane: myślnik czytał się jak interpunkcja,
+ * a fala jak literówka. Nowe trzy różnią się KONTUREM, nie tylko kolorem, więc
+ * rozpoznaje się je w skali szarości i przy 200% powiększenia.
+ *
+ * Stan „zapytamy” nie ma znaku werdyktu, bo werdyktu jeszcze nie ma — ma znak
+ * zapytania i plakietkę ze słowem.
  */
-const ZNAK_STANU: Partial<Record<StanKafla, { znak: string; opis: string }>> = {
-  przysluguje: { znak: '✓', opis: 'przysługuje' },
-  zalezy: { znak: '~', opis: 'zależy' },
-  nie_przysluguje: { znak: '—', opis: 'nie przysługuje' },
+const ZNAKI_WERDYKTU: Record<StanKafla, { sciezka: ReactNode; opis: string }> = {
+  przysluguje: {
+    sciezka: <path d="M6 12.4 10.2 16.6 18 8.4" />,
+    opis: 'przysługuje',
+  },
+  zapytamy: {
+    sciezka: <><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.6a2.5 2.5 0 1 1 2.9 2.9v1.4" /><circle cx="12.4" cy="17" r="0.9" fill="currentColor" stroke="none" /></>,
+    opis: 'zapytamy o jedno',
+  },
+  zalezy: {
+    // Koło wypełnione do połowy — kształt sam mówi „częściowo”.
+    sciezka: <><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none" /></>,
+    opis: 'to zależy',
+  },
+  nie_przysluguje: {
+    sciezka: <><circle cx="12" cy="12" r="8.5" /><path d="M6.5 17.5 17.5 6.5" /></>,
+    opis: 'nie przysługuje',
+  },
+}
+
+export function ZnakWerdyktu({ stan, rozmiar = 24 }: { stan: StanKafla; rozmiar?: number }) {
+  const z = ZNAKI_WERDYKTU[stan]
+  return (
+    <>
+      <svg
+        width={rozmiar} height={rozmiar} viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {z.sciezka}
+      </svg>
+      <span className="tylko-dla-czytnika">{z.opis}</span>
+    </>
+  )
 }
 
 export function Kafel({
-  ikona, tytul, konkret, znacznik, niepewny, stan, onClick, dzieci,
+  ikona, tytul, konkret, znacznik, stan, doOdswiezenia, onClick, dzieci,
 }: {
   ikona: string
   tytul: string
   konkret?: string
   znacznik?: ReactNode
-  niepewny?: boolean
   stan?: StanKafla
+  /** Druga oś: wiek odpowiedzi. Nie podmienia znaku werdyktu. */
+  doOdswiezenia?: boolean
   onClick?: () => void
   dzieci?: ReactNode
 }) {
-  const znak = stan ? ZNAK_STANU[stan] : undefined
   const wnetrze = (
     <>
       <span className="kafel__ikona"><Ikona nazwa={ikona} /></span>
       <span className="kafel__tresc">
-        <span style={{ display: 'block', fontWeight: 700, fontSize: '1.0625rem' }}>{tytul}</span>
-        {konkret && <span className="kafel__konkret" style={{ display: 'block' }}>{konkret}</span>}
+        <span className="kafel__tytul">{tytul}</span>
+        {konkret && <span className="kafel__konkret">{konkret}</span>}
         {znacznik}
         {dzieci}
       </span>
-      {znak && <span className="kafel__stan" aria-hidden="true">{znak.znak}</span>}
-      {znak && <span className="tylko-dla-czytnika">{znak.opis}</span>}
-      {onClick && <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>}
+      {stan && <span className="kafel__stan"><ZnakWerdyktu stan={stan} /></span>}
     </>
   )
-  const klasa = `kafel${niepewny ? ' kafel--niepewny' : ''}${stan ? ` kafel--stan-${stan}` : ''}`
+  const klasa = [
+    'kafel',
+    stan ? `kafel--stan-${stan}` : '',
+    doOdswiezenia ? 'kafel--do-odswiezenia' : '',
+  ].filter(Boolean).join(' ')
   return onClick
     ? <button className={klasa} onClick={onClick}>{wnetrze}</button>
     : <div className={klasa}>{wnetrze}</div>

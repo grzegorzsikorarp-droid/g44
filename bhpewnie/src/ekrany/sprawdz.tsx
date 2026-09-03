@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
-import { Ikona, Naglowek, PlanszaPelnejWersji, PodstawaPrawna, Przycisk } from '../komponenty/podstawowe'
+import { Ikona, Naglowek, PlanszaPelnejWersji, PodstawaPrawna, Przycisk, ZnakWerdyktu } from '../komponenty/podstawowe'
 import { t, sytuacja as znajdzSytuacje } from '../dane/wczytaj'
 import { doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
 import { STAN_PRAWNY, wypelnij } from '../silnik/parametry'
 import { rozwiazProfil } from '../silnik/reguly'
 import { pustyProfil } from '../magazyn/magazyn'
-import type { AkcjaWerdyktu, Umowa, Werdykt } from '../typy'
+import type { AkcjaWerdyktu, StanKafla, Umowa, Werdykt } from '../typy'
 import porownanie from '../../content/porownanie-umow.json'
 
 /* ================= E2.1 Lista sytuacji ================= */
@@ -23,7 +23,7 @@ export function ListaSytuacji() {
         <ul className="lista-czysta">
           {lista.map((s) => (
             <li key={s.id}>
-              <button className="kafel" onClick={() => nawiguj('E2.2', { sytuacja: s.id })}>
+              <button className="kafel kafel--swobodny" onClick={() => nawiguj('E2.2', { sytuacja: s.id })}>
                 <span className="kafel__ikona" style={s.pelna ? undefined : { background: 'var(--szary-stan-tlo)', color: 'var(--szary-stan)' }}>
                   <Ikona nazwa={s.pelna ? 'lupa' : 'dokument'} />
                 </span>
@@ -255,7 +255,7 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
         {werdykt.stan === 'nie_przysluguje' && idSytuacji !== 'umowa'
           && (umowa === 'zlecenie' || umowa === 'dzialalnosc') && (
           <button
-            className="kafel"
+            className="kafel kafel--swobodny"
             data-test="odnosnik-pakiet-umowy"
             onClick={() => nawiguj('E2.2', { sytuacja: 'umowa' })}
           >
@@ -277,7 +277,7 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
             </p>
             {werdykt.pokrewne ? (
               <button
-                className="kafel"
+                className="kafel kafel--swobodny"
                 onClick={() => werdykt.pokrewne!.sprawdzacz && nawiguj('E2.2', { sytuacja: werdykt.pokrewne!.sprawdzacz })}
               >
                 <span className="kafel__ikona"><Ikona nazwa="lupa" /></span>
@@ -288,7 +288,7 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
                 <span className="kafel__strzalka"><Ikona nazwa="dalej" rozmiar={20} /></span>
               </button>
             ) : (
-              <button className="kafel" onClick={() => wrocDoZakladki('E1.1')}>
+              <button className="kafel kafel--swobodny" onClick={() => wrocDoZakladki('E1.1')}>
                 <span className="kafel__ikona"><Ikona nazwa="kask" /></span>
                 <span className="kafel__tresc">
                   <b style={{ display: 'block' }}>Twoje pozostałe uprawnienia</b>
@@ -309,7 +309,7 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
 
         {/* Punkt 6.4: z sytuacji „Nie mam kiedy odpocząć” prowadzimy do ewidencji. */}
         {idSytuacji === 'odpoczynek' && (
-          <button className="kafel" data-test="odnosnik-ewidencja" onClick={() => nawiguj('E7.1')}>
+          <button className="kafel kafel--swobodny" data-test="odnosnik-ewidencja" onClick={() => nawiguj('E7.1')}>
             <span className="kafel__ikona"><Ikona nazwa="zegar" /></span>
             <span className="kafel__tresc">
               <b style={{ display: 'block' }}>Zacznij notować czas, żeby mieć dowód</b>
@@ -326,9 +326,18 @@ export function KartaWyniku({ dane }: { dane: Record<string, unknown> }) {
           Konsultacja przed konfrontacją jest zasadą, a nie sugestią do przeczytania później.
         */}
         {werdykt.ostrzezenie && (
-          <div className="pas pas--powaga" data-test="ostrzezenie">
-            <Ikona nazwa="wykrzyknik" rozmiar={22} />
+          <div className="ostrzezenie-ryzyka" data-test="ostrzezenie">
+            <span className="ostrzezenie-ryzyka__plakietka">
+              <Ikona nazwa="wykrzyknik" rozmiar={20} />
+              ZANIM ZROBISZ KROK
+            </span>
             <p>{werdykt.ostrzezenie}</p>
+            {/*
+              Jedno wyjście, nie trzy. Pomoc DAJE wyjście (numer, ścieżkę, człowieka);
+              ostrzeżenie WSTRZYMUJE KROK i odsyła do Pomocy — stąd różnica w formie
+              (ROZBIEZNOSCI_DESIGN.md, wpis (q)).
+            */}
+            <button className="odnosnik" onClick={() => nawiguj('E4.13')}>Z kim mogę porozmawiać</button>
           </div>
         )}
 
@@ -455,6 +464,17 @@ export function WynikPosredni({ dane }: { dane: Record<string, unknown> }) {
 
 /* ================= E2.8 Porównanie form zatrudnienia ================= */
 
+/**
+ * Wartość w porównaniu też niesie znak, nie sam tekst. „Nie” to odmowa,
+ * „z umowy” albo „tylko gdy…” to stan zależny — prawo nie rozstrzyga, rozstrzyga umowa.
+ */
+function stanWartosci(wartosc: string): StanKafla {
+  const w = wartosc.toLowerCase()
+  if (w.startsWith('nie')) return 'nie_przysluguje'
+  if (w.includes('tylko') || w.includes('ograniczony') || w.includes('jeśli') || w.includes('umowy')) return 'zalezy'
+  return 'przysluguje'
+}
+
 export function PorownanieUmow() {
   const { wroc, dzis } = useAplikacja()
   const wiersze = porownanie.wiersze.map((w) => ({
@@ -472,11 +492,38 @@ export function PorownanieUmow() {
         </p>
 
         {/*
-          Tabela przewija się w swoim pudełku — strona nigdy nie przewija się w bok.
-          Pudełko musi być osiągalne z klawiatury, inaczej treść poza kadrem jest
-          niedostępna dla osoby bez myszy (axe: scrollable-region-focusable).
+          LISTA PAR na telefonie, tabela dopiero od 600 px (design 1.2, §8.6).
+          Nagłówek stoi PRZY DANEJ, nie 300 px wyżej w wierszu tabeli. Obie wartości
+          niosą te same trzy znaki co kafle: „Nie” bez znaku byłoby jedynym miejscem
+          w aplikacji, gdzie odmowa nie ma kształtu.
         */}
-        <div className="tabela-przewijana" tabIndex={0} role="region" aria-label="Porównanie form zatrudnienia">
+        <ul className="lista-czysta tylko-telefon">
+          {wiersze.map((w, i) => (
+            <li key={i}>
+              <div className="para">
+                <p className="para__nazwa">{w.cecha}</p>
+                <div className="para__wartosci">
+                  <div className="para__kolumna">
+                    <span className="para__etykieta">{porownanie.naglowki.cywilna}</span>
+                    <span className="para__wartosc">
+                      <ZnakWerdyktu stan={stanWartosci(w.cywilna)} rozmiar={18} />
+                      {w.cywilna}
+                    </span>
+                  </div>
+                  <div className="para__kolumna">
+                    <span className="para__etykieta">{porownanie.naglowki.etat}</span>
+                    <span className="para__wartosc">
+                      <ZnakWerdyktu stan={stanWartosci(w.etat)} rozmiar={18} />
+                      {w.etat}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="tabela-przewijana od-tabletu" tabIndex={0} role="region" aria-label="Porównanie form zatrudnienia">
           <table className="tabela">
             <thead>
               <tr>

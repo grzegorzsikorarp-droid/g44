@@ -2,7 +2,7 @@
 
 Aplikacja BHP Forum Związków Zawodowych. Odpowiadasz na kilkanaście pytań o **warunki** swojej pracy, a aplikacja pokazuje uprawnienia z konkretnymi kwotami, progami i terminami, dostarcza wzorów pism, notuje Twój czas pracy i przypomina o rzeczach we właściwym momencie.
 
-Stan: **wydanie 1.2** (zmiana z 2 września 2026).
+Stan: **wydanie 1.2** (zmiana merytoryczna z 2 września 2026, wdrożenie warstwy wizualnej z 3 września 2026).
 
 To **prototyp roboczy**, nie produkt. Ma trzy zadania: przeklikać założenia strategii i znaleźć miejsca, gdzie się nie sprawdzają (patrz `ROZBIEZNOSCI.md`), posłużyć do testów z użytkownikami i stać się załącznikiem do zamówienia dla wykonawcy komercyjnego.
 
@@ -22,8 +22,8 @@ npm run preview      # podgląd zbudowanej paczki, port 4173
 Testy:
 
 ```bash
-npm test             # 111 testów jednostkowych: reguły, parametry, harmonogram, ewidencja, sprawdzacze
-npm run test:e2e     # 91 testów e2e: przebiegi P1–P12, sytuacje brzegowe, dostępność
+npm test             # 112 testów jednostkowych: reguły, parametry, harmonogram, ewidencja, sprawdzacze
+npm run test:e2e     # 95 testów e2e: przebiegi P1–P12, sytuacje brzegowe, reguły designu, dostępność
 npm run ekrany       # eksport listy ekranów i porównanie z mapą (66)
 ```
 
@@ -57,6 +57,7 @@ zmiana czasu urzędowego, która rozstrzyga długość nocki, byłaby niewykrywa
 | 1.2 E | Grafik na dwóch poziomach E5.3a/E5.3b, wyzwalacz zmiany rytmu | gotowe |
 | 1.2 F | Testy P10–P12, B13, axe na nowych ekranach, rejestr 66 ekranów, rozbieżności 15–24 | gotowe |
 | 1.2 G | Cztery pozostałe sytuacje domknięte; opcje pytania budowane z cech profilu | gotowe |
+| 1.2 H | Wdrożenie odpowiedzi projektowej: kafel 104 px, cztery stany, listy zamiast tabel | gotowe |
 
 Zaimplementowano **66 ekranów** — dokładnie tyle, ile podaje punkt 8 zmiany 1.2 (`npm run ekrany` porównuje rejestr z mapą i kończy się zerem tylko przy pełnej zgodności).
 
@@ -189,7 +190,14 @@ Ostatni przebieg axe: **zero naruszeń** na piętnastu ekranach, w tym na wszyst
 
 ## System wizualny
 
-Warstwa wizualna pochodzi z kanwy projektowej „System BHPewnie" (`dokumentacja/`). Osiem reguł nienegocjowalnych opisanych jest w nagłówku `src/style/globalne.css`.
+Warstwa wizualna pochodzi z kanwy projektowej „System BHPewnie" (`dokumentacja/System BHPewnie v2.dc.html`). Osiem reguł nienegocjowalnych opisanych jest w nagłówku `src/style/globalne.css`; **trzy z nich zmieniły brzmienie** w wydaniu design 1.2 — nazywają teraz powód zamiast miejsca (`ROZBIEZNOSCI.md`, wpis 29).
+
+- **Kafel uprawnienia ma stałe 104 px.** Tytuł do dwóch linii, konkret do jednej z obcięciem; pełna treść stoi na karcie. W 1.2 kafel rozjeżdżał się od 127 do 247 px.
+- **Ekran główny ma cztery warstwy** — nagłówek stały, pole kafli (jedyny element rozciągliwy), stały pas z dokumentem, nawigacja. Dzięki temu droga do dokumentu nie zależy od tego, ile treści jest wyżej.
+- **Cztery stany werdyktu, świeżość na osobnej osi.** Znacznik „Do odświeżenia" staje na każdym stanie i nie podmienia znaku werdyktu.
+- **Tabela na telefonie nie występuje** — wchodzi od 600 px i do dokumentów A4. Ewidencja to lista dni, porównanie umów to lista par.
+- **72 px** przysługuje czynności wykonywanej w pośpiechu lub w rękawicy — dziś Pomoc i rejestracja czasu pracy.
+- **Terakota** należy do ryzyka, które stwarza drugi człowiek — dziś Pomoc i ostrzeżenie w pakiecie umowy. Błąd formularza ma własny, cichszy stan.
 
 - **Logotyp** — wariant „Zawias": litera **P** siedzi w kwadratowym polu i należy jednocześnie do skrótu BHP i do słowa „pewnie". Zmiana grubości na wyjściu z pola (700 → 500) pokazuje, gdzie kończy się skrót.
 - **Kolor niesie znaczenie, nie dekorację** — sześć rodzin: pewność (zieleń morska), zależy (bursztyn, potomek żółci FZZ), neutralny (odmowa), powaga (terakota, wyłącznie Pomoc), tła, tekst.
@@ -198,7 +206,7 @@ Warstwa wizualna pochodzi z kanwy projektowej „System BHPewnie" (`dokumentacja
 - **Cieni nie ma** — warstwy rozdziela obrys 1 px i zmiana tła.
 - **Brak animacji przejść** — ekran zmienia się natychmiast.
 
-Rozstrzygnięcia projektowe, w których brief kolidował sam ze sobą, opisuje `dokumentacja/ROZBIEZNOSCI_DESIGN.md`.
+Rozstrzygnięcia projektowe, w których brief kolidował sam ze sobą, opisuje `dokumentacja/ROZBIEZNOSCI_DESIGN.md` — 19 wpisów w układzie brief / kolizja / decyzja / dlaczego / żeby zdecydować inaczej. Zlecenie, na które odpowiada wydanie design 1.2, to `dokumentacja/ZLECENIE_DESIGN_1_2.md`; odpowiedź projektowa — `dokumentacja/PRZEKAZANIE_DESIGN_1_2.md`.
 
 ---
 
@@ -209,7 +217,7 @@ Trzy rzeczy wymagają decyzji zespołu albo testu z ludźmi, nie kolejnej iterac
 1. **Powiadomienia.** Silnik harmonogramu działa i liczy poprawnie, ale czysta PWA nie wyzwoli budzika przy zamkniętej aplikacji. Potrzebne opakowanie natywne (Capacitor). Szczegóły: `ROZBIEZNOSCI.md`, wpis 6.
 2. **Hałas po zniesieniu sufitu.** Sufit zniesiono zgodnie ze zmianą 1.2 — i ta sama miara pokazuje teraz do **13 przypomnień na dobę** przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem: wpis 17.
 3. **„Nie wiem" w pakiecie umowy.** Sześć odpowiedzi „Nie wiem" daje dziś werdykt szary „nic nie musisz robić" — najbardziej niepewny użytkownik dostaje najbardziej stanowczą odpowiedź: wpis 20.
-4. **„Pobierz kartę" poniżej krawędzi ekranu.** Zmierzone 347 px; sam obowiązkowy zestaw z punktu 3.4 przekracza wysokość ekranu: wpis 16.
+4. **Zakładki w belce nawigacji.** Makiety projektowe pokazują „Moje · Sprawdź · Mój czas · Pomoc", co cofa nazwy ze zmiany 1.2 i wycina Aktualności z nawigacji. To decyzja produktowa, nie wizualna — nie wdrożono: wpis 30a.
 5. **Autoryzacja treści prawnych.** Pozycje ze znacznikiem czekają na specjalistę; około 20 z nich jest krytycznych przed testami z użytkownikami: wpis 8.
 
 ---
