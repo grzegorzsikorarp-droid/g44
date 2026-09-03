@@ -1,5 +1,6 @@
 import type {
-  Grafik, IdBudzika, OdpowiedziWarunkow, Profil, StanWyzwalaczaRytmu, WpisCzasu, WpisDziennika,
+  Czestotliwosc, Grafik, IdBudzika, OdpowiedziWarunkow, Profil, StanWyzwalaczaRytmu,
+  WpisCzasu, WpisDziennika,
 } from '../typy'
 import { POMINIETE } from '../typy'
 
@@ -16,6 +17,8 @@ export interface StanAplikacji {
   wersja: number
   profil: Profil | null
   budziki: Partial<Record<IdBudzika, boolean>>
+  /** Zmiana 1.3: wybor czestotliwosci przy budziku rytmicznym. Brak wpisu = domyslna. */
+  czestotliwosci: Partial<Record<IdBudzika, Czestotliwosc>>
   dziennik: WpisDziennika[]
   /** Przerwane sciezki Pomocy — trzymane 7 dni (B7). */
   przerwane: Record<string, { krok: string; kiedy: string }>
@@ -68,6 +71,7 @@ function pustyStan(): StanAplikacji {
     wersja: 1,
     profil: null,
     budziki: {},          // Zasada 8: nic domyslnie wlaczone.
+    czestotliwosci: {},   // Zmiana 1.3: puste = „raz dziennie” z definicji budzika.
     dziennik: [],
     przerwane: {},
     przerwanyKreator: null,

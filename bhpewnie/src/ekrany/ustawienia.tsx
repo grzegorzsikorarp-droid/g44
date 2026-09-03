@@ -3,13 +3,15 @@ import { useAplikacja } from '../App'
 import { Ikona, Logotyp, Naglowek, Przelacznik, Przycisk, ZnakFZZ } from '../komponenty/podstawowe'
 import { t } from '../dane/wczytaj'
 import { policzLuki, policzUprawnienia, rozwiazProfil, warunekSpelniony } from '../silnik/reguly'
-import { DEFINICJE_BUDZIKOW, nastepnePrzypomnienie, opiszKiedy, wyliczHarmonogram } from '../silnik/harmonogram'
+import {
+  DEFINICJE_BUDZIKOW, czestotliwoscBudzika, nastepnePrzypomnienie, opiszKiedy, wyliczHarmonogram,
+} from '../silnik/harmonogram'
 import { DNI_SKROTY, dodajDni, domyslneStaleGodziny, iso, nalozWzorzec, pomalujDzien, poczatekTygodnia, pustyGrafik, trybZGrafiku, WZORCE_ROTACJI } from '../silnik/grafik'
 import { pustyProfil } from '../magazyn/magazyn'
 import { datePoPolsku, dzisIso, STAN_PRAWNY } from '../silnik/parametry'
 import { pytaniaKreatora } from '../dane/wczytaj'
 import { opisStanowiska } from './stanowisko'
-import type { Grafik, IdBudzika, Profil, StaleGodziny } from '../typy'
+import type { Czestotliwosc, Grafik, IdBudzika, Profil, StaleGodziny } from '../typy'
 import biblioteka from '../../content/biblioteka.json'
 
 /* ================= E5.1 Menu ustawień ================= */
@@ -408,8 +410,13 @@ export function MojeBudziki() {
   )
 
   const harmonogram = useMemo(
-    () => wyliczHarmonogram({ profil, wlaczone: stan.budziki, powrotPoPomocy: stan.budziki.powrot_po_pomocy ? 'ścieżka Pomocy' : null }, new Date()),
-    [profil, stan.budziki],
+    () => wyliczHarmonogram({
+      profil,
+      wlaczone: stan.budziki,
+      czestotliwosci: stan.czestotliwosci,
+      powrotPoPomocy: stan.budziki.powrot_po_pomocy ? 'ścieżka Pomocy' : null,
+    }, new Date()),
+    [profil, stan.budziki, stan.czestotliwosci],
   )
   const nastepne = nastepnePrzypomnienie(harmonogram, new Date())
 
@@ -419,6 +426,10 @@ export function MojeBudziki() {
 
   const przelacz = (id: IdBudzika) => {
     zmienStan((s) => ({ ...s, budziki: { ...s.budziki, [id]: !s.budziki[id] } }))
+  }
+
+  const ustawCzestotliwosc = (id: IdBudzika, c: Czestotliwosc) => {
+    zmienStan((s) => ({ ...s, czestotliwosci: { ...s.czestotliwosci, [id]: c } }))
   }
 
   const popros = async () => {
@@ -459,17 +470,48 @@ export function MojeBudziki() {
         {(['rytm', 'terminy', 'otoczenie', 'aktualnosci'] as const).map((grupa) => (
           <section key={grupa} className="kolumna kolumna--ciasna">
             <p className="oczko">{NAZWY_GRUP[grupa]}</p>
-            {widoczne.filter((d) => d.grupa === grupa).map((d) => (
-              <Przelacznik
-                key={d.id}
-                nazwa={d.nazwa}
-                opis={d.regula}
-                wlaczony={d.automatyczny ? true : Boolean(stan.budziki[d.id])}
-                wylaczony={d.automatyczny}
-                plakietka={d.automatyczny ? t('budziki.auto') : undefined}
-                onZmiana={() => przelacz(d.id)}
-              />
-            ))}
+            {widoczne.filter((d) => d.grupa === grupa).map((d) => {
+              const wlaczony = d.automatyczny ? true : Boolean(stan.budziki[d.id])
+              const wybor = d.czestotliwosc
+              const teraz = czestotliwoscBudzika(d.id, stan.czestotliwosci)
+              return (
+                <div key={d.id}>
+                  <Przelacznik
+                    nazwa={d.nazwa}
+                    opis={d.regula}
+                    wlaczony={wlaczony}
+                    wylaczony={d.automatyczny}
+                    plakietka={d.automatyczny ? t('budziki.auto') : undefined}
+                    onZmiana={() => przelacz(d.id)}
+                  />
+                  {/*
+                    ZMIANA 1.3, sekcja 1.4 — tor częstotliwości. Pokazujemy go tylko przy
+                    budziku WŁĄCZONYM: wybór częstotliwości dla czegoś, co milczy, jest
+                    ustawieniem bez skutku, a lista budzików urosłaby o pusty tor przy
+                    każdej pozycji (ROZBIEZNOSCI.md, wpis 34).
+                  */}
+                  {wybor?.wybieralna && wlaczony && (
+                    <div className="wybor-czestotliwosci">
+                      <div className="tor-segmentow" role="group" aria-label={`Jak często: ${d.nazwa}`}>
+                        {(['raz_dziennie', 'zawsze'] as const).map((c) => (
+                          <button
+                            key={c}
+                            className="tor-segmentow__segment"
+                            aria-pressed={teraz === c}
+                            onClick={() => ustawCzestotliwosc(d.id, c)}
+                          >
+                            {c === 'raz_dziennie' ? 'raz dziennie' : 'za każdym razem'}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="drobne">
+                        {teraz === 'raz_dziennie' ? wybor.opis_raz : wybor.opis_zawsze}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </section>
         ))}
 

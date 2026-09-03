@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { nastepnePrzypomnienie, wyliczHarmonogram, wyliczSurowy } from '../src/silnik/harmonogram'
+import {
+  DEFINICJE_BUDZIKOW, nastepnePrzypomnienie, wyliczHarmonogram, wyliczSurowy,
+} from '../src/silnik/harmonogram'
 import { profilBarbary } from '../src/magazyn/magazyn'
 import { maNocki, nalozWzorzec, oknoSnuPoNocce, pomalujDzien, pustyGrafik, trybZGrafiku } from '../src/silnik/grafik'
 import type { IdBudzika } from '../src/typy'
@@ -75,17 +77,50 @@ describe('harmonogram na 14 dni', () => {
     expect(z.some((p) => p.budzik === 'przerwa_monitor')).toBe(true)
   })
 
-  it('przerwa przy monitorze przypomina co godzine, zgodnie z uprawnieniem', () => {
+  it('zmiana 1.3: domyslnie przerwa przy monitorze odzywa sie RAZ na dniowke', () => {
+    // Domyslna czestotliwosc to „raz dziennie” — jedno powiadomienie obejmujace cala serie.
     const profil = profilBarbary(TERAZ)
     profil.odpowiedzi.monitor = 'ponad4'
     const lista = wyliczSurowy({ profil, wlaczone: WSZYSTKIE }, TERAZ)
     const monitorowe = lista.filter((p) => p.budzik === 'przerwa_monitor')
     expect(monitorowe.length).toBeGreaterThan(0)
-    // W jednym dniu roboczym odstepy miedzy kolejnymi przerwami wynosza dokladnie godzine.
+    const dzien = monitorowe[0].kiedy.slice(0, 10)
+    const wDniu = monitorowe.filter((p) => p.kiedy.startsWith(dzien))
+    expect(wDniu).toHaveLength(1)
+    expect(wDniu[0].zbiorcze).toBe(true)
+    expect(wDniu[0].powod).toMatch(/po każdej godzinie przy ekranie/)
+  })
+
+  it('zmiana 1.3: przy wyborze „za kazdym razem” wraca seria co godzine', () => {
+    const profil = profilBarbary(TERAZ)
+    profil.odpowiedzi.monitor = 'ponad4'
+    const lista = wyliczSurowy(
+      { profil, wlaczone: WSZYSTKIE, czestotliwosci: { przerwa_monitor: 'zawsze' } },
+      TERAZ,
+    )
+    const monitorowe = lista.filter((p) => p.budzik === 'przerwa_monitor')
     const dzien = monitorowe[0].kiedy.slice(0, 10)
     const wDniu = monitorowe.filter((p) => p.kiedy.startsWith(dzien)).map((p) => new Date(p.kiedy).getTime())
     expect(wDniu.length).toBeGreaterThan(1)
     for (let i = 1; i < wDniu.length; i++) expect(wDniu[i] - wDniu[i - 1]).toBe(3600000)
+    // Seria nie jest zbiorcza — kazde wystapienie to osobna przerwa.
+    expect(monitorowe.every((p) => !p.zbiorcze)).toBe(true)
+  })
+
+  it('zmiana 1.3: sufit NIE wraca — zaden budzik nie jest odrzucany', () => {
+    // Wybor czestotliwosci zageszcza serie, ale niczego nie usuwa: przy „zawsze”
+    // harmonogram jest identyczny z tym sprzed zmiany 1.3.
+    const profil = profilBarbary(TERAZ)
+    profil.odpowiedzi.monitor = 'ponad4'
+    const wszystkoZawsze = wyliczHarmonogram(
+      { profil, wlaczone: WSZYSTKIE, czestotliwosci: { przerwa_monitor: 'zawsze', protokol_przed_nocka: 'zawsze' } },
+      TERAZ,
+    )
+    const surowy = wyliczSurowy(
+      { profil, wlaczone: WSZYSTKIE, czestotliwosci: { przerwa_monitor: 'zawsze', protokol_przed_nocka: 'zawsze' } },
+      TERAZ,
+    )
+    expect(wszystkoZawsze).toHaveLength(surowy.length)
   })
 
   it('powrot po Pomocy planuje sie nazajutrz rano', () => {
@@ -125,5 +160,39 @@ describe('harmonogram na 14 dni', () => {
     profil.terminy = profil.terminy.map((t) => ({ ...t, przypomnienie: true }))
     const lista = wyliczSurowy({ profil, wlaczone: WSZYSTKIE }, TERAZ)
     expect(lista.some((p) => p.budzik === 'badania_okresowe')).toBe(false)
+  })
+})
+
+/**
+ * ZMIANA 1.3, badanie 3 (sekcja 8): czy tresc powiadomienia zbiorczego miesci sie
+ * w tym, co system pokazuje BEZ rozwijania powiadomienia.
+ *
+ * Android (NotificationCompat, jedna linia tekstu przy zwinietym powiadomieniu):
+ * okolo 40 znakow tytulu i okolo 50 znakow tresci — dalej idzie wielokropek.
+ * iOS (banner): dwie linie tresci, w praktyce okolo 110 znakow.
+ * Zrodlem jest zachowanie systemowe, nie twardy limit API — dlatego pilnujemy
+ * PIERWSZEGO ZDANIA: ono musi niesc cala informacje samo, bo reszta bywa ucieta.
+ */
+describe('zmiana 1.3: tresc powiadomienia zbiorczego', () => {
+  const zbiorcze = DEFINICJE_BUDZIKOW
+    .filter((d) => d.czestotliwosc?.wybieralna)
+    .map((d) => ({ id: d.id, tresc: d.czestotliwosc!.tresc_raz }))
+
+  it('kazdy budzik z wyborem ma tresc zbiorcza', () => {
+    expect(zbiorcze.length).toBeGreaterThan(0)
+    for (const z of zbiorcze) expect(z.tresc.length).toBeGreaterThan(0)
+  })
+
+  it('pierwsze zdanie miesci sie w oknie zwinietego powiadomienia (50 znakow)', () => {
+    for (const z of zbiorcze) {
+      const pierwsze = z.tresc.split(/(?<=[.!?])\s|\s—\s/)[0]
+      expect(pierwsze.length, `${z.id}: „${pierwsze}”`).toBeLessThanOrEqual(50)
+    }
+  })
+
+  it('cala tresc miesci sie w bannerze iOS (110 znakow)', () => {
+    for (const z of zbiorcze) {
+      expect(z.tresc.length, `${z.id}: ${z.tresc.length} znakow`).toBeLessThanOrEqual(110)
+    }
   })
 })

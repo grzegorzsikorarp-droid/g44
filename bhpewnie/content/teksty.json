@@ -109,7 +109,7 @@
   "budziki.brak_zgody": "Twój telefon nie pozwala nam się odezwać. Włącz powiadomienia w ustawieniach systemu, a przypomnienia zaczną działać.",
   "budziki.brak_zgody_przycisk": "Otwórz ustawienia systemu",
   "budziki.niedokladne": "Przypomnienia mogą przyjść z opóźnieniem. Żeby były punktualne, zezwól aplikacji na dokładne alarmy.",
-  "budziki.sufit": "Dostajesz dokładnie to, co włączyłeś — nic nie jest po drodze odrzucane.",
+  "budziki.sufit": "Dostajesz dokładnie to, co włączyłeś — nic nie jest po drodze odrzucane. Przy budzikach, które powtarzają się w ciągu dnia, sam wybierasz: raz dziennie czy za każdym razem.",
   "quiz.naglowek": "Sprawdzian wiedzy",
   "quiz.opis": "Bez punktów i rankingów. Wynik zostaje w telefonie i służy tylko Tobie.",
   "quiz.wynik": "Odpowiedzi trafne: {trafne} z {ile}",
@@ -139,5 +139,6 @@
   "kafel.zamiast_szary": "Zobacz, co Ci przysługuje zamiast tego",
   "kafel.niepewny_dopisek": "To zależy od odpowiedzi, której jeszcze nie mamy — albo od wartości, która się zmieniła.",
   "kafel.uzupelnij_odpowiedz": "Uzupełnij odpowiedź",
-  "kafel.do_odswiezenia": "Do odświeżenia"
+  "kafel.do_odswiezenia": "Do odświeżenia",
+  "stanowisko.pasek_zimowy": "Zimą na dworze — posiłek profilaktyczny i ciepłe napoje"
 }

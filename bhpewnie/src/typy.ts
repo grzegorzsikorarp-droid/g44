@@ -306,10 +306,27 @@ export type OdpowiedziWarunkow = Record<string, number>
 
 export type StanWerdyktu = 'przysluguje' | 'zalezy' | 'nie_przysluguje'
 
+export interface OpcjaSprawdzacza {
+  wartosc: string
+  etykieta: string
+  /**
+   * ZMIANA 1.3, sekcja 4: przedzial liczbowy stojacy za odpowiedzia — [min, max].
+   * Uzytkownik wybiera „3–5 osob”, a silnik liczy z obu koncow przedzialu,
+   * zeby moc powiedziec, czy norma jest przekroczona NA PEWNO, czy tylko MOZE.
+   */
+  zakres?: [number, number]
+}
+
 export interface PytanieSprawdzacza {
   id: string
   tresc: string
-  opcje: { wartosc: string; etykieta: string }[]
+  opcje: OpcjaSprawdzacza[]
+  /**
+   * ZMIANA 1.3: pytanie zadawane tylko przy okreslonych wczesniejszych odpowiedziach.
+   * Warunek moze wskazywac wylacznie pytania stojace WYZEJ na liscie — pytanie
+   * zalezne od pozniejszego nie pokazaloby sie nigdy.
+   */
+  gdy?: Record<string, string[]>
   /**
    * Zmiana 1.2, punkt 4.3, sytuacja 3: opcje budowane z CECH PROFILU, a nie wpisane
    * na sztywno. Uzytkownik ma wybierac z tego, co go faktycznie dotyczy — lista
@@ -369,12 +386,27 @@ export interface PunktacjaSytuacji {
   opisy_braku?: Record<string, string>
 }
 
+/**
+ * ZMIANA 1.3, sekcja 4 — przeliczenie ciasnoty pomieszczenia.
+ * Sytuacja deklaruje, ktore pytania niosa liczby i z jakimi normami je porownac.
+ * Silnik wystawia pseudo-odpowiedz `_ciasnota` (jak `_punkty` w pakiecie umowy)
+ * oraz podstawienia `{kubatura_na_osobe}` i `{powierzchnia_na_osobe}`.
+ */
+export interface WyliczenieCiasnoty {
+  osoby: string
+  powierzchnia: string
+  wysokosc: string
+  norma_kubatura: string
+  norma_powierzchnia: string
+}
+
 export interface Sytuacja {
   id: string
   etykieta: string
   pelna: boolean
   sezonowa?: 'lato' | 'zima'
   pytania?: PytanieSprawdzacza[]
+  wyliczenie_ciasnoty?: WyliczenieCiasnoty
   punktacja?: PunktacjaSytuacji
   /** Etykiety opcji budowanych z cech profilu — klucz to id cechy. */
   etykiety_cech?: Partial<Record<IdCechy, string>>
@@ -412,6 +444,25 @@ export type IdBudzika =
   | 'szkolenie_bhp' | 'alert_pogodowy' | 'nowa_stawka_nocna' | 'wejscie_przepisu'
   | 'powrot_po_pomocy' | 'prasowka'
 
+/**
+ * ZMIANA 1.3, sekcja 1 — wybor czestotliwosci przy budziku rytmicznym.
+ * Sufit nie wraca: aplikacja nadal nie odrzuca zadnego przypomnienia.
+ * Zmienia sie to, KTO decyduje o serii. Domyslnie „raz dziennie" — jedno
+ * powiadomienie obejmujace cala serie; „za kazdym razem" to dawne zachowanie.
+ */
+export type Czestotliwosc = 'raz_dziennie' | 'zawsze'
+
+export interface WyborCzestotliwosci {
+  /** false dla budzikow, ktore z natury odzywaja sie raz (terminy, alerty, prasowka). */
+  wybieralna: boolean
+  domyslna: Czestotliwosc
+  /** Zdanie pod torem segmentow na E5.4 — co czlowiek dostanie przy tym wyborze. */
+  opis_raz: string
+  opis_zawsze: string
+  /** Tresc jednego powiadomienia zbiorczego, obejmujaca cala serie. */
+  tresc_raz: string
+}
+
 export interface DefinicjaBudzika {
   id: IdBudzika
   nazwa: string
@@ -420,6 +471,7 @@ export interface DefinicjaBudzika {
   /** Cisza po nocce nie ma przelacznika — liczy sie sama z grafiku. */
   automatyczny?: boolean
   widoczny_gdy?: WarunekZlozony
+  czestotliwosc?: WyborCzestotliwosci
 }
 
 export interface ZaplanowanePrzypomnienie {
@@ -427,6 +479,8 @@ export interface ZaplanowanePrzypomnienie {
   nazwa: string
   kiedy: string              // ISO z godzina
   powod: string
+  /** Zmiana 1.3: powiadomienie obejmujace cala serie zamiast pojedynczego wystapienia. */
+  zbiorcze?: boolean
 }
 
 /* ---------- Dzienniki (E4.7-E4.9) ---------- */

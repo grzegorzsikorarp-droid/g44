@@ -3,7 +3,9 @@
   "etykieta": "Czy to na pewno nie powinna być umowa o pracę?",
   "pelna": true,
   "nie_dotyczy": {
-    "gdy_umowa": ["o_prace"],
+    "gdy_umowa": [
+      "o_prace"
+    ],
     "naglowek": "Masz umowę o pracę",
     "tresc": "Ten sprawdzacz jest dla osób na zleceniu i na własnej działalności. Możesz go pokazać komuś, kogo to dotyczy — u siebie nie masz tu nic do sprawdzania."
   },
@@ -12,54 +14,108 @@
       "id": "godziny",
       "tresc": "Czy masz wyznaczone godziny pracy, których musisz się trzymać?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     },
     {
       "id": "miejsce",
       "tresc": "Czy pracujesz w miejscu wskazanym przez zleceniodawcę — w biurze, sklepie, hali, na jego terenie?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     },
     {
       "id": "nadzor",
       "tresc": "Czy ktoś na bieżąco mówi Ci, co i jak robić, i sprawdza wykonanie?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     },
     {
       "id": "zastepstwo",
       "tresc": "Czy możesz wysłać kogoś za siebie, gdy nie możesz przyjść?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     },
     {
       "id": "sprzet",
       "tresc": "Czy pracujesz na sprzęcie, materiałach i narzędziach firmy?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     },
     {
       "id": "wylacznosc",
       "tresc": "Czy to Twój jedyny zleceniodawca albo klient?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak" },
-        { "wartosc": "nie", "etykieta": "Nie" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie wiem" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie wiem"
+        }
       ]
     }
   ],
@@ -91,7 +147,58 @@
   },
   "reguly": [
     {
-      "gdy": { "_punkty": ["5", "6"] },
+      "gdy": {
+        "_nie_wiem": [
+          "3",
+          "4",
+          "5",
+          "6"
+        ]
+      },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Za mało wiadomo, żeby to rozstrzygnąć",
+        "uzasadnienie": "Na {niewiadome} z sześciu pytań odpowiedź brzmiała „Nie wiem”. To za mało, żeby powiedzieć Ci cokolwiek pewnego o Twojej umowie — i za mało, żeby powiedzieć, że nic Ci nie przysługuje. Sprawdź dwie rzeczy poniżej i wróć tutaj.",
+        "ile": [
+          "O tym, czy istnieje stosunek pracy, decyduje sposób wykonywania pracy, a nie nazwa umowy.",
+          "Odpowiedzi znajdziesz w samej umowie, w grafiku i w tym, jak wygląda Twój zwykły dzień pracy.",
+          "Nic nie tracisz, wracając do tych pytań później — aplikacja zapamięta, co już wiesz."
+        ],
+        "podstawa": "art. 22 § 1¹ i § 1² Kodeksu pracy [do potwierdzenia przez specjalistę]",
+        "ostrzezenie": "Zanim porozmawiasz z pracodawcą, porozmawiaj z kimś, kto zna Twoją sytuację. Ryzyko, że pracodawca zareaguje źle, jest realne.",
+        "porownanie": "E2.8",
+        "akcje_wlasne": [
+          {
+            "rodzaj": "telefon",
+            "etykieta": "Zadzwoń po bezpłatną poradę do inspekcji pracy",
+            "wartosc": "[do potwierdzenia]",
+            "opis": "Inspekcja może wystąpić do sądu o ustalenie, że masz umowę o pracę — bez Twojego kosztu. Numer i godziny: [do potwierdzenia].",
+            "ikona": "telefon"
+          },
+          {
+            "rodzaj": "kontakt",
+            "etykieta": "Punkt konsultacyjny projektu",
+            "wartosc": "[do uzupełnienia]",
+            "opis": "Kontakt: [do uzupełnienia].",
+            "ikona": "dlon"
+          },
+          {
+            "rodzaj": "przypomnienie",
+            "etykieta": "Przypomnij mi za tydzień",
+            "wartosc": "7",
+            "opis": "Wrócimy do sprawy za tydzień — bez pośpiechu.",
+            "ikona": "dzwonek"
+          }
+        ]
+      }
+    },
+    {
+      "gdy": {
+        "_punkty": [
+          "5",
+          "6"
+        ]
+      },
       "werdykt": {
         "stan": "przysluguje",
         "naglowek": "Twoja umowa ma cechy umowy o pracę",
@@ -145,7 +252,12 @@
       }
     },
     {
-      "gdy": { "_punkty": ["3", "4"] },
+      "gdy": {
+        "_punkty": [
+          "3",
+          "4"
+        ]
+      },
       "werdykt": {
         "stan": "zalezy",
         "naglowek": "Część cech wskazuje na stosunek pracy",

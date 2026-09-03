@@ -306,3 +306,33 @@ test('E5.3a: stałe godziny mają dni tygodnia i listę odstępstw', async ({ pa
   await expect(page.getByText('Odstępstwa')).toBeVisible()
   await expect(page.getByRole('button', { name: /przejdź do kalendarza/ })).toBeVisible()
 })
+
+/**
+ * ZMIANA 1.3, sekcja 6 — adnotacja o mocy dowodowej w dokumencie ewidencji.
+ * Pytanie, czy taki wydruk działa w sporze z pracodawcą, idzie do prawnika;
+ * do czasu odpowiedzi dokument mówi wprost, czym jest i czym nie jest.
+ */
+test('zmiana 1.3: PDF ewidencji niesie adnotację o zapisie własnym pracownika', async ({ page }) => {
+  await przygotujStan(page, {
+    rytm: 'stale',
+    wpisy: [{ data: dzien(0), od: '08:00', do: '16:00', przerwy: [] }],
+  })
+  await page.getByRole('button', { name: /Mój czas pracy/ }).click()
+  await page.getByRole('button', { name: 'Ten tydzień' }).click()
+  await page.getByRole('button', { name: /Eksport miesiąca/ }).click()
+
+  const pobranie = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Pobierz PDF/ }).click()
+  const plik = await pobranie
+
+  const { PDFDocument } = await import('pdf-lib')
+  const sciezka = await plik.path()
+  const { readFileSync } = await import('node:fs')
+  const dok = await PDFDocument.load(readFileSync(sciezka))
+  expect(dok.getPageCount()).toBeGreaterThan(0)
+
+  // Treść adnotacji sprawdzamy na ekranie podglądu — w PDF pdf-lib nie czyta tekstu.
+  await expect(page.getByText(/Zapis prowadzony samodzielnie przez pracownika/)).toBeVisible()
+  await expect(page.getByText(/Nie zastępuje ewidencji czasu pracy prowadzonej przez pracodawcę/)).toBeVisible()
+  await expect(page.getByText(/do potwierdzenia przez specjalistę/)).toBeVisible()
+})

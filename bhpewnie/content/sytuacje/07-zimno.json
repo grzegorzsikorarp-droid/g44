@@ -8,32 +8,189 @@
       "id": "ile_stopni",
       "tresc": "Ile stopni pokazuje termometr w pomieszczeniu, w którym pracujesz?",
       "opcje": [
-        { "wartosc": "ponizej14", "etykieta": "Poniżej 14 °C" },
-        { "wartosc": "do18", "etykieta": "Od 14 do 18 °C" },
-        { "wartosc": "powyzej18", "etykieta": "Powyżej 18 °C" },
-        { "wartosc": "nie_wiem", "etykieta": "Nie ma termometru" }
+        {
+          "wartosc": "ponizej14",
+          "etykieta": "Poniżej 14 °C"
+        },
+        {
+          "wartosc": "do18",
+          "etykieta": "Od 14 do 18 °C"
+        },
+        {
+          "wartosc": "powyzej18",
+          "etykieta": "Powyżej 18 °C"
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie ma termometru"
+        }
       ]
     },
     {
       "id": "jaka_praca",
       "tresc": "Jaka to praca?",
       "opcje": [
-        { "wartosc": "biurowa", "etykieta": "Siedząca albo lekka" },
-        { "wartosc": "fizyczna", "etykieta": "Fizyczna — ruch, wysiłek" }
+        {
+          "wartosc": "biurowa",
+          "etykieta": "Siedząca albo lekka"
+        },
+        {
+          "wartosc": "fizyczna",
+          "etykieta": "Fizyczna — ruch, wysiłek"
+        }
       ]
     },
     {
       "id": "ciasno",
       "tresc": "Czy w tym pomieszczeniu jest ciasno?",
       "opcje": [
-        { "wartosc": "tak", "etykieta": "Tak, ledwo się mieścimy" },
-        { "wartosc": "nie", "etykieta": "Nie, miejsca wystarcza" }
+        {
+          "wartosc": "tak",
+          "etykieta": "Tak, ledwo się mieścimy"
+        },
+        {
+          "wartosc": "nie",
+          "etykieta": "Nie, miejsca wystarcza"
+        }
+      ]
+    },
+    {
+      "id": "ile_osob",
+      "tresc": "Ile osób pracuje w tym pomieszczeniu jednocześnie?",
+      "gdy": {
+        "ciasno": [
+          "tak"
+        ]
+      },
+      "opcje": [
+        {
+          "wartosc": "do2",
+          "etykieta": "Jedna albo dwie",
+          "zakres": [
+            1,
+            2
+          ]
+        },
+        {
+          "wartosc": "do5",
+          "etykieta": "Od trzech do pięciu",
+          "zakres": [
+            3,
+            5
+          ]
+        },
+        {
+          "wartosc": "do10",
+          "etykieta": "Od sześciu do dziesięciu",
+          "zakres": [
+            6,
+            10
+          ]
+        },
+        {
+          "wartosc": "ponad10",
+          "etykieta": "Więcej niż dziesięć",
+          "zakres": [
+            11,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "powierzchnia_pom",
+      "tresc": "Jak duże jest to pomieszczenie? Wystarczy przybliżenie — długość razy szerokość.",
+      "gdy": {
+        "ciasno": [
+          "tak"
+        ]
+      },
+      "opcje": [
+        {
+          "wartosc": "do10",
+          "etykieta": "Mniej więcej do 10 m² — jak mały pokój",
+          "zakres": [
+            6,
+            10
+          ]
+        },
+        {
+          "wartosc": "do20",
+          "etykieta": "Około 10–20 m²",
+          "zakres": [
+            10,
+            20
+          ]
+        },
+        {
+          "wartosc": "do40",
+          "etykieta": "Około 20–40 m²",
+          "zakres": [
+            20,
+            40
+          ]
+        },
+        {
+          "wartosc": "ponad40",
+          "etykieta": "Więcej niż 40 m²",
+          "zakres": [
+            40,
+            80
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wysokosc_pom",
+      "tresc": "Jaka jest wysokość tego pomieszczenia?",
+      "gdy": {
+        "ciasno": [
+          "tak"
+        ]
+      },
+      "opcje": [
+        {
+          "wartosc": "niskie",
+          "etykieta": "Niskie — sufit blisko, poniżej 2,5 m",
+          "zakres": [
+            2.2,
+            2.5
+          ]
+        },
+        {
+          "wartosc": "zwykle",
+          "etykieta": "Zwykłe — około 2,5–3 m",
+          "zakres": [
+            2.5,
+            3.0
+          ]
+        },
+        {
+          "wartosc": "wysokie",
+          "etykieta": "Wysokie — powyżej 3 m",
+          "zakres": [
+            3.0,
+            4.0
+          ]
+        },
+        {
+          "wartosc": "nie_wiem",
+          "etykieta": "Nie umiem ocenić",
+          "zakres": [
+            2.2,
+            4.0
+          ]
+        }
       ]
     }
   ],
   "reguly": [
     {
-      "gdy": { "ile_stopni": ["ponizej14"] },
+      "gdy": {
+        "ile_stopni": [
+          "ponizej14"
+        ]
+      },
       "werdykt": {
         "stan": "przysluguje",
         "naglowek": "Ta temperatura jest poniżej minimum przy każdej pracy",
@@ -45,7 +202,10 @@
           "Jeżeli warunki bezpośrednio zagrażają Twojemu zdrowiu, masz prawo powstrzymać się od pracy — po zawiadomieniu przełożonego."
         ],
         "podstawa": "[do uzupełnienia przez specjalistę]",
-        "pokrewne": { "tytul": "Miejsce do ogrzania się i zjedzenia", "sprawdzacz": "upal" },
+        "pokrewne": {
+          "tytul": "Miejsce do ogrzania się i zjedzenia",
+          "sprawdzacz": "upal"
+        },
         "pismo": {
           "tytul": "Wniosek o zapewnienie właściwej temperatury w pomieszczeniu pracy",
           "akapity": [
@@ -64,7 +224,14 @@
       }
     },
     {
-      "gdy": { "ile_stopni": ["do18"], "jaka_praca": ["biurowa"] },
+      "gdy": {
+        "ile_stopni": [
+          "do18"
+        ],
+        "jaka_praca": [
+          "biurowa"
+        ]
+      },
       "werdykt": {
         "stan": "przysluguje",
         "naglowek": "Przy pracy biurowej przysługuje Ci {temperatura_min_biurowa}",
@@ -93,7 +260,11 @@
       }
     },
     {
-      "gdy": { "ile_stopni": ["nie_wiem"] },
+      "gdy": {
+        "ile_stopni": [
+          "nie_wiem"
+        ]
+      },
       "werdykt": {
         "stan": "zalezy",
         "naglowek": "Bez pomiaru trudno to rozstrzygnąć",
@@ -126,14 +297,125 @@
       }
     },
     {
-      "gdy": { "ciasno": ["tak"] },
+      "gdy": {
+        "_ciasnota": [
+          "ponizej"
+        ]
+      },
+      "werdykt": {
+        "stan": "przysluguje",
+        "naglowek": "Na jedną osobę wychodzi mniej, niż przewiduje norma",
+        "uzasadnienie": "Z Twoich odpowiedzi wychodzi {kubatura_na_osobe} objętości i {powierzchnia_na_osobe} podłogi na osobę. Norma to {kubatura_min_na_pracownika} i {powierzchnia_min_na_pracownika}. Nawet przy najkorzystniejszym odczytaniu Twoich odpowiedzi wynik jest poniżej — to wystarczy, żeby zażądać przeglądu pomieszczenia.",
+        "ile": [
+          "Minimalna wolna objętość pomieszczenia stałej pracy: {kubatura_min_na_pracownika} na pracownika.",
+          "Minimalna wolna powierzchnia podłogi: {powierzchnia_min_na_pracownika} na pracownika.",
+          "Obie wartości czekają na potwierdzenie przez specjalistę — traktuj je jako punkt wyjścia do rozmowy, nie jako gotowy przepis.",
+          "Zgłoszenie ciasnoty jest podstawą do przeglądu stanowiska przez służbę BHP."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o przegląd warunków w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o przegląd pomieszczenia, w którym wykonuję pracę, pod kątem kubatury i wolnej powierzchni przypadającej na jednego pracownika.",
+            "W pomieszczeniu pracuje jednocześnie tyle osób, że warunki wydają mi się poniżej wymaganych.",
+            "Proszę o udostępnienie wyniku przeglądu oraz odpowiedniej części oceny ryzyka zawodowego."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że w naszym pomieszczeniu pracuje nas tyle osób, że robi się ciasno. Proszę o przegląd stanowiska przez służbę BHP.",
+          "mail": {
+            "temat": "Prośba o przegląd warunków w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd pomieszczenia, w którym pracuję, pod kątem powierzchni i kubatury przypadającej na jednego pracownika.\n\nProszę też o udostępnienie odpowiedniej części oceny ryzyka zawodowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {
+        "_ciasnota": [
+          "granica"
+        ]
+      },
       "werdykt": {
         "stan": "zalezy",
-        "naglowek": "Ciasnota ma swoje normy, ale liczy się je inaczej niż stopnie",
-        "uzasadnienie": "Temperatura mieści się w minimum, ale zgłaszasz ciasnotę. Przepisy określają minimalną kubaturę i wolną powierzchnię podłogi na jednego pracownika — z wyłączeniami dla pomieszczeń o określonej wysokości. Bez wymiarów pomieszczenia i liczby osób nie da się tego przeliczyć.",
+        "naglowek": "To zależy od dokładnych wymiarów pomieszczenia",
+        "uzasadnienie": "Z Twoich odpowiedzi wychodzi {kubatura_na_osobe} objętości i {powierzchnia_na_osobe} podłogi na osobę. Norma to {kubatura_min_na_pracownika} i {powierzchnia_min_na_pracownika} — Twój wynik leży po obu jej stronach, zależnie od tego, jak dokładnie wypadną wymiary. Pomiar rozstrzyga sprawę, a należy on do pracodawcy.",
         "ile": [
-          "Minimalna kubatura i wolna powierzchnia podłogi na pracownika: [do uzupełnienia przez specjalistę].",
-          "Przy pracy w pomieszczeniu przysługuje też wymiana powietrza i oświetlenie odpowiednie do rodzaju pracy.",
+          "Minimalna wolna objętość pomieszczenia stałej pracy: {kubatura_min_na_pracownika} na pracownika.",
+          "Minimalna wolna powierzchnia podłogi: {powierzchnia_min_na_pracownika} na pracownika.",
+          "Obie wartości czekają na potwierdzenie przez specjalistę — traktuj je jako punkt wyjścia do rozmowy, nie jako gotowy przepis.",
+          "Zgłoszenie ciasnoty jest podstawą do przeglądu stanowiska przez służbę BHP."
+        ],
+        "do_sprawdzenia": [
+          "Jakie są dokładne wymiary pomieszczenia — długość, szerokość i wysokość",
+          "Ile osób ma tam wyznaczone stałe stanowisko pracy, a ile bywa przejściowo"
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o przegląd warunków w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o przegląd pomieszczenia, w którym wykonuję pracę, pod kątem kubatury i wolnej powierzchni przypadającej na jednego pracownika.",
+            "W pomieszczeniu pracuje jednocześnie tyle osób, że warunki wydają mi się poniżej wymaganych.",
+            "Proszę o udostępnienie wyniku przeglądu oraz odpowiedniej części oceny ryzyka zawodowego."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że w naszym pomieszczeniu pracuje nas tyle osób, że robi się ciasno. Proszę o przegląd stanowiska przez służbę BHP.",
+          "mail": {
+            "temat": "Prośba o przegląd warunków w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd pomieszczenia, w którym pracuję, pod kątem powierzchni i kubatury przypadającej na jednego pracownika.\n\nProszę też o udostępnienie odpowiedniej części oceny ryzyka zawodowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {
+        "_ciasnota": [
+          "powyzej"
+        ]
+      },
+      "werdykt": {
+        "stan": "nie_przysluguje",
+        "naglowek": "Norma powierzchni i kubatury nie jest przekroczona",
+        "uzasadnienie": "Z Twoich odpowiedzi wychodzi {kubatura_na_osobe} objętości i {powierzchnia_na_osobe} podłogi na osobę, przy normie {kubatura_min_na_pracownika} i {powierzchnia_min_na_pracownika}. Ciasno może być mimo to — normy nie liczą szaf, maszyn ani dróg przejścia. Nie ma tu jednak przepisu, na który mógłbyś się dziś powołać.",
+        "ile": [
+          "Minimalna wolna objętość pomieszczenia stałej pracy: {kubatura_min_na_pracownika} na pracownika.",
+          "Minimalna wolna powierzchnia podłogi: {powierzchnia_min_na_pracownika} na pracownika.",
+          "Obie wartości czekają na potwierdzenie przez specjalistę — traktuj je jako punkt wyjścia do rozmowy, nie jako gotowy przepis.",
+          "Zgłoszenie ciasnoty jest podstawą do przeglądu stanowiska przez służbę BHP."
+        ],
+        "podstawa": "[do uzupełnienia przez specjalistę]",
+        "pismo": {
+          "tytul": "Wniosek o przegląd warunków w pomieszczeniu pracy",
+          "akapity": [
+            "Wnoszę o przegląd pomieszczenia, w którym wykonuję pracę, pod kątem kubatury i wolnej powierzchni przypadającej na jednego pracownika.",
+            "W pomieszczeniu pracuje jednocześnie tyle osób, że warunki wydają mi się poniżej wymaganych.",
+            "Proszę o udostępnienie wyniku przeglądu oraz odpowiedniej części oceny ryzyka zawodowego."
+          ]
+        },
+        "skrypt": {
+          "ustny": "Dzień dobry, chciałem(-am) zgłosić, że w naszym pomieszczeniu pracuje nas tyle osób, że robi się ciasno. Proszę o przegląd stanowiska przez służbę BHP.",
+          "mail": {
+            "temat": "Prośba o przegląd warunków w pomieszczeniu pracy",
+            "tresc": "Dzień dobry,\n\nproszę o przegląd pomieszczenia, w którym pracuję, pod kątem powierzchni i kubatury przypadającej na jednego pracownika.\n\nProszę też o udostępnienie odpowiedniej części oceny ryzyka zawodowego.\n\nZ poważaniem"
+          }
+        }
+      }
+    },
+    {
+      "gdy": {
+        "_ciasnota": [
+          "nieznane"
+        ]
+      },
+      "werdykt": {
+        "stan": "zalezy",
+        "naglowek": "Ciasnota ma swoje normy, ale bez wymiarów nie da się ich przeliczyć",
+        "uzasadnienie": "Przepisy określają minimalną kubaturę i wolną powierzchnię podłogi na jednego pracownika. Bez wymiarów pomieszczenia i liczby osób nie da się powiedzieć, po której stronie normy jesteś.",
+        "ile": [
+          "Minimalna wolna objętość pomieszczenia stałej pracy: {kubatura_min_na_pracownika} na pracownika.",
+          "Minimalna wolna powierzchnia podłogi: {powierzchnia_min_na_pracownika} na pracownika.",
+          "Obie wartości czekają na potwierdzenie przez specjalistę — traktuj je jako punkt wyjścia do rozmowy, nie jako gotowy przepis.",
           "Zgłoszenie ciasnoty jest podstawą do przeglądu stanowiska przez służbę BHP."
         ],
         "do_sprawdzenia": [
@@ -170,7 +452,10 @@
           "Niezależnie od temperatury przysługuje Ci wymiana powietrza, oświetlenie odpowiednie do pracy i pomieszczenie do zjedzenia posiłku, gdy pracuje więcej niż 20 osób."
         ],
         "podstawa": "[do uzupełnienia przez specjalistę]",
-        "pokrewne": { "tytul": "Napoje i posiłek profilaktyczny", "sprawdzacz": "upal" },
+        "pokrewne": {
+          "tytul": "Napoje i posiłek profilaktyczny",
+          "sprawdzacz": "upal"
+        },
         "pismo": {
           "tytul": "Wniosek o informację o warunkach w pomieszczeniu pracy",
           "akapity": [
@@ -193,5 +478,12 @@
     "rola": "redakcja BHPewnie (wymaga autoryzacji specjalisty)",
     "data_opracowania": "2026-09-03",
     "data_przegladu": "2026-12-01"
+  },
+  "wyliczenie_ciasnoty": {
+    "osoby": "ile_osob",
+    "powierzchnia": "powierzchnia_pom",
+    "wysokosc": "wysokosc_pom",
+    "norma_kubatura": "kubatura_min_na_pracownika",
+    "norma_powierzchnia": "powierzchnia_min_na_pracownika"
   }
 }

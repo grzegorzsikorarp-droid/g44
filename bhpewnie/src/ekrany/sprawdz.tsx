@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { useAplikacja } from '../App'
 import { Ikona, Naglowek, PlanszaPelnejWersji, PodstawaPrawna, Przycisk, ZnakWerdyktu } from '../komponenty/podstawowe'
 import { t, sytuacja as znajdzSytuacje } from '../dane/wczytaj'
-import { doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, sytuacjeWKolejnosci, werdyktBezPytan } from '../silnik/sprawdzacz'
+import {
+  doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, sytuacjeWKolejnosci, werdyktBezPytan, widocznePytania,
+} from '../silnik/sprawdzacz'
 import { STAN_PRAWNY, wypelnij } from '../silnik/parametry'
 import { rozwiazProfil } from '../silnik/reguly'
 import { pustyProfil } from '../magazyn/magazyn'
@@ -96,21 +98,32 @@ export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) 
     )
   }
 
-  const pytania = sytuacja.pytania ?? []
+  /*
+    ZMIANA 1.3: lista pytań liczy się z dotychczasowych odpowiedzi, bo pytanie
+    może mieć warunek `gdy`. Pytania o wymiary pomieszczenia pokazują się dopiero
+    po „Tak, ledwo się mieścimy” — pytanie o kubaturę kogoś, kto właśnie powiedział,
+    że miejsca wystarcza, to trzy dotknięcia bez żadnego skutku.
+    Warunek wolno oprzeć wyłącznie na pytaniu STOJĄCYM WYŻEJ — pytanie zależne
+    od późniejszego nigdy by się nie pojawiło.
+  */
+  const pytania = widocznePytania(sytuacja, odpowiedzi)
   const pytanie = pytania[nr]
   const opcje = opcjeZCech(sytuacja, pytanie, rozwiazProfil(profil, dzis))
 
   const odpowiedz = (wartosc: string) => {
     const nowe = { ...odpowiedzi, [pytanie.id]: wartosc }
     ustawOdpowiedzi(nowe)
-    if (nr + 1 < pytania.length) {
+    // Lista przeliczona z NOWĄ odpowiedzią: ta odpowiedź mogła właśnie odsłonić
+    // albo ukryć pytania stojące dalej.
+    const poOdpowiedzi = widocznePytania(sytuacja, nowe)
+    if (nr + 1 < poOdpowiedzi.length) {
       /*
         E2.4 — wynik pośredni. Pokazujemy go tylko wtedy, gdy naprawdę oszczędza pracę:
         sprawa jest już rozstrzygnięta, a do końca zostały CO NAJMNIEJ dwa pytania.
         Przy jednym pytaniu do końca ekran pośredni tylko wydłużałby drogę.
         Najwyżej raz na przebieg.
       */
-      const zostaloPytan = pytania.length - nr - 1
+      const zostaloPytan = poOdpowiedzi.length - nr - 1
       const posredni = pokazanoPosredni || zostaloPytan < 2
         ? null
         : ocenPosrednio(sytuacja, nowe, umowa, dzis)
@@ -133,6 +146,13 @@ export function PytaniaSprawdzacza({ dane }: { dane: Record<string, unknown> }) 
     delete bez[pytania[nr - 1].id]
     ustawOdpowiedzi(bez)
     ustawNr(nr - 1)
+  }
+
+  // Odpowiedź mogła zwinąć listę (np. cofnięcie „ciasno” na „nie”) — wtedy `nr`
+  // wskazywałby poza koniec. Wracamy na ostatnie istniejące pytanie.
+  if (!pytanie) {
+    ustawNr(Math.max(0, pytania.length - 1))
+    return null
   }
 
   return (

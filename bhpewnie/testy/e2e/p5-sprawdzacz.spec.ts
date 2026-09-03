@@ -198,3 +198,56 @@ test('sytuacja 4: badania — żądanie zapłaty od pracownika daje zielony werd
 
   await expect(page.getByRole('heading', { name: /Badania okresowe są na koszt pracodawcy/ })).toBeVisible()
 })
+
+/**
+ * ZMIANA 1.3, sekcja 4 — normy ciasnoty. Pytania o wymiary pojawiają się dopiero
+ * po zgłoszeniu ciasnoty, a werdykt podaje przeliczoną wartość, nie ogólnik.
+ */
+test('zmiana 1.3: pytania o wymiary tylko po zgłoszeniu ciasnoty', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Jest zimno albo ciasno/)
+  await expect(page.getByText('Pytanie 1 z 3')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Powyżej 18 °C' }).click()
+  await page.getByRole('button', { name: 'Siedząca albo lekka' }).click()
+  await expect(page.getByText('Pytanie 3 z 3')).toBeVisible()
+
+  // „Tak” odsłania trzy pytania o wymiary — licznik rośnie w miejscu.
+  await page.getByRole('button', { name: 'Tak, ledwo się mieścimy' }).click()
+  await expect(page.getByRole('heading', { name: /Ile osób pracuje/ })).toBeVisible()
+  await expect(page.getByText('Pytanie 4 z 6')).toBeVisible()
+})
+
+test('zmiana 1.3: ciasno na pewno — werdykt podaje przeliczone metry, nie ogólnik', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Jest zimno albo ciasno/)
+  await page.getByRole('button', { name: 'Powyżej 18 °C' }).click()
+  await page.getByRole('button', { name: 'Siedząca albo lekka' }).click()
+  await page.getByRole('button', { name: 'Tak, ledwo się mieścimy' }).click()
+  await page.getByRole('button', { name: 'Od sześciu do dziesięciu' }).click()
+  await page.getByRole('button', { name: /do 10 m²/ }).click()
+  await page.getByRole('button', { name: /Niskie/ }).click()
+
+  await expect(page.getByRole('heading', { name: /mniej, niż przewiduje norma/ })).toBeVisible()
+  // Liczby z przeliczenia ORAZ normy z parametrów.
+  await expect(page.getByText(/m³ objętości/)).toBeVisible()
+  // Normy padają w dwóch miejscach — w uzasadnieniu i w bloku „ile” — stąd `.first()`.
+  await expect(page.getByText(/13 m³/).first()).toBeVisible()
+  await expect(page.getByText(/2 m²/).first()).toBeVisible()
+  // Oznaczenie źródła zostaje — wartości czekają na potwierdzenie.
+  await expect(page.getByText(/czekają na potwierdzenie przez specjalistę/)).toBeVisible()
+})
+
+test('zmiana 1.3: układ na granicy daje bursztyn i prośbę o pomiar', async ({ page }) => {
+  await wejdzZPrzykladem(page)
+  await otworzSprawe(page, /Jest zimno albo ciasno/)
+  await page.getByRole('button', { name: 'Powyżej 18 °C' }).click()
+  await page.getByRole('button', { name: 'Siedząca albo lekka' }).click()
+  await page.getByRole('button', { name: 'Tak, ledwo się mieścimy' }).click()
+  await page.getByRole('button', { name: 'Od sześciu do dziesięciu' }).click()
+  await page.getByRole('button', { name: /20–40 m²/ }).click()
+  await page.getByRole('button', { name: /Zwykłe/ }).click()
+
+  await expect(page.getByRole('heading', { name: /zależy od dokładnych wymiarów/ })).toBeVisible()
+  await expect(page.getByText(/dokładne wymiary pomieszczenia/)).toBeVisible()
+})

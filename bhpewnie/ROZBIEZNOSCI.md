@@ -4,17 +4,18 @@ Rejestr miejsc, w których brief nie dał się zrealizować dosłownie, oraz dec
 
 Każdy wpis ma pięć części: założenie strategii, co okazało się w praktyce, skutek, proponowane rozstrzygnięcie i dowód.
 
-**Stan na 3 września 2026. Trzydzieści jeden wpisów.** Dotyczy katalogu `bhpewnie/`.
+**Stan na 3 września 2026. Trzydzieści dziewięć wpisów.** Dotyczy katalogu `bhpewnie/`.
 
-Rejestr rósł w trzech turach i tak też się czyta:
+Rejestr rósł w czterech turach i tak też się czyta:
 
 | wpisy | kiedy | czego dotyczą |
 |---|---|---|
 | 1–14 | wydanie 1.1 (1 września) | brief pierwotny: stawki, wymiar czasu pracy, powiadomienia, dostępność |
 | 15–25 | zmiana 1.2 (2 września) | zniesienie sufitu, ewidencja czasu pracy, pakiet umowy, osiem sytuacji |
 | 26–31 | design 1.2 (3 września) | odpowiedź projektowa: warstwy ekranu, kafel 104 px, dwie osie stanu, wersaliki |
+| 32–39 | zmiana 1.3 (3 września) | wybór częstotliwości budzika, próg trzech „Nie wiem”, normy ciasnoty, zachowanie przy 200% |
 
-Lista pytań otwartych dla zespołu stoi na końcu pliku — po zmianie 1.2 i wydaniu design 1.2 zostało ich sześć.
+Lista pytań otwartych dla zespołu stoi na końcu pliku — po zmianie 1.3 zostało ich osiem, a najpoważniejsza z nich nie dotyczy treści, tylko opakowania natywnego (wpis 6).
 
 **Rozstrzygnięcia projektowe** (kolor, układ, plakietki, pasek numerów) mają własny rejestr — `ROZBIEZNOSCI_DESIGN.md` w dokumentacji systemu wizualnego. Ten plik zajmuje się wykonalnością techniczną i merytoryczną.
 
@@ -192,7 +193,7 @@ Prototyp miał „znaleźć miejsca, gdzie założenia się nie sprawdzają”. 
 5. **Kształt budzika monitorowego** — trzy warianty w opisie wpisu 7.
 6. **Harmonogram pracy prawnika** — 86 pozycji do autoryzacji, w tym około 20 krytycznych przed testami z użytkownikami (wpis 8).
 7. **Sprzeczność „co godzinę / co dwie godziny”** (wpis 14).
-8. **Pliki znaków Funduszy Europejskich i godła RP** — pas oznaczeń w dokumentach ma opisane wymiary i kolejność, ale wektory muszą pochodzić z księgi wizualizacji.
+8. **Pliki znaku Funduszy Europejskich i barw Rzeczypospolitej Polskiej** — pas oznaczeń w dokumentach ma opisane wymiary i kolejność, ale wektory muszą pochodzić z księgi wizualizacji.
 
 ---
 
@@ -417,15 +418,117 @@ Pierwsza tura wdrożenia (wpisy 26–30) objęła fundament: warstwy, kafel 104 
 
 ---
 
-## Do rozstrzygnięcia przez zespół — po zmianie 1.2
+# Zmiana 1.3 — wpisy 32–39
 
-Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Doszło osiem, z czego dwa zamknęliśmy sami — zasięg wersalików decyzją zamawiającego „zdecyduj za mnie” (wpis 30b), a zakładki w belce ustaleniem, że rysunek wynikał z luki w zleceniu, nie z propozycji (wpis 30a). Zostaje sześć:
+Zmiana 1.3 (rozstrzygnięcia zespołu z 3 września 2026) odpowiada na listę „Do rozstrzygnięcia — po zmianie 1.2”. Sześć z ośmiu punktów zostało zamkniętych, dwa zostają otwarte świadomie: brzmienie plakietki czeka na test z ludźmi, a `aria-live` licznika na test z NVDA i TalkBack. Wpisy poniżej opisują, co z tego weszło do kodu i co przy okazji wyszło.
 
-9. **Hałas po zniesieniu sufitu** — do 13 przypomnień na dobę przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem (wpis 17).
-10. **„Nie wiem” w pakiecie umowy** — czy trzy takie odpowiedzi mają kierować do bursztynu niezależnie od punktów (wpis 20).
-11. **Brzmienie plakietki kafla warunkowego** — dziś „Zapytamy o jedno” (design 1.2 zdjął wersaliki i skrócił brzmienie); trzy warianty wciąż czekają na test z ludźmi (wpis 19, wpis 30b).
-12. **Znaczenie ekranu E2.4** — czy „wynik pośredni” to ten ekran, który zespół miał na myśli (wpis 15).
-13. **Normy kubatury i wolnej powierzchni** w sytuacji „Jest zimno albo ciasno” — dokument zmiany mówi „kubatura”, ale nie podaje liczby (wpis 25).
-14. **Kafel przy powiększeniu 200%** — rośnie do 148 px i wypycha dokument pod zgięcie; czy dokument zostaje nad zgięciem, czy ustępuje kaflom (pakiet projektowy, „Zachowanie i stany”).
-15. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack.
-16. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą i czy potrzebuje adnotacji, że jest zapisem własnym pracownika. Pytanie do prawników.
+---
+
+## 32. Wybór częstotliwości zdejmuje 82 przypomnienia — ale nie tam, gdzie zespół się spodziewał
+
+- **Rozstrzygnięcie.** Sufit nie wraca. Każdy budzik rytmiczny dostaje wybór: **„raz dziennie”** (jedno powiadomienie obejmujące całą serię) albo **„za każdym razem”** (dawne zachowanie). Domyślnie „raz dziennie”, bo domyślne „za każdym razem” byłoby decyzją aplikacji podjętą za człowieka.
+- **Pomiar, wariant domyślny.** Profil przykładowy, pełny grafik, wszystkie budziki włączone: **17 przypomnień na 14 dni, średnio 1,2 na dobę, najwięcej 2 w jednej dobie.** Zero odrzuconych. Rozkład: przerwa przy monitorze 8, cisza po nocce 4, prasówka 2, protokół przed nocką 2, powrót po Pomocy 1.
+- **Pomiar, wariant głośny.** Wszystko przestawione na „za każdym razem”: **99 przypomnień, średnio 7,1 na dobę, najwięcej 13.** To liczba **co do jednego identyczna** z pomiarem 1.2 — czyli wybór „za każdym razem” naprawdę wraca do dawnego zachowania, a nie do jego przybliżenia.
+- **Wyszło niżej niż oczekiwane 25–30 — i wiadomo dlaczego.** Szacunek zespołu zakładał mniej więcej dwa przypomnienia na każdy z czternastu dni. Profil przykładowy pracuje jednak **8 dni z 14** (cztery dniówki, cztery nocki, sześć dni wolnych), a przypomnienia rytmiczne odzywają się wyłącznie w dni robocze. Do tego terminy (badania 4 listopada, szkolenie 31 grudnia) wypadają **poza oknem czternastu dni** i nie dokładają nic. Osiem dni razy jedno przypomnienie plus cztery ciszy po nocce, dwie prasówki, dwa protokoły i jeden powrót daje dokładnie 17.
+- **Czego to nie znaczy.** Przy grafiku pięciodniowym z monitorem liczba wzrośnie do około 10 dni roboczych, czyli **około 21 przypomnień na 14 dni**. Rząd wielkości zostaje ten sam.
+- **Dowód.** `testy/pomiar-przypomnien.test.ts` — dwa pomiary wypisywane przy każdym przebiegu; `testy/harmonogram.test.ts` — trzy testy zachowania, w tym „sufit NIE wraca”.
+
+---
+
+## 33. „Raz dziennie” przy protokole przed nocką znaczy „raz na serię” — nasza interpretacja
+
+- **Założenie zmiany.** Punkt 1.2: wybór mają „przerwa przy monitorze, protokół przed nocką, **wszystkie inne rytmiczne powtarzające się w obrębie doby**”.
+- **Co okazało się w praktyce.** Protokół przed nocką **nie powtarza się w obrębie doby** — odzywa się raz przed każdą nocką, czyli raz na dobę. Dosłowne „raz dziennie” nic by przy nim nie zmieniło, a tor byłby przełącznikiem bez skutku.
+- **Co zrobiliśmy.** Przyjęliśmy jedyne odczytanie, przy którym wybór coś znaczy: **„raz dziennie” = raz na serię nocek**, czyli przed pierwszą nocką po dniu bez nocki. Przy grafiku 2 nocki + 2 nocki daje to 2 przypomnienia zamiast 4. Opis pod torem mówi wprost „raz przed pierwszą nocką w serii”, więc użytkownik nie musi zgadywać.
+- **Do potwierdzenia przez zespół.** Jeżeli intencją było, żeby protokół nie miał wyboru w ogóle, wystarczy zdjąć mu pole `czestotliwosc` — reszta mechanizmu zostaje bez zmian.
+- **Dowód.** `src/silnik/harmonogram.ts` (`czestotliwoscBudzika`, gałąź `pierwszaWSerii`).
+
+---
+
+## 34. Tor pokazujemy tylko przy budziku włączonym — i tyle miejsca zajmuje
+
+- **Założenie zmiany.** Punkt 1.4: tor „przy pozycjach z wyborem”.
+- **Co zrobiliśmy inaczej.** Tor pojawia się dopiero, gdy budzik jest **włączony**. Ustawienie częstotliwości dla czegoś, co milczy, nie ma skutku, a lista budzików urosłaby o pusty tor przy każdej pozycji — także przy tych, których użytkownik nigdy nie włączy.
+- **Badanie 2 — zmierzone.** Tor ma **58 px**; jeden włączony budzik rytmiczny wydłuża listę o **106 px** (tor plus linijka opisu plus odstępy). Segmenty mają **48 px** przy piśmie 16 px i **68 px** przy 150%, czyli nigdzie nie schodzą poniżej reguły 3. Napisy „raz dziennie” i „za każdym razem” mieszczą się w jednej linii, strona nie wystaje w bok przy 150%. Lista budzików i tak się przewija, więc nic nie wypada z ekranu; profil przykładowy ma najwyżej dwa budziki z wyborem, czyli 212 px w najgorszym razie.
+- **Dowód.** `testy/e2e/p2-p3-p9-budziki.spec.ts` — „badanie 2: tor częstotliwości nie rozpycha listy budzików”, z pomiarami wypisywanymi przy każdym przebiegu.
+
+---
+
+## 35. Badanie 3: powiadomienie zbiorcze mieści się, ale tylko dlatego, że pilnujemy pierwszego zdania
+
+- **Co badaliśmy.** Punkt 8.3: czy treść „Dziś pamiętaj o przerwach…” mieści się w limicie powiadomienia systemowego — i co się dzieje, gdy nie mieści.
+- **Wynik.** Treść przerwy przy monitorze ma **82 znaki**, treść protokołu **76**. Oba mieszczą się w bannerze iOS (dwie linie, około 110 znaków). **Nie mieszczą się** w zwiniętym powiadomieniu Androida, które pokazuje jedną linię, około 50 znaków — reszta idzie za wielokropek i widać ją dopiero po rozwinięciu.
+- **Co z tego wynika.** Limitu nie da się dotrzymać bez okrojenia treści do zdania w rodzaju „Pamiętaj o przerwach”, które nie niesie już informacji, **jakie** przerwy i **jak często**. Zamiast skracać, przyjęliśmy regułę redakcyjną: **pierwsze zdanie musi nieść całą informację samo**, bo tylko ono jest pewne. „Dziś pamiętaj o przerwach” ma 25 znaków i mieści się wszędzie; reszta doprecyzowuje.
+- **Czego nie sprawdziliśmy.** Nie mamy tu prawdziwych powiadomień systemowych (czysta PWA, wpis 6), więc liczby pochodzą z zachowania systemów, a nie z pomiaru na urządzeniu. Przy opakowaniu natywnym trzeba to potwierdzić na obu systemach.
+- **Dowód.** `testy/harmonogram.test.ts` — trzy testy „treść powiadomienia zbiorczego”; test pilnuje progu 50 znaków dla pierwszego zdania i 110 dla całości.
+
+---
+
+## 36. Badanie 4: reguła trzech „Nie wiem” nie zderza się z punktacją — bo zielony i tak był nieosiągalny
+
+- **Rozstrzygnięcie.** Trzy lub więcej odpowiedzi „Nie wiem” dają werdykt **bursztynowy niezależnie od sumy punktów**. Reguła leży w danych (`_nie_wiem` w `08-umowa.json`), tak samo jak punktacja — nie w kodzie silnika.
+- **Badanie 4 — zbieg z wysoką punktacją.** Sprawdziliśmy układ „trzy Tak i trzy Nie wiem”: trafia w regułę progową i pokazuje werdykt o niewiedzy. Kolor się nie zmienia, bo werdykt punktowy przy trzech cechach też jest bursztynowy — **zbieg zmienia treść, nie kolor**.
+- **Co wyszło przy okazji.** Zielony werdykt („Twoja umowa ma cechy umowy o pracę”) wymaga 5 z 6 punktów, a każde „Nie wiem” to punkt mniej. Przy **dwóch** „Nie wiem” maksimum wynosi 4, więc zielony jest nieosiągalny **z samej arytmetyki**, zanim reguła progowa cokolwiek zrobi. Innymi słowy: zielony werdykt dopuszcza najwyżej **jedno** „Nie wiem”. Reguła progowa domyka więc lukę tylko między trzema a sześcioma — dwójka była już zamknięta.
+- **Blok „co sprawdzić”.** Budujemy go z pytań, na które padło **wprost „Nie wiem”**, a nie ze wszystkich braków. Odpowiedź przecząca jest wiedzą; „nie wiem” jest jej brakiem i tylko to drugie warto sprawdzać.
+- **Dowód.** `testy/sprawdzacz.test.ts` — sześć testów „trzy «Nie wiem» w pakiecie umowy”; `testy/e2e/p10-umowa.spec.ts` — trzy przebiegi (3, 6 i 2 razy „Nie wiem”).
+
+---
+
+## 37. Badanie 5: przy 200% układ czterowarstwowy NIE trzymał dokumentu — naprawione
+
+- **Rozstrzygnięcie zespołu.** Punkt 5: dokument zostaje nad zgięciem, kafle się przewijają. „To wynika wprost z układu czterowarstwowego”.
+- **Co okazało się w praktyce.** Nie wynikało. Przy piśmie 32 px (200%) sam **nagłówek stały** rósł z 223 px do około 446 px; razem z pasem akcji i belką nawigacji warstwy nieruchome przekraczały wysokość ekranu i **wypychały dokument pod krawędź**. Układ gwarantował dokument tylko dopóki nagłówek się mieścił — czyli dokładnie do momentu, w którym gwarancja stawała się potrzebna.
+- **Co zrobiliśmy.** Nagłówek ustępuje **jako pierwszy**: kurczy się i przewija u siebie (`flex: 0 3 auto; min-height: 0; overflow-y: auto`), pole kafli jako drugie, a pas z dokumentem i belka nie ustępują nigdy. Przy 100% nic z tego się nie uruchamia, bo jest miejsce.
+- **Zmierzone po naprawie.** Przy 200% w polu kafli mieści się **jeden kafel**, przycisk „Pobierz kartę moich uprawnień” jest widoczny bez przewijania, belka go nie zakrywa, a strona **nie wystaje w bok ani o piksel** (badanie 5: nic innego poza ekran nie wypada).
+- **Warte zapamiętania.** Warstwa oznaczona jako „stała” jest stała tylko dopóki starcza miejsca. Przy powiększeniu pisma trzeba z góry rozstrzygnąć **kolejność ustępowania**, a nie liczyć na to, że mieszczą się wszystkie.
+- **Dowód.** `src/style/globalne.css` (`.warstwa-stala`), `testy/e2e/p4-p6-stanowisko.spec.ts` — „przy powiększeniu 200% dokument zostaje nad zgięciem”.
+
+---
+
+## 38. Normy ciasnoty wpisane — ale nie jako jedna liczba, tylko jako przedział z trzema odpowiedziami
+
+- **Rozstrzygnięcie.** Punkt 4: `kubatura_min_na_pracownika` = **13 m³**, `powierzchnia_min_na_pracownika` = **2 m²**, oba ze źródłem `[do potwierdzenia przez specjalistę]`. Wartości weszły jako parametry z datami obowiązywania, więc podlegają zasadzie 9 tak samo jak stawki.
+- **Problem, którego dokument nie rozstrzyga.** „Werdykt liczy z odpowiedzi użytkownika (ile osób, jaka powierzchnia, jaka wysokość)”. Tyle że **nikt nie zna kubatury swojego pokoju z dokładnością do metra**. Pytanie o dokładne wymiary dałoby albo zgadywanie, albo porzucenie ścieżki.
+- **Co zrobiliśmy.** Użytkownik wybiera **przedziały** („od trzech do pięciu osób”, „około 20–40 m²”, „zwykłe — około 2,5–3 m”), a silnik liczy **oba końce** i rozróżnia trzy odpowiedzi: `ponizej` (norma przekroczona przy każdym układzie liczb z przedziałów), `granica` (może być przekroczona — rozstrzyga pomiar), `powyzej` (nie jest przekroczona przy żadnym). Werdykt podaje wyliczony przedział wprost: „Z Twoich odpowiedzi wychodzi 1,3–4,2 m³ objętości i 0,6–1,7 m² podłogi na osobę. Norma to 13 m³ i 2 m².”
+- **Dlaczego nie zaokrąglamy na niczyją korzyść.** Zaokrąglenie w dół dawałoby fałszywe „norma przekroczona”, w górę — fałszywe „wszystko w porządku”. Trzeci stan („to zależy od dokładnych wymiarów”) jest jedyną uczciwą odpowiedzią przy danych, które użytkownik faktycznie ma.
+- **Nowy mechanizm przy okazji: pytania warunkowe.** Trzy pytania o wymiary pojawiają się **dopiero po „Tak, ledwo się mieścimy”**. Dołożyliśmy do pytania sprawdzacza pole `gdy` — czytane tak samo jak w regułach werdyktu. Warunek wolno oprzeć wyłącznie na pytaniu stojącym wyżej; zależne od późniejszego nie pokazałoby się nigdy. Bez tego każdy, kto wchodzi w sytuację 7 z powodu zimna, odpowiadałby na trzy pytania o kubaturę bez żadnego skutku.
+- **Czego dalej nie wiemy.** Czy 13 m³ i 2 m² dotyczą wszystkich pomieszczeń stałej pracy, czy mają wyłączenia (dokument zmiany wspomina o wyłączeniach „dla pomieszczeń o określonej wysokości”, ale ich nie podaje). Do czasu potwierdzenia werdykt mówi wprost, że wartości są punktem wyjścia do rozmowy, nie gotowym przepisem.
+- **Dowód.** `content/parametry.json`, `content/sytuacje/07-zimno.json`, `src/silnik/sprawdzacz.ts` (`policzCiasnote`, `widocznePytania`); `testy/sprawdzacz.test.ts` (sześć testów), `testy/e2e/p5-sprawdzacz.spec.ts` (trzy przebiegi).
+
+---
+
+## 39. Trzy drobiazgi, z których jeden okazał się nie być drobiazgiem
+
+- **Adnotacja o mocy dowodowej (sekcja 6) stoi także NA EKRANIE, nie tylko w pliku.** Dokument zmiany kazał dodać ją do stopki dokumentu z E7.5. Zrobiliśmy jedno i drugie: człowiek ma wiedzieć, czym ten wydruk jest, **zanim** go pobierze i zaniesie pracodawcy — adnotacja widoczna dopiero po otwarciu PDF-a przychodzi za późno.
+- **Barwy Rzeczypospolitej, nie godło (7.1).** Poprawione w komentarzu generatora dokumentów, w kanwie projektowej v2, w pakiecie przekazania i w tym rejestrze. Sam pas oznaczeń w kodzie był **od początku poprawny** — kolejność FE → barwy RP → UE → nadawca, z podpisem „Rzeczpospolita Polska” pod flagą. Błąd był wyłącznie w opisach. Kanwa wydania pierwszego (`System-BHPewnie.dc.html`) zachowuje dawne brzmienie jako zapis archiwalny.
+- **Alert zimowy (7.2) — dołożony BEZ progu temperatury.** Pasek pokazuje się od 1 listopada do 31 marca przy pracy na otwartej przestrzeni i prowadzi do sytuacji „Jest zimno albo ciasno”. Brzmi „Zimą na dworze — posiłek profilaktyczny i ciepłe napoje” i **nie podaje żadnej liczby stopni**: dokument zmiany progu nie zawiera, a wymyślona temperatura w tym miejscu czytałaby się jak przepis. Pasek przypomina o uprawnieniu, nie orzeka o nim. Próg do uzupełnienia przez zespół.
+- **Reguła budzika przestała kłamać.** Przy okazji sekcji 1 wyszło, że opis budzika monitorowego brzmiał „co godzinę w trakcie zmiany” — czyli opisywał **częstotliwość powiadomienia**. Od 1.3 częstotliwość wybiera użytkownik, więc ten opis przy domyślnym „raz dziennie” byłby nieprawdą. Reguła mówi teraz o **uprawnieniu** („przerwa należy się po każdej godzinie przy ekranie”), a tor — o powiadomieniu. To dwie różne rzeczy i od tej zmiany są rozdzielone.
+- **E2.4 potwierdzone bez zmian (sekcja 3).** Zespół przyjął nadane przez nas znaczenie ekranu „wynik pośredni” wraz z regułą `zostaloPytan >= 2`. Wpis 15 zamknięty, kodu nie ruszaliśmy.
+- **Dowód.** `src/pdf/dokumenty.ts`, `src/ekrany/czas-pracy.tsx`, `src/ekrany/stanowisko.tsx`, `src/silnik/harmonogram.ts`; `testy/e2e/p11-p12-ewidencja.spec.ts` — „PDF ewidencji niesie adnotację o zapisie własnym pracownika”.
+
+---
+
+## Do rozstrzygnięcia przez zespół — po zmianie 1.3
+
+Lista z wydania 1.1 pozostaje w mocy poza punktami 5 i 7, które zmiana 1.2 rozstrzygnęła. Zmiana 1.3 zamknęła sześć z ośmiu punktów listy po 1.2 (hałas, „Nie wiem” w pakiecie umowy, znaczenie E2.4, normy kubatury, kafel przy 200%, ewidencja jako dowód — ta ostatnia adnotacją roboczą, bo samo pytanie prawne zostaje). Zostaje osiem:
+
+**Z wcześniejszych wydań**
+
+9. **Brzmienie plakietki kafla warunkowego** — dziś „Zapytamy o jedno”; trzy warianty czekają na test z ludźmi (wpisy 19, 30b).
+10. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack (pakiet projektowy).
+11. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą. Dokument nosi już adnotację roboczą, ale samo pytanie idzie do prawnika (wpisy 24 i 39).
+
+**Nowe, ze zmiany 1.3**
+
+12. **„Raz dziennie” przy protokole przed nocką** — przyjęliśmy „raz na serię nocek”, bo dosłowne „raz na dobę” nic by przy tym budziku nie zmieniło. Do potwierdzenia albo do zdjęcia wyboru z tego budzika (wpis 33).
+13. **Tor częstotliwości tylko przy budziku włączonym** — nasza decyzja, nie litera dokumentu. Do potwierdzenia (wpis 34).
+14. **Treść powiadomienia zbiorczego na Androidzie** — 82 znaki nie mieszczą się w zwiniętym powiadomieniu; przyjęliśmy regułę „pierwsze zdanie niesie całą informację”. Do sprawdzenia na urządzeniu przy opakowaniu natywnym (wpis 35).
+15. **Wyłączenia od norm kubatury** — dokument zmiany wspomina o wyłączeniach „dla pomieszczeń o określonej wysokości”, ale ich nie podaje. Bez nich werdykt może pokazywać przekroczenie tam, gdzie przepis go nie widzi (wpis 38).
+16. **Próg temperatury dla alertu zimowego** — pasek działa na oknie kalendarzowym (1 XI – 31 III) i celowo nie podaje żadnej liczby stopni, bo dokument jej nie zawiera. Do uzupełnienia (wpis 39).
+
+**Bez zmian od 1.1**
+
+17. **Stawka dodatku nocnego w materiałach promocyjnych** — wszędzie, gdzie pada „5,22 zł”, trzeba dopisać miesiąc albo podać widełki (wpis 1).
+18. **Decyzja o Capacitorze** — bez niej przypomnienia pozostaną funkcją działającą tylko przy otwartej aplikacji (wpis 6). To najpoważniejsza rzecz na całej liście.
+19. **Harmonogram pracy prawnika** — pozycje do autoryzacji, w tym normy z 1.3 (kubatura, powierzchnia) i adnotacja o mocy dowodowej ewidencji (wpisy 8, 38, 39).
+20. **Pliki znaku Funduszy Europejskich i barw Rzeczypospolitej Polskiej** — pas oznaczeń ma opisane wymiary i kolejność, ale wektory muszą pochodzić z księgi wizualizacji.

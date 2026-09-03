@@ -345,12 +345,12 @@ Pełna lista w `ROZBIEZNOSCI_DESIGN.md`. Trzy nowe z tego wydania:
 2. **`aria-live` licznika na żywo** — `off` z przyciskiem odczytu czy `polite`; wymaga testu z NVDA i TalkBack.
 3. **Ewidencja jako dowód** — czy wydruk z E7.5 może być używany w sporze z pracodawcą i czy dokument potrzebuje adnotacji, że jest zapisem własnym pracownika, a nie ewidencją pracodawcy. Pytanie do prawników.
 
-Osobno, z wcześniejszych wydań: brzmienie plakietki (test z użytkownikami), grupowanie listy sytuacji, pliki wektorowe znaków Funduszy Europejskich i godła RP, numery infolinii użyte w makietach jako przykład, dni poprzedniego miesiąca w kalendarzu (kontrast 3,3:1 — elementy nieaktywne, formalnie zwolnione).
+Osobno, z wcześniejszych wydań: brzmienie plakietki (test z użytkownikami), grupowanie listy sytuacji, pliki wektorowe znaku Funduszy Europejskich i barw Rzeczypospolitej Polskiej, numery infolinii użyte w makietach jako przykład, dni poprzedniego miesiąca w kalendarzu (kontrast 3,3:1 — elementy nieaktywne, formalnie zwolnione).
 
 ## Zasoby
 
 - `fzz-logo.png` — znak Forum Związków Zawodowych, źródło dla wariantu „Zawias".
-- Znaki Funduszy Europejskich i godło RP w kanwie są **rysowane wektorowo do specyfikacji** i nie są plikami źródłowymi. Przed publikacją zespół musi wstawić pliki z obowiązującej księgi wizualizacji.
+- Znak Funduszy Europejskich i barwy Rzeczypospolitej Polskiej w kanwie są **rysowane wektorowo do specyfikacji** i nie są plikami źródłowymi. Przed publikacją zespół musi wstawić pliki z obowiązującej księgi wizualizacji.
 - Ikony: wszystkie rysowane inline jako SVG, siatka 24. Nie ma zewnętrznego zestawu ikon.
 - Pismo: IBM Plex Sans z plików lokalnych. Kanwa ładuje je z sieci — **w aplikacji tego nie wolno robić.**
 

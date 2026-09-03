@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, policzPunkty, sytuacjeWKolejnosci } from '../src/silnik/sprawdzacz'
+import {
+  doSprawdzenia, ocen, ocenPosrednio, opcjeZCech, policzCiasnote, policzPunkty,
+  sytuacjeWKolejnosci, widocznePytania,
+} from '../src/silnik/sprawdzacz'
 import { rozwiazProfil } from '../src/silnik/reguly'
 import { pustyProfil } from '../src/magazyn/magazyn'
 import { sytuacja as znajdz, sytuacje } from '../src/dane/wczytaj'
@@ -315,15 +318,159 @@ describe('sytuacja 7: zimno i ciasnota', () => {
     expect(w.ile.join(' ')).toContain('14 °C')
   })
 
-  it('ciasnota bez przekroczonej temperatury daje bursztyn, a kubatura czeka na specjalistę', () => {
+  it('zmiana 1.3: zgloszona ciasnota bez wymiarow nie daje jeszcze werdyktu o ciasnocie', () => {
+    // W 1.2 samo „ciasno: tak” dawalo bursztyn z kubatura „[do uzupelnienia]”.
+    // Od 1.3 kubatura jest liczona, wiec do werdyktu potrzebne sa trzy wymiary;
+    // sciezka bez nich spada na regule zbiorcza. W aplikacji ten stan nie wystapi,
+    // bo pytania warunkowe zadaja te trzy pytania od razu po „Tak”.
     const w = ocen(zimno, { ile_stopni: 'powyzej18', jaka_praca: 'biurowa', ciasno: 'tak' }, 'o_prace', DZIEN)!
-    expect(w.stan).toBe('zalezy')
-    expect(w.ile.join(' ')).toContain('[do uzupełnienia przez specjalistę]')
+    expect(w.stan).toBe('nie_przysluguje')
+    expect(widocznePytania(zimno, { ciasno: 'tak' })).toHaveLength(6)
   })
 
   it('brak termometru daje bursztyn z prośbą o pomiar', () => {
     const w = ocen(zimno, { ile_stopni: 'nie_wiem', jaka_praca: 'biurowa', ciasno: 'nie' }, 'o_prace', DZIEN)!
     expect(w.stan).toBe('zalezy')
     expect(w.pismo.tytul).toContain('pomiar')
+  })
+})
+
+/**
+ * ZMIANA 1.3, sekcja 2 — regula progowa „trzy razy Nie wiem”.
+ * Badanie 4 z sekcji 8: sprawdzamy takze zbieg z wysoka punktacja.
+ */
+describe('zmiana 1.3: trzy „Nie wiem” w pakiecie umowy', () => {
+  const umowa = znajdz('umowa')!
+
+  const odp = (o: Partial<Record<string, string>>) => ({
+    godziny: 'nie', miejsce: 'nie', nadzor: 'nie',
+    zastepstwo: 'tak', sprzet: 'nie', wylacznosc: 'nie', ...o,
+  } as Record<string, string>)
+
+  it('trzy „Nie wiem” daja bursztyn mimo zera punktow', () => {
+    const w = ocen(umowa, odp({ godziny: 'nie_wiem', miejsce: 'nie_wiem', nadzor: 'nie_wiem' }), 'zlecenie', '2026-09-03')
+    expect(w?.stan).toBe('zalezy')
+    expect(w?.naglowek).toMatch(/Za mało wiadomo/)
+    expect(w?.uzasadnienie).toMatch(/Na 3 z sześciu pytań/)
+  })
+
+  it('blok „co sprawdzic” budujemy z pytan bez odpowiedzi, nie ze wszystkich brakow', () => {
+    const w = ocen(umowa, odp({ sprzet: 'nie_wiem', wylacznosc: 'nie_wiem', zastepstwo: 'nie_wiem' }), 'zlecenie', '2026-09-03')
+    expect(w?.do_sprawdzenia).toHaveLength(2)
+    // Pytania odpowiedziane „nie” (godziny, miejsce, nadzor) nie moga tu trafic.
+    expect(w?.do_sprawdzenia?.join(' ')).not.toMatch(/Czy godziny są rzeczywiście/)
+    expect(w?.do_sprawdzenia?.join(' ')).toMatch(/sprzęt|zleceniodawców|zastępstwo/)
+  })
+
+  it('badanie 4: trzy „Nie wiem” i trzy „Tak” — niewiedza wygrywa z punktacja', () => {
+    // Trzy cechy stwierdzone dawalyby bursztyn punktowy (3-4 punkty), ale regula
+    // progowa stoi PRZED punktowa, wiec czlowiek dostaje werdykt o niewiedzy.
+    const w = ocen(
+      umowa,
+      { godziny: 'tak', miejsce: 'tak', nadzor: 'tak', zastepstwo: 'nie_wiem', sprzet: 'nie_wiem', wylacznosc: 'nie_wiem' },
+      'zlecenie', '2026-09-03',
+    )
+    expect(w?.stan).toBe('zalezy')
+    expect(w?.naglowek).toMatch(/Za mało wiadomo/)
+    // Oba werdykty sa bursztynowe, wiec zbieg nie zmienia koloru — zmienia tresc.
+    expect(w?.uzasadnienie).not.toMatch(/Część cech wskazuje/)
+  })
+
+  it('dwa „Nie wiem” to za malo — rozstrzyga punktacja, nie prog', () => {
+    const w = ocen(
+      umowa,
+      { godziny: 'tak', miejsce: 'tak', nadzor: 'tak', zastepstwo: 'nie', sprzet: 'nie_wiem', wylacznosc: 'nie_wiem' },
+      'zlecenie', '2026-09-03',
+    )
+    // Cztery cechy stwierdzone -> bursztyn punktowy. Prog niewiedzy sie nie odpalil.
+    expect(w?.stan).toBe('zalezy')
+    expect(w?.naglowek).toMatch(/Część cech wskazuje/)
+  })
+
+  it('badanie 4: zielony werdykt wymaga najwyzej JEDNEGO „Nie wiem”', () => {
+    // Arytmetyka progu: kazde „Nie wiem” to punkt mniej, a zielen zaczyna sie od pieciu
+    // na szesc. Przy dwoch „Nie wiem” maksimum wynosi cztery, wiec zielony jest
+    // nieosiagalny — nie z powodu reguly progowej, tylko z samego liczenia.
+    const jedno = ocen(
+      umowa,
+      { godziny: 'tak', miejsce: 'tak', nadzor: 'tak', zastepstwo: 'nie', sprzet: 'tak', wylacznosc: 'nie_wiem' },
+      'zlecenie', '2026-09-03',
+    )
+    expect(jedno?.stan).toBe('przysluguje')
+
+    const wszystkieZDwoma = policzPunkty(umowa, {
+      godziny: 'tak', miejsce: 'tak', nadzor: 'tak', zastepstwo: 'nie', sprzet: 'nie_wiem', wylacznosc: 'nie_wiem',
+    })
+    expect(wszystkieZDwoma?.punkty).toBeLessThanOrEqual(4)
+  })
+
+  it('ostrzezenie o konfrontacji zostaje takze przy werdykcie z niewiedzy', () => {
+    const w = ocen(umowa, odp({ godziny: 'nie_wiem', miejsce: 'nie_wiem', nadzor: 'nie_wiem' }), 'zlecenie', '2026-09-03')
+    expect(w?.ostrzezenie).toMatch(/Ryzyko, że pracodawca zareaguje źle/)
+  })
+})
+
+/**
+ * ZMIANA 1.3, sekcja 4 — normy ciasnoty w sytuacji 7.
+ * Wartosci (13 m³ i 2 m²) sa rozstrzygnieciem zespolu i nosza oznaczenie
+ * wymagajace potwierdzenia. Silnik liczy z PRZEDZIALOW, wiec rozroznia
+ * „na pewno za malo” od „moze byc za malo”.
+ */
+describe('zmiana 1.3: przeliczenie ciasnoty', () => {
+  const zimno = znajdz('zimno')!
+  const D = '2026-09-03'
+
+  const bezCiasnoty = { ile_stopni: 'powyzej18', jaka_praca: 'biurowa', ciasno: 'nie' }
+  const zCiasnota = (o: Record<string, string>) => ({
+    ile_stopni: 'powyzej18', jaka_praca: 'biurowa', ciasno: 'tak', ...o,
+  })
+
+  it('pytania o wymiary pokazuja sie DOPIERO po zgloszeniu ciasnoty', () => {
+    expect(widocznePytania(zimno, {}).map((p) => p.id)).toEqual(['ile_stopni', 'jaka_praca', 'ciasno'])
+    expect(widocznePytania(zimno, bezCiasnoty).map((p) => p.id)).toEqual(['ile_stopni', 'jaka_praca', 'ciasno'])
+    expect(widocznePytania(zimno, { ciasno: 'tak' }).map((p) => p.id))
+      .toEqual(['ile_stopni', 'jaka_praca', 'ciasno', 'ile_osob', 'powierzchnia_pom', 'wysokosc_pom'])
+  })
+
+  it('dziesiec osob w malym niskim pomieszczeniu — norma przekroczona na pewno', () => {
+    // 6-10 m², wysokosc 2,2-2,5 m, 6-10 osob: najlepszy uklad to 10*2,5/6 = 4,2 m³.
+    const o = zCiasnota({ ile_osob: 'do10', powierzchnia_pom: 'do10', wysokosc_pom: 'niskie' })
+    const c = policzCiasnote(zimno, o, D)
+    expect(c?.stan).toBe('ponizej')
+    const w = ocen(zimno, o, 'o_prace', D)
+    expect(w?.stan).toBe('przysluguje')
+    expect(w?.naglowek).toMatch(/mniej, niż przewiduje norma/)
+    // Wynik podany liczbami, nie ogolnikiem.
+    expect(w?.uzasadnienie).toMatch(/m³/)
+    expect(w?.uzasadnienie).toMatch(/13 m³/)
+  })
+
+  it('dwie osoby w duzym pomieszczeniu — norma dotrzymana', () => {
+    const o = zCiasnota({ ile_osob: 'do2', powierzchnia_pom: 'ponad40', wysokosc_pom: 'wysokie' })
+    const c = policzCiasnote(zimno, o, D)
+    expect(c?.stan).toBe('powyzej')
+    expect(ocen(zimno, o, 'o_prace', D)?.stan).toBe('nie_przysluguje')
+  })
+
+  it('uklad na granicy daje bursztyn i prosbe o pomiar, a nie werdykt', () => {
+    // 20-40 m², 2,5-3 m, 6-10 osob: od 20*2,5/10 = 5 m³ do 40*3/6 = 20 m³.
+    const o = zCiasnota({ ile_osob: 'do10', powierzchnia_pom: 'do40', wysokosc_pom: 'zwykle' })
+    const c = policzCiasnote(zimno, o, D)
+    expect(c?.stan).toBe('granica')
+    const w = ocen(zimno, o, 'o_prace', D)
+    expect(w?.stan).toBe('zalezy')
+    expect(w?.do_sprawdzenia?.join(' ')).toMatch(/dokładne wymiary/)
+  })
+
+  it('bez zgloszonej ciasnoty przeliczenia nie ma, a werdykt jest temperaturowy', () => {
+    expect(policzCiasnote(zimno, bezCiasnoty, D)).toBeNull()
+    expect(ocen(zimno, bezCiasnoty, 'o_prace', D)?.naglowek).toMatch(/progi nie są przekroczone/)
+  })
+
+  it('normy nosza oznaczenie wymagajace potwierdzenia', () => {
+    const o = zCiasnota({ ile_osob: 'do10', powierzchnia_pom: 'do10', wysokosc_pom: 'niskie' })
+    const w = ocen(zimno, o, 'o_prace', D)
+    expect(w?.ile.join(' ')).toMatch(/czekają na potwierdzenie przez specjalistę/)
+    expect(w?.podstawa).toMatch(/do uzupełnienia przez specjalistę/)
   })
 })

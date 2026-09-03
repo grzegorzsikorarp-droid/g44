@@ -146,3 +146,48 @@ test('P10: przy umowie o pracę pakiet pokazuje ekran informacyjny zamiast pyta�
   await page.getByRole('button', { name: /Zobacz porównanie form zatrudnienia/ }).click()
   await expect(page.locator('.para')).toHaveCount(8)
 })
+
+/**
+ * ZMIANA 1.3, sekcja 2 — reguła progowa „trzy razy Nie wiem”.
+ * Nadrzędna wobec punktacji: brak wiedzy nie może kończyć się zdaniem
+ * „nic nie musisz robić”, bo reszta aplikacji przy pominiętym pytaniu
+ * pokazuje WIĘCEJ, nie mniej.
+ */
+test('zmiana 1.3: trzy „Nie wiem” dają bursztyn zamiast szarego werdyktu', async ({ page }) => {
+  await doPytaniaOUmowe(page)
+  await page.getByRole('button', { name: /Umowa zlecenia/ }).click()
+  await page.getByRole('button', { name: 'Sprawdź teraz' }).click()
+  await odpowiedzNaSzesc(page, ['Nie wiem', 'Nie wiem', 'Nie wiem', 'Tak', 'Nie', 'Nie'])
+
+  await expect(page.getByRole('heading', { name: /Za mało wiadomo/ })).toBeVisible()
+  await expect(page.getByText(/Na 3 z sześciu pytań/)).toBeVisible()
+
+  // Blok „co sprawdzić” ma najwyżej dwie pozycje i pochodzi z pytań bez odpowiedzi.
+  await expect(page.getByText('Co sprawdzić')).toBeVisible()
+  const pozycje = page.locator('.pas ul li')
+  expect(await pozycje.count()).toBeLessThanOrEqual(2)
+
+  // Ostrzeżenie przed konfrontacją zostaje — sprawa jest wciąż otwarta.
+  await expect(page.locator('[data-test="ostrzezenie"]')).toBeVisible()
+})
+
+test('zmiana 1.3: sześć „Nie wiem” nie kończy się zdaniem, że nic nie przysługuje', async ({ page }) => {
+  await doPytaniaOUmowe(page)
+  await page.getByRole('button', { name: /Umowa zlecenia/ }).click()
+  await page.getByRole('button', { name: 'Sprawdź teraz' }).click()
+  await odpowiedzNaSzesc(page, ['Nie wiem', 'Nie wiem', 'Nie wiem', 'Nie wiem', 'Nie wiem', 'Nie wiem'])
+
+  await expect(page.getByRole('heading', { name: /Za mało wiadomo/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /wygląda na zlecenie/ })).toHaveCount(0)
+  await expect(page.getByText(/Na 6 z sześciu pytań/)).toBeVisible()
+})
+
+test('zmiana 1.3: dwa „Nie wiem” zostawiają rozstrzygnięcie punktacji', async ({ page }) => {
+  await doPytaniaOUmowe(page)
+  await page.getByRole('button', { name: /Umowa zlecenia/ }).click()
+  await page.getByRole('button', { name: 'Sprawdź teraz' }).click()
+  await odpowiedzNaSzesc(page, ['Tak', 'Tak', 'Tak', 'Nie', 'Nie wiem', 'Nie wiem'])
+
+  await expect(page.getByRole('heading', { name: /Część cech wskazuje na stosunek pracy/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Za mało wiadomo/ })).toHaveCount(0)
+})

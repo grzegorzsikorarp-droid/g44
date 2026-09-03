@@ -790,6 +790,17 @@ export function EksportEwidencji() {
           {zapisuje ? 'Składamy dokument…' : 'Pobierz PDF'}
         </Przycisk>
         <Przycisk odmiana="obrys" ikona="kalendarz" onClick={wroc}>Zmień miesiąc</Przycisk>
+
+        {/*
+          ZMIANA 1.3, sekcja 6 — adnotacja o mocy dowodowej. Stoi na ekranie, a nie
+          tylko w pliku: człowiek ma wiedzieć, czym ten dokument jest, ZANIM go pobierze
+          i zaniesie do pracodawcy. Pytanie o moc dowodową idzie do prawnika
+          (ROZBIEZNOSCI.md, wpis 36) — do tego czasu treść nosi oznaczenie źródła.
+        */}
+        <p className="drobne">
+          Zapis prowadzony samodzielnie przez pracownika. Nie zastępuje ewidencji czasu pracy
+          prowadzonej przez pracodawcę. [treść do potwierdzenia przez specjalistę]
+        </p>
       </div>
     </>
   )

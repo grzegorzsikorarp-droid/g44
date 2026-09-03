@@ -1,4 +1,4 @@
-import type { DefinicjaBudzika, IdBudzika, Profil, ZaplanowanePrzypomnienie } from '../typy'
+import type { Czestotliwosc, DefinicjaBudzika, IdBudzika, Profil, ZaplanowanePrzypomnienie } from '../typy'
 import { dodajDni, iso, oknoSnuPoNocce, ramyZmiany, szablonDnia } from './grafik'
 
 /**
@@ -12,6 +12,13 @@ import { dodajDni, iso, oknoSnuPoNocce, ramyZmiany, szablonDnia } from './grafik
  * (ROZBIEZNOSCI.md, wpis 7). Przełącznik przy każdym budziku wystarcza:
  * użytkownik, który włączył przerwę przy monitorze, ma ją dostawać.
  * Sufitu nie wolno przywracać w żadnej postaci.
+ *
+ * ZMIANA 1.3 — hałas rozstrzygnięty wyborem, nie odrzucaniem. Każdy budzik
+ * rytmiczny ma częstotliwość: „raz dziennie” (jedno powiadomienie obejmujące
+ * całą serię, o starcie zmiany plus 15 minut) albo „za każdym razem” (dawna
+ * seria). Domyślnie „raz dziennie”, bo domyślne „za każdym razem” byłoby
+ * decyzją aplikacji podjętą za człowieka, a nie jego decyzją. Aplikacja
+ * dalej nie odrzuca niczego, o co użytkownik poprosił.
  *
  * Uwaga inżynierska (patrz ROZBIEZNOSCI.md): wyliczenie harmonogramu jest w pełni
  * wykonalne w przeglądarce, ale SAMO WYZWOLENIE powiadomienia o zadanej godzinie
@@ -42,13 +49,28 @@ export const DEFINICJE_BUDZIKOW: DefinicjaBudzika[] = [
   },
   {
     id: 'przerwa_monitor', nazwa: 'Przerwa przy monitorze',
-    regula: 'co godzinę w trakcie zmiany', grupa: 'rytm',
+    // Reguła opisuje UPRAWNIENIE (kiedy przerwa się należy), a tor częstotliwości —
+    // jak często aplikacja o nim mówi. Od zmiany 1.3 to dwie różne rzeczy i nie wolno
+    // ich mieszać: „co godzinę” w regule przy domyślnym „raz dziennie” byłoby kłamstwem.
+    regula: 'przerwa należy się po każdej godzinie przy ekranie', grupa: 'rytm',
     widoczny_gdy: { wszystkie: [{ cecha: 'monitor', wartosc_w: ['od2do4', 'ponad4'] }, { modyfikator: 'umowa', wartosc_w: ['o_prace'] }] },
+    czestotliwosc: {
+      wybieralna: true, domyslna: 'raz_dziennie',
+      opis_raz: 'raz na początku zmiany',
+      opis_zawsze: 'co godzinę w trakcie zmiany',
+      tresc_raz: 'Dziś pamiętaj o przerwach — przerwa należy Ci się po każdej godzinie przy ekranie.',
+    },
   },
   {
     id: 'protokol_przed_nocka', nazwa: 'Protokół przed nocką',
     regula: '2 godziny przed zmianą N', grupa: 'rytm',
     widoczny_gdy: { wszystkie: [{ cecha: 'zmiany', wartosc_w: ['zmiany_noce'] }] },
+    czestotliwosc: {
+      wybieralna: true, domyslna: 'raz_dziennie',
+      opis_raz: 'raz przed pierwszą nocką w serii',
+      opis_zawsze: 'przed każdą nocką',
+      tresc_raz: 'Zaczyna się seria nocek. Przejrzyj protokół — obowiązuje przed każdą z nich.',
+    },
   },
   {
     id: 'cisza_po_nocce', nazwa: 'Cisza po nocce',
@@ -68,6 +90,8 @@ export const DEFINICJE_BUDZIKOW: DefinicjaBudzika[] = [
 export interface WejscieHarmonogramu {
   profil: Profil
   wlaczone: Partial<Record<IdBudzika, boolean>>
+  /** Zmiana 1.3: wybór częstotliwości. Brak wpisu = wartość domyślna z definicji. */
+  czestotliwosci?: Partial<Record<IdBudzika, Czestotliwosc>>
   /** Ścieżka Pomocy przejdzia wczoraj — wywołuje przypomnienie nazajutrz. */
   powrotPoPomocy?: string | null
   /** Symulacja alertu pogodowego w prototypie. */
@@ -79,9 +103,29 @@ function dodaj(lista: ZaplanowanePrzypomnienie[], p: ZaplanowanePrzypomnienie) {
   lista.push(p)
 }
 
+/**
+ * Zmiana 1.3: częstotliwość obowiązująca dla budzika.
+ * Budzik bez wyboru zachowuje się jak dawniej („zawsze”) — to jego jedyny tryb.
+ * Budzik z wyborem bierze ustawienie użytkownika, a gdy go nie ma — wartość domyślną.
+ */
+export function czestotliwoscBudzika(
+  id: IdBudzika,
+  wybory: Partial<Record<IdBudzika, Czestotliwosc>> = {},
+): Czestotliwosc {
+  const def = DEFINICJE_BUDZIKOW.find((d) => d.id === id)
+  if (!def?.czestotliwosc?.wybieralna) return 'zawsze'
+  return wybory[id] ?? def.czestotliwosc.domyslna
+}
+
+/** Treść jednego powiadomienia zbiorczego — leży przy definicji, nie w kodzie ekranu. */
+function trescZbiorcza(id: IdBudzika): string {
+  return DEFINICJE_BUDZIKOW.find((d) => d.id === id)?.czestotliwosc?.tresc_raz ?? ''
+}
+
 /** Wylicza wszystkie przypomnienia na najbliższe 14 dni. */
 export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Date()): ZaplanowanePrzypomnienie[] {
   const { profil, wlaczone } = wejscie
+  const czestotliwosci = wejscie.czestotliwosci ?? {}
   const lista: ZaplanowanePrzypomnienie[] = []
   const grafik = profil.grafik
 
@@ -95,21 +139,40 @@ export function wyliczSurowy(wejscie: WejscieHarmonogramu, teraz: Date = new Dat
       const { start, koniec } = ramyZmiany(dzien, szablon)
 
       if (wlaczone.przerwa_monitor) {
-        for (let g = 1; g < (koniec.getTime() - start.getTime()) / 3600000; g += 1) {
+        if (czestotliwoscBudzika('przerwa_monitor', czestotliwosci) === 'zawsze') {
+          for (let g = 1; g < (koniec.getTime() - start.getTime()) / 3600000; g += 1) {
+            dodaj(lista, {
+              budzik: 'przerwa_monitor', nazwa: 'Przerwa przy monitorze',
+              kiedy: new Date(start.getTime() + g * 3600000).toISOString(),
+              powod: `w trakcie zmiany ${szablon.skrot}`,
+            })
+          }
+        } else {
+          // Jedno powiadomienie obejmujące całą serię — kwadrans po starcie zmiany,
+          // żeby nie wpadło w moment przebierania się i wchodzenia na stanowisko.
           dodaj(lista, {
             budzik: 'przerwa_monitor', nazwa: 'Przerwa przy monitorze',
-            kiedy: new Date(start.getTime() + g * 3600000).toISOString(),
-            powod: `w trakcie zmiany ${szablon.skrot}`,
+            kiedy: new Date(start.getTime() + 15 * 60000).toISOString(),
+            powod: trescZbiorcza('przerwa_monitor'),
+            zbiorcze: true,
           })
         }
       }
 
       if (wlaczone.protokol_przed_nocka && szablon.nocna) {
-        dodaj(lista, {
-          budzik: 'protokol_przed_nocka', nazwa: 'Protokół przed nocką',
-          kiedy: new Date(start.getTime() - 2 * 3600000).toISOString(),
-          powod: `2 godziny przed zmianą ${szablon.skrot}`,
-        })
+        // „Raz dziennie” przy protokole znaczy „raz na serię”: budzik powtarza się
+        // z dnia na dzień, nie w obrębie doby, więc jedyne sensowne zagęszczenie
+        // to pierwsza nocka po dniu bez nocki (ROZBIEZNOSCI.md, wpis 33).
+        const zawsze = czestotliwoscBudzika('protokol_przed_nocka', czestotliwosci) === 'zawsze'
+        const wczoraj = szablonDnia(grafik, iso(dodajDni(data, -1)))
+        if (zawsze || !wczoraj?.nocna) {
+          dodaj(lista, {
+            budzik: 'protokol_przed_nocka', nazwa: 'Protokół przed nocką',
+            kiedy: new Date(start.getTime() - 2 * 3600000).toISOString(),
+            powod: zawsze ? `2 godziny przed zmianą ${szablon.skrot}` : trescZbiorcza('protokol_przed_nocka'),
+            zbiorcze: !zawsze,
+          })
+        }
       }
 
       // Cisza po nocce: automatyczna, bez przełącznika (zasada 8).

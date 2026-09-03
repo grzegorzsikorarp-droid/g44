@@ -162,6 +162,22 @@
       "obowiazuje_od": "2026-01-01",
       "obowiazuje_do": null,
       "zrodlo": "minimalna temperatura w pomieszczeniu przy pracy fizycznej [do potwierdzenia przez specjalistę]"
+    },
+    {
+      "id": "kubatura_min_na_pracownika",
+      "wartosc": 13,
+      "jednostka": "m³",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "minimalna wolna objętość pomieszczenia stałej pracy na jednego pracownika [do potwierdzenia przez specjalistę]"
+    },
+    {
+      "id": "powierzchnia_min_na_pracownika",
+      "wartosc": 2,
+      "jednostka": "m²",
+      "obowiazuje_od": "2026-01-01",
+      "obowiazuje_do": null,
+      "zrodlo": "minimalna wolna powierzchnia podłogi w pomieszczeniu stałej pracy na jednego pracownika [do potwierdzenia przez specjalistę]"
     }
   ]
 }

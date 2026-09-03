@@ -22,8 +22,8 @@ npm run preview      # podgląd zbudowanej paczki, port 4173
 Testy:
 
 ```bash
-npm test             # 112 testów jednostkowych: reguły, parametry, harmonogram, ewidencja, sprawdzacze
-npm run test:e2e     # 95 testów e2e: przebiegi P1–P12, sytuacje brzegowe, reguły designu, dostępność
+npm test             # 130 testów jednostkowych: reguły, parametry, harmonogram, ewidencja, sprawdzacze
+npm run test:e2e     # 108 testów e2e: przebiegi P1–P12, sytuacje brzegowe, reguły designu, dostępność
 npm run ekrany       # eksport listy ekranów i porównanie z mapą (66)
 ```
 
@@ -59,6 +59,20 @@ zmiana czasu urzędowego, która rozstrzyga długość nocki, byłaby niewykrywa
 | 1.2 G | Cztery pozostałe sytuacje domknięte; opcje pytania budowane z cech profilu | gotowe |
 | 1.2 H | Wdrożenie odpowiedzi projektowej: kafel 104 px, cztery stany, listy zamiast tabel | gotowe |
 | 1.2 I | Domknięcie pakietu: tor segmentów, blok sumy, karta sygnału, miniatura A4, zasięg wersalików | gotowe |
+
+### Zmiana 1.3 (3 września 2026)
+
+Rozstrzygnięcia zespołu na listę pytań otwartych z rejestru 1.2.
+
+| Etap | Zakres | Stan |
+|---|---|---|
+| 1.3 A | Wybór częstotliwości przy każdym budziku rytmicznym, domyślnie „raz dziennie" | gotowe |
+| 1.3 B | Próg trzech „Nie wiem" w pakiecie umowy — bursztyn niezależnie od punktacji | gotowe |
+| 1.3 C | Normy ciasnoty (13 m³ / 2 m²), pytania warunkowe, przeliczenie z przedziałów | gotowe |
+| 1.3 D | Adnotacja o mocy dowodowej ewidencji, barwy RP zamiast godła, alert zimowy | gotowe |
+| 1.3 E | Zachowanie przy powiększeniu 200%, pięć badań obowiązkowych, rejestr 32–39 | gotowe |
+
+**Hałas powiadomień zmierzony ponownie:** przy ustawieniach domyślnych **17 przypomnień na 14 dni** (średnio 1,2 na dobę, najwięcej 2) zamiast 99 sprzed zmiany. Wariant „wszystko za każdym razem" daje dokładnie te same 99 co w 1.2 — czyli wybór realnie wraca do dawnego zachowania. Sufit nie wrócił w żadnej postaci: nic nie jest odrzucane, zmienia się tylko to, kto decyduje o gęstości serii.
 
 Zaimplementowano **66 ekranów** — dokładnie tyle, ile podaje punkt 8 zmiany 1.2 (`npm run ekrany` porównuje rejestr z mapą i kończy się zerem tylko przy pełnej zgodności).
 
@@ -216,13 +230,14 @@ Zlecenie ma **sekcję 0 pisaną po pierwszej rundzie**: mapa 66 ekranów, cztery
 
 ## Czego prototyp nie rozstrzyga
 
-Trzy rzeczy wymagają decyzji zespołu albo testu z ludźmi, nie kolejnej iteracji kodu:
+Cztery rzeczy wymagają decyzji zespołu, prawnika albo testu z ludźmi — nie kolejnej iteracji kodu. Pełna lista: koniec `ROZBIEZNOSCI.md`, osiem punktów.
 
-1. **Powiadomienia.** Silnik harmonogramu działa i liczy poprawnie, ale czysta PWA nie wyzwoli budzika przy zamkniętej aplikacji. Potrzebne opakowanie natywne (Capacitor). Szczegóły: `ROZBIEZNOSCI.md`, wpis 6.
-2. **Hałas po zniesieniu sufitu.** Sufit zniesiono zgodnie ze zmianą 1.2 — i ta sama miara pokazuje teraz do **13 przypomnień na dobę** przy pełnym grafiku. Dwie drogi wyjścia, żadna nie jest sufitem: wpis 17.
-3. **„Nie wiem" w pakiecie umowy.** Sześć odpowiedzi „Nie wiem" daje dziś werdykt szary „nic nie musisz robić" — najbardziej niepewny użytkownik dostaje najbardziej stanowczą odpowiedź: wpis 20.
-4. **Zakładki w belce nawigacji.** Makiety projektowe pokazują „Moje · Sprawdź · Mój czas · Pomoc", co cofa nazwy ze zmiany 1.2 i wycina Aktualności z nawigacji. To decyzja produktowa, nie wizualna — nie wdrożono: wpis 30a.
-5. **Autoryzacja treści prawnych.** Pozycje ze znacznikiem czekają na specjalistę; około 20 z nich jest krytycznych przed testami z użytkownikami: wpis 8.
+1. **Powiadomienia.** Silnik harmonogramu działa i liczy poprawnie, ale czysta PWA nie wyzwoli budzika przy zamkniętej aplikacji. Potrzebne opakowanie natywne (Capacitor). To najpoważniejsza rzecz na liście — bez niej połowa obietnicy aplikacji jest niewykonalna. Szczegóły: `ROZBIEZNOSCI.md`, wpis 6.
+2. **Autoryzacja treści prawnych.** Pozycje ze znacznikiem czekają na specjalistę; około 20 z nich jest krytycznych przed testami z użytkownikami. Doszły do nich normy ciasnoty z 1.3 (13 m³ / 2 m²) i adnotacja o mocy dowodowej ewidencji: wpisy 8, 38, 39.
+3. **Ewidencja jako dowód.** Czy wydruk z E7.5 da się użyć w sporze z pracodawcą. Dokument nosi już adnotację roboczą („zapis prowadzony samodzielnie przez pracownika"), ale samo pytanie jest dla prawnika: wpisy 24, 39.
+4. **Rzeczy do testu z ludźmi.** Brzmienie plakietki kafla warunkowego (wpis 19) i sposób odczytu licznika na żywo przez NVDA i TalkBack — bez urządzeń i użytkowników nie da się tego rozstrzygnąć przy biurku.
+
+Hałas powiadomień **przestał być pytaniem otwartym**: zmiana 1.3 dała wybór częstotliwości przy każdym budziku rytmicznym i zbiła pomiar z 99 do 17 przypomnień na 14 dni, bez przywracania sufitu (wpis 32).
 
 ---
 

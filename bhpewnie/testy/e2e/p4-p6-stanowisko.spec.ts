@@ -73,6 +73,41 @@ test('E1.1: rozwinięcie pełnej listy nie wypycha dokumentu spod zgięcia', asy
   await expect(page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })).toBeInViewport()
 })
 
+test('zmiana 1.3: przy powiększeniu 200% dokument zostaje nad zgięciem', async ({ page }) => {
+  /*
+    Rozstrzygnięcie zespołu (zmiana 1.3, sekcja 5): dokument zostaje nad zgięciem,
+    kafle się przewijają. Wynika to wprost z układu czterowarstwowego — rozciąga się
+    wyłącznie pole kafli, a pas z dokumentem jest stały.
+    200% symulujemy podwojeniem pisma bazowego: `rem` w tej aplikacji niesie wszystko
+    poza jednym elementem — patrz badanie 5 w ROZBIEZNOSCI.md, wpis 37.
+  */
+  await wejdzZPrzykladem(page)
+  await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
+
+  const przycisk = page.getByRole('button', { name: /Pobierz kartę moich uprawnień/ })
+  await expect(przycisk).toBeInViewport()
+
+  // Badanie 5: czy przy 200% cokolwiek INNEGO wypada poza ekran w poziomie.
+  const wBok = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+  expect(wBok, `strona wystaje w bok o ${wBok} px`).toBeLessThanOrEqual(1)
+
+  // Pole kafli faktycznie się kurczy — to ono ustępuje, nie dokument.
+  const ilePelnych = await page.locator('.warstwa-pole .kafel:not(.kafel--swobodny)').evaluateAll((ns) => {
+    const pole = document.querySelector('.warstwa-pole')!.getBoundingClientRect()
+    return ns.filter((n) => n.getBoundingClientRect().bottom <= pole.bottom + 1).length
+  })
+  console.log(`E1.1 przy 200%: w polu kafli mieści się ${ilePelnych} kafli, dokument zostaje widoczny`)
+  expect(ilePelnych).toBeGreaterThanOrEqual(1)
+
+  // Belka nawigacji dalej nie zakrywa dokumentu.
+  const zakryty = await przycisk.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const belka = document.querySelector('nav.belka')!.getBoundingClientRect()
+    return r.bottom > belka.top
+  })
+  expect(zakryty).toBe(false)
+})
+
 test('design 1.2: kafel uprawnienia ma dokładnie 104 px, niezależnie od długości treści', async ({ page }) => {
   await wejdzZPrzykladem(page)
   await page.getByRole('button', { name: /Pokaż wszystkie uprawnienia/ }).click()

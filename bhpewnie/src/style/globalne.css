@@ -391,7 +391,22 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 */
 .ekran--warstwowy { display: flex; flex-direction: column; gap: 0; padding: 0; }
 
-.warstwa-stala { flex: 0 0 auto; }
+/*
+  ZMIANA 1.3, sekcja 5 — zachowanie przy powiększeniu pisma.
+  Rozstrzygnięcie zespołu: dokument zostaje nad zgięciem, kafle się przewijają.
+  Przy 200% same warstwy stałe (nagłówek 446 px + pas akcji + belka) przekraczały
+  wysokość ekranu i wypychały dokument POD krawędź — układ czterowarstwowy
+  gwarantował dokument tylko dopóki nagłówek się mieścił.
+  Nagłówek ustępuje więc jako PIERWSZY: kurczy się i przewija u siebie
+  (`flex-shrink: 3`), pole kafli jako drugie, a pas z dokumentem i belka
+  nie ustępują nigdy. Przy 100% nic z tego się nie uruchamia — jest miejsce.
+*/
+.warstwa-stala {
+  flex: 0 3 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 .warstwa-pole {
   flex: 1 1 auto;
@@ -1000,3 +1015,16 @@ textarea.pole { resize: vertical; line-height: 1.45; }
   background: var(--karta); border: 1px solid var(--obrys);
   border-radius: var(--r-karta); padding: var(--o3) var(--o4);
 }
+
+/*
+  WYBÓR CZĘSTOTLIWOŚCI BUDZIKA (zmiana 1.3, sekcja 1.4).
+  Tor stoi POD przełącznikiem i jest z nim związany wcięciem, nie ramką —
+  ramka robiłaby z pary „przełącznik + tor” kartę, a to nadal jedna pozycja listy.
+*/
+.wybor-czestotliwosci {
+  margin: calc(-1 * var(--o1)) 0 var(--o2);
+  padding: 0 var(--o3) 0 var(--o4);
+}
+/* Pismo mniejsze niż w E7.3, bo napis jest dłuższy — ale cel dotykowy zostaje 48 px. */
+.wybor-czestotliwosci .tor-segmentow__segment { font-size: 0.9375rem; }
+.wybor-czestotliwosci .drobne { margin-top: 6px; }

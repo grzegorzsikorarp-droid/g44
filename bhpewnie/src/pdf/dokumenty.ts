@@ -118,7 +118,7 @@ function poleDoWpisania(p: Pisarz, etykieta: string): void {
  *
  * Flagę UE i barwy RP rysujemy wektorowo (UE: pole 2:3, dwanaście gwiazd na okręgu
  * o promieniu ⅓ wysokości, #003399 i #FFCC00; RP: pole 5:8, biel i #D4213D).
- * Znak Funduszy Europejskich i godło RP muszą pochodzić z pliku źródłowego —
+ * Znak Funduszy Europejskich i barwy Rzeczypospolitej Polskiej muszą pochodzić z pliku źródłowego —
  * odrysowanie ich łamie księgę wizualizacji, więc zostaje miejsce z ramką kreskowaną.
  */
 const WYSOKOSC_PASA = 76
@@ -398,6 +398,15 @@ export async function ewidencjaMiesiaca(dane: DaneEwidencji): Promise<Blob> {
   }
 
   linia(p)
+  /*
+    ZMIANA 1.3, sekcja 6 — adnotacja robocza o mocy dowodowej.
+    Pytanie, czy taki wydruk da się użyć w sporze z pracodawcą, idzie do prawnika
+    i NIE jest rozstrzygane w prototypie (ROZBIEZNOSCI.md, wpis 36). Do czasu
+    odpowiedzi dokument mówi wprost, czym jest i czym nie jest.
+  */
+  pisz(p, 'Zapis prowadzony samodzielnie przez pracownika. Nie zastępuje ewidencji czasu pracy '
+    + 'prowadzonej przez pracodawcę. [treść do potwierdzenia przez specjalistę]',
+    { rozmiar: 9, kolor: [0.42, 0.45, 0.44], odstepPo: 3 })
   pisz(p, 'Własna ewidencja pracownika prowadzona w aplikacji BHPewnie. '
     + 'Dokument pomocniczy — dane nie opuszczają urządzenia.',
     { rozmiar: 9, kolor: [0.42, 0.45, 0.44] })

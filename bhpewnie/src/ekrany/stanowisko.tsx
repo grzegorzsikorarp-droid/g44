@@ -122,6 +122,16 @@ export function MojeStanowisko() {
   const sezonUpalu = miesiac >= 5 && miesiac <= 9
   const pokazUpal = !bezProfilu && przekroczonyProg && sezonUpalu
 
+  /*
+    ZMIANA 1.3, punkt 7.2 — pasek zimowy, druga strona tego samego mechanizmu.
+    Okno 1 listopada – 31 marca jest rozstrzygnięciem zespołu; dotyczy pracy na
+    otwartej przestrzeni. ŻADNEGO progu temperatury tu nie podajemy: dokument
+    zmiany go nie zawiera, a wymyślona liczba w tym miejscu czytałaby się jak
+    przepis. Pasek przypomina o uprawnieniu, nie orzeka o nim.
+  */
+  const sezonZimowy = miesiac >= 11 || miesiac <= 3
+  const pokazZimno = !bezProfilu && !pokazUpal && sezonZimowy && profil.odpowiedzi.teren === true
+
   const naZleceniu = profil.umowa === 'zlecenie' || profil.umowa === 'dzialalnosc'
 
   return (
@@ -177,6 +187,17 @@ export function MojeStanowisko() {
             <span className="pasek-jednolinijkowy__tekst">
               Dziś {TEMPERATURA_SYMULOWANA} °C — napoje i przerwy
             </span>
+            <Ikona nazwa="dalej" rozmiar={20} />
+          </button>
+        )}
+
+        {pokazZimno && (
+          <button
+            className="pas pasek-jednolinijkowy pasek-sezonowy"
+            onClick={() => nawiguj('E2.2', { sytuacja: 'zimno' })}
+          >
+            <Ikona nazwa="platek" rozmiar={24} />
+            <span className="pasek-jednolinijkowy__tekst">{t('stanowisko.pasek_zimowy')}</span>
             <Ikona nazwa="dalej" rozmiar={20} />
           </button>
         )}
