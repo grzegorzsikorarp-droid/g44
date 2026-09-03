@@ -54,7 +54,7 @@ while (i < wiersze.length) {
     }))
     dzieci.push(new Paragraph({
       children: [new TextRun({
-        text: 'Forum Związków Zawodowych · prototyp roboczy aplikacji BHP · stan na 1 września 2026',
+        text: 'Forum Związków Zawodowych · prototyp roboczy aplikacji BHP · wydanie 1.2, 3 września 2026',
         size: 20, color: SZARY,
       })],
       border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: ZIELEN, space: 8 } },
