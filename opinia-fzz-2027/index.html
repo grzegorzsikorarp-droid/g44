@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deficyt strategiczny · Opinia FZZ 2027</title>
+<meta name="description" content="Opinia Forum Związków Zawodowych do projektu ustawy budżetowej na rok 2027 jako przestrzenne uniwersum treści: deficyt strategiczny w środku, sześć obszarów jego ekspozycji, wskaźnik 103% jako emanacja, konkluzja jako horyzont.">
+<meta name="theme-color" content="#05060A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!--
+  FZZ · Opinia do projektu ustawy budżetowej na rok 2027
+  Uniwersum treści. Cała treść pochodzi z tekstu opinii (wrzesień 2026).
+  Architektura sceny odwzorowuje architekturę wywodu:
+    źródło  = część 1, deficyt strategiczny ("projekt jest jego ekspozycją")
+    orbita  = części 2–7, obszary, w których deficyt się ujawnia
+    emanacja = część 8, wskaźnik 103% ("emanacja wszystkich tych deficytów")
+    horyzont = część 9, konkluzja i trzy oczekiwania
+  Zależność zewnętrzna: three.js r128 (cdnjs). Bez WebGL strona przechodzi na układ płaski.
+-->
+<style>
+:root{
+  --tlo:#05060A; --tlo-2:#0C0E14; --tlo-3:#13161F; --linia:rgba(255,255,255,.12); --linia-2:rgba(255,255,255,.22);
+  --tekst:#F2F3F6; --tekst-2:#C6CBD6; --mgla:#8A92A3;
+  --czerw:#E8202A; --czerw-2:#FF4D55; --czerw-3:#B3131C;
+  --c1:#FF4D55; --c2:#F2A33A; --c3:#E0C46B; --c4:#8FB3D9; --c5:#C9A0F0; --c6:#6FD3B8; --c7:#A9B4C4; --c8:#FF5A62; --c9:#FFFFFF;
+  --rys:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --txt:"IBM Plex Sans","Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,monospace;
+  --panel-w:440px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--tlo);color:var(--tekst);font-family:var(--txt);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,h4,p,ul,ol,figure{margin:0;padding:0}
+ul,ol{list-style:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--czerw-2);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ikona{width:1em;height:1em;display:inline-block;vertical-align:-.15em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.et{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mgla)}
+.et b{color:var(--czerw-2);font-weight:500}
+.rys{font-family:var(--rys);font-weight:700;line-height:.95;letter-spacing:.005em;text-wrap:balance}
+
+/* ====== UNIWERSUM ====== */
+#uniwersum{position:relative;height:100svh;min-height:600px;overflow:hidden;background:var(--tlo)}
+#plotno{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#plotno.ciag{cursor:grabbing}
+#etykiety{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.ety{position:absolute;left:0;top:0;pointer-events:auto;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 7px;border:1px solid var(--linia);background:rgba(5,6,10,.62);backdrop-filter:blur(4px);font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:var(--tekst-2);white-space:nowrap;transition:border-color .15s,color .15s,background .15s;will-change:transform}
+.ety .ikona{font-size:1rem;color:var(--k)}
+.ety .nr{color:var(--k);font-weight:500}
+.ety:hover,.ety.hov{border-color:var(--k);color:#fff;background:rgba(5,6,10,.85)}
+.ety.akt{border-color:var(--k);color:#fff;background:rgba(5,6,10,.92);box-shadow:0 0 0 1px var(--k),0 0 24px -6px var(--k)}
+.ety.ksiezyc{padding:3px 8px;font-size:.66rem;border-color:transparent;background:rgba(5,6,10,.5);color:var(--tekst-2)}
+.ety.ksiezyc .nr{color:var(--k)}
+.ety.ksiezyc:hover{border-color:var(--k)}
+.ety[hidden]{display:none}
+.ety.ukryj{opacity:0;pointer-events:none}
+
+.hud{position:absolute;inset:0;pointer-events:none;z-index:5}
+.hud > *{pointer-events:auto}
+.belka{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:18px;padding:16px 24px;background:linear-gradient(180deg,rgba(5,6,10,.85),rgba(5,6,10,0))}
+.marka{display:flex;align-items:center;gap:12px;text-decoration:none}
+.marka .znak{width:34px;height:34px;background:var(--czerw);clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%);display:grid;place-items:center;font-family:var(--rys);font-weight:900;font-size:1.15rem;color:#fff}
+.marka span{font-family:var(--rys);font-weight:700;font-size:1.05rem;letter-spacing:.06em;color:#fff}
+.belka .et{display:none}
+.belka-akcje{margin-left:auto;display:flex;gap:8px}
+.guz{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;border:1px solid var(--linia-2);color:var(--tekst);background:rgba(5,6,10,.55);text-decoration:none;transition:background .15s,border-color .15s,color .15s}
+.guz:hover{background:#fff;color:var(--tlo);border-color:#fff}
+.guz-krew{background:var(--czerw);border-color:var(--czerw);color:#fff}
+.guz-krew:hover{background:var(--czerw-2);border-color:var(--czerw-2);color:#fff}
+.guz[aria-pressed="true"]{background:#fff;color:var(--tlo);border-color:#fff}
+
+.tytul{position:absolute;left:24px;bottom:118px;max-width:560px;transition:opacity .35s,transform .35s}
+.tytul .et{margin-bottom:12px}
+.tytul h1{font-family:var(--rys);font-weight:900;font-size:clamp(3.2rem,8vw,6.8rem);line-height:.86;letter-spacing:-.01em;color:#fff;text-wrap:balance}
+.tytul h1 em{font-style:normal;color:var(--czerw-2)}
+.tytul .lead{margin-top:16px;max-width:48ch;font-size:1.02rem;color:var(--tekst-2)}
+.tytul .lead b{color:#fff;font-weight:500}
+.tytul .wsk{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;color:var(--mgla)}
+.tytul .wsk span::before{content:"";display:inline-block;width:6px;height:6px;background:var(--czerw);margin-right:8px;vertical-align:middle}
+#uniwersum.otwarty .tytul{opacity:0;transform:translateY(10px);pointer-events:none}
+
+.legenda{position:absolute;right:24px;top:78px;display:grid;gap:6px;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;color:var(--mgla);text-transform:uppercase}
+.legenda span{display:flex;align-items:center;gap:10px}
+.legenda i{width:10px;height:10px;border-radius:50%;background:var(--k);box-shadow:0 0 10px var(--k)}
+#uniwersum.otwarty .legenda{opacity:0;pointer-events:none}
+
+/* dok nawigacyjny */
+.dok{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:stretch;gap:2px;padding:4px;background:rgba(12,14,20,.86);border:1px solid var(--linia);backdrop-filter:blur(8px);max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
+.dok::-webkit-scrollbar{display:none}
+.dok button{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:64px;padding:8px 8px 7px;color:var(--tekst-2);border:1px solid transparent;transition:background .15s,color .15s,border-color .15s;position:relative}
+.dok button .ikona{font-size:1.35rem;color:var(--k)}
+.dok button span{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;white-space:nowrap}
+.dok button:hover{background:rgba(255,255,255,.06);color:#fff}
+.dok button[aria-current="true"]{background:rgba(255,255,255,.1);border-color:var(--k);color:#fff}
+.dok .sep{width:1px;background:var(--linia);margin:6px 4px}
+.dok .tour{min-width:auto;flex-direction:row;gap:8px;padding:8px 14px}
+.dok .tour .ikona{color:var(--czerw-2);font-size:1.1rem}
+.dok .tour[aria-pressed="true"]{background:var(--czerw);color:#fff;border-color:var(--czerw)}
+.dok .tour[aria-pressed="true"] .ikona{color:#fff}
+
+/* panel części */
+.panel{position:absolute;top:0;right:0;bottom:0;width:var(--panel-w);max-width:100%;background:rgba(9,10,16,.94);border-left:1px solid var(--linia);backdrop-filter:blur(14px);transform:translateX(102%);transition:transform .38s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;z-index:6}
+#uniwersum.otwarty .panel{transform:none}
+.panel-glowa{padding:22px 24px 16px;border-bottom:1px solid var(--linia);position:relative}
+.panel-glowa .et{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.panel-glowa .et .ikona{font-size:1.2rem;color:var(--k)}
+.panel-glowa h2{font-family:var(--rys);font-weight:700;font-size:2.1rem;line-height:.95;color:#fff;padding-right:44px;text-wrap:balance}
+.panel-glowa .teza{margin-top:12px;font-size:1.02rem;line-height:1.45;color:#fff;border-left:2px solid var(--k);padding-left:12px;font-style:italic}
+.panel .zamknij{position:absolute;top:18px;right:18px;width:34px;height:34px;border:1px solid var(--linia-2);display:grid;place-items:center;color:var(--tekst-2)}
+.panel .zamknij:hover{background:#fff;color:var(--tlo);border-color:#fff}
+.zakladki{display:flex;border-bottom:1px solid var(--linia);overflow-x:auto;scrollbar-width:none}
+.zakladki::-webkit-scrollbar{display:none}
+.zakladki button{flex:1 0 auto;padding:11px 12px;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mgla);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.zakladki button[aria-selected="true"]{color:#fff;border-bottom-color:var(--k)}
+.panel-cialo{flex:1;overflow-y:auto;padding:20px 24px 28px;scrollbar-width:thin;scrollbar-color:var(--linia-2) transparent}
+.panel-cialo p{font-size:.95rem;line-height:1.6;color:var(--tekst-2)}
+.panel-cialo p+p{margin-top:12px}
+.panel-cialo p b{color:#fff;font-weight:500}
+.panel-cialo .lb{font-family:var(--rys);font-weight:700;font-size:1.15em;color:var(--k);letter-spacing:.01em}
+.panel-cialo h4{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mgla);margin:22px 0 10px}
+.panel-cialo h4:first-child{margin-top:0}
+.skutek{margin-top:18px;padding:14px 16px;background:rgba(232,32,42,.1);border:1px solid rgba(232,32,42,.35)}
+.skutek h4{margin:0 0 6px;color:var(--czerw-2)}
+.skutek p{color:#fff}
+.cytat{margin-top:18px;padding:14px 16px;border:1px solid var(--linia);background:var(--tlo-2)}
+.cytat p{font-style:italic;color:#fff;font-size:1rem;line-height:1.5}
+.cytat .zr{margin-top:8px;font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--mgla);font-style:normal}
+.cytat .akcje{display:flex;gap:8px;margin-top:10px}
+.guz-maly{font-size:.66rem;padding:6px 10px}
+.ksiezyce{display:grid;gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.ksiezyce button{display:grid;grid-template-columns:44px 1fr;gap:12px;text-align:left;padding:12px 14px;background:var(--tlo-2);transition:background .15s}
+.ksiezyce button:hover{background:var(--tlo-3)}
+.ksiezyce button .nr{font-family:var(--rys);font-weight:700;font-size:1.3rem;color:var(--k)}
+.ksiezyce button h5{margin:0;font-weight:500;font-size:.95rem;color:#fff;line-height:1.3}
+.ksiezyce button p{font-size:.86rem;color:var(--tekst-2);line-height:1.45;margin-top:4px}
+.ksiezyce button[aria-expanded="false"] p{display:none}
+.liczby-mini{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.liczby-mini div{background:var(--tlo-2);padding:12px 12px 10px}
+.liczby-mini b{display:block;font-family:var(--rys);font-weight:700;font-size:1.7rem;line-height:1;color:#fff;font-variant-numeric:tabular-nums}
+.liczby-mini span{display:block;font-size:.8rem;color:var(--tekst-2);line-height:1.35;margin-top:5px}
+.liczby-mini i{display:block;font-style:normal;font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;color:var(--mgla);margin-top:6px}
+.powiaz{display:grid;gap:8px}
+.powiaz button{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;text-align:left;padding:11px 14px;border:1px solid var(--linia);background:var(--tlo-2);transition:border-color .15s,background .15s}
+.powiaz button:hover{border-color:var(--k2);background:var(--tlo-3)}
+.powiaz .ikona{font-size:1.2rem;color:var(--k2)}
+.powiaz h5{margin:0;font-size:.9rem;font-weight:500;color:#fff}
+.powiaz p{font-size:.82rem;color:var(--tekst-2);line-height:1.4;margin-top:2px}
+.powiaz .strz{font-family:var(--mono);color:var(--mgla)}
+.panel-stopka{display:flex;gap:8px;padding:12px 24px;border-top:1px solid var(--linia);background:rgba(5,6,10,.6)}
+.panel-stopka .guz{flex:1;justify-content:center}
+
+/* postęp / zwiedzanie */
+.postep{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent;z-index:7}
+.postep i{display:block;height:100%;width:0;background:var(--czerw-2);transition:width .1s linear}
+
+/* komunikat */
+.kom{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:#fff;color:var(--tlo);font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
+.kom.jest{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* fallback bez WebGL */
+.plaska{display:none;position:absolute;inset:0;padding:110px 24px 120px;overflow:auto}
+#uniwersum.bez3d .plaska{display:block}
+#uniwersum.bez3d #plotno,#uniwersum.bez3d #etykiety,#uniwersum.bez3d .legenda{display:none}
+.plaska .siatka{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--linia);border:1px solid var(--linia);max-width:1100px}
+.plaska button{text-align:left;padding:18px;background:var(--tlo-2)}
+.plaska button .ikona{font-size:1.6rem;color:var(--k)}
+.plaska button h3{font-family:var(--rys);font-size:1.4rem;margin-top:10px}
+
+/* ====== LĄD ====== */
+.lad{position:relative;z-index:2;background:var(--tlo)}
+.obszar{max-width:1180px;margin:0 auto;padding:88px 24px}
+.obszar+.obszar{padding-top:0}
+.glowa{display:grid;grid-template-columns:auto 1fr;gap:20px 28px;align-items:end;margin-bottom:34px}
+.glowa .et{grid-column:1/-1}
+.glowa h2{font-family:var(--rys);font-weight:700;font-size:clamp(2.2rem,4.6vw,3.8rem);line-height:.92;color:#fff;text-wrap:balance;max-width:16ch}
+.glowa p{font-size:1rem;color:var(--tekst-2);max-width:56ch;padding-bottom:6px}
+
+/* kryterium i granice */
+.kryt{display:grid;grid-template-columns:1.1fr 1fr;gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.kryt > div{background:var(--tlo-2);padding:30px 30px 32px}
+.kryt h3{font-family:var(--rys);font-weight:700;font-size:1.9rem;line-height:.95;color:#fff;margin-bottom:16px}
+.kryt h3 em{font-style:normal;color:var(--czerw-2)}
+.kryt p{color:var(--tekst-2);font-size:.98rem}
+.kryt .wielkie{font-family:var(--rys);font-weight:900;font-size:clamp(2.6rem,5vw,4rem);line-height:.9;color:#fff;margin:6px 0 18px;text-wrap:balance}
+.kryt .wielkie em{font-style:normal;color:var(--czerw-2)}
+.granice{display:grid;gap:10px;margin-top:8px}
+.granice li{position:relative;padding-left:42px;font-size:.95rem;color:var(--tekst-2);line-height:1.5}
+.granice li::before{content:"NIE";position:absolute;left:0;top:3px;font-family:var(--rys);font-weight:900;font-size:.95rem;color:var(--czerw-2);letter-spacing:.04em}
+.granice li b{color:#fff;font-weight:500}
+.kryt .funk{display:flex;gap:14px;align-items:center;margin-top:22px;padding-top:18px;border-top:1px solid var(--linia)}
+.kryt .funk b{font-family:var(--rys);font-weight:900;font-size:2rem;color:var(--czerw-2);line-height:1}
+.kryt .funk span{font-size:.9rem;color:var(--tekst-2);max-width:40ch}
+
+/* liczby: karty obracane */
+.karty{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;perspective:1400px}
+.karta{position:relative;height:196px;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.8,.2,1);cursor:pointer;text-align:left;width:100%}
+.karta.odwr{transform:rotateY(180deg)}
+.karta .strona{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--linia);background:linear-gradient(160deg,var(--tlo-3),var(--tlo-2));padding:18px 20px;display:flex;flex-direction:column;transform:translateZ(1px)}
+.karta .tyl{transform:rotateY(180deg) translateZ(1px);background:var(--tlo-2);border-color:var(--k)}
+.karta .et{display:flex;justify-content:space-between;gap:8px}
+.karta .et i{font-style:normal;color:var(--k)}
+.karta .w{font-family:var(--rys);font-weight:900;font-size:clamp(2.6rem,3.4vw,3.4rem);line-height:.9;color:#fff;margin-top:auto;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.karta .w small{font-size:.5em;font-weight:700;color:var(--tekst-2);margin-left:.1em}
+.karta .o{font-size:.88rem;color:var(--tekst-2);line-height:1.4;margin-top:8px}
+.karta .tyl .o{color:#fff;margin-top:12px;font-size:.92rem}
+.karta .tyl .zr{margin-top:auto;font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;color:var(--mgla);line-height:1.45}
+.karta:hover:not(.odwr){transform:rotateY(-6deg) rotateX(4deg)}
+.karta .odwroc{position:absolute;right:14px;top:14px;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;color:var(--mgla)}
+
+/* symulator */
+.sym{display:grid;grid-template-columns:1.05fr 1fr;gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.sym > div{background:var(--tlo-2);padding:28px 30px 30px}
+.sym .duzy{font-family:var(--rys);font-weight:900;font-size:clamp(4.5rem,9vw,7.5rem);line-height:.85;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sym .duzy small{font-size:.32em;color:var(--czerw-2);font-weight:700;margin-left:.15em;vertical-align:.9em;letter-spacing:.02em}
+.sym input[type=range]{width:100%;margin:22px 0 6px;accent-color:var(--czerw);height:32px;cursor:pointer}
+.sym .skala{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;color:var(--mgla)}
+.sym .skala b{color:#fff;font-weight:500}
+.sym .znaczniki{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.sym .znaczniki button{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;padding:6px 10px;border:1px solid var(--linia-2);color:var(--tekst-2)}
+.sym .znaczniki button:hover,.sym .znaczniki button[aria-pressed="true"]{background:#fff;color:var(--tlo);border-color:#fff}
+.sym .wynik{display:grid;gap:14px}
+.sym .w{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--linia)}
+.sym .w:last-child{border-bottom:0}
+.sym .w span{font-size:.86rem;color:var(--tekst-2)}
+.sym .w b{font-family:var(--rys);font-weight:700;font-size:1.9rem;line-height:1;color:#fff;font-variant-numeric:tabular-nums;text-align:right}
+.sym .w b.min{color:var(--czerw-2)}
+.sym .w .pasek{grid-column:1/-1;height:6px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.sym .w .pasek i{position:absolute;left:0;top:0;bottom:0;background:var(--czerw);transition:width .35s cubic-bezier(.2,.8,.2,1)}
+.sym .w .pasek i.b{background:#fff}
+.sym .w .pasek em{position:absolute;top:-4px;bottom:-4px;width:2px;background:#fff;opacity:.7}
+.sym .w .pod{grid-column:1/-1;font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;color:var(--mgla);line-height:1.5}
+.sym .uwaga{margin-top:20px;font-family:var(--mono);font-size:.66rem;letter-spacing:.05em;line-height:1.6;color:var(--mgla);border-top:1px solid var(--linia);padding-top:12px}
+
+/* próg epok */
+.os-wrap{position:relative;overflow-x:auto;overflow-y:hidden;border:1px solid var(--linia);background:var(--tlo-2);scrollbar-width:thin;scrollbar-color:var(--linia-2) transparent;perspective:1200px}
+.os{display:grid;grid-template-columns:150px repeat(var(--kol),minmax(150px,1fr));grid-auto-rows:auto;min-width:1580px}
+.os .rok{padding:14px 12px 10px;font-family:var(--rys);font-weight:900;font-size:1.8rem;color:#fff;border-bottom:1px solid var(--linia);border-left:1px solid var(--linia);position:sticky;top:0;background:var(--tlo-2);z-index:2}
+.os .rok small{display:block;font-family:var(--mono);font-weight:400;font-size:.62rem;letter-spacing:.1em;color:var(--mgla);text-transform:uppercase;margin-top:4px}
+.os .rok.prog{color:var(--czerw-2);border-left:2px solid var(--czerw)}
+.os .rok.prog small{color:var(--czerw-2)}
+.os .pas{padding:14px 12px;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mgla);border-bottom:1px solid var(--linia);position:sticky;left:0;background:var(--tlo-2);z-index:1;display:flex;align-items:flex-start;line-height:1.5}
+.os .pas b{color:#fff;font-weight:500;display:block}
+.os .kom-os{border-left:1px solid var(--linia);border-bottom:1px solid var(--linia);padding:10px 10px;display:grid;gap:8px;align-content:start;min-height:120px}
+.os .kom-os.prog{border-left:2px solid var(--czerw)}
+.zd{display:block;text-align:left;width:100%;padding:9px 10px;border:1px solid var(--linia);background:var(--tlo-3);font-size:.8rem;line-height:1.4;color:var(--tekst-2);transform-style:preserve-3d;transition:transform .25s,border-color .2s,background .2s}
+.zd:hover{transform:translateZ(18px) rotateX(3deg);border-color:var(--linia-2);background:#191d28;color:#fff}
+.zd time{display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;color:var(--k,var(--mgla));margin-bottom:3px}
+.zd b{color:#fff;font-weight:500}
+.zd[aria-expanded="true"]{border-color:var(--k,var(--czerw));background:#191d28;color:#fff}
+.zd .wiecej{display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--linia);font-size:.76rem;color:var(--tekst-2)}
+.zd[aria-expanded="true"] .wiecej{display:block}
+.os-legenda{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mgla)}
+.os-legenda span::before{content:"";display:inline-block;width:14px;height:2px;background:var(--k);margin-right:8px;vertical-align:middle}
+
+/* oczekiwania */
+.ocz{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.ocz > div{background:var(--tlo-2);padding:28px 26px 30px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.ocz .ikona{font-size:2rem;color:var(--czerw-2)}
+.ocz h3{font-family:var(--rys);font-weight:700;font-size:1.7rem;line-height:.95;color:#fff;text-wrap:balance}
+.ocz p{font-size:.92rem;color:var(--tekst-2)}
+.ocz .brak{margin-top:auto;padding-top:12px;border-top:1px solid var(--linia);font-family:var(--mono);font-size:.66rem;letter-spacing:.06em;line-height:1.5;color:var(--mgla)}
+.ocz .brak b{color:var(--czerw-2);font-weight:500}
+.ocz > div::after{content:"";position:absolute;right:-40px;bottom:-40px;width:120px;height:120px;border-radius:50%;border:1px solid rgba(255,77,85,.25);pointer-events:none}
+.gotowosc{margin-top:26px;padding:26px 30px;border:1px solid rgba(232,32,42,.4);background:linear-gradient(120deg,rgba(232,32,42,.14),rgba(232,32,42,.03));display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+.gotowosc b{font-family:var(--rys);font-weight:900;font-size:clamp(2rem,4vw,3rem);line-height:.9;color:#fff;max-width:14ch;text-wrap:balance}
+.gotowosc p{font-size:1rem;color:var(--tekst-2);max-width:66ch}
+
+/* skutki */
+.skutki{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.skutki div{background:var(--tlo-2);padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.skutki b{font-family:var(--rys);font-weight:900;font-size:2.2rem;line-height:.85;color:var(--czerw-2);font-variant-numeric:tabular-nums;min-width:3ch}
+.skutki p{font-size:.92rem;color:var(--tekst-2);line-height:1.5}
+.skutki p strong{color:#fff;font-weight:500}
+
+/* źródła / materiały */
+.pliki{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--linia);border:1px solid var(--linia)}
+.plik{background:var(--tlo-2);padding:20px;display:flex;flex-direction:column;gap:8px;text-decoration:none;text-align:left;transition:background .15s}
+.plik:hover{background:var(--czerw);color:#fff}
+.plik h3{font-family:var(--rys);font-weight:700;font-size:1.3rem;line-height:1}
+.plik p{font-size:.86rem;color:var(--tekst-2);line-height:1.4}
+.plik:hover p,.plik:hover .fmt{color:#FFE2E2}
+.plik .fmt{margin-top:auto;font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--mgla)}
+.zrodla{columns:2;column-gap:40px;margin-top:8px}
+.zrodla li{break-inside:avoid;padding:9px 0;border-bottom:1px dotted var(--linia-2);font-size:.88rem;line-height:1.4}
+.zrodla a{text-decoration:none;border-bottom:1px solid var(--czerw)}
+.zrodla a:hover{color:var(--czerw-2)}
+.zrodla .co{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;color:var(--mgla);margin-top:2px}
+.stopka{padding:36px 24px 80px;color:var(--mgla);font-size:.88rem;line-height:1.6;max-width:1180px;margin:0 auto;border-top:1px solid var(--linia)}
+.stopka strong{color:#fff}
+
+@media (max-width:980px){
+  .kryt,.sym{grid-template-columns:1fr}
+  .ocz{grid-template-columns:1fr}
+  .glowa{grid-template-columns:1fr}
+  .legenda{display:none}
+}
+@media (max-width:760px){
+  :root{--panel-w:100%}
+  .panel{top:auto;height:72svh;border-left:0;border-top:1px solid var(--linia);transform:translateY(102%)}
+  .tytul{left:16px;right:16px;bottom:104px}
+  .tytul h1{font-size:clamp(2.6rem,15vw,4.4rem)}
+  .tytul .lead{font-size:.92rem}
+  .belka{padding:12px 16px}
+  .belka-akcje .guz span{display:none}
+  .dok{bottom:14px}
+  .dok button{min-width:54px}
+  .obszar{padding:60px 16px}
+  .zrodla{columns:1}
+  .gotowosc{grid-template-columns:1fr}
+  .karta{height:180px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.001ms!important;animation:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="2.6" stroke-dasharray="2.2 2"/></symbol>
+    <symbol id="i-2" viewBox="0 0 24 24"><path d="M12 12l6.5-5.5"/><path d="M4 12a8 8 0 0 0 16 0"/><path d="M12 4a8 8 0 0 0-8 8" stroke-dasharray="2.2 2.2"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-3" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z" stroke-dasharray="3 2.2"/><path d="M14 3v5h5"/><path d="M10 14h5M10 17.5h5"/></symbol>
+    <symbol id="i-4" viewBox="0 0 24 24"><path d="M3 5h5v4.5h4.5V14H17v4.5h4"/><path d="M3 20h18" stroke-dasharray="2.2 2.2"/></symbol>
+    <symbol id="i-5" viewBox="0 0 24 24"><path d="M3.5 4.5h9.5v7.5H8.5l-3 3v-3h-2z"/><path d="M14 9h6.5v7.5h-1.5v3l-3-3H14v-3" stroke-dasharray="2.2 2.2"/></symbol>
+    <symbol id="i-6" viewBox="0 0 24 24"><path d="M12 4.5v15M6 20h12"/><path d="M4 10l3-4.5 3 4.5a3 3 0 0 1-6 0zM14 10l3-4.5 3 4.5a3 3 0 0 1-6 0z"/><path d="M12 4.5h0" /></symbol>
+    <symbol id="i-7" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8 12.5h8" stroke-dasharray="2.2 2.2"/></symbol>
+    <symbol id="i-8" viewBox="0 0 24 24"><path d="M4 16.5a8 8 0 0 1 16 0"/><path d="M12 16.5L7.5 12"/><circle cx="12" cy="16.5" r="1.4" fill="currentColor" stroke="none"/><path d="M4 16.5h2M18 16.5h2"/></symbol>
+    <symbol id="i-9" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-graj" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-strz" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-wariant" viewBox="0 0 24 24"><path d="M4 6h8v12H4z"/><path d="M14 6h6v12h-6z" stroke-dasharray="2.4 2.2"/><path d="M7 10h2M7 13h2M17 10h0M17 13h0"/></symbol>
+    <symbol id="i-harm" viewBox="0 0 24 24"><path d="M4 5h16v15H4z"/><path d="M4 9h16M9 5V3M15 5V3"/><path d="M8 13h3M13 13h3M8 16.5h3" /></symbol>
+    <symbol id="i-struk" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8 10h8M8 13h8M8 16h5" /></symbol>
+  </defs>
+</svg>
+
+<!-- ============ UNIWERSUM ============ -->
+<section id="uniwersum" aria-label="Uniwersum opinii">
+  <canvas id="plotno" aria-label="Przestrzenna mapa opinii: deficyt strategiczny w środku, obszary jego ekspozycji na orbicie, wskaźnik 103 procent jako emanacja, konkluzja jako horyzont" role="img"></canvas>
+  <div id="etykiety"></div>
+
+  <div class="plaska" id="plaska">
+    <p class="et" style="margin-bottom:14px">Twoja przeglądarka nie obsługuje grafiki 3D. Oto ta sama mapa w układzie płaskim.</p>
+    <div class="siatka" id="plaska-siatka"></div>
+  </div>
+
+  <div class="hud">
+    <div class="belka">
+      <a class="marka" href="https://fzz.org.pl/" aria-label="Forum Związków Zawodowych"><span class="znak">F</span><span>FZZ</span></a>
+      <div class="belka-akcje">
+        <a class="guz" href="#kryterium"><span>Kryterium</span></a>
+        <a class="guz" href="#liczby"><span>Liczby</span></a>
+        <a class="guz" href="#prog"><span>Próg epok</span></a>
+        <a class="guz guz-krew" href="#" data-plik="opinia-pdf">PDF</a>
+      </div>
+    </div>
+
+    <div class="legenda" aria-hidden="true">
+      <span style="--k:#FF4D55"><i></i>Źródło · deficyt strategiczny</span>
+      <span style="--k:#C6CBD6"><i></i>Obszary ekspozycji · części 2–7</span>
+      <span style="--k:#FF5A62"><i></i>Emanacja · wskaźnik 103%</span>
+      <span style="--k:#FFFFFF"><i></i>Horyzont · konkluzja</span>
+    </div>
+
+    <div class="tytul">
+      <p class="et"><b>Forum Związków Zawodowych</b> · opinia do projektu ustawy budżetowej na rok 2027</p>
+      <h1>Deficyt <em>strategiczny</em></h1>
+      <p class="lead">Jedno kryterium: czy projekt jest owocem myślenia strategicznego. W środku leży odpowiedź, którą opinia nazywa w części pierwszej. Wokół niej sześć obszarów, w których ten deficyt się ujawnia. Na obrzeżu <b>wskaźnik 103%</b>, w którym wszystko się skupia.</p>
+      <p class="wsk"><span>przeciągnij, aby obracać</span><span>kółko, aby przybliżyć</span><span>kliknij część</span></p>
+    </div>
+
+    <nav class="dok" id="dok" aria-label="Części opinii"></nav>
+
+    <aside class="panel" id="panel" aria-live="polite" aria-label="Treść części">
+      <div class="panel-glowa" id="panel-glowa"></div>
+      <div class="zakladki" id="zakladki" role="tablist"></div>
+      <div class="panel-cialo" id="panel-cialo" role="tabpanel"></div>
+      <div class="panel-stopka">
+        <button class="guz" id="poprz" aria-label="Poprzednia część">← Poprzednia</button>
+        <button class="guz" id="nast" aria-label="Następna część">Następna →</button>
+      </div>
+    </aside>
+    <div class="postep" aria-hidden="true"><i id="postep"></i></div>
+  </div>
+</section>
+
+<!-- ============ LĄD ============ -->
+<div class="lad">
+
+  <section class="obszar" id="kryterium">
+    <div class="glowa">
+      <p class="et"><b>Wstęp</b> · przedmiot, kryterium i granice opinii</p>
+      <h2>Jedno kryterium. Cztery granice.</h2>
+      <p>Opinia nie zawiera odrębnego katalogu żądań. W każdej części FZZ formułuje ocenę, wskazuje miejsce w projekcie, w którym ocena znajduje potwierdzenie albo w którym brakuje tego, co powinno się w dokumencie znaleźć, i nazywa skutek dla pracowników.</p>
+    </div>
+    <div class="kryt">
+      <div>
+        <h3>Kryterium</h3>
+        <p class="wielkie">Czy projekt jest owocem <em>myślenia strategicznego</em>?</p>
+        <p>Czy zapisana w nim alokacja środków publicznych wynika z doktryny społeczno-gospodarczej wyznaczającej kierunki rozwoju państwa, czy też jest sumą pozycji, których wzajemna hierarchia nie wynika z żadnego nadrzędnego zamierzenia. FZZ oczekiwało projektu <b style="color:#fff;font-weight:500">apartyjnego, nie apolitycznego</b>, oraz <b style="color:#fff;font-weight:500">strategicznego, nie operacyjnego</b>, ponieważ rok 2027 jest rokiem, w którym kończy się jedna epoka finansów publicznych, a zaczyna druga.</p>
+        <div class="funk"><b>Funkcjonalność</b><span>Pojęcie, które porządkuje całość: czy dana instytucja, wydatek lub procedura pełni funkcję, dla której zostały ustanowione.</span></div>
+      </div>
+      <div>
+        <h3>Czego opinia <em>nie</em> rozstrzyga</h3>
+        <ul class="granice">
+          <li><b>po czyjej stronie leży racja w sporze między Radą Ministrów a Prezydentem.</b> FZZ ocenia sposób, w jaki władza publiczna odpowiada na polaryzację, i stosuje wobec obu ośrodków ten sam standard.</li>
+          <li><b>czy wydatki redystrybucyjne należy ograniczać.</b> Rozstrzygnięcia te powinny powstać w dialogu, a nie zostać przesądzone przed jego rozpoczęciem.</li>
+          <li><b>czy termin korekty nadmiernego deficytu należy wydłużyć.</b> Z tego samego powodu.</li>
+          <li><b>czy nakłady na obronność w skali 4,51% PKB są potrzebne.</b> FZZ nie kwestionuje ich co do zasady.</li>
+        </ul>
+        <p style="margin-top:18px;font-size:.88rem">FZZ nie przedstawia też własnej prognozy makroekonomicznej ani własnego projektu budżetu. Tam, gdzie posługuje się rachunkiem własnym, opiera go na liczbach strony rządowej i oznacza jako przybliżenie, nie prognozę.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="obszar" id="liczby">
+    <div class="glowa">
+      <p class="et"><b>Liczby</b> · każda pochodzi z projektu, uzasadnienia albo dokumentu instytucji publicznej</p>
+      <h2>Odwróć, zobaczysz źródło</h2>
+      <p>Opinia nie spiera się o saldo. Spiera się o to, co liczby w dokumencie pokazują, a czego nie pokazują. Kliknij kartę.</p>
+    </div>
+    <div class="karty" id="karty"></div>
+  </section>
+
+  <section class="obszar" id="rachunek">
+    <div class="glowa">
+      <p class="et"><b>Część 8</b> · rachunek FZZ na liczbach z projektu, nie prognoza</p>
+      <h2>Ile kosztuje jeden punkt wskaźnika</h2>
+      <p>Projekt ustala wskaźnik 103,0%. Strona pracowników zaproponowała 27 maja 2026 r. nie mniej niż 115%. Przesuń suwak, a zobaczysz, co z tego wynika w obu konwencjach liczenia, które opinia przedstawia obok siebie.</p>
+    </div>
+    <div class="sym">
+      <div>
+        <p class="et">Średnioroczny wskaźnik wzrostu wynagrodzeń w państwowej sferze budżetowej</p>
+        <p class="duzy" id="sym-w">103<small>%</small></p>
+        <label class="sr" for="sym-suwak">Wskaźnik wzrostu wynagrodzeń</label>
+        <input type="range" id="sym-suwak" min="100" max="118" step="0.5" value="103">
+        <div class="skala"><span>100 · zamrożenie</span><span><b>103 · projekt</b></span><span>115 · strona pracowników</span></div>
+        <div class="znaczniki">
+          <button type="button" data-w="100">100% · art. 86 po progu 55%</button>
+          <button type="button" data-w="102.8">102,8% · inflacja</button>
+          <button type="button" data-w="103" aria-pressed="true">103% · projekt</button>
+          <button type="button" data-w="105.9">105,9% · gospodarka narodowa</button>
+          <button type="button" data-w="115">115% · propozycja FZZ, NSZZ „S”, OPZZ</button>
+        </div>
+        <p class="uwaga">Konwencja funduszu: 1 punkt ≈ 790 mln zł w odniesieniu do funduszu wynagrodzeń pracowników objętych ustawą z 1999 r. (82,8 mld zł), bez pochodnych i nauczycieli. Konwencja rządowa: komunikat KPRM z 28 sierpnia 2026 r. podaje 7,8 mld zł za 3% dla sfery budżetowej i nauczycieli wraz z pochodnymi, a więc ≈ 2,6 mld zł za punkt.</p>
+      </div>
+      <div class="wynik" id="sym-wynik"></div>
+    </div>
+  </section>
+
+  <section class="obszar" id="prog">
+    <div class="glowa">
+      <p class="et"><b>Próg epok</b> · terminy były znane od lat</p>
+      <h2>Co było wiadomo, co zrobiło państwo, co zrobili partnerzy</h2>
+      <p>Trzy pasma jednej osi. Górne to terminy wyznaczające próg między epoką przestrzeni fiskalnej a epoką postkonsolidacyjną. Środkowe to decyzje ośrodków władzy. Dolne to gotowość partnerów społecznych. Przewijaj w bok, kliknij zdarzenie.</p>
+    </div>
+    <div class="os-wrap"><div class="os" id="os"></div></div>
+    <div class="os-legenda">
+      <span style="--k:#F2A33A">terminy znane z wyprzedzeniem</span>
+      <span style="--k:#C6CBD6">decyzje i zaniechania państwa</span>
+      <span style="--k:#FF4D55">gotowość partnerów społecznych</span>
+    </div>
+  </section>
+
+  <section class="obszar" id="skutki">
+    <div class="glowa">
+      <p class="et"><b>Konkluzja</b> · skutki poniosą pracownicy, przede wszystkim pracownicy sfery publicznej</p>
+      <h2>Sześć postaci jednego nieprzygotowania</h2>
+    </div>
+    <div class="skutki" id="skutki-siatka"></div>
+  </section>
+
+  <section class="obszar" id="oczekiwania">
+    <div class="glowa">
+      <p class="et"><b>Oczekiwania</b> · o co FZZ prosi stronę rządową</p>
+      <h2>Trzy uzupełnienia projektu</h2>
+      <p>Każde z nich jest w zasięgu strony rządowej, bo technika i dane już istnieją. Zabrakło decyzji, aby je zastosować tam, gdzie ryzyko jest największe.</p>
+    </div>
+    <div class="ocz">
+      <div>
+        <svg class="ikona"><use href="#i-wariant"/></svg>
+        <h3>Wariant bez nieuchwalonych ustaw</h3>
+        <p>Dwa warianty: z wejściem w życie projektowanych ustaw dochodowych i bez niego, z podaniem dla każdego dochodów, deficytu budżetu państwa, wyniku sektora i relacji długu do PKB.</p>
+        <p class="brak"><b>Dlaczego to możliwe:</b> uzasadnienie już zawiera dwa warianty długu, według limitów i przewidywany. Skutki wet z 2026 r. policzono co do tysiąca złotych.</p>
+      </div>
+      <div>
+        <svg class="ikona"><use href="#i-harm"/></svg>
+        <h3>Harmonogram i zakres konsolidacji 2028–2030</h3>
+        <p>Przedstawiony Radzie Dialogu Społecznego załącznik rozstrzygający, czy państwo zamierza ograniczać wydatki, zwiększać dochody czy wydłużać horyzont, oraz kto i w jakiej proporcji poniesie koszt każdego z tych wyborów.</p>
+        <p class="brak"><b>Dlaczego to konieczne:</b> Rada Fiskalna zaleciła to 11 maja 2026 r. Bez tego konsolidacja odbędzie się przez automat art. 86, którego pierwszym adresatem są płace sfery budżetowej.</p>
+      </div>
+      <div>
+        <svg class="ikona"><use href="#i-struk"/></svg>
+        <h3>Struktura wydatków obronnych</h3>
+        <p>Jaka część nakładów 4,51% PKB buduje nową zdolność, jaka utrzymuje posiadaną, a jaka obsługuje zdolność kupioną na kredyt, i jak relacje te zmieniały się między rokiem 2026 a 2027.</p>
+        <p class="brak"><b>Dlaczego to możliwe:</b> dane są jawne i FZZ odtworzyło je z załączników do projektu. Zarzut nie dotyczy jawności, lecz analizy.</p>
+      </div>
+    </div>
+    <div class="gotowosc">
+      <b>FZZ pozostaje gotowe do udziału w każdej debacie</b>
+      <p>która uczyni z Rady Dialogu Społecznego instrument rozwiązywania problemów strategicznych państwa, ponieważ odporność Rzeczypospolitej nie powstanie ani w jednym resorcie, ani w jednej ustawie budżetowej, lecz w porozumieniu tych, którzy państwo tworzą i którzy w nim pracują.</p>
+    </div>
+  </section>
+
+  <section class="obszar" id="materialy">
+    <div class="glowa">
+      <p class="et"><b>Materiały</b> · do pobrania i do cytowania</p>
+      <h2>Cała opinia</h2>
+    </div>
+    <div class="pliki">
+      <a class="plik" href="#" data-plik="opinia-pdf"><h3>Opinia FZZ, pełny tekst</h3><p>Streszczenie, wstęp, dziewięć części, wykaz źródeł w ośmiu grupach.</p><span class="fmt">PDF</span></a>
+      <a class="plik" href="#" data-plik="streszczenie-pdf"><h3>Streszczenie</h3><p>Sześć akapitów dla redakcji i organizacji członkowskich.</p><span class="fmt">PDF</span></a>
+      <a class="plik" href="https://fzz.org.pl/rds-czerwiec/" target="_blank" rel="noopener"><h3>Wystąpienie Przewodniczącej FZZ</h3><p>Posiedzenie plenarne RDS, 15 czerwca 2026 r.: „3-procentowa podwyżka to informacja, że nie chcemy inwestować w odporność państwa”.</p><span class="fmt">fzz.org.pl</span></a>
+      <button class="plik" id="pakiet" type="button"><h3>Pakiet cytatów</h3><p>Dziewięć zdań z atrybucją, po jednym z każdej części, prosto do schowka.</p><span class="fmt">SCHOWEK</span></button>
+    </div>
+    <div class="glowa" style="margin-top:56px"><p class="et"><b>Źródła</b> · wybór z wykazu, adresy sprawdzone 6 września 2026 r.</p><h2>Na czym to stoi</h2></div>
+    <ul class="zrodla" id="zrodla"></ul>
+  </section>
+
+  <footer class="stopka">
+    <p><strong>Forum Związków Zawodowych</strong> · reprezentatywna organizacja związkowa w Radzie Dialogu Społecznego.</p>
+    <p style="margin-top:8px;max-width:92ch">Opinia przedkładana na podstawie art. 18 ustawy z dnia 24 lipca 2015 r. o Radzie Dialogu Społecznego i innych instytucjach dialogu społecznego, do projektu przekazanego Radzie pismem Ministra Finansów i Gospodarki z 28 sierpnia 2026 r. Wszystkie liczby na tej stronie pochodzą z projektu ustawy budżetowej na rok 2027 wraz z uzasadnieniem i załącznikami oraz z dokumentów instytucji publicznych przywołanych w wykazie źródeł. Rachunki własne FZZ są oznaczone jako przybliżenia.</p>
+  </footer>
+</div>
+
+<div class="kom" id="kom" role="status" aria-live="polite"></div>
+<script>
+/* =====================================================================
+   TREŚĆ. Wszystko poniżej pochodzi z tekstu opinii FZZ (wrzesień 2026).
+   Pola każdej części odwzorowują konwencję opinii:
+   ocena → gdzie w projekcie → skutek dla pracowników.
+   ===================================================================== */
+window.FZZ = window.FZZ || {};
+FZZ.CZESCI = [
+{
+  id:1, kolor:'#FF4D55', rola:'zrodlo', rolaNazwa:'Źródło',
+  tytul:'Deficyt strategiczny', krotki:'Deficyt strategiczny',
+  teza:'Największym deficytem projektu nie jest deficyt finansowy, chociaż wynosi 282,6 mld zł, lecz deficyt strategii. Projekt jest jego ekspozycją.',
+  ocena:[
+    'Alokacja środków nie wynika z żadnej doktryny społeczno-gospodarczej, ponieważ państwo nie dysponuje żadną aktualną strategią rozwoju ani zatwierdzoną strategią bezpieczeństwa, a uzasadnienie nie przywołuje żadnego dokumentu tego rodzaju. Rozdział „Kierunki polityki budżetowej w 2027 r.” w całości poświęcono ramom określonym poza krajowym procesem decyzyjnym. Kierunek polityki budżetowej został utożsamiony ze zgodnością z zaleceniami, a nie z realizacją własnych zamierzeń.',
+    'Decyzje zapisane w projekcie są racjonalne, jednak ich racjonalność odnosi się do interesu partyjno-politycznego w roku poprzedzającym wybory, a nie do racji stanu. Wszystkie trudne decyzje mają w projekcie tę samą datę, przypadającą rok po wyborach. Odpowiedzialność nie spoczywa na jednej stronie sporu: Rada Ministrów przyjęła strategię bezpieczeństwa, której Prezydent nie zatwierdził, i przygotowała strategię rozwoju, którą Premier zatrzymał.',
+    'Rok 2027 jest progiem między epoką przestrzeni fiskalnej a epoką postkonsolidacyjną. Sam projekt potwierdza tę diagnozę: w jego własnej prognozie od 2028 roku wygasa impuls inwestycji publicznych, spożycie publiczne przestaje realnie rosnąć, zatrudnienie zaczyna spadać, a wzrost obniża się do 2,0%. Nowa epoka została zapisana w Tablicy 1, natomiast w tekście nie została nazwana.'
+  ],
+  wProjekcie:[
+    'Słowo <b>„strategiczny” pada w uzasadnieniu 73 razy</b>, zawsze jako przymiotnik przy inwestycjach, rezerwach lub przedsięwzięciach, nigdy jako wskazanie dokumentu, z którego alokacja miałaby wynikać. Nie przywołano ani Strategii na rzecz Odpowiedzialnego Rozwoju, ani Koncepcji Rozwoju Kraju 2050, ani Strategii Bezpieczeństwa Narodowego, ani Strategii Rozwoju Polski 2035.',
+    'Strategia Bezpieczeństwa Narodowego z 12 maja 2020 r. pozostaje w mocy; nowa, przyjęta przez Radę Ministrów 25 lipca 2025 r., <b>od trzynastu miesięcy czeka na zatwierdzenie przez Prezydenta</b>. Polityczno-Strategiczną Dyrektywę Obronną z 2018 r. uchylono bez następcy. Strategia Rozwoju Polski 2035, po konsultacjach, omówieniu w RDS i przyjęciu przez Stały Komitet Rady Ministrów 5 marca 2026 r., została w maju zatrzymana przez Prezesa Rady Ministrów.',
+    'Tablica 1: spożycie publiczne rośnie realnie o <b>3,0% w 2027 r., a potem o 1,0%, 0,4% i 0,2%</b> w latach 2028–2030. Koszty obsługi długu Skarbu Państwa: 107 mld zł wobec limitu 90 mld zł na 2026 r. Strategia zarządzania długiem prowadzi dług sektora z 59,8% PKB w 2025 r. do 75,3% PKB w 2029 r. Klauzula wyjścia wygasa z końcem 2028 r., a nowego planu budżetowo-strukturalnego nie przygotowano.'
+  ],
+  skutek:'Alokacja, która nie wynika z doktryny, wynika z cyklu politycznego, a w cyklu politycznym pierwszą pozycją podlegającą zamrożeniu są wynagrodzenia pracowników sfery publicznej. Koszt decyzji odłożonych na rok 2028 poniosą ci, którzy będą wówczas pracować w instytucjach państwa, a nie ci, którzy w roku 2027 o tym państwie decydują.',
+  liczby:[
+    ['73','razy słowo „strategiczny” w uzasadnieniu, ani razu jako wskazanie dokumentu','Uzasadnienie do projektu'],
+    ['282,6 mld','deficyt budżetu państwa, o który opinia się nie spiera','Projekt ustawy budżetowej, art. 1'],
+    ['13 mies.','oczekiwania Strategii Bezpieczeństwa Narodowego na zatwierdzenie','RM 25.07.2025 → wrzesień 2026'],
+    ['75,3%','PKB: dług sektora w 2029 r. wg Strategii zarządzania długiem','MF, Strategia 2026–2029']
+  ],
+  cytat:['Największym deficytem projektu nie jest deficyt finansowy, lecz deficyt strategii, a w głębszej warstwie deficyt kultury strategicznej, przez którą FZZ rozumie utrwalony w instytucjach nawyk myślenia o państwie jako o całości mającej kierunek.','Opinia FZZ, część 1.1'],
+  podrozdzialy:[
+    ['1.1','Astrategiczność projektu i uzasadnienia','Państwo nie ma aktualnej strategii, do której projekt mógłby się odwołać. Kolejność priorytetów wyznaczają w praktyce limit z reguły wydatkowej i kalendarz wyborczy.'],
+    ['1.2','Racja stanu i racja władzy','Decyzje o wskaźniku 103%, o dochodach z nieuchwalonych ustaw, o odłożeniu konsolidacji i o zatrzymaniu strategii rozwoju są racjonalne z punktu widzenia racji władzy. Żadna nie jest racjonalna z punktu widzenia racji stanu.'],
+    ['1.3','Budżety nie są samotnymi wyspami','Koszty obsługi długu w 2027 r. to cena deficytów z lat wcześniejszych; deficyt 2027 r. stanie się ceną lat następnych. Rok 2027 jest zapewne ostatnim, w którym państwo może utrzymywać deficyt tej wielkości.'],
+    ['1.4','Próg epok','Epoka przestrzeni fiskalnej kończy się. Epoka postkonsolidacyjna zakotwicza koszty odstraszania, odbiera wzrostowi finansowanie deficytem i koncentruje presję demograficzną w zdrowiu. Po raz pierwszy budżet opiniuje też Rada Fiskalna.']
+  ],
+  powiazania:[[8,'Wskaźnik 103% jest najostrzejszym pojedynczym przykładem tego, jak deficyt strategiczny przekłada się na liczbę w projekcie.'],[4,'Wszystkie trudne decyzje mają w projekcie tę samą datę: rok 2028, rok po wyborach.'],[2,'Państwo bez strategii nie jest zobowiązane do rozpoznawania ryzyk i nie odczuwa presji, aby to czynić.']]
+},
+{
+  id:2, kolor:'#F2A33A', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Rozpoznanie i komunikowanie ryzyk', krotki:'Ryzyka',
+  teza:'Tabela ryzyk zna wojnę trwającą i wojnę zakończoną. Nie zna świata, w którym pokój przynosi własne zagrożenia, a Europa ma w niej jeden wskaźnik.',
+  ocena:[
+    'Uzasadnienie oznacza przebieg wojny w Ukrainie jako czynnik o wpływie „mieszanym”: wojna trwająca to zagrożenie, wojna zakończona to korzyść. To dychotomia opisująca świat, jakiego nie ma i nie będzie. Po czterech latach wojny państwo zna architekturę zagrożeń trwającego konfliktu, natomiast nie zna architektury zagrożeń, które przyniesie pokój lub zamrożenie działań, i to ona jest większym wyzwaniem dla odporności państwa.',
+    'Otoczenie zewnętrzne sprowadzono do jednego czynnika: „niższy wzrost gospodarczy w strefie euro”. Niemcy i Francja nie występują w tabeli ryzyk z nazwy, choć sytuacja w obu państwach ma dla Polski znaczenie strategiczne, w pierwszej kolejności polityczne, w drugiej gospodarcze. Negocjacje ram finansowych 2028–2034 będą toczyć się wtedy, gdy Berlin i Paryż są zaabsorbowane własną sytuacją wewnętrzną.',
+    'Nierozpoznanie tych ryzyk nie jest przypadkiem, lecz konsekwencją braku strategii. Państwo, które ma aktualną strategię, wie, czego chce, zanim usiądzie do stołu. Strategia jest źródłem lewaru w negocjacjach.'
+  ],
+  wProjekcie:[
+    'Jedyne rozpoznane zagrożenie scenariusza pokoju to niepewność co do liczby obywateli Ukrainy na rynku pracy: <b>950,3 tys. osób ze statusem UKR</b>, z których w połowie 2025 r. pracowało 75%. Uzasadnienie powołuje się na badanie NBP, które stwierdza, że zakończenie wojny nie spowoduje masowego odpływu: 51% migrantów przedwojennych i 24% uchodźców deklaruje zamiar pozostania na stałe.',
+    'Szef sztabu Bundeswehry oświadczył 11 czerwca 2026 r., że wszystkich 32 sojuszników łączy ocena, zgodnie z którą Rosja może w 2029 r. dysponować zdolnością do uderzenia na państwo NATO. Państwa flankowe traktują okres powojenny jako okres podwyższonego ryzyka: budżety obronne Estonii 5,4% PKB i Litwy 5,38% PKB na 2026 r., decyzja Finlandii o wzroście do 3% PKB do 2029 r.',
+    'Niemcy odbierały w 2025 r. <b>26,9% polskiego eksportu towarów</b>; Bundesbank prognozuje wzrost 0,6%, 1,3% i 1,1% w latach 2026–2028. We Francji w ciągu piętnastu miesięcy urząd premiera sprawowały cztery osoby, dług przekroczył 117% PKB, a w kwietniu 2027 r. odbędą się wybory prezydenckie. Traktat z Nancy z 9 maja 2025 r. tworzy dla Polski nowy element architektury bezpieczeństwa, którego trwałość zależy od tego, kto będzie rządził we Francji po 2027 r. W projekcie ram finansowych 2028–2034 Polska miałaby otrzymać 123,3 mld euro.'
+  ],
+  skutek:'Państwo, które nie rozpoznaje przesunięcia zagrożenia w stronę działań hybrydowych, nie przygotowuje na to przesunięcie ani kadr, ani systemów, a więc tych, którzy w takim scenariuszu staną się celem w pierwszej kolejności.',
+  liczby:[
+    ['1','zagrożenie rozpoznane w scenariuszu pokoju: powrót obywateli Ukrainy','Uzasadnienie, tabela czynników ryzyka'],
+    ['2029','rok, w którym Rosja może mieć zdolność do uderzenia na państwo NATO wg oceny 32 sojuszników','Szef sztabu Bundeswehry, 11.06.2026'],
+    ['26,9%','polskiego eksportu towarów trafiło w 2025 r. do Niemiec','trade.gov.pl'],
+    ['123,3 mld €','dla Polski w projekcie ram finansowych UE 2028–2034','Komisja Europejska, 16.07.2025']
+  ],
+  cytat:['Strona rządowa przywołuje zatem źródło, którego głównego wniosku w sprawie scenariusza pokojowego nie wykorzystuje, i rozpoznaje jako zagrożenie to, co bank centralny uznaje za mało prawdopodobne, natomiast nie rozpoznaje tego, co analitycy bezpieczeństwa uznają za prawdopodobne.','Opinia FZZ, część 2.1'],
+  podrozdzialy:[
+    ['2.1','Trzy scenariusze, z których rozpoznano jeden','Eskalacja występuje w uzasadnieniu wyłącznie jako kanał surowcowy i cenowy. Scenariusz pokoju ma jedno rozpoznane zagrożenie. FZZ nie oczekuje tysiąca scenariuszy, oczekuje wskazania, jakie konsekwencje dla finansów niesie każdy z nich.'],
+    ['2.2','Niemcy i Francja jako czynnik strategiczny','Kanał gospodarczy jest znany. Kanał polityczny jest w uzasadnieniu nieobecny, a to on decyduje o warunkach, w jakich Polska będzie funkcjonować w epoce postkonsolidacyjnej.'],
+    ['2.3','Strategia jako źródło lewaru','Państwo, które strategii nie ma, nie jest systemowo zobowiązane do rozpoznawania ryzyk, a jego elity nie wyrobiły w sobie nawyku myślenia w scenariuszach.']
+  ],
+  powiazania:[[8,'Działania poniżej progu wojny są wobec Polski już prowadzone: 69 śledztw kontrwywiadowczych ABW z lat 2024–2025.'],[1,'Skutkiem braku strategii jest tabela ryzyk, w której wojna ma dwa warianty, a Europa jeden wskaźnik.'],[7,'Państwa flankowe traktują okres powojenny jako okres podwyższonego ryzyka.']]
+},
+{
+  id:3, kolor:'#E0C46B', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Funkcja planistyczna i strona dochodowa', krotki:'Dochody',
+  teza:'Plan oparty na dochodach, których źródło z wysokim prawdopodobieństwem nie powstanie, funkcji planistycznej nie pełni.',
+  ocena:[
+    'Projekt zakłada dochody 695 mld zł, o 47,8 mld zł wyższe niż w ustawie na 2026 r. Trzecie źródło tego wzrostu to „proponowane zmiany w systemie podatkowym”. W dniu przekazania projektu do RDS żaden z projektów ustaw, na których opiera się 25,2 mld zł z 27,6 mld zł działań dyskrecjonalnych, nie miał rangi ustawy. Zgodnie z art. 112aa ustawy o finansach publicznych ich weto nie obniży wydatków 2027 r., lecz dopuszczalny limit wydatków 2028 r., pierwszego roku po wyborach.',
+    'Strona rządowa sama wpisała „Weta prezydenckie ustaw proponowanych przez RM” do tabeli ryzyk, opisała mechanizm i skutek, lecz nie oszacowała wielkości. Nie wynika to z braku umiejętności: skutki wet z 2026 r. rozliczono w tym samym dokumencie z dokładnością do tysiąca złotych. Strona rządowa liczy skutki wet, które już nastąpiły, natomiast nie liczy skutków wet, które ma przed sobą.',
+    'Zarzut nie dotyczy legalności, lecz odpowiedzialności planistycznej. Odpowiedzialne wykonanie funkcji planistycznej wymagało dwóch wariantów: z wejściem w życie ustaw i bez niego. Technikę wariantowania strona rządowa zna, bo dług pokazała w dwóch ujęciach. FZZ nie ocenia, po czyjej stronie leży racja w sporze Rady Ministrów z Prezydentem; ocenia przeniesienie tego sporu do dokumentu planistycznego.'
+  ],
+  wProjekcie:[
+    'Wykaz działań dyskrecjonalnych: trzynaście pozycji o skutku netto 27,6 mld zł, z czego <b>25,2 mld zł to projekty ustaw</b>: UD458 (podatki dochodowe i ryczałt) 14,4 mld zł, UD457 (opłaty koncesyjne) 3,6 mld zł, UD459 (CIT dla energetyki) 2,8 mld zł, UD417, UD416 i UD327 (opłata cukrowa, zezwolenia alkoholowe, VAT od napojów) 2,7 mld zł, UD385 (podatek cyfrowy) 1,7 mld zł. Projekt UD458 trafił do Rządowego Centrum Legislacji 16 sierpnia 2026 r., dwanaście dni przed przyjęciem budżetu.',
+    'Weta z 2026 r. policzone: SENT dla betonu −1 396 944 tys. zł, akcyza −8,8 mld zł, opodatkowanie banków −1 900 000 tys. zł. Fitch 21 sierpnia 2026 r. utrzymał ocenę A minus z perspektywą negatywną, wskazując na „ograniczone możliwości środków kompensacyjnych ze względu na prawdopodobne weta prezydenckie”. Do sierpnia 2026 r. Prezydent zawetował 41 ustaw, sześć o skutku fiskalnym 8,04 mld zł.',
+    'Rachunek FZZ na liczbach rządowych: sam UD458 jest niemal neutralny (CIT 22% ≈ 6,6 mld zł i ryczałt 3,3 mld zł w tej samej ustawie co skala kosztująca 9,1 mld zł). Właściwa ekspozycja leży w mniejszych projektach. <b>Przy wecie całego pakietu ubytek ≈ 10 mld zł rocznie</b>, a limit 2028 r. obniży się o kwotę większą, liczoną według konwencji reguły. Przybliżenie, nie prognoza.'
+  ],
+  skutek:'Ubytek rzędu dziesięciu miliardów złotych w roku, w którym wydatki sztywne są zdeterminowane ustawami, a przestrzeń fiskalna dobiega końca, będzie domykany tam, gdzie domknięcie jest najłatwiejsze: w wydatkach uznaniowych, do których należy fundusz wynagrodzeń jednostek budżetowych zaplanowany na 96,4 mld zł. Strona rządowa napisała to sama: brak wejścia w życie projektów „wymusi silniejsze dostosowania fiskalne w kolejnych latach”.',
+  liczby:[
+    ['25,2 z 27,6 mld','działań podnoszących limit wydatków opiera się na projektach ustaw','Uzasadnienie, wykaz działań dyskrecjonalnych'],
+    ['12 dni','przed przyjęciem budżetu projekt UD458 (14,4 mld zł) trafił do RCL','16.08.2026 → 28.08.2026'],
+    ['≈10 mld','rocznego ubytku dochodów przy wecie całego pakietu; rachunek FZZ','Przybliżenie na liczbach z uzasadnienia'],
+    ['41','ustaw zawetowanych do sierpnia 2026 r., sześć o skutku 8,04 mld zł','Ministerstwo Finansów']
+  ],
+  cytat:['Strona rządowa liczy więc skutki wet, które już nastąpiły, natomiast nie liczy skutków wet, które ma przed sobą.','Opinia FZZ, część 3.1'],
+  podrozdzialy:[
+    ['3.1','Baza dochodowa oparta na ustawach, których nie ma','Pięć projektów ustaw o wartości 25,2 mld zł. Jedynym uchwalonym elementem pakietu jest ustawa o Osobistym Koncie Inwestycyjnym, która dochody obniża o 0,5 mld zł.'],
+    ['3.2','Postulat dwóch wariantów','Dyrektywa 2011/85/UE, kodeks przejrzystości MFW i zalecenie OECD z 2015 r. wymagają realistycznych prognoz i kwantyfikacji ryzyk. Zabrakło jedynie decyzji, aby zastosować znaną technikę tam, gdzie ryzyko jest największe.'],
+    ['3.3','Luka między budżetem zaplanowanym a wykonywanym','Obywatel dowiaduje się, że dochody wzrosną o 47,8 mld zł, a nie dowiaduje się, że co piąta złotówka przyrostu zależy od projektu, który dwa tygodnie przed budżetem trafił do uzgodnień.'],
+    ['3.4','Bez symetrii i bez rozstrzygania sporu','Ten sam standard wobec obu ośrodków władzy. Państwo, w którym rząd planuje dochody z ustaw, które najpewniej nie wejdą w życie, a Prezydent w czasie wojny nie zatwierdza strategii bezpieczeństwa, ma jeden wspólny deficyt.']
+  ],
+  powiazania:[[4,'Ubytek ≈10 mld zł jest większy od marginesu 0,2 pkt proc. (≈9 mld zł), dzięki któremu dług pozostaje pod progiem 55% PKB.'],[8,'Domknięcie luki w wydatkach uznaniowych trafia w fundusz wynagrodzeń 96,4 mld zł.'],[1,'Spór o pakiet podatkowy przeniesiono do dokumentu planistycznego; obie strony sporu mają udział w deficycie strategicznym.']]
+},
+{
+  id:4, kolor:'#8FB3D9', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Zarządzanie deficytem i ścieżka konsolidacji', krotki:'Konsolidacja',
+  teza:'Ścieżka konsolidacji została napisana w Brukseli, w przepisie i w Londynie, ale nie w Warszawie.',
+  ocena:[
+    'FZZ nie ocenia wysokości deficytu, bo deficyt jest skutkiem wyboru celów, a spór o cele należy prowadzić w odniesieniu do celów, nie do salda. Ocenie podlega sposób, w jaki państwo zarządza przestrzenią, która zgodnie z jego własnymi dokumentami jest ostatnią taką przestrzenią. Państwo wydaje na odsetki więcej niż na płace wszystkich swoich jednostek budżetowych.',
+    'Konsolidacja nadchodzi niezależnie od tego, czy zostanie zakomunikowana. Pytanie dotyczy wyłącznie tego, kto ją napisze i czy zostanie napisana jako decyzja, czy zadziała jako automat. Ścieżka istnieje w trzech warstwach: unijnej, krajowej i zewnętrznej. Żadna nie jest decyzją polityczną państwa polskiego i żadna nie została w tekście nazwana.',
+    'Model wzrostu oparty na popycie się wyczerpuje: filar popytowy nie jest równoważony filarem inwestycyjnym innym niż środki unijne, których część grantowa kończy się w 2026 r. Projekt nie zawiera żadnego zamierzenia budującego nowe silniki wzrostu. Projekt powinien był zostać przedłożony wraz z załącznikiem: harmonogramem i zakresem działań konsolidacyjnych na lata 2028–2030, o charakterze paktu społecznego.'
+  ],
+  wProjekcie:[
+    '<b>Warstwa unijna.</b> Zalecenie Rady z 21 stycznia 2025 r. wyznacza rok 2028 jako termin korekty; ścieżka wydatków netto 12,5%, 6,3%, 4,4%, 4,0% i 3,5% w latach 2024–2028. Rząd zapowiada w uzasadnieniu, że „Komisja zarekomenduje Radzie UE przyjęcie zrewidowanego zalecenia, które przedłużyłoby termin korekty”. Na lata 2029–2030 obowiązuje domyślna korekta reguły −0,5% PKB rocznie z art. 112aa ust. 4.',
+    '<b>Warstwa krajowa, zapisana w tabeli, nie w tekście.</b> Spożycie publiczne 3,0% w 2027 r., potem 1,0%, 0,4% i 0,2%. Założenia z 28 kwietnia przewidywały 2,4%, 1,0% i 1,1%; uzasadnienie z 28 sierpnia obniżyło je bez słowa wyjaśnienia. W wersji kwietniowej zdanie o „działaniach w celu spełnienia reguł ostrożnościowych” opatrzono przypisem do art. 86 ust. 1 pkt 2, czyli procedur po przekroczeniu 55% PKB. Rada Fiskalna 11 maja 2026 r.: „do działań sanacyjnych należy m.in. zamrożenie płac w sferze budżetowej”. Dług: 55,9% według limitów, 54,8% w ujęciu przewidywanym. <b>Margines 0,2 pkt proc., około 9 mld zł</b>, mniejszy niż ubytek przy wecie pakietu.',
+    '<b>Warstwa zewnętrzna, już wyceniona.</b> Fitch: A minus, perspektywa negatywna z powodu „braku wiarygodnego planu konsolidacji”, dług 72,7% PKB w 2028 r. Moody’s: perspektywa negatywna. Rachunek FZZ: utrzymanie salda pierwotnego zamiast konsolidacji do 4% PKB daje przestrzeń większą o 30, 82 i 134 mld zł w latach 2028–2030 kosztem długu wyższego o 5,3 pkt proc. PKB. Nie rekomendacja, lecz miara tego, o czym państwo nie zdecydowało.'
+  ],
+  skutek:'Ścieżka pisana przez automaty prawne uderza w to, co przepisy wskazują z góry. Art. 86 ust. 1 pkt 2 lit. a ustawy o finansach publicznych stanowi, że po przekroczeniu progu 55% PKB w projekcie ustawy budżetowej na kolejny rok „nie przewiduje się wzrostu wynagrodzeń pracowników państwowej sfery budżetowej”.',
+  liczby:[
+    ['107 › 96,4 mld','odsetki od długu Skarbu Państwa większe niż fundusz płac wszystkich państwowych jednostek budżetowych','Projekt ustawy budżetowej na 2027 r.'],
+    ['1,0 · 0,4 · 0,2','realny wzrost spożycia publicznego 2028–2030; w kwietniu było 2,4 · 1,0 · 1,1','Tablica 1; założenia z 28.04.2026'],
+    ['0,2 pkt','marginesu pod progiem 55% PKB, czyli około 9 mld zł','Uzasadnienie: 55,9% wg limitów, 54,8% przewidywane'],
+    ['+134 mld','przestrzeni w 2030 r. bez konsolidacji, kosztem +5,3 pkt proc. długu; rachunek FZZ','Przybliżenie na ścieżce Strategii zarządzania długiem']
+  ],
+  cytat:['Państwo utrzymuje się poniżej progu ostrożnościowego dzięki założeniu, że nie wykona własnego budżetu, i dzięki ustawom, które sam rząd wpisał do tabeli ryzyk, a zarazem planuje na lata 2029–2030 działania właściwe dla sytuacji, w której próg ten został przekroczony.','Opinia FZZ, część 4.2'],
+  podrozdzialy:[
+    ['4.1','Deficyt nie jest problemem, problemem jest zarządzanie nim','Deficyt sektora 7,1% PKB wobec 6,3% w prognozach KE i OECD, bo liczba rządowa zawiera więcej wydatków. Przyrost kosztów obsługi długu wobec limitu na 2026 r. sięga 17 mld zł.'],
+    ['4.2','Ścieżka konsolidacji, której nie napisano w Warszawie','Trzy warstwy: zalecenie Rady UE i domyślna korekta reguły; wiersz Tablicy 1 przesunięty o rok wcześniej i pogłębiony między kwietniem a sierpniem; komunikaty agencji ratingowych.'],
+    ['4.3','Model wzrostu oparty na popycie','„Największym motorem wzrostu pozostanie spożycie prywatne.” Inwestycje spowalniają z 6,4% do 4,2% i dalej do 3,0%, zatrudnienie spada od 2028 r. Brak podziału inwestycji na publiczne i prywatne, mimo zalecenia Rady Fiskalnej.'],
+    ['4.4','Wspólny model, kapitał zaufania i pakt','FZZ nie przesądza, czy ograniczać transfery ani czy wydłużać horyzont. Postuluje załącznik do projektu: harmonogram i zakres działań na lata 2028–2030 przedstawiony RDS jako pakt społeczny wokół konsolidacji.']
+  ],
+  powiazania:[[8,'Pierwszym ustawowym adresatem działań po progu 55% PKB są wynagrodzenia w sferze budżetowej.'],[3,'Nieprzekroczenie progu zależy od ustaw, których weto rząd wpisał do tabeli ryzyk.'],[5,'Debata o działaniach sanacyjnych jest debatą, którą ustawa przewiduje, a której państwo nie rozpoczęło.']]
+},
+{
+  id:5, kolor:'#C9A0F0', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Nieprzygotowanie do przygotowania projektu', krotki:'Dialog',
+  teza:'Partnerzy społeczni byli gotowi. Państwo nie dało sobie pomóc.',
+  ocena:[
+    'Terminy czyniące rok 2027 progiem były znane z wyprzedzeniem, a strona rządowa wiedziała, czego w jej dokumentach brakuje, bo wskazała jej to własna instytucja państwa: Rada Fiskalna w opinii z 11 maja 2026 r. Uzasadnienie z sierpnia odpowiada tylko na jeden z jej zarzutów. W tym samym maju Prezes Rady Ministrów zatrzymał Strategię Rozwoju Polski 2035, jedyny dokument, który mógł nadać projektowi ramę strategiczną.',
+    'Ustawa nie ustanawia RDS jako organu wyłącznie konsultacyjnego. Przed budżetem roku przełomu powinno się było odbyć pięć debat: o polityce społecznej, o systemie emerytalnym, o finansowaniu zdrowia, o ETS2 i osłonach, o obronności i odporności. Zespoły pracowały nad tym, co strona rządowa im przedłożyła: nowelizacjami, terminami, instrumentami i uposażeniami. Żadnego z pięciu problemów nie przedłożono Radzie jako problemu do rozwiązania. Trzy kolejne cykle budżetowe zakończyły się bez porozumienia.',
+    'W obszarach, w których nie prowadzono dialogu, prowadzono komunikację. W ochronie zdrowia zamiast debaty o finansowaniu systemu toczyła się debata o wynagrodzeniach medyków jako przyczynie jego niewydolności. Demokracja nie została nam dana po to, aby zamienić ją w system zarządzania luką percepcyjną. Rada jest miejscem, w którym luka ta mogłaby się zamykać, gdyby została do tego użyta.'
+  ],
+  wProjekcie:[
+    'Procedura budżetowa 2026: <b>28 kwietnia</b> Rada Ministrów przyjmuje założenia z zasadą waloryzacji o inflację → <b>14 maja</b> strona rządowa komunikuje ją zespołowi RDS → <b>27 maja</b> strona pracowników przedkłada propozycję 15% → <b>9 czerwca</b> rząd przyjmuje minimalne wynagrodzenie 4 950 zł → <b>15 czerwca</b> posiedzenie plenarne bez porozumienia → <b>10 lipca</b> zespół przyjmuje stanowisko stron pracowników i pracodawców negatywnie oceniające wskaźnik 103,0% → <b>28 sierpnia</b> Rada Ministrów przyjmuje projekt z tym wskaźnikiem. Art. 7 ustawy o kształtowaniu wynagrodzeń: porozumienie wiąże stronę rządową, a jego brak ją uwalnia.',
+    'Rada Fiskalna 11 maja 2026 r.: „brakuje założeń dotyczących przyszłej konsolidacji fiskalnej”, „nie określono precyzyjnie momentu wdrożenia działań sanacyjnych ani zakresu tych działań”, pominięcie ETS2 „niewłaściwe”. Odpowiedź: ETS2 wpisano do tabeli ryzyk. Reszta bez odpowiedzi. Krajowy Plan Społeczno-Klimatyczny bez opinii Rady; Strategia Bezpieczeństwa Narodowego Radzie nieprzedstawiona; do Sprawozdania z wdrażania planu budżetowo-strukturalnego, mimo art. 16a, brak opinii Rady.',
+    'Dowody gotowości FZZ: opinia z września 2025 r. ostrzegała przed wypychaniem wydatków do funduszy w BGK i przywoływała perspektywę negatywną Fitch; rok później agencja podtrzymała obie oceny. Propozycje płacowe 21 maja 2025 r. i 27 maja 2026 r. Stanowisko Przewodniczącej FZZ na plenarnym 15 czerwca 2026 r. łączące wynagrodzenia z odpornością państwa. Propozycja przeglądu zwolnień ze składki zdrowotnej. <b>Żadna nie doczekała się zmiany decyzji.</b> Irlandia w 2010 r. zawarła z partnerami porozumienie z Croke Park: −28 tys. etatów, −3,1 mld euro, bez zwolnień przymusowych, w zamian za gwarancje uzgodnione przy wspólnym stole.'
+  ],
+  skutek:'Projekt trafia na grunt nieprzygotowany, a decyzje konsolidacyjne, które nadejdą po 2027 roku, będą podejmowane bez mandatu społecznego i bez debaty, która mogłaby taki mandat wytworzyć. Państwo nie przygotowało porozumienia i nie przygotowało społeczeństwa na jego brak.',
+  liczby:[
+    ['5','debat, które powinny się odbyć w RDS przed budżetem roku przełomu; żadna nie odbyła się jako debata o problemie','Opinia FZZ, część 5.2'],
+    ['3','kolejne cykle budżetowe zakończone bez porozumienia: 2024, 2025, 2026','Komunikaty RDS'],
+    ['1 z 5','zarzutów Rady Fiskalnej, na które odpowiedziało uzasadnienie z sierpnia','Opinia Rady Fiskalnej, 11.05.2026'],
+    ['−28 tys.','etatów w sektorze publicznym Irlandii po porozumieniu z Croke Park, bez zwolnień przymusowych','Public Service Agreement 2010–2014']
+  ],
+  cytat:['Wartość wynikająca z dialogu społecznego ujawnia się wtedy, gdy strony się komunikują, a nie tylko informują. My się niestety informujemy, a nie komunikujemy.','Przewodnicząca FZZ, posiedzenie plenarne RDS, 15 czerwca 2026 r.; opinia FZZ, część 5.2'],
+  podrozdzialy:[
+    ['5.1','Rok, który miał być rokiem przygotowania','Rada Fiskalna nazwała braki w maju. Uzasadnienie z sierpnia odpowiedziało tylko na ETS2. W tym samym miesiącu zatrzymano Strategię Rozwoju Polski 2035 po konsultacjach, opinii RDS i przyjęciu przez Stały Komitet.'],
+    ['5.2','Dialog trójstronny jako instrument nieużyty','Zespół ds. ubezpieczeń społecznych: nowelizacje i instrumenty, nie system. Zespół ds. zdrowia: termin waloryzacji, nie finansowanie. Zespół ds. służb mundurowych: uposażenia, nie odporność.'],
+    ['5.3','Zarządzanie luką percepcyjną zamiast dialogiem','„Killer planu finansowego NFZ”. Tymczasem NIK: na Fundusz przeniesiono zadania za 113 mld zł, z czego ponad 90 mld zł to podwyżki z ustaw, bez źródła pokrycia. Odpowiedzialnością obciążono grupę zawodową.'],
+    ['5.4','Państwo nie dało sobie pomóc','Konsolidację można przeprowadzić w porozumieniu, jak Irlandia, albo bez niego, ponosząc koszt, który MFW opisuje jako mniejszą trwałość i głębsze szkody dla usług publicznych. Polska nie wybrała żadnej z tych dróg.']
+  ],
+  powiazania:[[8,'Wskaźnik był założeniem prognozy na miesiąc przed rozpoczęciem procedury ustawowej.'],[6,'Debata o wynagrodzeniach medyków zastąpiła debatę o finansowaniu systemu.'],[7,'Debata o odporności państwa nie odbyła się ani w RDS, ani w żadnym innym miejscu.']]
+}
+];
+</script>
+<script>
+FZZ.CZESCI.push(
+{
+  id:6, kolor:'#6FD3B8', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Wydatki: pytanie o funkcjonalność', krotki:'Wydatki',
+  teza:'Nie o skalę wydatków chodzi, choć jest duża. Chodzi o pytanie, którego państwo nie zadało: czy pełnią nadal funkcję, dla której zostały ustanowione.',
+  ocena:[
+    'FZZ popierało politykę redystrybucyjną od jej początków i popiera ją nadal. Nie zajmuje stanowiska, czy któryś z programów należy ograniczyć. Pytanie brzmi, czy skumulowany wydatek redystrybucyjny pełni nadal funkcję zabezpieczenia obywatela przed wykluczeniem i czy będzie ją pełnić w epoce postkonsolidacyjnej. Państwo nie sporządza oceny skutków dystrybucyjnych, głośno utrzymuje świadczenia powszechne, a po cichu wygasza świadczenia adresowane i podnosi obciążenia najniższych dochodów.',
+    'Demografia nie zagraża budżetowi emerytalnemu, lecz emerytom, i działa bez rozgłosu, bo żaden wskaźnik fiskalny jej nie ujawnia. Wskaźnik 7% PKB na zdrowie jest zobowiązaniem o randze umowy społecznej i FZZ odnotowuje jego dotrzymanie. Zarzut dotyczy tego, że uzasadnienie przedstawia 7% jako miarę wysiłku państwa w 2027 r., nie podając, jaka część produktu tego roku faktycznie trafi do systemu. Rosnący udział finansowania prywatnego przy rosnących nakładach publicznych to cicha prywatyzacja, która nie wynika z żadnej decyzji, lecz z braku decyzji.',
+    'Wynagrodzenia medyków ukształtowane ustawą z 2017 r. są sukcesem systemowym i godnościowym. Problemem nie jest to, że medycy zarabiają godnie, lecz to, że ustawodawca zbudował mechanizm bez źródła finansowania. ETS2 jest najbardziej wyrazistym przykładem tego, jak bardzo państwo nie jest przygotowane do wyzwań, o których od lat wiadomo, że nadejdą. Udział inwestycji publicznych w produkcie nie został pokazany zapewne dlatego, że liczba ta stałaby się obrazem, o który toczyłby się spór.'
+  ],
+  wProjekcie:[
+    '<b>Redystrybucja.</b> Rodzina 800+: 60 695 593 tys. zł (−929 mln, bo maleje liczba dzieci); Aktywny Rodzic 7 012 925 tys. zł (+1 037 mln); trzynasta i czternasta emerytura 32 081 408 tys. zł; renta wdowia z 15% do 25% od 1 stycznia 2027 r. Kwota wolna 30 000 zł niezmieniona od 2022 r.; MF szacuje skutek na ≈12 mld zł rocznie, a liczba podatników w drugim progu wzrosła z ≈740 tys. do ≈2 mln. W wykazie działań dyskrecjonalnych zaniechanie waloryzacji zaksięgowano jako dochód: 1 740 923 tys. zł. Nowa skala: 12% do 130 tys., 24% między 130 a 150 tys., koszt 9,1 mld zł. Próg zasiłku rodzinnego 674 zł od listopada 2015 r.; liczba dzieci nim objętych spadła w 2024 r. o 23%, do 782,8 tys.',
+    '<b>Zdrowie.</b> 7% PKB (n-2) = 273,9 mld zł; zaplanowano 274,1 mld zł. W relacji do PKB roku 2027 (4 400,3 mld zł) to <b>6,23%</b>. Siedem procent bieżącego produktu wynosiłoby 308 mld zł; różnica ≈34 mld zł odpowiada zadłużeniu szpitali publicznych na koniec 2025 r. GUS 2024: wydatki bieżące 293,6 mld zł (8,1% PKB), publiczne 229,1 mld zł, prywatne 64,5 mld zł (+9,9 mld zł w rok). Zadłużenie 562 szpitali: 34 mld zł, po I kwartale 2026 r. ponad 37 mld zł. Luka finansowa wg IFP: 41 mld zł w 2027 r. Dotacja podmiotowa dla NFZ rośnie o 60% w rok. 5,9 pielęgniarki na tysiąc mieszkańców wobec 9,2 w OECD.',
+    '<b>ETS2.</b> Wejście w życie 1 stycznia 2028 r. przesądzone rozporządzeniem opublikowanym 18 marca 2026 r. NBP, 10 lipca 2026 r.: przy cenie ≈59 euro za tonę system podniósłby inflację w 2028 r. o ≈2 pkt proc. Według CEEB 56,67% domów jednorodzinnych ogrzewanych jest wyłącznie paliwami stałymi. Społeczny Fundusz Klimatyczny: ≈11,4 mld euro dla Polski przy wkładzie ≈3,8 mld euro; jego nazwa nie występuje w pakiecie budżetowym ani razu. Rząd podaje jako powód niemodelowania niepewność co do własnych rozwiązań osłonowych, których jeszcze nie zaprojektował. <b>Inwestycje.</b> Tablica 1 podaje wyłącznie dynamikę nakładów ogółem: 6,4% → 4,2% → 3,6%, 3,3%, 3,0%. Brak podziału na publiczne i prywatne, mimo zalecenia Rady Fiskalnej.'
+  ],
+  skutek:'Pracownicy płacą za system ochrony zdrowia dwa razy, składką i z własnej kieszeni, a pracownicy ochrony zdrowia zostali dodatkowo obciążeni odpowiedzialnością za jego stan. Szok cenowy roku 2028 uderzy w realne dochody w chwili, gdy spożycie publiczne przestanie rosnąć, i najsilniej w gospodarstwa najsłabsze, dla których osłon nie przygotowano. Gospodarka bez nowych silników wzrostu zostawia następnemu pokoleniu wybór między pracą o niskiej marży a emigracją.',
+  liczby:[
+    ['6,23%','PKB roku 2027 trafia na ochronę zdrowia; uzasadnienie przedstawia to jako 7%','274,1 mld zł / 4 400,3 mld zł, Tablica 1'],
+    ['64,5 mld','wydatków prywatnych obywateli na zdrowie w 2024 r.; +9,9 mld zł w rok','GUS, wydatki na ochronę zdrowia 2022–2024'],
+    ['+2 pkt','inflacji w 2028 r. po wejściu ETS2 przy cenie ≈59 euro za tonę','NBP, konferencja 10.07.2026'],
+    ['0','razy nazwa Społecznego Funduszu Klimatycznego w pakiecie budżetowym','Opinia FZZ, część 6.4']
+  ],
+  cytat:['Państwo płaci w tym obiegu dwa razy, raz przez transfer, a raz przez system publiczny, którego usługi nie zostały wykorzystane, natomiast obywatel płaci również dwa razy, raz składką, a raz z własnej kieszeni.','Opinia FZZ, część 6.3'],
+  podrozdzialy:[
+    ['6.1','Polityka redystrybucyjna: pytanie o funkcjonalność, nie o skalę','Jedyna szeroka ocena programu 500+ (IBS, 2019): 37% budżetu trafia do rodzin ubogich. Od tego czasu program podwyższono o 60%, a oceny nie powtórzono. Gospodarstwa o najniższych dochodach wydają 50,7% na żywność, mieszkanie i energię.'],
+    ['6.2','Demografia, system emerytalny i system daninowo-składkowy','Ageing Report 2024: wydatki emerytalne stabilne (10,2% → 10,1% PKB), ale stopa zastąpienia spada z 58% do 27%. OECD: dzisiejszy debiutant może liczyć na 31,8% (kobiety) lub 40,6% (mężczyźni) ostatniej płacy netto.'],
+    ['6.3','Ochrona zdrowia','Sześć procent bieżącego produktu przedstawiane jako siedem. NIK: przychody NFZ +8,3%, koszty +30% w latach 2021–2024. Koszt ustawy z 2017 r. nie jest przyczyną nierównowagi, lecz jej składnikiem bez źródła pokrycia.'],
+    ['6.4','ETS2','Rok 2027 jest ostatnim, w którym państwo może przygotować gospodarstwa domowe, osłony i finanse. W budżecie nie zaplanowano ani złotówki na przygotowanie osłon.'],
+    ['6.5','Inwestycje publiczne i prywatne','SAFE wymaga, aby 65% wartości sprzętu pochodziło z UE, a projekt nie zawiera polityki czyniącej z wydatków obronnych dźwignię dla krajowego przemysłu. Inwestycje są tym, co zostało, nie tym, co państwo zamierza.']
+  ],
+  powiazania:[[5,'Zamiast debaty o finansowaniu zdrowia toczyła się debata o wynagrodzeniach medyków.'],[1,'Państwo bez doktryny porządkującej wydatki nie ma argumentu, dla którego miałoby ponieść koszt debaty o ich funkcjonalności.'],[8,'W 2028 r. szok ETS2 zbiegnie się z zamrożeniem realnego spożycia publicznego.']]
+},
+{
+  id:7, kolor:'#A9B4C4', rola:'obszar', rolaNazwa:'Obszar ekspozycji',
+  tytul:'Obronność i odporność', krotki:'Obronność',
+  teza:'Budżet pokazuje, ile program SAFE kosztuje stronę dochodową, i nie pokazuje, co za niego państwo kupuje.',
+  ocena:[
+    'FZZ nie kwestionuje potrzeby przeznaczania ogromnych środków na bezpieczeństwo i rozumie, że im większe zagrożenie, tym mniejsza może być transparentność. Od państwa, które przeznacza na obronność 4,51% PKB, należy jednak wymagać czegoś więcej niż informacji o kwocie i przekazu, że bezpieczeństwo rośnie proporcjonalnie do zakupów. Należy wymagać pokazania struktury wydatków. Zarzut nie dotyczy jawności, bo dane są jawne i FZZ je odtworzyło. Dotyczy analizy.',
+    'Struktura przesądza o kształcie epoki postkonsolidacyjnej: sprzęt nabywany dziś będzie wymagał utrzymania przez dziesięciolecia, a dług zaciągnięty na jego zakup będzie obsługiwany przez lata. Koszty odstraszania nie są wydatkiem jednego roku, lecz zobowiązaniem epoki. Wydatki obronne nie konkurują ze wzrostem, lecz są jego warunkiem, jednak tylko wtedy, gdy system jest zbudowany jako całość, a nie jako suma zakupów.',
+    'Doktryny NATO i UE opisują odporność jako właściwość całego społeczeństwa. Polska nie ma ani aktualnej strategii bezpieczeństwa, ani krajowego planu odporności odpowiadającego siedmiu wymogom bazowym NATO. Odporność, o której mówią doktryny, jest sprawą całego państwa, a w projekcie pozostaje sprawą jednego działu klasyfikacji budżetowej. Państwo, które nie przeprowadziło o tym rozmowy, nie mogło rozpoznać, że kadry sfery publicznej są częścią tego systemu.'
+  ],
+  wProjekcie:[
+    'Wydatki obronne 2027: <b>198,1 mld zł, 4,51% PKB</b> = 131,7 mld zł z budżetu + 66,4 mld zł z Funduszu Wsparcia Sił Zbrojnych. Nominalnie pula „podobna” do 2026 r.; większy zakres zakupów wynika ze zwolnienia sprzętu SAFE z VAT. Dział 752: wydatki stałe ≈78,2 mld zł (62%), majątkowe ≈48,7 mld zł (38%). FWSZ: programy 66,3 mld zł; obsługa finansowania dłużnego 11,4 mld zł (kapitał 4,7, odsetki 5,8, prowizje 0,8) = 14,6% wydatków Funduszu. Przychody: 69,2 mld zł z długu i 6,5 mld zł z budżetu, czyli <b>ponad 90% zasilenia to dług</b>. Zobowiązania Funduszu na koniec 2027 r.: 209,5 mld zł.',
+    'NIK: „nierzetelne przygotowanie podstaw funkcjonowania Funduszu”; przy 403 mld zł kosztów obsługi instrumentów dłużnych do 2035 r. zasilenia zaplanowano na 46,1 mld zł, niespełna 12%; VAT finansowany długiem. SAFE wspomniany dwanaście razy, zawsze w związku z VAT (−4,4 mld zł dochodów w 2027 r.), bez kwoty określającej, jaką część wydatków sfinansuje: alokacja 43,7 mld euro, pierwsza transza 6,6 mld euro z 29 maja 2026 r.',
+    'Rachunek FZZ według reguły GAO (eksploatacja ≈70% kosztu cyklu życia) przy 4,5% PKB: udział nabycia nowego sprzętu spada z ≈52% w 2027 r. do ≈31% w 2035 r.; eksploatacja rośnie z ≈16 do ≈85 mld zł, obsługa długu Funduszu z ≈11 do ≈31 mld zł, wydatki osobowe z ≈49 do ≈72 mld zł. Przy kopercie większej o ≈87 mld zł na nowy sprzęt zostanie o ≈14 mld zł mniej niż dziś. NATO: Polska wydaje na sprzęt 54,44%, najwięcej w Sojuszu; Grecja na personel 58,45%. SIPRI: import uzbrojenia +852%, 47% z Korei, 44% z USA. Agencja Uzbrojenia, I półrocze 2025: z 21,9 mld zł kontraktów ≈65% do podmiotów zagranicznych. B+R w budżecie MON: 0,85%.'
+  ],
+  skutek:'Państwo, które nie przeprowadziło rozmowy o tym, jak przy nakładach 4,51% PKB budować system odporności jako całość, nie mogło rozpoznać, że kadry sfery publicznej są częścią tego systemu, i dlatego potraktowało je w projekcie tak, jak opisuje część 8.',
+  liczby:[
+    ['198,1 mld','wydatków obronnych w 2027 r., czyli 4,51% PKB','131,7 mld zł budżet + 66,4 mld zł FWSZ'],
+    ['>90%','zasilenia Funduszu Wsparcia Sił Zbrojnych stanowi dług','Plan finansowy FWSZ: 69,2 mld zł dług, 6,5 mld zł budżet'],
+    ['14,6%','wydatków Funduszu to obsługa jego zadłużenia: 11,4 mld zł','Załącznik do projektu'],
+    ['52% → 31%','udział nabycia nowego sprzętu w nakładach 2027 → 2035; rachunek FZZ','Ilustracja mechanizmu wg reguły GAO, nie prognoza']
+  ],
+  cytat:['Bez tej struktury nie da się ocenić, czy nakłady w wysokości 4,51% PKB budują zdolność, czy w rosnącej części obsługują zdolność już zaciągniętą na kredyt.','Opinia FZZ, część 7.2'],
+  podrozdzialy:[
+    ['7.1','Zasada i granice oceny','Ocena nie dotyczy ani wielkości nakładów, ani konieczności zachowania części informacji w tajemnicy. Dotyczy tego, czego od systemu wydatków obronnych należy wymagać nawet przy tych zastrzeżeniach.'],
+    ['7.2','Struktura wydatków, której nie pokazano','Dane są w załącznikach do projektu. Uzasadnienie nie zawiera ani zdania o tym, jaka część nakładów przypada na obsługę wcześniejszego zadłużenia, jaka na utrzymanie, a jaka na nabycie.'],
+    ['7.3','Trwałe zakotwiczenie kosztów odstraszania','Polska nie spełnia warunków, przy których wydatki obronne stają się silnikiem wzrostu: importochłonność wysoka, udział badań niski, rynek pracy bez luzu.'],
+    ['7.4','Odporność jako sprawa całego państwa','Siedem wymogów bazowych NATO, raport Niinistö, Haga: 5% PKB, w tym 1,5% na odporność cywilną. Partnerzy społeczni powinni uczestniczyć w debacie o odporności, bo odporności społeczeństwa nie zbuduje się bez organizacji reprezentujących je w miejscu pracy.']
+  ],
+  powiazania:[[8,'Kadry sfery publicznej są częścią systemu odporności; projekt tego nie rozpoznał.'],[5,'Zespół ds. służb mundurowych obradował nad uposażeniami, nie nad odpornością państwa.'],[4,'Dług Funduszu jest zobowiązaniem epoki postkonsolidacyjnej.']]
+},
+{
+  id:8, kolor:'#FF5A62', rola:'emanacja', rolaNazwa:'Emanacja',
+  tytul:'Wskaźnik 103% jako emanacja', krotki:'Wskaźnik 103%',
+  teza:'W roku, w którym państwo przeznacza 4,51% PKB na odstraszanie, wynagrodzenia kadr sfery publicznej rosną realnie o 0,2%. Wskaźnik 103% jest informacją, że państwo nie uznaje ich za inwestycję w odporność.',
+  ocena:[
+    'FZZ ocenia tę liczbę nie jako pozycję wydatkową, lecz jako wynik procesu. Zasada, że płace rosną wyłącznie o inflację, została ustalona w założeniach makroekonomicznych na miesiąc przed terminem, w którym strona pracowników mogła przedłożyć propozycję. Dialog toczył się o parametr wpisany już do scenariusza jako założenie. Łańcuch ma trzy ogniwa: przesądzony parametr, brak debaty o odporności i sam wskaźnik. Związek między nimi jest przyczynowy.',
+    'Wojna zmieniła sposób, w jaki państwa są atakowane: przeciwnik uderza w system jako całość. Jeżeli państwo atakuje państwo, bronić musi go całe państwo. Ekspozycją państwa wobec obywateli i wobec przeciwnika są pracownicy sfery publicznej, bo to oni utrzymują działanie instytucji w sytuacji kryzysowej, a ich postawa kształtuje zaufanie do instytucji, które raport Niinistö wskazuje jako warunek odporności.',
+    'Wynagrodzenia w sferze publicznej są w warunkach roku 2027 inwestycją w odporność państwa. To własny wniosek FZZ, wyprowadzony z ram sojuszniczych na grunt polski. Nie chodzi o kupowanie patriotyzmu, lecz o to, czy państwo utrzyma kadry zdolne do działania, czy będzie je odtwarzać w kryzysie po wielokrotnie wyższym koszcie. Wskaźnik 103% jest politycznie bezkosztowy, bo społeczeństwo ma w głowie obraz państwa, którego nie ma. Strona rządowa tej luki nie stworzyła, korzysta z niej jednak.'
+  ],
+  wProjekcie:[
+    'Art. 9 ust. 1 pkt 3 projektu: wskaźnik 103,0%. Kwota bazowa nauczycieli 5 765,80 zł. Fundusz wynagrodzeń w państwowych jednostkach budżetowych 96 444 437 tys. zł, z czego 82 775 929 tys. zł dla pracowników objętych ustawą z 1999 r. Uzasadnienie: <b>„Analogiczne założenie dotyczące waloryzacji tych wynagrodzeń, tj. o 3,0%, przyjęto również na kolejny rok.”</b> Propozycja strony pracowników z 27 maja 2026 r.: sfera budżetowa nie mniej niż 15,0%, gospodarka narodowa nie mniej niż 11,0%, minimalne wynagrodzenie nie mniej niż 8,2%, waloryzacja emerytur o inflację powiększoną o co najmniej 50% realnego wzrostu płac.',
+    'Stan kadr: Policja 108 909 etatów i 16 262 wakaty; Straż Graniczna 14 540 etatów, 2 105 nieobsadzonych; ponad 700 brakujących sędziów; <b>17 308 wolnych stanowisk nauczycielskich</b> przed rokiem szkolnym 2026/2027; korpus służby cywilnej 123 201 osób, przeciętne wynagrodzenie 12 347 zł; według OECD 35% pracowników administracji centralnej ma ponad 55 lat, 7% mniej niż 34. ABW: 69 śledztw kontrwywiadowczych w latach 2024–2025, tyle co przez trzy dekady; Marywilska 44; dywersja kolejowa 16 listopada 2025 r. z 475 pasażerami w pociągu. Projekt tworzy 25 etatów StratCom, a odporność poznawcza następnego pokolenia spoczywa na 636 tys. etatów nauczycielskich.',
+    'Rachunek: 3% dla przeciętnego wynagrodzenia w służbie cywilnej to ≈370 zł brutto miesięcznie. Jeden punkt wskaźnika ≈790 mln zł w konwencji funduszu z ustawy z 1999 r., więc różnica 103% → 115% ≈ 9,5 mld zł. W konwencji rządowej (7,8 mld zł za 3% dla sfery i nauczycieli z pochodnymi, ≈623 tys. etatów) punkt ≈ 2,6 mld zł, różnica ≈31 mld zł. Dla porównania: przyrost obsługi długu 2026 → 2027 to 17 mld zł, a 7 565 nowych etatów żołnierzy kosztuje 872 724 tys. zł, tyle co 3% dla ≈196 tys. pracowników. Realnie +0,2% przy inflacji 2,8%; gospodarka narodowa +5,9% nominalnie, +3,0% realnie: <b>blisko trzy punkty dystansu w jednym roku</b>, około dziewięciu do 2030 r. na ścieżce z prognozy rządu. Eksperyment PIE/SGH/NHH (2021, n=1800): udział emerytur w wydatkach szacowany na ≈15% wobec ≈34%; CBOS 2024: 56% wskazuje administrację jako obszar cięć, choć to ≈5% wydatków.'
+  ],
+  skutek:'Wynagrodzenia w sferze budżetowej rosną realnie o 0,2% i tracą do gospodarki narodowej blisko trzy punkty w jednym roku. Wskaźnik pogłębia degradację tych obszarów odporności, które już dziś stanowią systemową słabość strategiczną. Koszt mechanizmu luki percepcyjnej ponoszą pracownicy sfery publicznej, którzy płacą za wyobrażenie o państwie, w którym nie pracują.',
+  liczby:[
+    ['+0,2%','realny wzrost wynagrodzeń w sferze budżetowej w 2027 r. przy inflacji 2,8%','Art. 9 projektu; Tablica 1'],
+    ['≈3 pkt','dystansu do gospodarki narodowej w jednym roku; około 9 do 2030 r.','Wniosek z prognozy rządu, nie prognoza FZZ'],
+    ['69','śledztw kontrwywiadowczych ABW w latach 2024–2025, tyle co przez trzy dekady','ABW, raport z 6.05.2026'],
+    ['17 308','wolnych stanowisk nauczycielskich przed rokiem szkolnym 2026/2027','MEN, 20.08.2026']
+  ],
+  cytat:['Państwo, które znajduje 17 mld zł na przyrost odsetek i 873 mln zł na nowe etaty w wojsku, dysponuje zdolnością finansowania decyzji uznawanych za strategiczne, a wskaźnik 103% jest informacją o tym, których decyzji za strategiczne nie uznaje.','Opinia FZZ, część 8.3'],
+  podrozdzialy:[
+    ['8.1','Związek przyczynowy','Trzy ogniwa: parametr wpisany do założeń przed procedurą, brak debaty o odporności, wskaźnik. Państwo, które nie rozpoznało w dialogu, czym jest jego odporność, nie mogło rozpoznać, że płace jego pracowników stanowią jej część.'],
+    ['8.2','Kadry sfery publicznej jako ekspozycja państwa','Urzędnicy, nauczyciele, ratownicy, funkcjonariusze, pracownicy sądów i szpitali pracują w środowisku, w którym przeciwnik testuje reakcję państwa. Konkurencja o pracownika będzie rosła, a państwo wchodzi w nią ze wskaźnikiem 3%.'],
+    ['8.3','Inwestycja w odporność, nie populizm','MFW: cięcia płac w sektorze publicznym wywołują najbardziej trwałe szkody. Rumunia po obniżce o jedną czwartą w 2010 r. przez lata odbudowywała kadry. Właściwą miarą nie jest inflacja, lecz to, czego państwo potrzebuje od kadr, i to, co kadry mogą uzyskać poza sferą publiczną.'],
+    ['8.4','Luka percepcyjna, twarz druga','Społeczeństwo widzi państwo z rozdętą administracją i skromnymi emeryturami. W takim państwie zamrożenie płac urzędników wygląda jak oszczędność, nie jak ryzyko. Informacja zmienia preferencje; zamiast zamknąć lukę, państwo nią zarządza.']
+  ],
+  powiazania:[[1,'Najostrzejszy pojedynczy przykład tego, jak deficyt strategiczny przekłada się na liczbę w projekcie.'],[5,'Parametr przesądzony miesiąc przed procedurą z art. 16 ustawy o RDS.'],[7,'Bez debaty o odporności państwo nie rozpoznało kadr jako jej części.'],[4,'Art. 86: po progu 55% PKB „nie przewiduje się wzrostu wynagrodzeń”.'],[3,'Luka po wecie będzie domykana w funduszu wynagrodzeń.'],[2,'Działania hybrydowe są wobec Polski już prowadzone.'],[6,'Szok ETS2 w 2028 r. zbiegnie się z zamrożeniem spożycia publicznego.']]
+},
+{
+  id:9, kolor:'#FFFFFF', rola:'horyzont', rolaNazwa:'Horyzont',
+  tytul:'Konkluzja', krotki:'Konkluzja',
+  teza:'Dokument operacyjny w roku, który wymagał dokumentu strategicznego, i dokument partyjny w roku, który wymagał dokumentu apartyjnego.',
+  ocena:[
+    'FZZ ocenia projekt i jego uzasadnienie jednoznacznie negatywnie. Nie z powodu wysokości deficytu ani poziomu wydatków, lecz dlatego, że projekt nie jest owocem myślenia strategicznego, a więc nie spełnia jedynego kryterium przyjętego na początku opinii. Odpowiedź na wszystkie pytania zadane w ośmiu częściach jest jedna: państwo polskie ma deficyt strategiczny, a projekt jest jego ekspozycją. Deficyt ten nie jest dziełem jednego rządu ani jednego ośrodka władzy.',
+    'Rok 2027 nie jest kolejnym ogniwem łańcucha. Jest momentem przełomu, progiem między epoką przestrzeni fiskalnej a epoką postkonsolidacyjną, a terminy tego progu były znane od lat. Zmarnowano rok 2026, a zapewne także rok 2025. FZZ ocenia nie tylko projekt, lecz także przygotowanie państwa do progu, którego projekt jest epilogiem. Państwo nie zbudowało fundamentów pod epokę, która się zaczyna, i nie dało sobie pomóc w ich budowaniu w ramach dialogu społecznego.',
+    'Interes pracowników jest prosty: rozwiązania, które będą stymulować wzrost dobrobytu, a co najmniej nie doprowadzą do sytuacji, w której dobrobyt będzie się kurczyć, nierówności rosnąć, a koszty kryzysu będą przerzucane na tych, którzy w nim nie zawinili. Taką miarą FZZ będzie oceniać kolejne projekty.'
+  ],
+  wProjekcie:[
+    'Osiem pytań, na które projekt nie odpowiada: <b>z jakiej doktryny</b> wynika alokacja; <b>jakie zagrożenia</b> niesie zakończenie wojny i sytuacja w Niemczech i Francji; <b>jak wyglądałby budżet</b> bez ustaw, których weto rząd sam wpisał do tabeli ryzyk; <b>jaka jest ścieżka konsolidacji</b> po 2028 r.; <b>do czego użyto dialogu</b> w latach 2025–2026; <b>czy wydatki społeczne</b> pełnią nadal swoją funkcję; <b>jaka część nakładów obronnych</b> obsługuje zdolność kupioną na kredyt; <b>dlaczego wskaźnik wynosi 103%</b>, jeżeli państwo przeznacza 4,51% PKB na odstraszanie, a przeciwnik uderza w to, co w państwie najsłabsze.',
+    'Trzy oczekiwania: wariant bez nieuchwalonych ustaw; harmonogram i zakres działań konsolidacyjnych na lata 2028–2030 przedstawiony Radzie Dialogu Społecznego; struktura wydatków obronnych w uzasadnieniu.'
+  ],
+  skutek:'Skutki nieprzygotowania poniosą pracownicy, przede wszystkim sfery publicznej: w postaci wynagrodzeń rosnących realnie o 0,2% i tracących trzy punkty do gospodarki, zamrożenia spożycia publicznego od 2028 r., procedur sanacyjnych, których pierwszym adresatem ustawa czyni ich płace, systemu ochrony zdrowia, za który płacą dwa razy, szoku cenowego 2028 r. bez osłon oraz konsolidacji, która wobec braku porozumienia odbędzie się w formie najostrzejszej.',
+  liczby:[
+    ['8','pytań zadanych projektowi, na które projekt nie odpowiada','Opinia FZZ, część 9'],
+    ['1','odpowiedź na wszystkie: deficyt strategiczny','Opinia FZZ, część 1 i 9'],
+    ['2','zmarnowane lata: 2026, a zapewne także 2025','Opinia FZZ, konkluzja'],
+    ['3','oczekiwania wobec strony rządowej','Opinia FZZ, streszczenie']
+  ],
+  cytat:['Odporność Rzeczypospolitej, o którą FZZ zabiega, nie powstanie ani w jednym resorcie, ani w jednej ustawie budżetowej, lecz w porozumieniu tych, którzy państwo tworzą i którzy w nim pracują.','Opinia FZZ, część 9'],
+  podrozdzialy:[
+    ['9','Konkluzja','Ocena jednoznacznie negatywna: dokumentu i procesu, nie intencji. Państwo potrzebuje partnerów mówiących mu prawdę o jego przygotowaniu bardziej niż partnerów mówiących to, co chciałoby usłyszeć.']
+  ],
+  powiazania:[[1,'Wszystkie pytania prowadzą do odpowiedzi nazwanej w części 1.'],[8,'Najostrzejszy skutek: wynagrodzenia sfery publicznej.'],[5,'Gotowość FZZ do każdej debaty, która uczyni z RDS instrument rozwiązywania problemów strategicznych.']]
+}
+);
+
+/* Karty liczb: wartość, jednostka, opis, źródło, część, kolor */
+FZZ.KARTY = [
+ ['282,6','mld zł','Deficyt budżetu państwa. Opinia nie spiera się o tę liczbę, lecz o to, na co zostanie przeznaczona ostatnia przestrzeń fiskalna.','Projekt ustawy budżetowej na rok 2027, art. 1; opinia FZZ, część 1.3 i 4.1',1],
+ ['107','mld zł','Obsługa długu Skarbu Państwa. Więcej niż fundusz wynagrodzeń wszystkich państwowych jednostek budżetowych, który wynosi 96,4 mld zł. Przyrost wobec limitu na 2026 r.: 17 mld zł.','Projekt ustawy budżetowej; Strategia zarządzania długiem 2026–2029; opinia FZZ, część 4.1',4],
+ ['25,2','z 27,6 mld zł','Działania podnoszące limit wydatków oparte na projektach ustaw, które w dniu przekazania budżetu do RDS nie były ustawami.','Uzasadnienie, wykaz działań dyskrecjonalnych; art. 112aa ustawy o finansach publicznych',3],
+ ['0,2','pkt proc.','Margines pod progiem 55% PKB, około 9 mld zł. Mniejszy niż ubytek dochodów przy wecie pakietu podatkowego, szacowany przez FZZ na około 10 mld zł.','Uzasadnienie: 55,9% według limitów, 54,8% w wariancie przewidywanym; opinia FZZ, część 4.2',4],
+ ['103','%','Średnioroczny wskaźnik wzrostu wynagrodzeń w państwowej sferze budżetowej. Realnie +0,2% przy inflacji 2,8%. Ten sam wskaźnik zapowiedziano na 2028 r.','Art. 9 ust. 1 pkt 3 projektu; Tablica 1; opinia FZZ, część 8.1',8],
+ ['623','tys. etatów','Przeciętne zatrudnienie w państwowej sferze budżetowej według komunikatu KPRM. Koszt 3% z pochodnymi: 7,8 mld zł, czyli około 2,6 mld zł za punkt.','Komunikat Kancelarii Prezesa Rady Ministrów z 28 sierpnia 2026 r.; opinia FZZ, część 8.3',8],
+ ['198,1','mld zł','Wydatki obronne, 4,51% PKB. Nominalnie bez wzrostu wobec 2026 r.; większy zakres zakupów wynika ze zwolnienia sprzętu SAFE z VAT.','Uzasadnienie: 131,7 mld zł budżet + 66,4 mld zł FWSZ; opinia FZZ, część 7.2',7],
+ ['90','% z długu','Zasilenie Funduszu Wsparcia Sił Zbrojnych: 69,2 mld zł z finansowania dłużnego wobec 6,5 mld zł z budżetu. Obsługa zadłużenia to 14,6% wydatków Funduszu.','Plan finansowy FWSZ, załącznik do projektu; NIK I/24/002/KON',7],
+ ['6,23','% PKB','Nakłady na zdrowie w relacji do produktu roku 2027. Uzasadnienie przedstawia je jako 7%, bo reguła ustawowa liczy od PKB sprzed dwóch lat.','274,1 mld zł / 4 400,3 mld zł, Tablica 1; opinia FZZ, część 6.3',6],
+ ['64,5','mld zł','Wydatki prywatne obywateli na zdrowie w 2024 r., w tym 47,6 mld zł bezpośrednio z kieszeni. Wzrost o 9,9 mld zł w rok. Uzasadnienie tej wielkości nie zawiera.','GUS, „Wydatki na ochronę zdrowia w latach 2022–2024”; opinia FZZ, część 6.3',6],
+ ['69','śledztw','Postępowań kontrwywiadowczych wszczętych przez ABW w latach 2024–2025, tyle co przez trzy poprzednie dekady łącznie.','ABW, „2024–2025. Wybrane aktywności”, 6 maja 2026 r.; opinia FZZ, część 8.2',8],
+ ['73','razy','Słowo „strategiczny” w uzasadnieniu. Ani razu jako wskazanie dokumentu, z którego alokacja miałaby wynikać.','Uzasadnienie do projektu; opinia FZZ, część 1.1',1],
+ ['+2','pkt proc.','Wpływ ETS2 na inflację w 2028 r. przy cenie uprawnienia około 59 euro za tonę. Uzasadnienie wpisuje system do tabeli ryzyk bez oszacowania.','NBP, konferencja po Raporcie o inflacji, 10 lipca 2026 r.; opinia FZZ, część 6.4',6],
+ ['1,0 · 0,4 · 0,2','%','Realny wzrost spożycia publicznego w latach 2028–2030. W kwietniu 2026 r. zakładano 2,4, 1,0 i 1,1. Zmiany nie odnotowano w tekście.','Tablica 1 uzasadnienia; założenia z 28 kwietnia 2026 r.; opinia FZZ, część 4.2',4],
+ ['17 308','wakatów','Wolnych stanowisk nauczycielskich zgłoszonych przed rokiem szkolnym 2026/2027. Odporność poznawcza następnego pokolenia spoczywa na 636 tys. etatów.','MEN, 20 sierpnia 2026 r.; opinia FZZ, część 8.2',8],
+ ['12','dni','Tyle przed przyjęciem budżetu projekt UD458, wart 14,4 mld zł, trafił do Rządowego Centrum Legislacji.','Wykaz prac legislacyjnych RM; opinia FZZ, część 3.1',3]
+];
+
+/* Sześć postaci skutków (konkluzja) */
+FZZ.SKUTKI = [
+ ['0,2%','<strong>Wynagrodzenia</strong>, które w 2027 r. rosną realnie o dwie dziesiąte procenta i tracą do gospodarki narodowej trzy punkty.'],
+ ['2028','<strong>Zamrożenie spożycia publicznego</strong> zapisane w prognozie od pierwszego roku po wyborach.'],
+ ['art. 86','<strong>Procedury sanacyjne</strong>, których pierwszym adresatem ustawa czyni płace sfery budżetowej.'],
+ ['×2','<strong>System ochrony zdrowia</strong>, za który pracownicy płacą dwa razy: składką i z własnej kieszeni.'],
+ ['ETS2','<strong>Szok cenowy roku 2028</strong>, na który nie przygotowano osłon dla gospodarstw najsłabszych.'],
+ ['brak paktu','<strong>Konsolidacja</strong>, która wobec braku porozumienia odbędzie się w formie najostrzejszej.']
+];
+
+/* Oś czasu. pas: 1 terminy znane, 2 decyzje państwa, 3 partnerzy społeczni */
+FZZ.OS = {
+ kolumny:['2020–2024','2025','I–IV 2026','V–VI 2026','VII–IX 2026','2027','2028','2029–2030'],
+ prog:6,
+ zdarzenia:[
+  [0,1,'12.05.2020','Zatwierdzona Strategia Bezpieczeństwa Narodowego','Przed wybuchem wojny za wschodnią granicą. Formalnie w mocy do dziś.'],
+  [0,1,'lipiec 2024','Procedura nadmiernego deficytu wobec Polski','Od tej chwili termin korekty jest sprawą zalecenia Rady UE.'],
+  [0,2,'08.02.2024','MON o „zaburzeniu kolejności” dokumentów strategicznych','Polityczno-Strategiczna Dyrektywa Obronna z 2018 r. uchylona bez następcy.'],
+  [0,2,'05.12.2024','Ustawa o ochronie ludności i obronie cywilnej','NIK: „Polska nie ma skutecznego systemu ochrony ludności”. Bez opinii RDS.'],
+  [1,1,'21.01.2025','Rada UE: rok 2028 terminem korekty nadmiernego deficytu','Ścieżka wydatków netto 12,5 · 6,3 · 4,4 · 4,0 · 3,5% w latach 2024–2028.'],
+  [1,1,'lipiec 2025','Krajowa klauzula wyjścia','Pozwala odchylać się od ścieżki wydatków. Wygasa z końcem 2028 r.'],
+  [1,1,'16.07.2025','Projekt ram finansowych UE 2028–2034','Około 2 bln euro; Polska 123,3 mld euro. Negocjacje w latach 2026–2027.'],
+  [1,2,'25.07.2025','Rada Ministrów przyjmuje nową Strategię Bezpieczeństwa Narodowego','Od tego dnia czeka na zatwierdzenie przez Prezydenta. Radzie Dialogu Społecznego nieprzedstawiona.'],
+  [1,2,'05.09.2025','Fitch: perspektywa negatywna','Uzasadnienie: brak wiarygodnego planu konsolidacji i ryzyko przedwyborczego łagodzenia polityki fiskalnej.'],
+  [1,2,'10.09–31.10.2025','Konsultacje Strategii Rozwoju Polski 2035','Następnie omówienie w zespole RDS 2 grudnia i na plenarnym 23 lutego 2026 r.'],
+  [1,3,'21.05.2025','Wspólna propozycja płacowa strony pracowników','FZZ, NSZZ „Solidarność”, OPZZ w trybie ustawowym. Rząd ustala 4 806 zł wobec proponowanych 5 015 zł.'],
+  [1,3,'wrzesień 2025','Opinia FZZ do budżetu na 2026 r.','Ostrzeżenie przed wypychaniem wydatków do funduszy w BGK i przed perspektywą negatywną Fitch. Rok później oba potwierdzone.'],
+  [2,1,'18.03.2026','Rozporządzenie: ETS2 od 1 stycznia 2028 r.','Termin przesądzony i opublikowany w Dzienniku Urzędowym UE.'],
+  [2,2,'05.03.2026','Stały Komitet RM przyjmuje Strategię Rozwoju Polski 2035','Przekazana Radzie Ministrów 10 kwietnia.'],
+  [2,2,'28.04.2026','Założenia makroekonomiczne: płace sfery budżetowej „o inflację”','Parametr wpisany do scenariusza na miesiąc przed terminem propozycji strony pracowników. Spożycie publiczne 2028–2030: 2,4 · 1,0 · 1,1%.'],
+  [3,2,'maj 2026','Premier zatrzymuje Strategię Rozwoju Polski 2035','Jedyny dokument, który mógł nadać projektowi ramę strategiczną, odłożony na posiedzeniu Rady Ministrów.'],
+  [3,2,'11.05.2026','Opinia Rady Fiskalnej o założeniach','Brak ścieżki konsolidacji, brak harmonogramu działań z art. 86, pominięcie ETS2 „niewłaściwe”. W sierpniu odpowiedź tylko na ETS2.'],
+  [3,2,'09.06.2026','Rada Ministrów: minimalne wynagrodzenie 4 950 zł','Wyższe o 3%. Wobec braku uzgodnienia w RDS ustalone rozporządzeniem na poziomie własnej propozycji.'],
+  [3,3,'27.05.2026','Propozycja: sfera budżetowa nie mniej niż 15%','Strona pracowników w trybie art. 16 ustawy o RDS. Gospodarka narodowa ≥11%, minimalne ≥8,2%.'],
+  [3,3,'15.06.2026','Plenarne RDS bez porozumienia','Przewodnicząca FZZ: „3-procentowa podwyżka to informacja, że nie chcemy inwestować w odporność państwa”.'],
+  [4,3,'10.07.2026','Wspólne stanowisko pracowników i pracodawców przeciw 103%','Zespół problemowy ds. budżetu, wynagrodzeń i świadczeń socjalnych.'],
+  [4,1,'10.07.2026','NBP: ETS2 to około +2 pkt proc. inflacji w 2028 r.','Efekt bezpośredni 1,5–1,6 pkt, pośredni 0,4–0,5 pkt.'],
+  [4,2,'16.08.2026','Projekt UD458 trafia do RCL','14,4 mld zł dochodów. Dwanaście dni przed przyjęciem budżetu.'],
+  [4,2,'21.08.2026','Fitch podtrzymuje A− z perspektywą negatywną','„Ograniczone możliwości środków kompensacyjnych ze względu na prawdopodobne weta prezydenckie.”'],
+  [4,2,'28.08.2026','Rada Ministrów przyjmuje projekt ze wskaźnikiem 103%','Spożycie publiczne 2028–2030 obniżone do 1,0 · 0,4 · 0,2% bez słowa w tekście. Pismo do RDS tego samego dnia.'],
+  [4,3,'wrzesień 2026','Opinia FZZ do projektu na rok 2027','Przedłożona na podstawie art. 18 ustawy o RDS. Ocena jednoznacznie negatywna.'],
+  [5,1,'2027','Ostatni rok przestrzeni fiskalnej','Wybory parlamentarne. Po raz pierwszy w historii budżet opiniuje Rada Fiskalna. W kwietniu wybory prezydenckie we Francji.'],
+  [5,2,'2027','Wskaźnik 103%, deficyt 282,6 mld zł','Realnie +0,2% dla 623 tys. etatów. Dochody z ustaw, których nie ma. Zdrowie: 6,23% bieżącego PKB.'],
+  [6,1,'01.01.2028','Wejście w życie ETS2','56,67% domów jednorodzinnych ogrzewanych wyłącznie paliwami stałymi. Osłony nieprzygotowane.'],
+  [6,1,'2028','Termin korekty nadmiernego deficytu. Koniec klauzuli wyjścia i horyzontu planu','Rząd już zapowiada, że termin zostanie przesunięty przez Komisję. Nowego planu na lata 2029–2032 nie ma.'],
+  [6,2,'2028','Korekta limitu wydatków po ewentualnych wetach','Spożycie publiczne +1,0% realnie. Zatrudnienie w gospodarce narodowej zaczyna spadać. Wszystkie trudne decyzje mają tę samą datę.'],
+  [7,1,'2029','Rosja może dysponować zdolnością do uderzenia na państwo NATO','Ocena wywiadowcza 32 sojuszników wg szefa sztabu Bundeswehry. Dług sektora 75,3% PKB wg Strategii zarządzania długiem.'],
+  [7,2,'2029–2030','Działania z art. 86 ustawy o finansach publicznych','Domyślna korekta reguły −0,5% PKB rocznie. Spożycie publiczne 0,4 i 0,2%. „Nie przewiduje się wzrostu wynagrodzeń pracowników państwowej sfery budżetowej.”'],
+  [7,3,'2030','Dystans płac do gospodarki narodowej ≈9%','Wniosek z prognozy rządu przy utrzymaniu ścieżki wskaźnika. Debata, której państwo nie rozpoczęło, wciąż jest możliwa.']
+ ]
+};
+
+FZZ.ZRODLA = [
+ ['Projekt ustawy budżetowej na rok 2027 wraz z uzasadnieniem i załącznikami','Rada Ministrów, 28 sierpnia 2026 r.','https://www.gov.pl/web/finanse'],
+ ['Wieloletnie założenia makroekonomiczne na lata 2026–2030','Rada Ministrów, 28 kwietnia 2026 r.','https://www.gov.pl/web/finanse/zalozenia-wieloletnie2'],
+ ['Ustawa o finansach publicznych, art. 86, 112aa, 142','Dz.U. z 2025 r. poz. 1483','https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20250001483'],
+ ['Ustawa o Radzie Dialogu Społecznego, art. 1, 2, 16, 16a, 18','Dz.U. z 2026 r. poz. 836','https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20260000836'],
+ ['Ustawa o kształtowaniu wynagrodzeń w państwowej sferze budżetowej, art. 7','Dz.U. z 2024 r. poz. 1356','https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20240001356'],
+ ['Strategia zarządzania długiem sektora finansów publicznych 2026–2029','Ministerstwo Finansów, druk sejmowy nr 1749','https://www.gov.pl/web/finanse/strategia-zarzadzania-dlugiem-sektora-finansow-publicznych-w-latach-2026-2029'],
+ ['Fitch potwierdza dotychczasowy rating Polski','Ministerstwo Finansów i Gospodarki, 21 sierpnia 2026 r.','https://www.gov.pl/web/finanse/fitch-potwierdza-dotychczasowy-rating-polski12'],
+ ['Zalecenie Rady w sprawie likwidacji nadmiernego deficytu w Polsce','Rada UE, 21 stycznia 2025 r.','https://economy-finance.ec.europa.eu/economic-governance-framework/stability-and-growth-pact/corrective-arm-excessive-deficit-procedure/excessive-deficit-procedures-overview/Poland_en'],
+ ['Rozporządzenie (UE) 2026/667 w sprawie ram neutralności klimatycznej (ETS2)','Dz.Urz. UE, 18 marca 2026 r.','https://eur-lex.europa.eu/eli/reg/2026/667/oj/eng'],
+ ['Funkcjonowanie Narodowego Funduszu Zdrowia','Najwyższa Izba Kontroli, 12 czerwca 2025 r.','https://www.nik.gov.pl/najnowsze-informacje-o-wynikach-kontroli/nfz-realizacja-zadan.html'],
+ ['Planowanie i realizacja zadań finansowanych przez Fundusz Wsparcia Sił Zbrojnych','Najwyższa Izba Kontroli, I/24/002/KON','https://www.nik.gov.pl/kontrole/I/24/002/KON'],
+ ['Raport o inflacji, lipiec 2026','Narodowy Bank Polski','https://nbp.pl/raport-o-inflacji-lipiec-2026/'],
+ ['Wydatki na ochronę zdrowia w latach 2022–2024','Główny Urząd Statystyczny','https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/wydatki-na-ochrone-zdrowia-w-latach-2022-2024,27,5.html'],
+ ['Prognoza wpływów i wydatków FUS na lata 2026–2030','Zakład Ubezpieczeń Społecznych, październik 2025 r.','https://www.zus.pl/documents/10182/167761/Publikacja_FUS_2026-2030.pdf'],
+ ['ABW 2024–2025. Wybrane aktywności','Agencja Bezpieczeństwa Wewnętrznego, 6 maja 2026 r.','https://www.abw.gov.pl/pl/aktualnosci/2815,Agencja-Bezpieczenstwa-Wewnetrznego-2024-2025-Wybrane-aktywnosci.html'],
+ ['Defence Expenditure of NATO Countries (2014–2025)','NATO, 28 sierpnia 2025 r.','https://nato.int/content/dam/nato/webready/documents/finance/def-exp-2025-en.pdf'],
+ ['Trends in International Arms Transfers, 2025','SIPRI, 9 marca 2026 r.','https://www.sipri.org/sites/default/files/2026-03/fs_2603_at_2025.pdf'],
+ ['2024 Ageing Report','Komisja Europejska, Institutional Paper 279','https://economy-finance.ec.europa.eu/publications/2024-ageing-report-economic-and-budgetary-projections-eu-member-states-2022-2070_en'],
+ ['Safer Together (raport Niinistö)','Komisja Europejska, 30 października 2024 r.','https://commission.europa.eu/topics/defence/safer-together-path-towards-fully-prepared-union_en'],
+ ['Information effects in public spending preferences: evidence from Poland','Sawulski, Szewczyk, Kiełczewska, European Journal of Political Economy 2024','https://doi.org/10.1016/j.ejpoleco.2024.102558'],
+ ['Rodzina 500+ – ocena programu i propozycje zmian','Instytut Badań Strukturalnych, 7 maja 2019 r.','https://ibs.org.pl/app/uploads/2019/05/Raport_500plus.pdf'],
+ ['Posiedzenie plenarne RDS: wystąpienie Przewodniczącej FZZ','Forum Związków Zawodowych, 15 czerwca 2026 r.','https://fzz.org.pl/rds-czerwiec/'],
+ ['Opinia FZZ do projektu ustawy budżetowej na rok 2026','Forum Związków Zawodowych, wrzesień 2025 r.','https://fzz.org.pl/wp-content/uploads/2025/09/Opinia-FZZ-do-projektu-ustawy-budzetowej-na-2026-rok.pdf'],
+ ['Weapon System Sustainment','U.S. Government Accountability Office, GAO-26-108140','https://www.gao.gov/products/gao-26-108140']
+];
+</script>
+<script>
+(function(){
+"use strict";
+var CZ=FZZ.CZESCI, byId={}; CZ.forEach(function(c){byId[c.id]=c;});
+var spokoj=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $=function(s,r){return (r||document).querySelector(s);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+function ico(id,cls){return '<svg class="ikona '+(cls||'')+'" aria-hidden="true"><use href="#i-'+id+'"/></svg>';}
+var kom=$('#kom'),kt;
+function pokaz(t){kom.textContent=t;kom.classList.add('jest');clearTimeout(kt);kt=setTimeout(function(){kom.classList.remove('jest');},1900);}
+function kopiuj(t,m){
+  var ok=function(){pokaz(m);},zle=function(){pokaz('Nie udało się skopiować');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,zle);}
+  else{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok();}catch(e){zle();}document.body.removeChild(a);}
+}
+
+/* ================= PANEL ================= */
+var U=$('#uniwersum'), panel=$('#panel'), pGlowa=$('#panel-glowa'), pZak=$('#zakladki'), pCialo=$('#panel-cialo');
+var wybrany=null, zakladka='ocena';
+var ZAK=[['ocena','Ocena'],['projekt','W projekcie'],['podrozdzialy','Podrozdziały'],['powiazania','Powiązania']];
+
+function otworz(id,zak){
+  var c=byId[id]; if(!c) return;
+  wybrany=id; if(zak) zakladka=zak;
+  U.classList.add('otwarty'); U.style.setProperty('--k',c.kolor);
+  pGlowa.innerHTML='<p class="et" style="--k:'+c.kolor+'">'+ico(c.id)+'<span><b>Część '+c.id+'</b> · '+esc(c.rolaNazwa)+'</span></p>'+
+    '<h2>'+esc(c.tytul)+'</h2><p class="teza" style="--k:'+c.kolor+'">'+esc(c.teza)+'</p>'+
+    '<button class="zamknij" id="zamknij" aria-label="Zamknij">'+ico('x')+'</button>';
+  pZak.innerHTML=ZAK.map(function(z){return '<button role="tab" data-z="'+z[0]+'" aria-selected="'+(z[0]===zakladka)+'" style="--k:'+c.kolor+'">'+z[1]+'</button>';}).join('');
+  renderujZakladke(c);
+  $('#zamknij').addEventListener('click',zamknij);
+  Array.prototype.forEach.call($('#dok').children,function(b){ if(b.dataset.id) b.setAttribute('aria-current', String(b.dataset.id===String(id))); });
+  if(location.hash!=='#czesc-'+id) history.replaceState(null,'','#czesc-'+id);
+  if(S3D) S3D.wybierz(id);
+  pCialo.scrollTop=0;
+}
+function renderujZakladke(c){
+  var h='';
+  if(zakladka==='ocena'){
+    h='<h4>Ocena FZZ</h4>'+c.ocena.map(function(p){return '<p>'+p+'</p>';}).join('')+
+      '<div class="skutek"><h4>Skutek dla pracowników</h4><p>'+esc(c.skutek)+'</p></div>'+
+      '<div class="cytat"><p>„'+esc(c.cytat[0])+'”</p><p class="zr">'+esc(c.cytat[1])+'</p><div class="akcje"><button class="guz guz-maly kopiuj" data-t="'+esc('„'+c.cytat[0]+'” ('+c.cytat[1]+')')+'">Skopiuj cytat</button><button class="guz guz-maly link" data-id="'+c.id+'">Skopiuj link</button></div></div>';
+  }else if(zakladka==='projekt'){
+    h='<h4>Gdzie w projekcie i uzasadnieniu</h4>'+c.wProjekcie.map(function(p){return '<p>'+p+'</p>';}).join('')+
+      '<h4>Liczby tej części</h4><div class="liczby-mini">'+c.liczby.map(function(l){return '<div><b>'+esc(l[0])+'</b><span>'+esc(l[1])+'</span><i>'+esc(l[2])+'</i></div>';}).join('')+'</div>';
+  }else if(zakladka==='podrozdzialy'){
+    h='<h4>'+c.podrozdzialy.length+' '+(c.podrozdzialy.length===1?'punkt':'podrozdziały')+' · kliknij, aby rozwinąć</h4><div class="ksiezyce" style="--k:'+c.kolor+'">'+
+      c.podrozdzialy.map(function(p,i){return '<button aria-expanded="false" data-i="'+i+'"><span class="nr">'+esc(p[0])+'</span><div><h5>'+esc(p[1])+'</h5><p>'+esc(p[2])+'</p></div></button>';}).join('')+'</div>';
+  }else{
+    h='<h4>Dokąd prowadzi ta część</h4><div class="powiaz">'+c.powiazania.map(function(p){var d=byId[p[0]];return '<button data-id="'+d.id+'" style="--k2:'+d.kolor+'">'+ico(d.id)+'<div><h5>Część '+d.id+' · '+esc(d.krotki)+'</h5><p>'+esc(p[1])+'</p></div><span class="strz">→</span></button>';}).join('')+'</div>';
+  }
+  pCialo.innerHTML=h;
+}
+pZak.addEventListener('click',function(e){var b=e.target.closest('button[data-z]');if(!b)return;zakladka=b.dataset.z;otworz(wybrany);});
+pCialo.addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  if(b.classList.contains('kopiuj')){kopiuj(b.dataset.t,'Cytat w schowku');return;}
+  if(b.classList.contains('link')){kopiuj(location.href.split('#')[0]+'#czesc-'+b.dataset.id,'Link w schowku');return;}
+  if(b.closest('.ksiezyce')){var r=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!r));if(S3D&&!r)S3D.podswietlKsiezyc(wybrany,parseInt(b.dataset.i,10));return;}
+  if(b.closest('.powiaz')){otworz(parseInt(b.dataset.id,10),'ocena');}
+});
+function zamknij(){
+  wybrany=null; U.classList.remove('otwarty');
+  Array.prototype.forEach.call($('#dok').children,function(b){ if(b.dataset.id) b.setAttribute('aria-current','false'); });
+  if(location.hash.indexOf('#czesc-')===0) history.replaceState(null,'',location.pathname+location.search);
+  if(S3D) S3D.wybierz(null);
+}
+function krok(d){var i=wybrany?((wybrany-1+d+9)%9)+1:1;otworz(i,'ocena');}
+$('#poprz').addEventListener('click',function(){krok(-1);});
+$('#nast').addEventListener('click',function(){krok(1);});
+document.addEventListener('keydown',function(e){
+  if(e.target.matches('input,textarea')) return;
+  if(e.key==='Escape'&&wybrany){zamknij();stopTour();}
+  if(e.key==='ArrowRight'){krok(1);stopTour();}
+  if(e.key==='ArrowLeft'){krok(-1);stopTour();}
+});
+
+/* dok */
+var dok=$('#dok');
+CZ.forEach(function(c){
+  var b=el('button',null,ico(c.id)+'<span>'+c.id+' · '+esc(c.krotki)+'</span>');
+  b.dataset.id=c.id; b.style.setProperty('--k',c.kolor); b.setAttribute('aria-current','false'); b.setAttribute('aria-label','Część '+c.id+': '+c.tytul);
+  b.addEventListener('click',function(){stopTour();otworz(c.id,'ocena');});
+  dok.appendChild(b);
+});
+dok.appendChild(el('span','sep'));
+var tourBtn=el('button','tour',ico('graj')+'<span>Zwiedzaj</span>'); tourBtn.setAttribute('aria-pressed','false'); dok.appendChild(tourBtn);
+var tour=null, tourT=0, TOUR_S=11, postep=$('#postep');
+function startTour(){ stopTour(); tourBtn.setAttribute('aria-pressed','true'); tourBtn.innerHTML=ico('stop')+'<span>Stop</span>'; tourT=0; otworz(1,'ocena'); tour=true; }
+function stopTour(){ if(!tour) return; tour=null; tourBtn.setAttribute('aria-pressed','false'); tourBtn.innerHTML=ico('graj')+'<span>Zwiedzaj</span>'; postep.style.width='0'; }
+tourBtn.addEventListener('click',function(){ tour?stopTour():startTour(); });
+function tickTour(dt){
+  if(!tour) return; tourT+=dt; postep.style.width=Math.min(100,tourT/TOUR_S*100)+'%';
+  if(tourT>=TOUR_S){ tourT=0; if(wybrany===9){stopTour();return;} otworz((wybrany||0)+1,'ocena'); }
+}
+
+/* fallback płaski */
+var siat=$('#plaska-siatka');
+CZ.forEach(function(c){var b=el('button',null,ico(c.id)+'<h3>'+c.id+' · '+esc(c.krotki)+'</h3><p style="font-size:.85rem;color:#C6CBD6;margin-top:6px">'+esc(c.teza)+'</p>');b.style.setProperty('--k',c.kolor);b.addEventListener('click',function(){otworz(c.id,'ocena');});siat.appendChild(b);});
+
+/* ================= SCENA 3D ================= */
+var S3D=null;
+(function(){
+  var canvas=$('#plotno'); if(!window.THREE){U.classList.add('bez3d');return;}
+  var renderer; try{ renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:false,powerPreference:'high-performance'}); }catch(e){U.classList.add('bez3d');return;}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2)); renderer.setClearColor(0x05060a,1);
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(42,1,0.1,800);
+  var W=1,H=1;
+
+  function tekstura(kolorSrodka){
+    var c=document.createElement('canvas');c.width=c.height=128;var x=c.getContext('2d');
+    var g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.25,'rgba(255,255,255,.55)');g.addColorStop(0.6,'rgba(255,255,255,.12)');g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.fillRect(0,0,128,128);var t=new THREE.CanvasTexture(c);return t;
+  }
+  var texPoswiata=tekstura();
+  function poswiata(kolor,skala,op){var m=new THREE.SpriteMaterial({map:texPoswiata,color:kolor,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false});var s=new THREE.Sprite(m);s.scale.set(skala,skala,1);return s;}
+
+  /* gwiazdy tła */
+  (function(){
+    var N=window.innerWidth<800?3500:7000, pos=new Float32Array(N*3), col=new Float32Array(N*3);
+    for(var i=0;i<N;i++){
+      var r=55+Math.random()*110, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+      pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.cos(ph)*0.75; pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+      var w=0.55+Math.random()*0.45, ciep=Math.random()<0.15;
+      col[i*3]=w; col[i*3+1]=ciep?w*0.78:w*0.96; col[i*3+2]=ciep?w*0.7:w;
+    }
+    var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(col,3));
+    var m=new THREE.PointsMaterial({size:0.42,vertexColors:true,transparent:true,opacity:.85,sizeAttenuation:true,depthWrite:false,blending:THREE.AdditiveBlending});
+    scene.add(new THREE.Points(g,m));
+  })();
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.42));
+  var sw=new THREE.PointLight(0xff3b46,1.6,60,1.6); sw.position.set(0,0.5,0); scene.add(sw);
+  var dl=new THREE.DirectionalLight(0xffffff,0.55); dl.position.set(-8,14,10); scene.add(dl);
+
+  function okrag(r,kolor,op,tilt){
+    var n=160,p=new Float32Array((n+1)*3);
+    for(var i=0;i<=n;i++){var a=i/n*Math.PI*2;p[i*3]=Math.cos(a)*r;p[i*3+1]=0;p[i*3+2]=Math.sin(a)*r;}
+    var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    var l=new THREE.Line(g,new THREE.LineBasicMaterial({color:kolor,transparent:true,opacity:op,depthWrite:false}));
+    if(tilt)l.rotation.x=tilt; return l;
+  }
+
+  /* pozycje */
+  var R_OBSZAR=9, R_EMAN=15.5, R_HOR=21;
+  var planety=[], meshe=[], ksiezyce=[], linie={}, emanacje=[];
+  var grupa=new THREE.Group(); scene.add(grupa);
+  grupa.add(okrag(R_OBSZAR,0xffffff,.16)); grupa.add(okrag(R_EMAN,0xff4d55,.14)); grupa.add(okrag(R_HOR,0xffffff,.09));
+  grupa.add(okrag(3.1,0xff4d55,.35,0.5)); grupa.add(okrag(3.6,0xff4d55,.22,-0.7));
+
+  function pozycja(c){
+    if(c.rola==='zrodlo') return new THREE.Vector3(0,0,0);
+    if(c.rola==='emanacja'){var a=Math.PI*1.12;return new THREE.Vector3(Math.cos(a)*R_EMAN,-0.4,Math.sin(a)*R_EMAN);}
+    if(c.rola==='horyzont'){var b=Math.PI*1.62;return new THREE.Vector3(Math.cos(b)*R_HOR,0.6,Math.sin(b)*R_HOR);}
+    var k=c.id-2, ang=-Math.PI*0.42+k*(Math.PI*2/6);
+    return new THREE.Vector3(Math.cos(ang)*R_OBSZAR,Math.sin(k*2.1)*0.9,Math.sin(ang)*R_OBSZAR);
+  }
+  CZ.forEach(function(c){
+    var pos=pozycja(c), kol=new THREE.Color(c.kolor), r=c.rola==='zrodlo'?2.1:c.rola==='emanacja'?1.25:c.rola==='horyzont'?0.95:0.82+c.podrozdzialy.length*0.05;
+    var mat=c.rola==='zrodlo'?new THREE.MeshStandardMaterial({color:0xff2a35,emissive:0xd8151f,emissiveIntensity:1.1,roughness:.35,metalness:.1})
+           :new THREE.MeshStandardMaterial({color:kol.clone().lerp(new THREE.Color(0xffffff),0.35),emissive:kol,emissiveIntensity:c.rola==='emanacja'?.55:.18,roughness:.55,metalness:.15});
+    var mesh=new THREE.Mesh(new THREE.SphereGeometry(r,48,32),mat); mesh.position.copy(pos); mesh.userData.id=c.id; grupa.add(mesh); meshe.push(mesh);
+    var glow=poswiata(kol,r*(c.rola==='zrodlo'?6.5:3.6),c.rola==='zrodlo'?.8:.38); glow.position.copy(pos); grupa.add(glow);
+    if(c.rola==='zrodlo'){var szk=new THREE.Mesh(new THREE.IcosahedronGeometry(2.55,1),new THREE.MeshBasicMaterial({color:0xff4d55,wireframe:true,transparent:true,opacity:.28}));szk.position.copy(pos);grupa.add(szk);c._szk=szk;}
+    if(c.rola==='emanacja'){var ring=okrag(r*1.9,0xff5a62,.5,0.9);ring.position.copy(pos);grupa.add(ring);c._ring=ring;}
+    c._pos=pos;c._mesh=mesh;c._glow=glow;c._r=r;
+    /* księżyce = podrozdziały */
+    c._ks=[];
+    c.podrozdzialy.forEach(function(p,i){
+      if(c.rola==='horyzont') return;
+      var m=new THREE.Mesh(new THREE.SphereGeometry(0.15,16,12),new THREE.MeshBasicMaterial({color:kol,transparent:true,opacity:.9}));
+      var d={mesh:m,rad:r+1.1+i*0.55,v:(0.22+i*0.06)*(i%2?1:-1),f:i*1.7,tilt:0.25+i*0.18,cz:c,i:i,el:null};
+      grupa.add(m); ksiezyce.push(d); c._ks.push(d);
+    });
+  });
+  /* emanacje: z 1–7 do 8 */
+  var c8=byId[8];
+  function krzywa(a,b,wys,kolor,op){
+    var mid=a.clone().add(b).multiplyScalar(.5); mid.y+=wys;
+    var pts=new THREE.QuadraticBezierCurve3(a,mid,b).getPoints(48);
+    var l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:kolor,transparent:true,opacity:op,depthWrite:false,blending:THREE.AdditiveBlending}));
+    l.userData.op=op; return l;
+  }
+  CZ.forEach(function(c){ if(c.id===8||c.id===9) return; var l=krzywa(c._pos,c8._pos,c.id===1?4.5:2.8,0xff5a62,.16); grupa.add(l); emanacje.push(l); });
+  /* powiązania (ukryte do wyboru) */
+  CZ.forEach(function(c){ c.powiazania.forEach(function(p){ var d=byId[p[0]], k=Math.min(c.id,d.id)+'-'+Math.max(c.id,d.id); if(linie[k]) return; var l=krzywa(c._pos,d._pos,2.2,0xffffff,0); l.userData.op=.0; grupa.add(l); linie[k]=l; }); });
+
+  /* etykiety HTML */
+  var ety=$('#etykiety');
+  CZ.forEach(function(c){
+    var e=el('button','ety',ico(c.id)+'<span class="nr">'+c.id+'</span><span>'+esc(c.krotki).toUpperCase()+'</span>');
+    e.style.setProperty('--k',c.kolor); e.setAttribute('aria-label','Część '+c.id+': '+c.tytul);
+    e.addEventListener('click',function(ev){ev.stopPropagation();stopTour();otworz(c.id,'ocena');});
+    e.addEventListener('mouseenter',function(){hover=c.id;}); e.addEventListener('mouseleave',function(){hover=null;});
+    ety.appendChild(e); c._el=e;
+    c._ks.forEach(function(d){var ke=el('span','ety ksiezyc','<span class="nr">'+esc(c.podrozdzialy[d.i][0])+'</span><span>'+esc(c.podrozdzialy[d.i][1])+'</span>');ke.style.setProperty('--k',c.kolor);ke.hidden=true;ety.appendChild(ke);d.el=ke;});
+  });
+
+  /* kamera */
+  var kam={theta:0.65,phi:1.02,dist:44,t:new THREE.Vector3(0,0,0)}, cel={theta:0.65,phi:1.02,dist:44,t:new THREE.Vector3(0,0,0)};
+  var wybr=null, hover=null, idle=0, ciag=false, px=0,py=0, pinch=0, ostatniRuch=performance.now();
+  function wymiar(){
+    W=canvas.clientWidth;H=canvas.clientHeight; renderer.setSize(W,H,false); camera.aspect=W/H;
+    var mobil=W<760;
+    if(wybr!==null){ if(mobil) camera.setViewOffset(W,H,0,H*0.24,W,H); else camera.setViewOffset(W,H,parseInt(getComputedStyle(U).getPropertyValue('--panel-w'))/2||220,0,W,H); }
+    else if(!mobil) camera.setViewOffset(W,H,-W*0.09,0,W,H); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize',wymiar); wymiar();
+
+  canvas.addEventListener('pointerdown',function(e){ciag=true;px=e.clientX;py=e.clientY;canvas.classList.add('ciag');canvas.setPointerCapture(e.pointerId);ostatniRuch=performance.now();stopTour();});
+  canvas.addEventListener('pointermove',function(e){ if(!ciag) return; cel.theta-=(e.clientX-px)*0.0055; cel.phi=Math.max(0.25,Math.min(1.5,cel.phi-(e.clientY-py)*0.0045)); px=e.clientX;py=e.clientY; ostatniRuch=performance.now(); });
+  function koniec(){ciag=false;canvas.classList.remove('ciag');}
+  canvas.addEventListener('pointerup',koniec); canvas.addEventListener('pointercancel',koniec);
+  canvas.addEventListener('wheel',function(e){e.preventDefault();cel.dist=Math.max(5,Math.min(70,cel.dist*(1+e.deltaY*0.0012)));ostatniRuch=performance.now();},{passive:false});
+  canvas.addEventListener('touchstart',function(e){if(e.touches.length===2){pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
+  canvas.addEventListener('touchmove',function(e){if(e.touches.length===2&&pinch){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);cel.dist=Math.max(5,Math.min(70,cel.dist*(pinch/d)));pinch=d;}},{passive:true});
+  var ray=new THREE.Raycaster(), mysz=new THREE.Vector2(), ruszyl=false;
+  canvas.addEventListener('mousemove',function(e){mysz.x=(e.clientX/W)*2-1;mysz.y=-(e.clientY/H)*2+1;ruszyl=true;});
+  canvas.addEventListener('click',function(e){
+    if(Math.abs(e.clientX-px)>4||Math.abs(e.clientY-py)>4) return;
+    mysz.x=(e.clientX/W)*2-1;mysz.y=-(e.clientY/H)*2+1; ray.setFromCamera(mysz,camera);
+    var h=ray.intersectObjects(meshe); if(h.length){stopTour();otworz(h[0].object.userData.id,'ocena');} else if(wybr!==null){zamknij();}
+  });
+
+  function wybierz(id){
+    wybr=id;
+    CZ.forEach(function(c){ c._el.classList.toggle('akt',c.id===id); c._ks.forEach(function(d){d.el.hidden=(c.id!==id);}); });
+    Object.keys(linie).forEach(function(k){ var ids=k.split('-').map(Number); linie[k].userData.op=(id!==null&&(ids[0]===id||ids[1]===id))?.55:0; });
+    emanacje.forEach(function(l){ l.userData.op=(id===8)?.6:(id===null?.16:.07); });
+    if(id===null){ cel.t.set(0,0,0); cel.dist=44; cel.phi=1.02; }
+    else{ var c=byId[id]; cel.t.copy(c._pos); cel.dist=c.rola==='zrodlo'?15:c.rola==='emanacja'?11.5:c.rola==='horyzont'?9:9.5; cel.phi=1.12; }
+    wymiar();
+  }
+  function podswietlKsiezyc(id,i){ var c=byId[id]; var d=c._ks[i]; if(!d) return; d.mesh.scale.set(2.2,2.2,2.2); setTimeout(function(){d.mesh.scale.set(1,1,1);},900); }
+  S3D={wybierz:wybierz,podswietlKsiezyc:podswietlKsiezyc};
+
+  var v=new THREE.Vector3(), t0=performance.now(), tp=t0;
+  function projektuj(pos,e,off){
+    v.copy(pos); v.project(camera);
+    if(v.z>1){e.classList.add('ukryj');return;} e.classList.remove('ukryj');
+    var x=(v.x*.5+.5)*W, y=(-v.y*.5+.5)*H+(off||0);
+    e.style.transform='translate(-50%,-50%) translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+  }
+  function klatka(){
+    var teraz=performance.now(), dt=Math.min(0.05,(teraz-tp)/1000); tp=teraz; var t=(teraz-t0)/1000;
+    tickTour(dt);
+    if(!ciag && wybr===null && !spokoj && teraz-ostatniRuch>2500) cel.theta+=dt*0.05;
+    var k=spokoj?1:Math.min(1,dt*4.2);
+    kam.theta+=(cel.theta-kam.theta)*k; kam.phi+=(cel.phi-kam.phi)*k; kam.dist+=(cel.dist-kam.dist)*k; kam.t.lerp(cel.t,k);
+    camera.position.set(kam.t.x+kam.dist*Math.sin(kam.phi)*Math.sin(kam.theta), kam.t.y+kam.dist*Math.cos(kam.phi), kam.t.z+kam.dist*Math.sin(kam.phi)*Math.cos(kam.theta));
+    camera.lookAt(kam.t);
+    /* animacje */
+    var c1=byId[1]; if(!spokoj){ var p=1+Math.sin(t*1.6)*0.025; c1._mesh.scale.set(p,p,p); c1._szk.rotation.y=t*0.12; c1._szk.rotation.x=t*0.07; byId[8]._ring.rotation.z=t*0.2; sw.intensity=1.5+Math.sin(t*1.6)*0.25; }
+    ksiezyce.forEach(function(d){ var a=(spokoj?0:t*d.v)+d.f; d.mesh.position.set(d.cz._pos.x+Math.cos(a)*d.rad, d.cz._pos.y+Math.sin(a)*d.rad*Math.sin(d.tilt), d.cz._pos.z+Math.sin(a)*d.rad*Math.cos(d.tilt)); });
+    Object.keys(linie).forEach(function(kk){var l=linie[kk];l.material.opacity+=(l.userData.op-l.material.opacity)*0.08;});
+    emanacje.forEach(function(l){l.material.opacity+=(l.userData.op-l.material.opacity)*0.08;});
+    /* hover */
+    if(ruszyl&&!ciag){ray.setFromCamera(mysz,camera);var h=ray.intersectObjects(meshe);var hid=h.length?h[0].object.userData.id:null;canvas.style.cursor=hid?'pointer':'';CZ.forEach(function(c){c._el.classList.toggle('hov',c.id===hid||c.id===hover);});}
+    /* etykiety */
+    CZ.forEach(function(c){ projektuj(c._pos,c._el,-(c._r*(c.rola==='zrodlo'?18:26))*(40/kam.dist)-14); c._ks.forEach(function(d){ if(!d.el.hidden) projektuj(d.mesh.position,d.el,-16); }); });
+    renderer.render(scene,camera);
+    requestAnimationFrame(klatka);
+  }
+  klatka();
+})();
+
+/* ================= LĄD ================= */
+/* karty liczb */
+var karty=$('#karty');
+FZZ.KARTY.forEach(function(k){
+  var c=byId[k[4]];
+  var b=el('button','karta'); b.style.setProperty('--k',c.kolor); b.setAttribute('aria-label',k[0]+' '+k[1]+': '+k[2]);
+  b.innerHTML='<div class="strona przod"><p class="et"><i>'+ico(c.id)+' Część '+c.id+'</i><span>'+esc(c.krotki)+'</span></p><span class="odwroc">ŹRÓDŁO ↻</span><p class="w">'+esc(k[0])+'<small>'+esc(k[1])+'</small></p><p class="o">'+esc(k[2].split('. ')[0])+'.</p></div>'+
+              '<div class="strona tyl"><p class="et"><i>Źródło</i><span>Część '+c.id+'</span></p><p class="o">'+esc(k[2])+'</p><p class="zr">'+esc(k[3])+'</p></div>';
+  b.addEventListener('click',function(){b.classList.toggle('odwr');});
+  karty.appendChild(b);
+});
+
+/* symulator */
+var suwak=$('#sym-suwak'), symW=$('#sym-w'), symWynik=$('#sym-wynik');
+function fmt(n,d){return n.toLocaleString('pl-PL',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function symuluj(){
+  var w=parseFloat(suwak.value), x=w-100, infl=2.8, gn=5.9;
+  symW.innerHTML=fmt(w,w%1?1:0)+'<small>%</small>';
+  var kwota=12347*x/100, f1=0.79*x, f2=2.6*x, real=x-infl, dyst=gn-x;
+  var maxF=2.6*18;
+  symWynik.innerHTML=
+    '<div class="w"><span>Miesięcznie brutto dla przeciętnego wynagrodzenia w służbie cywilnej (12 347 zł)</span><b>'+(x<0?'−':'')+fmt(Math.abs(kwota),0)+' zł</b><div class="pasek"><i style="width:'+Math.max(0,x/18*100)+'%"></i></div></div>'+
+    '<div class="w"><span>Realny wzrost przy inflacji 2,8%</span><b class="'+(real<0?'min':'')+'">'+(real>0?'+':'')+fmt(real,1)+' pkt</b><div class="pasek"><i class="b" style="width:'+Math.max(0,(real+2.8)/15.2*100)+'%"></i><em style="left:'+(2.8/15.2*100)+'%"></em></div><span class="pod">Znacznik: inflacja. Rząd odpowie, że 3% przewyższa 2,8%. Będzie to odpowiedź prawdziwa, ale nietrafna, bo miarą nie jest inflacja.</span></div>'+
+    '<div class="w"><span>Dystans do wynagrodzeń w gospodarce narodowej w 2027 r. (+5,9% nominalnie)</span><b class="'+(dyst>0?'min':'')+'">'+(dyst>0?'−':'+')+fmt(Math.abs(dyst),1)+' pkt</b><div class="pasek"><i style="width:'+Math.max(0,Math.min(100,dyst/5.9*100))+'%"></i></div><span class="pod">Przy 103% dystans rośnie o blisko trzy punkty w jednym roku, do około dziewięciu w 2030 r.</span></div>'+
+    '<div class="w"><span>Koszt roczny w konwencji funduszu z ustawy z 1999 r. (≈790 mln zł za punkt)</span><b>'+fmt(f1,2)+' mld zł</b><div class="pasek"><i class="b" style="width:'+Math.max(0,f1/maxF*100)+'%"></i></div></div>'+
+    '<div class="w"><span>Koszt roczny w konwencji rządowej z pochodnymi i nauczycielami (≈2,6 mld zł za punkt)</span><b>'+fmt(f2,1)+' mld zł</b><div class="pasek"><i style="width:'+Math.max(0,f2/maxF*100)+'%"></i><em style="left:'+(17/maxF*100)+'%" title="17 mld zł"></em><em style="left:'+(0.873/maxF*100)+'%"></em></div><span class="pod">Znaczniki: 873 mln zł na 7 565 nowych etatów żołnierzy zawodowych · 17 mld zł przyrostu kosztów obsługi długu między 2026 a 2027 r. FZZ nie przeciwstawia tych wydatków sobie; wskazuje, że państwo dysponuje zdolnością finansowania decyzji uznawanych za strategiczne.</span></div>';
+  Array.prototype.forEach.call(document.querySelectorAll('.znaczniki button'),function(b){b.setAttribute('aria-pressed',String(parseFloat(b.dataset.w)===w));});
+}
+suwak.addEventListener('input',symuluj);
+document.querySelector('.znaczniki').addEventListener('click',function(e){var b=e.target.closest('button[data-w]');if(!b)return;suwak.value=b.dataset.w;symuluj();});
+symuluj();
+
+/* oś czasu */
+var os=$('#os'), OS=FZZ.OS, PASY=[['Terminy znane z wyprzedzeniem','#F2A33A'],['Decyzje i zaniechania państwa','#C6CBD6'],['Gotowość partnerów społecznych','#FF4D55']];
+os.style.setProperty('--kol',OS.kolumny.length);
+os.appendChild(el('div','pas','<b>Próg epok</b>oś czasu opinii'));
+OS.kolumny.forEach(function(k,i){var d=el('div','rok'+(i===OS.prog?' prog':''),esc(k)+(i===OS.prog?'<small>próg epok</small>':i<OS.prog?'<small>przestrzeń fiskalna</small>':'<small>epoka postkonsolidacyjna</small>'));os.appendChild(d);});
+PASY.forEach(function(p,pi){
+  os.appendChild(el('div','pas','<b>'+p[0]+'</b>'));
+  OS.kolumny.forEach(function(k,ki){
+    var cell=el('div','kom-os'+(ki===OS.prog?' prog':''));
+    OS.zdarzenia.filter(function(z){return z[0]===ki&&z[1]===pi+1;}).forEach(function(z){
+      var b=el('button','zd','<time>'+esc(z[2])+'</time><b>'+esc(z[3])+'</b><span class="wiecej">'+esc(z[4])+'</span>');
+      b.style.setProperty('--k',p[1]); b.setAttribute('aria-expanded','false');
+      b.addEventListener('click',function(){b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));});
+      cell.appendChild(b);
+    });
+    os.appendChild(cell);
+  });
+});
+(function(){var w=$('.os-wrap');if(w&&window.innerWidth>760){w.scrollLeft=Math.max(0,150+3*150-40);}})();
+
+/* skutki */
+var sk=$('#skutki-siatka'); FZZ.SKUTKI.forEach(function(s){sk.appendChild(el('div',null,'<b>'+esc(s[0])+'</b><p>'+s[1]+'</p>'));});
+
+/* źródła */
+var zr=$('#zrodla'); FZZ.ZRODLA.forEach(function(z){zr.appendChild(el('li',null,'<a href="'+esc(z[2])+'" target="_blank" rel="noopener">'+esc(z[0])+'</a><span class="co">'+esc(z[1])+'</span>'));});
+
+/* pakiet cytatów */
+$('#pakiet').addEventListener('click',function(){
+  var t='OPINIA FZZ DO PROJEKTU USTAWY BUDŻETOWEJ NA ROK 2027\nCytaty do przedruku\n\n'+CZ.map(function(c){return 'Część '+c.id+'. '+c.tytul+'\n„'+c.cytat[0]+'” ('+c.cytat[1]+')';}).join('\n\n')+'\n\nŹródło: opinia FZZ przedkładana Radzie Dialogu Społecznego na podstawie art. 18 ustawy z 24 lipca 2015 r.';
+  kopiuj(t,'Pakiet dziewięciu cytatów w schowku');
+});
+/* pliki do podmiany */
+document.addEventListener('click',function(e){var a=e.target.closest('[data-plik]');if(!a)return;e.preventDefault();pokaz('Plik do podpięcia: '+a.dataset.plik);});
+/* kotwice */
+document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a||a.dataset.plik)return;var c=document.querySelector(a.getAttribute('href'));if(!c)return;e.preventDefault();c.scrollIntoView({behavior:spokoj?'auto':'smooth',block:'start'});});
+/* hash */
+(function(){var m=/#czesc-(\d)/.exec(location.hash);if(m&&byId[+m[1]])setTimeout(function(){otworz(+m[1],'ocena');},400);})();
+window.addEventListener('hashchange',function(){var m=/#czesc-(\d)/.exec(location.hash);if(m&&byId[+m[1]]&&wybrany!==+m[1])otworz(+m[1],'ocena');});
+})();
+</script>
+</body>
+</html>
