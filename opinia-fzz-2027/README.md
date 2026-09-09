@@ -16,7 +16,9 @@ Scena odwzorowuje strukturę argumentacji opinii, nie dodaje własnych metafor:
 | **Orbita obszarów** | 2–7 | Sześć obszarów, w których deficyt się ujawnia: ryzyka, dochody, konsolidacja, dialog, wydatki, obronność |
 | **Emanacja** (zewnętrzna orbita, linie zbiegające z części 1–7) | 8. Wskaźnik 103% | „Wskaźnik 103% jest emanacją wszystkich tych deficytów” |
 | **Horyzont** | 9. Konkluzja | Osiem pytań, jedna odpowiedź, trzy oczekiwania |
-| **Księżyce** planet | podrozdziały 1.1–8.4 | numeracja i tytuły z opinii |
+| **Księżyce** ikon | podrozdziały 1.1–8.4 | numeracja i tytuły z opinii |
+
+Każda część ma proceduralną ikonę 3D (three.js, bez zewnętrznych modeli), spójną z ikoną płaską w doku: kompas bez igły (1), radar (2), widmowy dokument (3), schody w dół (4), dymek pełny i pusty (5), waga (6), tarcza z linią długu (7), zegar wskazujący nisko (8), pierścień z kropką (9).
 
 Każda część ma w panelu tę samą triadę co w opinii: **Ocena → Gdzie w projekcie
 → Skutek dla pracowników**, a także cytat do skopiowania, liczby ze źródłami
