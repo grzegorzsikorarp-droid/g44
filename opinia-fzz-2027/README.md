@@ -32,11 +32,15 @@ i powiązania (linie do innych części odpowiadają odwołaniom w tekście).
 - **Próg epok** — oś czasu w trzech pasmach: terminy znane z wyprzedzeniem / decyzje państwa / gotowość partnerów społecznych.
 - **Skutki, oczekiwania, materiały, źródła** — z konkluzji i streszczenia.
 
+## Efekty
+
+Bloom (UnrealBloomPass z three.js, ładowany z jsdelivr; bez niego scena renderuje się zwykle), gwiazdy migoczące w shaderze, mgławica i pył orbitalny, impulsy biegnące po liniach emanacji do części 8, intro kamery z wyskakującymi ikonami, paralaksa myszy, podświetlenie po najechaniu i skupienie po wyborze (pozostałe ikony przygasają). Pod sceną: wejście sekcji, liczniki na kartach, reflektor pod kursorem, przycisk powrotu do mapy.
+
 ## Interakcja
 
 Obracanie (przeciąganie), zoom (kółko / uszczypnięcie), klik w planetę lub
 etykietę, dok z ikonami dziewięciu części, tryb **Zwiedzaj** (automatyczny
-przelot 1 → 9), strzałki ← → i Esc, linki głębokie `#czesc-8`, kopiowanie
+przelot 1 → 9), strzałki ← →, klawisze 1–9 i Esc, na mobile gest przeciągnięcia panelu w dół, linki głębokie `#czesc-8`, kopiowanie
 cytatów i pakietu cytatów. Respektuje `prefers-reduced-motion`.
 
 ## Do podpięcia przed publikacją
