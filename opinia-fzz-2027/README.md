@@ -1,6 +1,6 @@
 # Opinia FZZ do projektu ustawy budżetowej na rok 2027 — uniwersum treści
 
-Podstrona prezentująca opinię Forum Związków Zawodowych jako przestrzenną,
+Podstrona „Opinia do projektu ustawy budżetowej na rok 2027” prezentująca opinię Forum Związków Zawodowych jako przestrzenną,
 interaktywną mapę wywodu. **Plik:** [`index.html`](index.html) — kompletna,
 samodzielna strona (HTML + CSS + JS), jedyne zależności zewnętrzne to Google
 Fonts i three.js r128 z cdnjs. Bez WebGL strona przechodzi automatycznie na
