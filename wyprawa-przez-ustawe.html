@@ -256,7 +256,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
 /* ---------- sterowanie dotykowe ---------- */
 .wpu-pad{display:none;width:100%;justify-content:space-between;align-items:center;padding:.6em max(.8em,env(safe-area-inset-right)) max(.8em,env(safe-area-inset-bottom)) max(.8em,env(safe-area-inset-left));
   background:#e7e7e7;gap:1em;user-select:none;-webkit-user-select:none;touch-action:none;flex:none}
-.wpu.touch .wpu-pad{display:flex}
+.wpu.touch.padon .wpu-pad{display:flex}
 .wpu.overlaypad .wpu-pad{position:absolute;left:0;right:0;bottom:0;background:transparent;pointer-events:none;z-index:4}
 .wpu-pad .grp{display:flex;gap:.7em;pointer-events:auto}
 .wpu-pad button{appearance:none;border:0;margin:0;padding:0;cursor:pointer;touch-action:none;position:relative;
@@ -278,6 +278,23 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
 .wpu.fullmenus .wpu-screen{position:fixed;font-size:15px;padding:max(.8em,env(safe-area-inset-top)) max(.8em,env(safe-area-inset-right)) max(.8em,env(safe-area-inset-bottom)) max(.8em,env(safe-area-inset-left))}
 .wpu.fullmenus #scr-title{background:rgba(231,231,231,.35)}
 .wpu.inmenu .wpu-pad{display:none}
+/* sterowanie gestami: prawa połowa ekranu to ruch w prawo, lewa w lewo, przesunięcie w górę to skok */
+.wpu-gest{display:none;position:absolute;inset:0;z-index:2;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-size:14px}
+.wpu.touch.playing:not(.padon) .wpu-gest{display:block}
+.wpu-gest .gh{position:absolute;display:flex;align-items:center;gap:.5em;color:#fff;background:rgba(26,23,24,.62);border-left:.28em solid var(--red);
+  padding:.4em .75em;font-weight:600;line-height:1.25;max-width:42%;opacity:0;transition:opacity .5s;pointer-events:none}
+.wpu-gest .gh.l{left:.8em;top:50%;transform:translateY(-50%)}
+.wpu-gest .gh.r{right:.8em;top:50%;transform:translateY(-50%);border-left:0;border-right:.28em solid var(--red);text-align:right}
+.wpu-gest .gh.u{left:50%;bottom:1em;transform:translateX(-50%);max-width:70%;text-align:center}
+.wpu-gest .tri{flex:none;width:0;height:0;border-top:.6em solid transparent;border-bottom:.6em solid transparent}
+.wpu-gest .tri.l{border-right:.85em solid #fff}
+.wpu-gest .tri.r{border-left:.85em solid #fff}
+.wpu-gest::after{content:'';position:absolute;left:50%;top:12%;bottom:12%;border-left:2px dashed rgba(255,255,255,.55);opacity:0;transition:opacity .5s}
+.wpu-gest.hint .gh,.wpu-gest.hint::after{opacity:1}
+.wpu.portrait .wpu-gest .gh.l,.wpu.portrait .wpu-gest .gh.r{top:auto;bottom:6.4em;transform:none}
+.wpu.portrait .wpu-gest .gh.u{max-width:88%}
+.wpu.portrait .wpu-gest .gh{opacity:.85}
+.wpu-toast{pointer-events:none}
 .wpu-hint{display:none;margin-top:.9em;font-size:.85em;color:#d7d7d7}
 /* gra obrócona na bok, gdy ekran telefonu sam się nie obraca (blokada obrotu, aplikacja) */
 html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
@@ -572,7 +589,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <kbd>↓ S</kbd><span>wejście do rury poczty pneumatycznej, gdy na niej stoisz</span>
             <kbd>1–4</kbd><span>wybór odpowiedzi (także A, B, C, D)</span>
             <kbd>P Esc</kbd><span>pauza</span>
-            <kbd>Ekran dotykowy</kbd><span>strzałki, przycisk ▼ (rura), A (skok) i B (bieg i rzut)</span>
+            <kbd>Ekran dotykowy</kbd><span>przytrzymaj prawą połowę ekranu, aby iść w prawo, a lewą, aby iść w lewo. Po chwili marszu postać sama zaczyna biec. Przesuń palec w górę albo dotknij ekranu drugim palcem, aby skoczyć, a przytrzymaj, aby skoczyć wyżej. Przesuń palec w dół, aby wejść do rury. Dwa szybkie dotknięcia to rzut paragrafem. Przyciski na ekranie włączysz w ustawieniach</span>
             <kbd>Pad</kbd><span>gałka lub krzyżak, przycisk A skok, X bieg i rzut, Start pauza</span>
           </div>
           <div class="wpu-sec"><h3>Zasady punktacji</h3></div>
@@ -593,6 +610,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-toggle"><span>Muzyka</span><button type="button" data-set="music" aria-pressed="true">Tak</button></div>
           <div class="wpu-toggle"><span>Ograniczenie ruchu (bez wstrząsów i błysków)</span><button type="button" data-set="reduce" aria-pressed="false">Nie</button></div>
           <div class="wpu-toggle"><span>Swobodny wybór świata (dla szkoleń)</span><button type="button" data-set="free" aria-pressed="false">Nie</button></div>
+          <div class="wpu-toggle"><span>Przyciski sterowania na ekranie dotykowym zamiast gestów</span><button type="button" data-set="pad" aria-pressed="false">Nie</button></div>
           <div class="wpu-btns">
             <button class="wpu-btn alt" type="button" data-act="wipe"><span>Wyczyść postęp</span></button>
             <button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button>
@@ -614,6 +632,11 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
     </div>
   </div>
 
+  <div class="wpu-gest" id="wpu-gest" aria-hidden="true">
+    <div class="gh l"><i class="tri l"></i><span>Przytrzymaj, aby iść w lewo</span></div>
+    <div class="gh r"><span>Przytrzymaj, aby iść w prawo</span><i class="tri r"></i></div>
+    <div class="gh u"><span>Przesuń palec w górę albo dotknij drugim palcem, aby skoczyć</span></div>
+  </div>
   <div class="wpu-pad" id="wpu-pad" aria-hidden="true">
     <div class="grp">
       <button type="button" data-k="left" aria-label="W lewo"><i class="tri l"></i></button>
@@ -1368,8 +1391,8 @@ const AudioSys = (() => {
    ===================================================================== */
 const Input = (() => {
   const st = { left: false, right: false, up: false, down: false, jump: false, run: false };
-  const src = { k: {}, t: {}, p: {} };
-  let jumpEdge = false, runEdge = false, pauseEdge = false, downEdge = false;
+  const src = { k: {}, t: {}, p: {}, a: {} };
+  let jumpEdge = false, runEdge = false, pauseEdge = false, downEdge = false, manRun = false;
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowDown: 'down', KeyS: 'down',
     ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyK: 'jump',
@@ -1377,15 +1400,16 @@ const Input = (() => {
   };
   function recompute() {
     for (const k in st) {
-      const prev = st[k];
-      st[k] = !!(src.k[k] || src.t[k] || src.p[k]);
+      const prev = st[k], man = !!(src.k[k] || src.t[k] || src.p[k]);
+      st[k] = man || !!src.a[k];
       if (k === 'jump' && st[k] && !prev) jumpEdge = true;
-      if (k === 'run' && st[k] && !prev) runEdge = true;
+      /* rzut paragrafem tylko po świadomym naciśnięciu, nie po automatycznym biegu z gestów */
+      if (k === 'run') { if (man && !manRun) runEdge = true; manRun = man; }
       if (k === 'down' && st[k] && !prev) downEdge = true;
     }
   }
   function setSrc(s, k, v) { if (src[s][k] === v) return; src[s][k] = v; recompute(); }
-  function clearAll() { for (const s in src) src[s] = {}; recompute(); jumpEdge = runEdge = downEdge = false; }
+  function clearAll() { for (const s in src) src[s] = {}; recompute(); jumpEdge = runEdge = downEdge = false; manRun = false; }
   function takeJump() { const e = jumpEdge; jumpEdge = false; return e; }
   function takeRun() { const e = runEdge; runEdge = false; return e; }
   function takeDown() { const e = downEdge; downEdge = false; return e; }
@@ -2980,8 +3004,8 @@ const PH = { g: 1400, maxFall: 430, walk: 92, run: 152, accG: 900, accA: 640, fr
   swimG: 380, swimMax: 70, swimStroke: 175, swimOut: 360, conv: 46 };
 const POWER_INFO = {
   pwz: { name: 'PWZ', tip: () => '<b>Prawo wykonywania zawodu</b> chroni Cię przed jednym trafieniem. Członkami samorządu są pielęgniarki i położne ze stwierdzonym lub przyznanym PWZ (art. 5 ust. 1).' },
-  mandat: { name: 'Mandat', tip: () => '<b>Mandat</b> pozwala Ci latać przez 10 sekund. Przytrzymaj skok. Kadencja organów izby trwa 4 lata (art. 8 ust. 1).' },
-  kodeks: { name: 'Kodeks', tip: () => '<b>Kodeks</b> pozwala rzucać paragrafami (Shift, X albo przycisk B). Zasady etyki zawodowej określa Krajowy Zjazd (art. 20 pkt 1).' },
+  mandat: { name: 'Mandat', tip: () => '<b>Mandat</b> pozwala Ci latać przez 10 sekund. Przytrzymaj skok, a na ekranie dotykowym trzymaj palec po przesunięciu w górę. Kadencja organów izby trwa 4 lata (art. 8 ust. 1).' },
+  kodeks: { name: 'Kodeks', tip: () => '<b>Kodeks</b> pozwala rzucać paragrafami (Shift, X, przycisk B albo dwa szybkie dotknięcia ekranu). Zasady etyki zawodowej określa Krajowy Zjazd (art. 20 pkt 1).' },
   seal: { name: 'Pieczęć', tip: () => '<b>Pieczęć</b> daje Ci 8 sekund nietykalności. Wzory pieczęci organów samorządu ustala Naczelna Rada (art. 22 ust. 1 pkt 10).' },
   cap: { name: 'Czepek', tip: () => '<b>Czepek</b> to dodatkowe życie. Dostajesz go za serię pięciu dobrych odpowiedzi.' }
 };
@@ -3638,7 +3662,7 @@ function enterRoom(pipe) {
   game.camX = 0; game.trans = null; game.state = 'play';
   game.iris = { t: 0, dur: 0.45, open: true };
   AudioSys.music('bonus');
-  if (!save.tips.room) { save.tips.room = 1; showToast('<b>Ukryty pokój archiwum dokumentacji.</b> Złoty blok kryje pytanie premiowe za podwójne punkty i bez kary za błąd. Wyjście przez rurę po prawej, strzałka w dół.', 6000); }
+  if (!save.tips.room) { save.tips.room = 1; showToast('<b>Ukryty pokój archiwum dokumentacji.</b> Złoty blok kryje pytanie premiowe za podwójne punkty i bez kary za błąd. Wyjście przez rurę po prawej, strzałka w dół albo przesunięcie palca w dół.', 6000); }
 }
 function leaveRoom() {
   const R = game.room; if (!R) return;
@@ -4470,6 +4494,8 @@ function show(id) {
   for (const s of SCREENS) EL['scr-' + s].classList.toggle('on', s === id);
   current = id;
   EL.root.classList.toggle('inmenu', !!id && id !== 'intro');
+  EL.root.classList.toggle('playing', !id);
+  if (id && EL.gest) gestReset();
   EL.hud.hidden = !game.lvl || ['title', 'char', 'map', 'list'].includes(id);
   if (id && id !== 'intro') {
     const scr = EL['scr-' + id];
@@ -4557,7 +4583,7 @@ function showIntro() {
 }
 function beginPlay() {
   if (game.state !== 'intro') return;
-  game.state = 'play'; show(null); Input.clearAll();
+  game.state = 'play'; show(null); Input.clearAll(); gestHint();
   const p = game.player; game.iris = { t: 0, dur: 0.6, open: true };
   if (!game.lvl.boss) AudioSys.music(game.theme.music);
   if (game.w === 1 && game.s === 1 && !save.tips.start) {
@@ -4923,10 +4949,10 @@ function renderHelp() {
     [ts.item, 'Blok z wykrzyknikiem', 'Wzmocnienie bez pytania.'],
     [SPR.coin[0], 'Paragraf', 'Każde 100 paragrafów to dodatkowe życie.'],
     [SPR.gold[0], 'Złoty paragraf', 'Trzy w każdym etapie, część w trudno dostępnych miejscach.'],
-    [ts.pipe.tl, 'Rura poczty pneumatycznej', 'Stań na niej i naciśnij strzałkę w dół. Prowadzi do ukrytego pokoju.'],
+    [ts.pipe.tl, 'Rura poczty pneumatycznej', 'Stań na niej i naciśnij strzałkę w dół albo przesuń palec w dół. Prowadzi do ukrytego pokoju.'],
     [SPR.pwz, 'PWZ', 'Prawo wykonywania zawodu chroni przed jednym trafieniem.'],
     [SPR.mandat[0], 'Mandat', '10 sekund lotu. Przytrzymaj skok.'],
-    [SPR.kodeks, 'Kodeks', 'Rzut paragrafem klawiszem Shift, X albo przyciskiem B.'],
+    [SPR.kodeks, 'Kodeks', 'Rzut paragrafem klawiszem Shift, X, przyciskiem B albo dwoma szybkimi dotknięciami ekranu.'],
     [SPR.seal[0], 'Pieczęć', '8 sekund nietykalności.'],
     [SPR.cap, 'Czepek', 'Dodatkowe życie.'],
     [SPR.form[0], 'Zaległy formularz', 'Wskocz na niego z góry.'],
@@ -5030,6 +5056,68 @@ function onMotion(e) {
   if (Tilt.cand !== phys || !Tilt.candT) { Tilt.cand = phys; Tilt.candT = now; return; }
   if (now - Tilt.candT > 800) { Tilt.candT = 0; rot = phys; layout(); }
 }
+/* ---------- sterowanie gestami na ekranie dotykowym ----------
+   Pierwszy palec wybiera kierunek połową ekranu, przesunięcie tego palca w górę to skok (trzymanie
+   palca wydłuża skok i lot z Mandatem), w dół to wejście do rury. Każdy kolejny palec to skok.
+   Po 0,45 s marszu postać biegnie sama, a dwa szybkie dotknięcia to rzut paragrafem. */
+const Gest = { ptrs: new Map(), dirId: null, runT: 0, lastTap: 0, hintT: 0 };
+const SWIPE = 22;
+function gestSync() {
+  const d = Gest.dirId !== null ? Gest.ptrs.get(Gest.dirId) : null;
+  Input.setSrc('t', 'left', !!d && d.side < 0); Input.setSrc('t', 'right', !!d && d.side > 0);
+  let j = false; for (const p of Gest.ptrs.values()) if (p.jump) j = true;
+  Input.setSrc('t', 'jump', j);
+}
+function gestPulse(k, ms) { Input.setSrc('t', k, true); setTimeout(() => Input.setSrc('t', k, false), ms); }
+function gestReset() { Gest.ptrs.clear(); Gest.dirId = null; Input.setSrc('a', 'run', false); gestSync(); }
+function gestDown(ev) {
+  ev.preventDefault(); AudioSys.init();
+  try { EL.gest.setPointerCapture(ev.pointerId); } catch (e) {}
+  const q = localPoint(ev, EL.gest), now = performance.now();
+  const p = { x0: q.x, y0: q.y, t0: now, side: q.x < q.w / 2 ? -1 : 1, jump: false, moved: false, second: false, hist: [[now, q.y]], lowY: q.y };
+  if (Gest.dirId === null) { Gest.dirId = ev.pointerId; Gest.runT = now; }
+  else { p.jump = true; p.second = true; }
+  Gest.ptrs.set(ev.pointerId, p); gestSync();
+}
+function gestMove(ev) {
+  const p = Gest.ptrs.get(ev.pointerId); if (!p) return;
+  ev.preventDefault();
+  const q = localPoint(ev, EL.gest), now = performance.now();
+  if (Math.abs(q.x - p.x0) > 10 || Math.abs(q.y - p.y0) > 10) p.moved = true;
+  if (ev.pointerId === Gest.dirId) { const s = q.x < q.w / 2 ? -1 : 1; if (s !== p.side) { p.side = s; Gest.runT = now; } }
+  if (!p.second) {
+    p.hist.push([now, q.y]); while (p.hist.length > 2 && now - p.hist[0][0] > 320) p.hist.shift();
+    if (!p.jump) {
+      let hi = -1e9, lo = 1e9; for (const h of p.hist) { hi = Math.max(hi, h[1]); lo = Math.min(lo, h[1]); }
+      if (hi - q.y > SWIPE) { p.jump = true; p.lowY = q.y; save.tips.gj = (save.tips.gj || 0) + 1; }
+      else if (q.y - lo > SWIPE * 1.2) { gestPulse('down', 140); p.hist = [[now, q.y]]; }
+    } else {
+      p.lowY = Math.min(p.lowY, q.y);
+      if (q.y - p.lowY > SWIPE * 0.8) { p.jump = false; p.hist = [[now, q.y]]; }
+    }
+  }
+  gestSync();
+}
+function gestUp(ev) {
+  const p = Gest.ptrs.get(ev.pointerId); if (!p) return;
+  Gest.ptrs.delete(ev.pointerId);
+  const now = performance.now();
+  if (ev.pointerId === Gest.dirId) {
+    Gest.dirId = null; Input.setSrc('a', 'run', false);
+    if (!p.moved && now - p.t0 < 230) { if (now - Gest.lastTap < 320) { gestPulse('run', 90); Gest.lastTap = 0; } else Gest.lastTap = now; }
+  }
+  gestSync();
+}
+/* co klatkę: automatyczny bieg i znikanie podpowiedzi */
+function gestTick() {
+  const now = performance.now();
+  Input.setSrc('a', 'run', Gest.dirId !== null && now - Gest.runT > 450);
+  if (Gest.hintT && now > Gest.hintT) { Gest.hintT = 0; EL.gest.classList.remove('hint'); }
+}
+function gestHint() {
+  if (!isTouch || save.settings.pad || (save.tips.gj || 0) >= 6) return;
+  EL.gest.classList.add('hint'); Gest.hintT = performance.now() + 5000;
+}
 /* punkt dotknięcia we współrzędnych elementu, także gdy gra jest obrócona */
 function localPoint(ev, el) {
   const r = el.getBoundingClientRect();
@@ -5047,11 +5135,12 @@ function layout() {
   const portrait = vh > vw * 1.05;
   let W, padH = 0, overlay = false;
   EL.root.classList.toggle('touch', isTouch);
+  EL.root.classList.toggle('padon', !!save.settings.pad);
   EL.root.classList.toggle('portrait', portrait);
   EL.root.classList.toggle('fullmenus', isTouch && !framed);
   if (framed) W = vw;
   else {
-    if (isTouch && portrait) padH = 118;
+    if (isTouch && portrait && save.settings.pad) padH = 118;
     else if (isTouch) overlay = true;
     W = Math.min(vw, Math.floor(((vh - padH) * VW) / VH));
   }
@@ -5125,7 +5214,7 @@ function toggleFullscreen() {
 function init() {
   SCREENS.forEach((s) => (EL['scr-' + s] = $('#scr-' + s)));
   Object.assign(EL, {
-    root: $('#wpu'), stage: $('#wpu-stage'), hud: $('#wpu-hud'), toast: $('#wpu-toast'), pad: $('#wpu-pad'), print: $('#wpu-print'),
+    root: $('#wpu'), gest: $('#wpu-gest'), stage: $('#wpu-stage'), hud: $('#wpu-hud'), toast: $('#wpu-toast'), pad: $('#wpu-pad'), print: $('#wpu-print'),
     'hud-lives': $('#hud-lives'), 'hud-score': $('#hud-score'), 'hud-coins': $('#hud-coins'), 'hud-stage': $('#hud-stage'), 'hud-time': $('#hud-time'), 'hud-know': $('#hud-know'),
     'hud-streak': $('#hud-streak'), 'hud-pen': $('#hud-pen'), hudStreakChip: $('#hud-streakchip'), hudPenChip: $('#hud-penchip'), hudGoldChip: $('#hud-goldchip'), hudGold: $('#hud-gold'),
     hudPw: $('#hud-pw'), hudPwn: $('#hud-pwn'), hudPwb: $('#hud-pwb'), hudTimeChip: $('#hud-timechip'),
@@ -5155,11 +5244,16 @@ function init() {
   $$('[data-set]').forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.set; save.settings[k] = !save.settings[k]; writeSave(); renderSettings();
     if (k === 'music') AudioSys.refreshMusic();
+    if (k === 'pad') { Input.clearAll(); gestReset(); layout(); }
   }));
   EL.kompAll.addEventListener('click', () => { kompAll = !kompAll; renderKomp(); fitFrame(); });
   EL.kompList.addEventListener('toggle', () => fitFrame(), true);
   EL.repMiss.addEventListener('toggle', () => fitFrame(), true);
   $('#hud-pause').addEventListener('click', () => { AudioSys.init(); pauseGame(); });
+  EL.gest.addEventListener('pointerdown', gestDown);
+  EL.gest.addEventListener('pointermove', gestMove);
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => EL.gest.addEventListener(t, gestUp));
+  EL.gest.addEventListener('contextmenu', (e) => e.preventDefault());
   $('#hud-rot').addEventListener('click', (e) => { e.stopPropagation(); AudioSys.init(); cycleRot(true); });
   window.addEventListener('devicemotion', onMotion);
   EL['scr-intro'].addEventListener('click', () => beginPlay());
@@ -5185,7 +5279,7 @@ function init() {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 200));
   layout();
-  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, save: () => save, onMotion, getRot: () => rot, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom };
+  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, save: () => save, onMotion, Gest, getRot: () => rot, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom };
   goTitle();
   requestAnimationFrame(loop);
 }
@@ -5230,7 +5324,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   let dt = lastT ? (now - lastT) / 1000 : STEP; lastT = now;
   if (dt > 0.1) dt = 0.1;
-  Input.pollPad();
+  Input.pollPad(); gestTick();
   if (Input.takePause()) { if (game.state === 'play') pauseGame(); else if (game.state === 'pause') resumeGame(); }
   if (game.state === 'quiz') updateQuiz(dt);
   if (game.state === 'intro') { introTimer -= dt; if (introTimer <= 0) beginPlay(); }
