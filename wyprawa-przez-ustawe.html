@@ -3323,7 +3323,9 @@ function init() {
   EL['scr-intro'].addEventListener('click', () => beginPlay());
   /* fullscreen i nowa karta */
   try { if (document.fullscreenEnabled && EL.root.requestFullscreen) $('#btn-fs').hidden = false; } catch (e) {}
-  try { if (window.self !== window.top && /^(https?|file):$/.test(location.protocol)) { const a = $('#btn-newtab'); a.href = location.href.split('#')[0]; a.hidden = false; } } catch (e) {}
+  document.documentElement.lang = 'pl';
+  if (window.WPU_ARTIFACT) $$('[data-act="print"]').forEach((b) => (b.hidden = true));
+  try { if (!window.WPU_ARTIFACT && window.self !== window.top && /^(https?|file):$/.test(location.protocol)) { const a = $('#btn-newtab'); a.href = location.href.split('#')[0]; a.hidden = false; } } catch (e) {}
   document.addEventListener('fullscreenchange', layout);
   /* klawiatura */
   window.addEventListener('keydown', onKey);
