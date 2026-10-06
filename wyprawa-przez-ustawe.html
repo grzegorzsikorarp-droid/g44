@@ -279,6 +279,11 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
 .wpu.fullmenus #scr-title{background:rgba(231,231,231,.35)}
 .wpu.inmenu .wpu-pad{display:none}
 .wpu-hint{display:none;margin-top:.9em;font-size:.85em;color:#d7d7d7}
+/* gra obrócona na bok, gdy ekran telefonu sam się nie obraca (blokada obrotu, aplikacja) */
+html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
+.wpu.rot{position:fixed;top:0;left:0;min-height:0;transform-origin:0 0;overflow:hidden;background:#e7e7e7}
+.wpu-hbtn.rotb{display:inline-flex;align-items:center;justify-content:center;padding:.15em .45em}
+.wpu-hbtn.rotb svg{width:1.05em;height:1.05em;display:block}
 .wpu.portrait.touch .wpu-hint{display:block}
 
 /* ---------- okno potwierdzenia ---------- */
@@ -346,6 +351,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
       <span class="wpu-chip gd" id="hud-goldchip" hidden><small>Złote</small><span class="wpu-golds sm" id="hud-gold"><i></i><i></i><i></i></span></span>
       <span class="wpu-chip pw" id="hud-pw" hidden><small id="hud-pwn">Mandat</small><i><b id="hud-pwb"></b></i></span>
       <span class="sp"></span>
+      <button class="wpu-hbtn rotb" id="hud-rot" type="button" aria-label="Obróć grę na bok" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 9.4A5.4 5.4 0 1 1 11.6 4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.6 1.4v5.2H9.4z" fill="currentColor"/></svg></button>
       <button class="wpu-hbtn" id="hud-pause" type="button" aria-label="Pauza">II</button>
     </div>
     <div class="wpu-toast" id="wpu-toast" role="status" aria-live="polite"></div>
@@ -371,6 +377,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
               <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
               <button class="wpu-btn ghost" type="button" data-act="settings"><span>Ustawienia</span></button>
               <button class="wpu-btn ghost" type="button" data-act="fullscreen" id="btn-fs" hidden><span>Pełny ekran</span></button>
+              <button class="wpu-btn ghost wpu-rotbtn" type="button" data-act="rotate" hidden><span>Obróć grę na bok</span></button>
               <a class="wpu-btn ghost" id="btn-newtab" target="_blank" rel="noopener" hidden><span>Otwórz w nowej karcie</span></a>
             </div>
             <p class="wpu-titlefoot" data-nb>Pytania opracowano na podstawie ustawy z dnia 1 lipca 2011 r. o samorządzie pielęgniarek i położnych (t. j. Dz. U. z 2025 r. poz. 1760).<br>Okręgowa Izba Pielęgniarek i Położnych w Słupsku</p>
@@ -420,6 +427,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
             <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="komp"><span>Kompendium</span></button>
             <button class="wpu-btn ghost" type="button" data-act="help"><span>Jak grać?</span></button>
+            <button class="wpu-btn ghost wpu-rotbtn" type="button" data-act="rotate" hidden><span>Obróć grę na bok</span></button>
             <button class="wpu-btn ghost" type="button" data-act="settings"><span>Ustawienia</span></button>
             <button class="wpu-btn ghost" type="button" data-act="title"><span>Menu główne</span></button>
           </div>
@@ -446,7 +454,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
         <p id="intro-p"></p>
         <div class="lives"><canvas id="intro-face" width="18" height="26"></canvas><span id="intro-lives"></span></div>
         <p class="wpu-introtip" id="intro-tip"></p>
-        <p class="wpu-hint">Obróć telefon poziomo, a plansza będzie większa.</p>
+        <p class="wpu-hint" id="intro-hint">Obróć telefon poziomo, a plansza będzie większa.</p>
       </div>
     </div>
 
@@ -481,6 +489,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
             <button class="wpu-btn ghost" type="button" data-act="map"><span>Mapa ustawy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="help"><span>Jak grać?</span></button>
             <button class="wpu-btn ghost" type="button" data-act="settings"><span>Ustawienia</span></button>
+            <button class="wpu-btn ghost wpu-rotbtn" type="button" data-act="rotate" hidden><span>Obróć grę na bok</span></button>
           </div>
         </div>
       </div>
@@ -4334,8 +4343,7 @@ function mapCache() {
 }
 function setupMapCanvas() {
   if (!MAP.cv) { MAP.cv = $('#map-canvas'); MAP.ctx = MAP.cv.getContext('2d'); }
-  const box = MAP.cv.parentElement.getBoundingClientRect();
-  const w = Math.max(240, Math.floor(box.width || 600));
+  const w = Math.max(240, Math.floor(MAP.cv.parentElement.clientWidth || 600));
   const h = Math.round(w * (MAP.H / MAP.W));
   const dpr = window.devicePixelRatio || 1;
   MAP.rs = clamp(Math.round((w * dpr) / MAP.W), 1, 6);
@@ -4431,8 +4439,8 @@ function mapRender() {
   }
 }
 function mapClick(ev) {
-  const r = MAP.cv.getBoundingClientRect();
-  const mx = ((ev.clientX - r.left) / r.width) * MAP.W + MAP.cam, my = ((ev.clientY - r.top) / r.height) * MAP.H;
+  const p = localPoint(ev, MAP.cv);
+  const mx = (p.x / p.w) * MAP.W + MAP.cam, my = (p.y / p.h) * MAP.H;
   let best = null, bd = 1e9;
   for (const n of mapNodes()) { const d = Math.hypot(n.x - mx, n.y - my); if (d < bd) { bd = d; best = n; } }
   if (!best || bd > 18) return;
@@ -4970,8 +4978,70 @@ function printCard() {
 let isTouch = false;
 const inFrame = (() => { try { return !!(window.frameElement && /^oipip-iframe/.test(window.frameElement.id || '')); } catch (e) { return false; } })();
 let gameH = VH;
+/* ---------- obracanie gry na bok ----------
+   Gdy przeglądarka sama obraca stronę, wystarczy zwykły układ poziomy. Gdy ekran zostaje
+   w pionie (blokada obrotu, podgląd w aplikacji), gra obraca się sama: według czujnika ruchu,
+   jeśli przeglądarka go udostępnia, albo przyciskiem obrotu. */
+let rot = 0;
+const Tilt = { inv: 1, cal: false, calT: 0, phys: null, cand: null, candT: 0, lock: null, asked: false };
+const viewPortrait = () => window.innerHeight > (document.documentElement.clientWidth || window.innerWidth) * 1.05;
+const rotAllowed = () => isTouch && !inFrame && !document.fullscreenElement;
+function applyRot(iw, ih) {
+  const r = EL.root, on = rot !== 0;
+  r.classList.toggle('rot', on); document.documentElement.classList.toggle('wpu-rot', on);
+  r.style.width = on ? ih + 'px' : ''; r.style.height = on ? iw + 'px' : '';
+  r.style.transform = !on ? '' : rot > 0 ? 'translate(' + iw + 'px,0) rotate(90deg)' : 'translate(0,' + ih + 'px) rotate(-90deg)';
+  const show = rotAllowed() && (on || ih > iw * 1.05);
+  const label = rot === 0 ? 'Obróć grę na bok' : rot === 90 ? 'Obróć w drugą stronę' : 'Wróć do pionu';
+  $$('.wpu-rotbtn').forEach((b) => { b.hidden = !show; b.firstElementChild.textContent = label; });
+  const hb = $('#hud-rot'); hb.hidden = !show; hb.setAttribute('aria-label', label);
+  $('#intro-hint').textContent = nb(show ? 'Obróć telefon poziomo, a plansza będzie większa. Jeśli obraz się nie obróci, dotknij przycisku obrotu w prawym górnym rogu planszy.' : 'Obróć telefon poziomo, a plansza będzie większa.');
+}
+function cycleRot(inGame) {
+  askMotion();
+  rot = rot === 0 ? 90 : rot === 90 ? -90 : 0;
+  Tilt.lock = Tilt.phys; Tilt.candT = 0;
+  layout();
+  if (inGame) showToast(rot === 90 ? 'Gra jest obrócona. Trzymaj telefon poziomo, <b>górą w lewo</b>. Kolejne dotknięcie przycisku obraca ją w drugą stronę.'
+    : rot === -90 ? 'Gra jest obrócona w drugą stronę. Trzymaj telefon <b>górą w prawo</b>. Kolejne dotknięcie przycisku przywraca pion.' : 'Gra wróciła do pionu.', 4200);
+}
+/* Safari na iPhonie udostępnia czujnik ruchu dopiero po zgodzie, o którą można zapytać tylko po dotknięciu */
+function askMotion() {
+  if (Tilt.asked) return; Tilt.asked = true;
+  try { if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) {}
+}
+function onMotion(e) {
+  const g = e.accelerationIncludingGravity;
+  if (!g || typeof g.x !== 'number' || typeof g.y !== 'number') return;
+  const now = performance.now(), x = g.x * Tilt.inv, y = g.y * Tilt.inv, ax = Math.abs(x), ay = Math.abs(y);
+  let phys = null;
+  if (ax > 6.5 && ax > ay * 1.7) phys = x > 0 ? 90 : -90;
+  else if (ay > 6.5 && ay > ax * 1.7) phys = y > 0 ? 0 : 180;
+  /* część przeglądarek podaje odwrócony znak, więc kalibrujemy go, gdy telefon stoi pionowo */
+  if (!Tilt.cal && rot === 0 && viewPortrait() && (phys === 0 || phys === 180)) {
+    if (phys === 0) { Tilt.cal = true; Tilt.calT = 0; }
+    else if (!Tilt.calT) Tilt.calT = now;
+    else if (now - Tilt.calT > 1200) { Tilt.inv = -Tilt.inv; Tilt.cal = true; return; }
+  }
+  Tilt.phys = phys;
+  if (!rotAllowed() || !viewPortrait() || phys === null || phys === 180) { Tilt.candT = 0; return; }
+  if (Tilt.lock !== null) { if (phys === Tilt.lock) return; Tilt.lock = null; }
+  if (phys === rot) { Tilt.candT = 0; return; }
+  if (Tilt.cand !== phys || !Tilt.candT) { Tilt.cand = phys; Tilt.candT = now; return; }
+  if (now - Tilt.candT > 800) { Tilt.candT = 0; rot = phys; layout(); }
+}
+/* punkt dotknięcia we współrzędnych elementu, także gdy gra jest obrócona */
+function localPoint(ev, el) {
+  const r = el.getBoundingClientRect();
+  if (rot === 90) return { x: ev.clientY - r.top, y: r.right - ev.clientX, w: r.height, h: r.width };
+  if (rot === -90) return { x: r.bottom - ev.clientY, y: ev.clientX - r.left, w: r.height, h: r.width };
+  return { x: ev.clientX - r.left, y: ev.clientY - r.top, w: r.width, h: r.height };
+}
 function layout() {
-  const vw = document.documentElement.clientWidth || window.innerWidth, vh = window.innerHeight;
+  const iw = document.documentElement.clientWidth || window.innerWidth, ih = window.innerHeight;
+  if (rot && (!rotAllowed() || !(ih > iw * 1.05))) rot = 0;
+  applyRot(iw, ih);
+  const vw = rot ? ih : iw, vh = rot ? iw : ih;
   const fs = !!document.fullscreenElement;
   const framed = inFrame && !fs;
   const portrait = vh > vw * 1.05;
@@ -5041,7 +5111,8 @@ const ACTIONS = {
   'quiz-next': () => closeQuiz(),
   print: () => printCard(),
   wipe: () => ask('Wyczyścić <b>postęp?</b>', 'Usuniesz postęp, punkty i raport wiedzy zapisane w tej przeglądarce.', () => { const st = save.settings; save = newSave(); save.settings = st; writeSave(); knowCache = null; goTitle(); }),
-  fullscreen: () => toggleFullscreen()
+  fullscreen: () => toggleFullscreen(),
+  rotate: () => cycleRot()
 };
 function toggleFullscreen() {
   try {
@@ -5089,6 +5160,8 @@ function init() {
   EL.kompList.addEventListener('toggle', () => fitFrame(), true);
   EL.repMiss.addEventListener('toggle', () => fitFrame(), true);
   $('#hud-pause').addEventListener('click', () => { AudioSys.init(); pauseGame(); });
+  $('#hud-rot').addEventListener('click', (e) => { e.stopPropagation(); AudioSys.init(); cycleRot(true); });
+  window.addEventListener('devicemotion', onMotion);
   EL['scr-intro'].addEventListener('click', () => beginPlay());
   $('#map-canvas').addEventListener('click', mapClick);
   document.documentElement.lang = 'pl';
@@ -5112,7 +5185,7 @@ function init() {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 200));
   layout();
-  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, save: () => save, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom };
+  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, save: () => save, onMotion, getRot: () => rot, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom };
   goTitle();
   requestAnimationFrame(loop);
 }

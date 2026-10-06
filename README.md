@@ -111,6 +111,7 @@ Gra zręcznościowa w stylu platformówki, która sprawdza wiedzę o ustawie z d
 - **Ocena wiedzy**: liczy się pierwsza odpowiedź na każde pytanie. Raport pokazuje wynik ogólny, wynik w każdym rozdziale i listę do powtórki. Kartę wyniku można wydrukować. Kompendium zbiera odkryte pytania z odpowiedziami.
 - **Tryby**: Nauka (5 żyć, bez limitu czasu, łagodniejsze kary), Wyzwanie (30 sekund na odpowiedź), Ekspert (15 sekund, szybsi przeciwnicy). W ustawieniach jest swobodny wybór świata na potrzeby szkoleń.
 - **Sterowanie**: klawiatura, ekran dotykowy (przyciski na ekranie, na telefonie menu na cały ekran) i pad.
+- **Telefon obrócony na bok**: gdy przeglądarka sama obraca stronę, gra przechodzi w układ poziomy. Gdy ekran zostaje w pionie (blokada obrotu, podgląd w aplikacji), gra obraca się sama według czujnika ruchu, jeśli przeglądarka go udostępnia (Android). W pozostałych przypadkach służy do tego przycisk obrotu w prawym górnym rogu planszy oraz przycisk „Obróć grę na bok” w menu. Na iPhonie przycisk obrotu prosi też o zgodę na czujnik ruchu. W ramce we wpisie obracanie jest wyłączone, bo tam służy przycisk „Otwórz w nowej karcie”.
 - **Prywatność**: postęp i imię na karcie wyniku zostają w pamięci tej przeglądarki (localStorage). Gra niczego nie wysyła. Odpowiedzi z pierwszej wersji gry przechodzą do nowej automatycznie.
 
 ## Wdrożenie na WordPress
