@@ -89,12 +89,25 @@ pozostawiono zgodnie z przekazaną treścią.
 Gra zręcznościowa w stylu platformówki, która sprawdza wiedzę o ustawie z dnia 1 lipca 2011 r. o samorządzie pielęgniarek i położnych (t. j. Dz. U. z 2025 r. poz. 1760).
 
 - **Postaci**: pielęgniarka, pielęgniarz, położna albo położny, z tymi samymi umiejętnościami. Gra zwraca się do gracza w formie żeńskiej albo męskiej, zależnie od wybranej postaci.
-- **Osiem światów = rozdziały ustawy**: przepisy ogólne, zadania samorządu, prawa i obowiązki członków, organy Naczelnej Izby, organy okręgowej izby, odpowiedzialność zawodowa (dwa światy) oraz majątek i przepisy końcowe. Każdy świat ma dwa etapy na zewnątrz, etap w archiwum i strażnika rozdziału (Wątpliwość), razem 32 etapy. Między etapami prowadzi mapa ustawy, po której chodzi postać.
+- **Osiem światów = rozdziały ustawy w miejscach pracy pielęgniarek, pielęgniarzy, położnych i położnych**. Każdy świat ma dwa etapy w plenerze, etap we wnętrzu z tabliczkami na drzwiach i strażnika rozdziału (Wątpliwość), razem 32 etapy. Między etapami prowadzi mapa ustawy, po której chodzi postać.
+
+  | Świat | Rozdział ustawy | Plener | Wnętrze (etap 3) |
+  |---|---|---|---|
+  | 1 | Przepisy ogólne | Kampus uczelni (Wydział Nauk o Zdrowiu, aula, biblioteka) | Centrum symulacji medycznej |
+  | 2 | Zadania i zasady działania samorządu | Przychodnia na osiedlu, apteka, punkt pobrań | Korytarz przychodni |
+  | 3 | Prawa i obowiązki członków | Szpital powiatowy | Oddział chorób wewnętrznych |
+  | 4 | Organy Naczelnej Izby | Białe miasteczko w stolicy | Siedziba Naczelnej Izby, drzwi z nazwami organów |
+  | 5 | Organy okręgowej izby | Uzdrowisko nad morzem | Siedziba okręgowej izby, drzwi z nazwami organów |
+  | 6 | Odpowiedzialność zawodowa, postępowanie | Szpitalny oddział ratunkowy nocą | Korytarz oddziału ratunkowego |
+  | 7 | Odpowiedzialność zawodowa, kary i środki odwoławcze | Oddział położniczy o zmierzchu, szkoła rodzenia | Blok porodowy |
+  | 8 | Majątek i przepisy końcowe | Opieka w domu pacjenta, ośrodek zdrowia na wsi | Dom pomocy społecznej |
+
+  Transparenty w białym miasteczku mają ogólne hasła („Bezpieczny pacjent”, „Godna praca”, „Więcej rąk do opieki”) i nie wskazują żadnej organizacji. Ukryty pokój za rurą poczty pneumatycznej to archiwum dokumentacji.
 - **Pytania**: 153 pytania z podstawą prawną i wyjaśnieniem. Kryją się w czerwonych blokach z pytajnikiem, w złotym bloku w ukrytym pokoju i u strażnika. Strażnik ostatniego świata wraca do pytań, na które padła błędna odpowiedź.
 - **Nagrody**: dobra odpowiedź daje 1000 pkt (w trybach z limitem także 25 pkt za każdą pozostałą sekundę), wzmocnienie, deszcz paragrafów i rosnący mnożnik serii (×1,5, ×2, ×3, ×4), który mnoży wszystkie punkty w grze. Każda dobra odpowiedź zaciera jeden stopień kary.
 - **Kary**: kolejne błędy w etapie przynoszą kary nazwane jak kary z art. 60 ustawy, czyli upomnienie, naganę, karę pieniężną, ograniczenie zakresu czynności i zawieszenie prawa wykonywania zawodu (utrata życia, w trybie Nauka 20 sekund ograniczenia). U strażnika błąd dodatkowo go wzmacnia.
 - **Ocena etapu**: do trzech pieczęci, premie za komplet pytań i bezbłędny etap, trzy złote paragrafy w każdym etapie.
-- **Świat gry**: rury poczty pneumatycznej z ukrytymi pokojami, taśmociągi, woda, platformy ruchome i spadające, ukryte bloki, teczki do kopania, kopiarki strzelające pismami, obrotowe paragrafy, tablice z powtórką błędnych odpowiedzi.
+- **Elementy plansz**: rury poczty pneumatycznej z ukrytymi pokojami, taśmociągi, woda, platformy ruchome i spadające, ukryte bloki, teczki do kopania, kopiarki strzelające pismami, obrotowe paragrafy, tablice z powtórką błędnych odpowiedzi.
 - **Ocena wiedzy**: liczy się pierwsza odpowiedź na każde pytanie. Raport pokazuje wynik ogólny, wynik w każdym rozdziale i listę do powtórki. Kartę wyniku można wydrukować. Kompendium zbiera odkryte pytania z odpowiedziami.
 - **Tryby**: Nauka (5 żyć, bez limitu czasu, łagodniejsze kary), Wyzwanie (30 sekund na odpowiedź), Ekspert (15 sekund, szybsi przeciwnicy). W ustawieniach jest swobodny wybór świata na potrzeby szkoleń.
 - **Sterowanie**: klawiatura, ekran dotykowy (przyciski na ekranie, na telefonie menu na cały ekran) i pad.
