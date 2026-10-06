@@ -78,3 +78,31 @@ omyłkami pisarskimi (kontekst całej sekcji to rok 2025):
 Uspójniono też zapis dat (pełny rok `2025`) oraz nazewnictwo nagłówków
 („Kursy zrealizowane”, „Kursy dokształcające”). Same terminy i nazwy kursów
 pozostawiono zgodnie z przekazaną treścią.
+
+---
+
+# Gra edukacyjna „Wyprawa przez Ustawę”
+
+> **Plik:** [`wyprawa-przez-ustawe.html`](wyprawa-przez-ustawe.html). To kompletna, samodzielna gra (HTML, CSS i JS w jednym pliku, z osadzonym krojem Titillium Web i logo Izby, bez zależności zewnętrznych).
+> **Kod osadzenia we wpisie:** [`wordpress/wyprawa-przez-ustawe-osadzenie.html`](wordpress/wyprawa-przez-ustawe-osadzenie.html)
+
+Gra zręcznościowa w stylu platformówki, która sprawdza wiedzę o ustawie z dnia 1 lipca 2011 r. o samorządzie pielęgniarek i położnych (t. j. Dz. U. z 2025 r. poz. 1760).
+
+- **Postaci**: pielęgniarka, pielęgniarz, położna albo położny, z tymi samymi umiejętnościami. Gra zwraca się do gracza w formie żeńskiej albo męskiej, zależnie od wybranej postaci.
+- **Osiem światów = rozdziały ustawy**: przepisy ogólne, zadania samorządu, prawa i obowiązki członków, organy Naczelnej Izby, organy okręgowej izby, odpowiedzialność zawodowa (dwa światy) oraz majątek i przepisy końcowe. Każdy świat ma dwa etapy i strażnika rozdziału (Wątpliwość), razem 24 etapy.
+- **Pytania**: 145 pytań z podstawą prawną i wyjaśnieniem. Kryją się w czerwonych blokach z pytajnikiem i u strażnika. Strażnik ostatniego świata wraca do pytań, na które padła błędna odpowiedź.
+- **Ruch**: bieg, skok o regulowanej wysokości, lot z Mandatem, rzut paragrafem z Kodeksem, sprężyny i platformy ruchome oraz spadające.
+- **Ocena wiedzy**: liczy się pierwsza odpowiedź na każde pytanie. Raport pokazuje wynik ogólny, wynik w każdym rozdziale i listę do powtórki. Kartę wyniku można wydrukować. Kompendium zbiera odkryte pytania z odpowiedziami.
+- **Tryby**: Nauka (5 żyć, bez limitu czasu), Wyzwanie (30 sekund na odpowiedź), Ekspert (15 sekund, szybsi przeciwnicy). W ustawieniach jest swobodny wybór świata na potrzeby szkoleń.
+- **Sterowanie**: klawiatura, ekran dotykowy (przyciski na ekranie, na telefonie menu na cały ekran) i pad.
+- **Prywatność**: postęp i imię na karcie wyniku zostają w pamięci tej przeglądarki (localStorage). Gra niczego nie wysyła.
+
+## Wdrożenie na WordPress
+
+1. Wgraj `wyprawa-przez-ustawe.html` do Mediów z konta administratora. W październiku 2026 r. adres pliku to `https://oipip.slupsk.pl/wp-content/uploads/2026/10/wyprawa-przez-ustawe.html` (w chwili przygotowania pliku ten adres nie był zajęty). Jeśli wgrywasz go w innym miesiącu, popraw `2026/10` w kodzie osadzenia.
+2. We wpisie dodaj blok „Własny HTML” i wklej zawartość `wordpress/wyprawa-przez-ustawe-osadzenie.html`.
+3. Plik sam ustawia wysokość ramki (identyfikator ramki zaczyna się od `oipip-iframe`). Gdy otwierasz menu, ramka rośnie do wysokości treści, a po powrocie do gry wraca do wysokości planszy. Na telefonie przycisk „Otwórz w nowej karcie” uruchamia grę na całym ekranie.
+
+## Edycja pytań
+
+Pytania są w pliku w tablicy `WPU_QUESTIONS` (wyszukaj tę nazwę). Pierwsza odpowiedź w tablicy `o` jest zawsze poprawna, a gra sama tasuje kolejność. Pytania „Prawda czy fałsz?” mają pole `tf: true` i poprawną odpowiedź w polu `ans`. Każda zmiana pliku wymaga wgrania go do Mediów pod nową nazwą (np. `-v2`) i podmiany adresu w kodzie osadzenia.
