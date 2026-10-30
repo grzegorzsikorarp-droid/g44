@@ -348,6 +348,58 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
   .wpu-toast{transition:none}
   .wpu-chip.st.hot,.wpu-seals.big i.on{animation:none}
 }
+/* v5: torba, misje, koła ratunkowe, sklepik, odznaki */
+.wpu-inv{position:absolute;right:.4em;top:2.7em;display:flex;flex-direction:column;gap:.3em;pointer-events:none}
+.wpu-ib{pointer-events:auto;appearance:none;position:relative;width:2.5em;height:2.5em;padding:0;border:2px solid rgba(255,255,255,.93);background:rgba(26,23,24,.55);cursor:pointer;display:grid;place-items:center}
+.wpu-ib canvas{width:2.1em;height:2.1em}
+.wpu-ib small{position:absolute;right:.1em;bottom:0;font-size:.62em;font-weight:700;color:#fff;text-shadow:0 0 2px #000}
+.wpu-ib.empty{border-style:dashed;border-color:rgba(255,255,255,.55);background:rgba(26,23,24,.25);cursor:default}
+.wpu-ib:not(.empty):hover{border-color:var(--red)}
+.wpu-chip.doc{border-left-color:var(--ok)}
+.wpu-miss{list-style:none;margin:.7em 0 .2em;padding:0;display:grid;gap:.3em;text-align:left}
+.wpu-miss li{display:flex;gap:.55em;align-items:flex-start;font-size:.86em;line-height:1.3}
+.wpu-miss li i{flex:none;display:inline-block;width:.75em;height:.75em;margin-top:.25em;border:2px solid var(--red);transform:rotate(45deg);background:#fff}
+.wpu-miss li.on i{background:var(--red)}
+.wpu-miss li.on span{font-weight:600}
+.wpu-miss li small{display:block;font-size:.8em;color:var(--g4)}
+.wpu-introbox .wpu-miss{max-width:26em;margin:.8em auto 0}
+.wpu-introbox .wpu-miss li{color:#eee}
+.wpu-introbox .wpu-miss li i{background:transparent}
+.wpu-introbox .wpu-miss li.on i{background:var(--red)}
+.wpu-life{display:flex;flex-wrap:wrap;gap:.35em;margin:.55em 0 .2em}
+.wpu-life button{appearance:none;font:inherit;font-size:.78em;font-weight:600;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink);padding:.25em .6em;display:inline-flex;gap:.4em;align-items:center}
+.wpu-life button b{background:var(--ink);color:#fff;padding:0 .35em;font-size:.9em}
+.wpu-life button.on{background:var(--ink);color:#fff}
+.wpu-life button.on b{background:var(--red)}
+.wpu-life button.stake{border-color:var(--red);color:var(--red)}
+.wpu-life button.stake.on{background:var(--red);color:#fff}
+.wpu-life button[disabled]{opacity:.38;cursor:default}
+.wpu-life button:focus-visible{outline:3px solid var(--red);outline-offset:1px}
+.wpu-qhint{margin:.4em 0 0;padding:.4em .6em;background:#fff6d6;border-left:6px solid #e7b416;font-size:.85em;line-height:1.35}
+.wpu-wallet{display:flex;flex-wrap:wrap;gap:.5em;margin:.5em 0 0}
+.wpu-wallet span{background:var(--l3);border-left:6px solid var(--red);padding:.3em .6em;font-size:.85em}
+.wpu-wallet span.g{border-left-color:#e7b416}
+.wpu-wallet b{font-size:1.2em;font-variant-numeric:tabular-nums}
+.wpu-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(13.5em,1fr));gap:.5em}
+.wpu-shopc{background:var(--l3);border-left:6px solid var(--red);padding:.55em .7em;display:flex;flex-direction:column;gap:.3em;min-width:0}
+.wpu-shopc.up{border-left-color:#e7b416}
+.wpu-shopc h4{margin:0;font-size:1em;display:flex;justify-content:space-between;gap:.5em;align-items:baseline}
+.wpu-shopc h4 small{font-size:.75em;font-weight:600;color:var(--g4);white-space:nowrap}
+.wpu-shopc p{margin:0;font-size:.8em;line-height:1.35;color:var(--g3)}
+.wpu-shopc .tiers{display:flex;gap:.25em}
+.wpu-shopc .tiers i{flex:1;height:.4em;background:var(--l1)}
+.wpu-shopc .tiers i.on{background:#e7b416}
+.wpu-shopc .row{display:flex;align-items:center;justify-content:space-between;gap:.5em;margin-top:auto}
+.wpu-shopc .row b{font-variant-numeric:tabular-nums}
+.wpu-shopc .wpu-btn{font-size:.8em;padding:.3em .8em}
+.wpu-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(12.5em,1fr));gap:.5em}
+.wpu-badge{background:var(--l3);border-left:6px solid var(--l1);padding:.5em .7em;display:flex;gap:.6em;align-items:flex-start}
+.wpu-badge.on{border-left-color:#e7b416;background:#fffaf0}
+.wpu-badge i{flex:none;width:1.9em;height:1.9em;border-radius:50%;background:var(--l1);display:grid;place-items:center;font-style:normal;font-weight:700;color:#fff;font-size:.9em}
+.wpu-badge.on i{background:#e7b416}
+.wpu-badge b{display:block;font-size:.92em}
+.wpu-badge span{display:block;font-size:.78em;color:var(--g3);line-height:1.3}
+.wpu-badge small{display:block;font-size:.72em;font-weight:600;color:var(--g4);margin-top:.15em}
 </style>
 <style id="wpu-fonts">
 /* Titillium Web (SIL Open Font License), osadzony w pliku */
@@ -379,6 +431,8 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
       <span class="wpu-chip pen" id="hud-penchip" hidden><small>Kara</small><b id="hud-pen"></b></span>
       <span class="wpu-chip gd" id="hud-goldchip" hidden><small>Złote</small><span class="wpu-golds sm" id="hud-gold"><i></i><i></i><i></i></span></span>
       <span class="wpu-chip pw" id="hud-pw" hidden><small id="hud-pwn">Mandat</small><i><b id="hud-pwb"></b></i></span>
+      <span class="wpu-chip doc" id="hud-doc" hidden><small>Prośba</small><b>dokument</b></span>
+      <span class="wpu-inv" id="hud-inv" aria-label="Torba"></span>
       <span class="sp"></span>
       <button class="wpu-hbtn rotb" id="hud-rot" type="button" aria-label="Obróć grę na bok" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 9.4A5.4 5.4 0 1 1 11.6 4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.6 1.4v5.2H9.4z" fill="currentColor"/></svg></button>
       <button class="wpu-hbtn" id="hud-pause" type="button" aria-label="Pauza">II</button>
@@ -397,7 +451,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <span class="wpu-logo"><img id="wpu-logo" alt="Okręgowa Izba Pielęgniarek i Położnych w Słupsku"></span>
             <span class="wpu-kicker">Gra edukacyjna</span>
             <h1 class="wpu-h1">Wyprawa przez <b>Ustawę</b></h1>
-            <p class="wpu-lead" data-nb>Przemierz osiem światów ustawy o samorządzie pielęgniarek i położnych, od kampusu uczelni przez szpital i porodówkę po dom pacjenta. Skacz, lataj, zbieraj paragrafy i uderzaj w bloki z pytajnikiem. Każdy blok to pytanie, a każda odpowiedź trafia do Twojego raportu wiedzy.</p>
+            <p class="wpu-lead" data-nb>Przemierz osiem światów ustawy o samorządzie pielęgniarek i położnych, od kampusu uczelni przez szpital i porodówkę po dom pacjenta. Skacz, wybieraj drogi, rozbijaj kartony, pomagaj spotkanym osobom i uderzaj w bloki z pytajnikiem. Każdy blok to pytanie, a każda odpowiedź trafia do Twojego raportu wiedzy. Za zebrane paragrafy kupisz w sklepiku koła ratunkowe i ulepszenia.</p>
           </div>
           <div class="wpu-pbody">
             <div class="wpu-btns">
@@ -456,7 +510,9 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-mapinfo" id="map-info"></div>
           <div class="wpu-btns">
             <button class="wpu-btn big" type="button" data-act="mapplay" id="map-play" data-focus><span>Graj</span></button>
-            <button class="wpu-btn alt" type="button" data-act="list"><span>Lista etapów</span></button>
+            <button class="wpu-btn alt" type="button" data-act="shop"><span>Sklepik</span></button>
+            <button class="wpu-btn alt" type="button" data-act="badges"><span>Odznaki</span></button>
+            <button class="wpu-btn ghost" type="button" data-act="list"><span>Lista etapów</span></button>
             <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="komp"><span>Kompendium</span></button>
             <button class="wpu-btn ghost" type="button" data-act="help"><span>Jak grać?</span></button>
@@ -485,6 +541,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
         <span class="wpu-kicker" id="intro-k"></span>
         <h2 class="wpu-h1" id="intro-t"></h2>
         <p id="intro-p"></p>
+        <ul class="wpu-miss" id="intro-miss"></ul>
         <div class="lives"><canvas id="intro-face" width="60" height="80"></canvas><span id="intro-lives"></span></div>
         <p class="wpu-introtip" id="intro-tip"></p>
         <p class="wpu-hint" id="intro-hint">Obróć telefon poziomo, a plansza będzie większa.</p>
@@ -498,6 +555,8 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-quizhead"><span class="meta" id="quiz-meta"></span><span class="wpu-streak" id="quiz-streak" hidden><span></span></span></div>
           <div class="wpu-timer" id="quiz-timer"><i id="quiz-timer-bar"></i></div>
           <p class="wpu-q" id="quiz-q"></p>
+          <div class="wpu-life" id="quiz-life"></div>
+          <p class="wpu-qhint" id="quiz-hint" hidden></p>
           <div class="wpu-opts" id="quiz-opts"></div>
           <div class="wpu-fb" id="quiz-fb" hidden>
             <div class="v" id="quiz-v"></div>
@@ -516,6 +575,8 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
       <div class="wpu-panel narrow">
         <div class="wpu-phead"><span class="wpu-kicker" id="pause-k">Pauza</span><h2 class="wpu-h2">Chwila <b>przerwy</b></h2></div>
         <div class="wpu-pbody">
+          <ul class="wpu-miss" id="pause-miss"></ul>
+          <p class="wpu-small" id="pause-inv"></p>
           <div class="wpu-btns">
             <button class="wpu-btn" type="button" data-act="resume"><span>Wróć do gry</span></button>
             <button class="wpu-btn alt" type="button" data-act="restart"><span>Etap od nowa</span></button>
@@ -536,11 +597,44 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-clearrow"><span class="wpu-seals big" id="clear-seals"></span><span class="wpu-golds big" id="clear-golds"></span></div>
           <div class="wpu-stats" id="clear-stats"></div>
           <p class="wpu-small" id="clear-pens"></p>
+          <div class="wpu-sec"><h3>Misje</h3></div>
+          <ul class="wpu-miss" id="clear-miss"></ul>
+          <p class="wpu-small" id="clear-extra"></p>
           <div class="wpu-btns">
             <button class="wpu-btn big" type="button" data-act="next" id="btn-next"><span>Dalej</span></button>
+            <button class="wpu-btn alt" type="button" data-act="shop"><span>Sklepik</span></button>
             <button class="wpu-btn ghost" type="button" data-act="map"><span>Mapa ustawy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKLEPIK -->
+    <div class="wpu-screen dim" id="scr-shop">
+      <div class="wpu-panel wide">
+        <div class="wpu-phead"><span class="wpu-kicker">Sklepik samorządowy</span><h2 class="wpu-h2">Przygotuj się do <b>dyżuru</b></h2>
+          <p class="wpu-lead" data-nb>Za paragrafy kupisz koła ratunkowe do pytań, wzmocnienia do torby i dodatkowe życie. Za złote paragrafy kupisz trwałe ulepszenia. Wybieraj z głową, bo każdy etap to inna próba.</p>
+          <div class="wpu-wallet" id="shop-wallet"></div></div>
+        <div class="wpu-pbody">
+          <div class="wpu-sec"><h3>Koła ratunkowe i wzmocnienia</h3></div>
+          <div class="wpu-shop" id="shop-items"></div>
+          <div class="wpu-sec"><h3>Ulepszenia za złote paragrafy</h3></div>
+          <div class="wpu-shop" id="shop-ups"></div>
+          <p class="wpu-small" id="shop-msg" role="status" aria-live="polite"></p>
+          <div class="wpu-btns"><button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ODZNAKI -->
+    <div class="wpu-screen dim" id="scr-badges">
+      <div class="wpu-panel wide">
+        <div class="wpu-phead"><span class="wpu-kicker">Odznaki</span><h2 class="wpu-h2">Twoje <b>osiągnięcia</b></h2>
+          <p class="wpu-lead" id="badges-p"></p></div>
+        <div class="wpu-pbody">
+          <div class="wpu-badges" id="badges-list"></div>
+          <div class="wpu-btns"><button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button></div>
         </div>
       </div>
     </div>
@@ -595,7 +689,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
     <div class="wpu-screen dim" id="scr-help">
       <div class="wpu-panel wide">
         <div class="wpu-phead"><span class="wpu-kicker">Instrukcja</span><h2 class="wpu-h2">Jak <b>grać?</b></h2>
-          <p class="wpu-lead" data-nb>Dojdź do flagi na końcu każdego etapu. Uderzaj głową w czerwone bloki z pytajnikiem, bo każdy z nich kryje pytanie z ustawy. Dobra odpowiedź daje punkty, wzmocnienie, deszcz paragrafów i rosnący mnożnik serii. Błędna odpowiedź to kara nazwana jak kary z art. 60 ustawy. Światy to miejsca, w których pracują pielęgniarki, pielęgniarze, położne i położni, od kampusu uczelni i przychodni, przez szpital, oddział ratunkowy i porodówkę, po dom pacjenta. Każdy świat ma dwa etapy w plenerze, etap we wnętrzu z tabliczkami na drzwiach i strażnika rozdziału, czyli Wątpliwość.</p></div>
+          <p class="wpu-lead" data-nb>Dojdź do flagi przed Izbą na końcu każdego etapu. Uderzaj głową w czerwone bloki z pytajnikiem, bo każdy z nich kryje pytanie z ustawy. Krąg na podłodze pokazuje, gdzie stanąć pod blokiem, a w locie znacznik pokazuje, gdzie wylądujesz. Po drodze miniesz place pełne ludzi, rozwidlenia z bezpieczną i trudną drogą, górne trasy i kartony do rozbicia. Każdy etap ma trzy misje, a każda misja to pieczęć. Paragrafy wydasz w sklepiku na koła ratunkowe, wzmocnienia i dodatkowe życie, a złote paragrafy na trwałe ulepszenia. Światy to miejsca, w których pracują pielęgniarki, pielęgniarze, położne i położni, od kampusu i przychodni, przez szpital, oddział ratunkowy i porodówkę, po dom pacjenta. Etapy 1, 2 i 3 świata przechodzisz w dowolnej kolejności, a strażnik rozdziału, czyli Wątpliwość, czeka po dwóch z nich.</p></div>
         <div class="wpu-pbody">
           <div class="wpu-sec"><h3>Sterowanie</h3></div>
           <div class="wpu-keys">
@@ -604,10 +698,12 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <kbd>↓ S</kbd><span>do tyłu, a gdy stoisz na rurze poczty pneumatycznej, wejście do ukrytego pokoju</span>
             <kbd>Spacja</kbd><span>skok (także Z i K), przytrzymaj, aby skoczyć wyżej</span>
             <kbd>Shift X</kbd><span>bieg od razu, a z Kodeksem rzut paragrafem (także J). Po chwili marszu postać i tak biegnie sama</span>
+            <kbd>E 1–4</kbd><span>użycie przedmiotu z torby (E pierwszego, cyfry wybranego). Możesz też dotknąć ikony torby w prawym górnym rogu</span>
+            <kbd>Q W E R</kbd><span>w oknie pytania Ściąga, Konsultacja, Druga szansa i podwójna stawka</span>
             <kbd>1–4</kbd><span>wybór odpowiedzi (także A, B, C, D)</span>
             <kbd>P Esc</kbd><span>pauza</span>
             <kbd>Ekran dotykowy</kbd><span>przytrzymaj palec w dowolnym miejscu, aby iść naprzód, i przesuwaj go w lewo albo w prawo, aby skręcać. Przeciągnij palec w dół, aby się cofnąć. Szybko przesuń palec w górę albo dotknij ekranu drugim palcem, aby skoczyć, a przytrzymaj, aby skoczyć wyżej. Szybkie przesunięcie w dół na rurze to wejście do ukrytego pokoju, a dwa szybkie dotknięcia to rzut paragrafem. Przyciski na ekranie włączysz w ustawieniach</span>
-            <kbd>Pad</kbd><span>gałka albo krzyżak to ruch, przycisk A skok, X bieg i rzut, Start pauza</span>
+            <kbd>Pad</kbd><span>gałka albo krzyżak to ruch, przycisk A skok, X bieg i rzut, Y przedmiot z torby, Start pauza</span>
           </div>
           <div class="wpu-sec"><h3>Zasady punktacji</h3></div>
           <div id="help-score"></div>
@@ -1237,14 +1333,16 @@ const g = (f, m) => (G.fem ? f : m);
 const SAVE_KEY = 'wpu-save-v2', OLD_KEY = 'wpu-save-v1';
 function newSave() {
   return { v: 2, char: null, name: '', mode: 'std', progress: {}, answers: {}, score: 0, coins: 0, best: 0,
-    tips: {}, mapAt: '1-1', settings: { sfx: true, music: true, reduce: false, free: false } };
+    tips: {}, mapAt: '1-1', settings: { sfx: true, music: true, reduce: false, free: false },
+    inv: [], life: { sciaga: 0, konsult: 0, druga: 0 }, up: {}, goldSpent: 0, extraLives: 0, badges: {},
+    stats: { cartons: 0, quests: 0, hard: 0, rooms: 0, kills: 0, bossWon: 0, bestStreak: 0 } };
 }
 let save = newSave();
 function loadSave() {
   let raw = null;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
   if (raw) {
-    try { const s = JSON.parse(raw); if (s && s.v === 2) save = Object.assign(newSave(), s, { settings: Object.assign(newSave().settings, s.settings || {}) }); } catch (e) {}
+    try { const s = JSON.parse(raw); if (s && s.v === 2) { const d = newSave(); save = Object.assign(d, s, { settings: Object.assign(d.settings, s.settings || {}), life: Object.assign({ sciaga: 0, konsult: 0, druga: 0 }, s.life || {}), stats: Object.assign(newSave().stats, s.stats || {}) }); if (!Array.isArray(save.inv)) save.inv = []; } } catch (e) {}
     return;
   }
   /* przeniesienie postępu z pierwszej wersji gry: odpowiedzi zostają, strażnik przechodzi na etap 4 */
@@ -1418,13 +1516,13 @@ const AudioSys = (() => {
    STEROWANIE: klawiatura, dotyk, pad
    ===================================================================== */
 const Input = (() => {
-  const st = { left: false, right: false, up: false, down: false, jump: false, run: false };
+  const st = { left: false, right: false, up: false, down: false, jump: false, run: false, use: false };
   const src = { k: {}, t: {}, p: {}, a: {} };
-  let jumpEdge = false, runEdge = false, pauseEdge = false, downEdge = false, manRun = false;
+  let jumpEdge = false, runEdge = false, pauseEdge = false, downEdge = false, useEdge = false, manRun = false;
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowDown: 'down', KeyS: 'down',
     ArrowUp: 'up', KeyW: 'up', Space: 'jump', KeyZ: 'jump', KeyK: 'jump',
-    ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', KeyJ: 'run'
+    ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', KeyJ: 'run', KeyE: 'use', KeyQ: 'use'
   };
   function recompute() {
     for (const k in st) {
@@ -1434,13 +1532,15 @@ const Input = (() => {
       /* rzut paragrafem tylko po świadomym naciśnięciu, nie po automatycznym biegu z gestów */
       if (k === 'run') { if (man && !manRun) runEdge = true; manRun = man; }
       if (k === 'down' && st[k] && !prev) downEdge = true;
+      if (k === 'use' && st[k] && !prev) useEdge = true;
     }
   }
   function setSrc(s, k, v) { if (src[s][k] === v) return; src[s][k] = v; recompute(); }
-  function clearAll() { for (const s in src) src[s] = {}; recompute(); jumpEdge = runEdge = downEdge = false; manRun = false; }
+  function clearAll() { for (const s in src) src[s] = {}; recompute(); jumpEdge = runEdge = downEdge = useEdge = false; manRun = false; }
   function takeJump() { const e = jumpEdge; jumpEdge = false; return e; }
   function takeRun() { const e = runEdge; runEdge = false; return e; }
   function takeDown() { const e = downEdge; downEdge = false; return e; }
+  function takeUse() { const e = useEdge; useEdge = false; return e; }
   function takePause() { const e = pauseEdge; pauseEdge = false; return e; }
   /* ruch analogowy (gałka pada albo palec na ekranie): x w prawo, y do tyłu, oba od −1 do 1 */
   const an = { t: { x: 0, y: 0, on: false }, p: { x: 0, y: 0, on: false } };
@@ -1456,11 +1556,11 @@ const Input = (() => {
     const ax = p.axes[0] || 0, ay = p.axes[1] || 0, mag = Math.hypot(ax, ay);
     setAnalog('p', ax, ay, mag > 0.22);
     setSrc('p', 'left', b(14)); setSrc('p', 'right', b(15)); setSrc('p', 'up', b(12)); setSrc('p', 'down', b(13) || ay > 0.85);
-    setSrc('p', 'jump', b(0) || b(1)); setSrc('p', 'run', b(2) || b(3) || b(7));
+    setSrc('p', 'jump', b(0) || b(1)); setSrc('p', 'run', b(2) || b(7)); setSrc('p', 'use', b(3));
     if (b(9) && !gpPrev[9]) pauseEdge = true;
     gpPrev = { 9: b(9) };
   }
-  return { st, KEYMAP, setSrc, clearAll() { clearAll(); setAnalog('t', 0, 0, false); }, takeJump, takeRun, takeDown, takePause, pollPad, setAnalog, analog, firePause() { pauseEdge = true; } };
+  return { st, KEYMAP, setSrc, clearAll() { clearAll(); setAnalog('t', 0, 0, false); }, takeJump, takeRun, takeDown, takeUse, takePause, pollPad, setAnalog, analog, firePause() { pauseEdge = true; } };
 })();
 
 /* =====================================================================
@@ -1998,6 +2098,91 @@ function buildPower(kind) {
   const glow = new THREE.Sprite(kind === 'cap' || kind === 'pwz' ? MATS.glowWhite : MATS.glowGold); glow.scale.set(1.4, 1.4, 1); glow.position.y = 0.3; g.add(glow);
   return g;
 }
+/* ---------- postaci w świecie: pacjenci, personel, studenci, odwiedzający ---------- */
+const NPC_SKIN = ['#f0d0b8', '#e8c4a8', '#d6a888', '#b98a6a', '#9c6e50'], NPC_HAIR = ['#3d2f29', '#6b4a33', '#c9a46a', '#2d2d2d', '#8e5a3a', '#d9d4cc'];
+function npcLook(kind, R) {
+  const pick = (a) => a[Math.floor(R() * a.length)];
+  const L = { skin: pick(NPC_SKIN), hair: pick(NPC_HAIR), top: '#f6f6f4', legs: '#f6f6f4', shoe: '#ffffff', cap: false, coat: false, bag: null, cane: false, stripe: null, long: R() < 0.5 };
+  if (kind === 'nurse') { L.cap = R() < 0.5; L.stripe = PAL.red; L.long = true; }
+  else if (kind === 'nurseM') { L.top = '#2c4c6e'; L.legs = '#2c4c6e'; L.long = false; }
+  else if (kind === 'midwife') { L.top = '#b1040f'; L.legs = '#8e0009'; L.long = true; }
+  else if (kind === 'doctor') { L.top = '#9fc6de'; L.legs = '#3d5a78'; L.coat = true; L.shoe = '#2d2d2d'; }
+  else if (kind === 'student') { L.top = pick(['#c0392b', '#2c4c6e', '#e7b416', '#3e7d5a', '#7d4e9a', '#d9d4cc']); L.legs = pick(['#3d5a78', '#2d2d2d', '#5c636a']); L.shoe = pick(['#ffffff', '#2d2d2d']); L.bag = pick(['#2d2d2d', PAL.red, '#5c636a']); }
+  else if (kind === 'patient') { L.top = '#a9cbe0'; L.legs = '#a9cbe0'; L.shoe = '#e3e3df'; }
+  else if (kind === 'senior') { L.hair = pick(['#d9d4cc', '#c4c0b8', '#ffffff']); L.top = pick(['#8e6c54', '#6c6e70', '#7d5a5a', '#5d6b4f']); L.legs = '#4a4d51'; L.shoe = '#3d2f29'; L.cane = true; }
+  else if (kind === 'paramedic') { L.top = '#d1361f'; L.legs = '#2e3a4a'; L.stripe = '#f2f2c0'; L.shoe = '#2d2d2d'; }
+  else { L.top = pick(['#8e6c54', '#2c4c6e', '#6c6e70', '#b04a3e', '#3e7d5a', '#c9a46a', '#e3a6b4']); L.legs = pick(['#3d5a78', '#2d2d2d', '#5c636a', '#6b4a33']); L.shoe = pick(['#2d2d2d', '#6b4a33']); }
+  return L;
+}
+/* tułów z głową w jednej siatce, nogi osobno, żeby mogły kroczyć */
+function buildNPC(kind, R, o) {
+  o = o || {};
+  const L = npcLook(kind, R || Math.random), s = o.scale || 0.92 + (R ? R() : 0.5) * 0.14;
+  const root = new THREE.Group(), gb = new GB();
+  gb.box(0, 0.78, 0, 0.46, 0.64, 0.27, L.top); if (L.stripe) gb.box(0, 1.2, -0.14, 0.47, 0.06, 0.02, L.stripe);
+  if (L.coat) { gb.box(0, 0.45, 0, 0.5, 0.98, 0.3, '#ffffff'); gb.box(0, 1.28, -0.155, 0.12, 0.14, 0.02, L.top); gb.torus(0, 1.18, -0.15, 0.13, 0.015, '#2d2d2d', { seg: 8 }); }
+  [-1, 1].forEach((k) => gb.box(k * 0.29, 0.86, 0, 0.11, 0.52, 0.13, L.coat ? '#ffffff' : L.top));
+  [-1, 1].forEach((k) => gb.sph(k * 0.29, 0.84, 0, 0.065, L.skin, 0));
+  gb.box(0, 1.42, 0, 0.12, 0.08, 0.12, L.skin);
+  gb.sph(0, 1.64, 0, 0.19, L.skin, 1); gb.sph(0, 1.71, 0.035, 0.196, L.hair, 0, { sy: 0.78 });
+  if (L.long) gb.box(0, 1.4, 0.1, 0.34, 0.34, 0.1, L.hair);
+  [-1, 1].forEach((k) => gb.box(k * 0.07, 1.64, -0.18, 0.04, 0.04, 0.02, '#2d2d2d'));
+  if (L.cap) { gb.box(0, 1.86, 0, 0.3, 0.09, 0.2, '#ffffff'); gb.box(0, 1.89, -0.1, 0.12, 0.05, 0.01, PAL.red); }
+  if (L.bag) gb.box(0, 0.8, 0.2, 0.36, 0.44, 0.16, L.bag);
+  if (L.cane) gb.cyl(0.36, 0, -0.15, 0.025, 0.9, '#6b4a33', 5);
+  if (o.stroller) { gb.push(0, 0, -0.85, 0); gb.box(0, 0.4, 0, 0.5, 0.35, 0.8, '#3d6a94'); gb.sph(0, 0.75, 0.2, 0.3, '#2c4c6e', 1, { sy: 0.6, sz: 0.6 }); gb.box(0, 0.85, 0.42, 0.45, 0.04, 0.04, '#2d2d2d'); [-0.25, 0.25].forEach((a) => [-0.3, 0.3].forEach((b) => gb.cyl(a, 0.13, b, 0.13, 0.05, '#2d2d2d', 8, { rz: Math.PI / 2 }))); gb.pop(); }
+  if (o.wheelchair) { gb.push(0, 0, 0.1, 0); [-0.3, 0.3].forEach((a) => gb.torus(a, 0.32, 0, 0.32, 0.03, '#3d4045', { ry: Math.PI / 2 })); gb.box(0, 0.46, 0, 0.5, 0.06, 0.45, '#2c4c6e'); gb.box(0, 0.5, 0.22, 0.5, 0.45, 0.05, '#2c4c6e'); gb.pop(); }
+  const body = gb.mesh(); root.add(body);
+  let legL = null, legR = null;
+  if (o.static) { const lg = new GB(); [-1, 1].forEach((k) => { lg.box(k * 0.1, 0, 0, 0.15, 0.8, 0.17, L.legs); lg.box(k * 0.1, 0, -0.04, 0.16, 0.1, 0.24, L.shoe); }); root.add(lg.mesh()); }
+  else {
+    const leg = () => { const lg = new GB(); lg.box(0, -0.8, 0, 0.15, 0.8, 0.17, L.legs); lg.box(0, -0.8, -0.04, 0.16, 0.1, 0.24, L.shoe); const m = lg.mesh(); m.position.y = 0.8; root.add(m); return m; };
+    legL = leg(); legR = leg(); legL.position.x = -0.1; legR.position.x = 0.1;
+  }
+  root.scale.setScalar(s);
+  return { root, body, legL, legR, look: L };
+}
+/* krok: nogi wahają się, tułów lekko podskakuje */
+function stepNPC(n, ph, moving) {
+  const a = moving ? Math.sin(ph) * 0.55 : 0;
+  if (n.legL) { n.legL.rotation.x = a; n.legR.rotation.x = -a; }
+  n.body.position.y = moving ? Math.abs(Math.cos(ph)) * 0.04 : Math.sin(ph * 0.3) * 0.01;
+  n.body.rotation.z = moving ? Math.sin(ph) * 0.03 : 0;
+}
+/* karton z taśmą i nadrukiem; krąg świetlny na podłodze pod blokiem */
+function initExtras() {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  x.fillStyle = '#c99a62'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#b5844f'; for (let i = 0; i < 64; i += 4) x.fillRect(0, i, 64, 1);
+  x.fillStyle = '#e8d3a6'; x.fillRect(27, 0, 10, 64); x.strokeStyle = '#8e6232'; x.lineWidth = 2; x.strokeRect(1, 1, 62, 62);
+  x.fillStyle = '#8e6232'; x.font = '700 22px "Titillium Web", Arial, sans-serif'; x.textAlign = 'center'; x.fillText('§', 16, 40); x.fillText('§', 48, 40);
+  const t = new THREE.CanvasTexture(c); t.userData.keep = true;
+  BLK.carton = new THREE.MeshLambertMaterial({ map: t }); BLK.carton.userData.keep = true;
+  const rc = document.createElement('canvas'); rc.width = rc.height = 128; const r = rc.getContext('2d');
+  const g = r.createRadialGradient(64, 64, 4, 64, 64, 62); g.addColorStop(0, 'rgba(255,255,255,0.42)'); g.addColorStop(0.5, 'rgba(255,255,255,0.42)'); g.addColorStop(0.6, 'rgba(255,255,255,1)'); g.addColorStop(0.88, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  r.fillStyle = g; r.fillRect(0, 0, 128, 128);
+  BLK.ringTex = new THREE.CanvasTexture(rc); BLK.ringTex.userData.keep = true;
+  BLK.ringGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2); BLK.ringGeo.userData.keep = true;
+  const ringMat = (col, op) => { const m = new THREE.MeshBasicMaterial({ map: BLK.ringTex, color: col, transparent: true, opacity: op, depthWrite: false }); m.userData.keep = true; return m; };
+  BLK.rings = { quiz: ringMat(PAL.red, 0.85), bonus: ringMat(PAL.gold, 0.9), item: ringMat('#ffb21a', 0.8), coin: ringMat('#ff4d57', 0.75), brick: ringMat('#a8664f', 0.7), used: ringMat('#8d8a87', 0.3), aim: ringMat('#ffffff', 0.95), land: ringMat('#ffffff', 0.8) };
+  const lc = document.createElement('canvas'); lc.width = lc.height = 128; const l = lc.getContext('2d');
+  l.strokeStyle = '#ffffff'; l.lineWidth = 9; l.beginPath(); l.arc(64, 64, 44, 0, Math.PI * 2); l.stroke();
+  l.lineWidth = 7; [[64, 4, 64, 30], [64, 98, 64, 124], [4, 64, 30, 64], [98, 64, 124, 64]].forEach(([a, b, c2, d]) => { l.beginPath(); l.moveTo(a, b); l.lineTo(c2, d); l.stroke(); });
+  l.fillStyle = '#ffffff'; l.beginPath(); l.arc(64, 64, 7, 0, Math.PI * 2); l.fill();
+  BLK.landTex = new THREE.CanvasTexture(lc); BLK.landTex.userData.keep = true;
+  BLK.land = new THREE.MeshBasicMaterial({ map: BLK.landTex, color: '#ffffff', transparent: true, opacity: 0.85, depthWrite: false }); BLK.land.userData.keep = true;
+  /* dokument z prośby postaci */
+  const dc = document.createElement('canvas'); dc.width = 64; dc.height = 80; const dx = dc.getContext('2d');
+  dx.fillStyle = '#ffffff'; dx.fillRect(0, 0, 64, 80); dx.fillStyle = PAL.red; dx.fillRect(0, 0, 64, 10);
+  dx.fillStyle = '#9aa1a8'; for (let i = 0; i < 5; i++) dx.fillRect(9, 20 + i * 9, 46 - (i % 2) * 12, 3);
+  dx.fillStyle = PAL.red; dx.beginPath(); dx.arc(46, 66, 8, 0, Math.PI * 2); dx.fill();
+  BLK.docTex = new THREE.CanvasTexture(dc); BLK.docTex.userData.keep = true;
+}
+function buildDoc() {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.78), new THREE.MeshBasicMaterial({ map: BLK.docTex, side: THREE.DoubleSide }));
+  g.add(m); const gl = new THREE.Sprite(MATS.glowWhite); gl.scale.set(2.2, 2.2, 1); g.add(gl);
+  return g;
+}
 
 /* =====================================================================
    MIEJSCA ŚWIATÓW W 3D: kolory, światło, otoczenie ścieżki, szyldy
@@ -2173,6 +2358,14 @@ const P3 = {
 /* budynek z oknami: x0..x1 i z0..z1 to obrys, okna na ścianie od strony kamery (+z) i od strony ścieżki */
 function building(gb, glow, x0, x1, z0, z1, y, h, o) {
   o = o || {};
+  /* budynek nie może wchodzić na szerszy plac: odsuwa się od ścieżki */
+  const EL0 = ENV.L;
+  if (EL0 && EL0.zones && EL0.zones.length) {
+    let clear = 0;
+    for (const Z of EL0.zones) if (-Z.d0 > z0 && -Z.d1 < z1) clear = Math.max(clear, Z.hw + Z.vis + 0.6);
+    if (x0 > 0 && x0 < clear) { const k = clear - x0; x0 += k; x1 += k; }
+    else if (x1 < 0 && x1 > -clear) { const k = clear + x1; x0 -= k; x1 -= k; }
+  }
   const wall = o.wall || '#ece4d6', win = o.win || '#a9c0cf', fr = o.frame || shade(wall, -0.12);
   gb.box((x0 + x1) / 2, y, (z0 + z1) / 2, x1 - x0, h, z1 - z0, wall, { top: o.roof || shade(wall, -0.18) });
   if (o.cornice !== false) gb.box((x0 + x1) / 2, y + h, (z0 + z1) / 2, x1 - x0 + 0.3, 0.3, z1 - z0 + 0.3, o.cornice || shade(wall, -0.1));
@@ -2189,42 +2382,56 @@ function building(gb, glow, x0, x1, z0, z1, y, h, o) {
     if (o.side) { const nx = Math.floor((z1 - z0 - 1) / gx); const sx = o.side > 0 ? x1 : x0; for (let i = 0; i < nx; i++) W(gb, z0 + (z1 - z0 - (nx - 1) * gx) / 2 + i * gx, yy, sx, ww, wh, o.side > 0 ? 'x+' : 'x-'); }
   }
 }
-
 /* =====================================================================
    OTOCZENIE ŚCIEŻKI: nasyp, teren, budynki z szyldami, wnętrza, meta
    ===================================================================== */
-const ENV = { sky: null };
+const ENV = { sky: null, L: null };
 function buildEnv(L, th) {
   const R = mulberry32(L.w * 7919 + L.s * 104729 + (L.bonus ? 17 : 0));
+  ENV.L = L;
   const group = new THREE.Group();
-  const env = { group, anims: [], th, R, signs: [], lights: [] };
+  const env = { group, anims: [], th, R, signs: [], lights: [], npcs: [] };
   const gb = new GB(), glow = new GB(), path = new GB({ uv: true, uvS: 2 }), low = new GB({ uv: true, uvS: 5 });
   env.gb = gb; env.glow = glow;
+  /* szerokość strefy w danym miejscu i krawędź tego, co widać */
+  env.ZH = (z) => zoneHW(L, z); env.EW = (z) => visHW(L, z) - 0.7;
   const sign = (text, x, y, z, h, o, ry) => { const m = signMesh(text, h, o); m.position.set(x, y, z); m.rotation.y = ry || 0; group.add(m); env.signs.push(m); return m; };
   env.sign = sign;
-  const hw = L.hw, wide = 0.7;
-  /* nasyp ścieżki; pas 0,7 m za niewidzialną ścianą służy na krawężnik i rekwizyty */
+  const zA = 70, zB = -L.len - 170;
+  /* nasyp ścieżki; obrzeże za niewidzialną ścianą służy na krawężnik i rekwizyty */
   L.floors.forEach((f) => {
-    const x0 = f.x0 <= -hw + 0.01 ? f.x0 - wide : f.x0, x1 = f.x1 >= hw - 0.01 ? f.x1 + wide : f.x1;
+    const Z = zoneAt(L, (f.z0 + f.z1) / 2), wide = Z.vis;
+    const eL = f.x0 <= -f.zhw + 0.01, eR = f.x1 >= f.zhw - 0.01;
+    const x0 = eL ? f.x0 - wide : f.x0, x1 = eR ? f.x1 + wide : f.x1;
     path.box((x0 + x1) / 2, f.y - FLOOR_T, (f.z0 + f.z1) / 2, x1 - x0, FLOOR_T, f.z1 - f.z0, th.path.side, { top: th.path.top });
-    if (!th.indoor) [[x0, f.x0 <= -hw + 0.01], [x1, f.x1 >= hw - 0.01]].forEach(([xe, full]) => { if (full) gb.box(xe + (xe < 0 ? 0.18 : -0.18), f.y, (f.z0 + f.z1) / 2, 0.36, 0.14, f.z1 - f.z0, th.curb); });
+    if (!th.indoor) [[x0, eL], [x1, eR]].forEach(([xe, full]) => { if (full) gb.box(xe + (xe < 0 ? 0.18 : -0.18), f.y, (f.z0 + f.z1) / 2, 0.36, 0.14, f.z1 - f.z0, th.curb); });
   });
+  edgeTrims(env, L, th);
   /* podesty, półki i płotki na ścieżce */
   L.props.forEach((s) => propOnPath(gb, glow, s, th, R));
+  L.islands.forEach((s) => islandLook(env, s, th, R));
+  L.forks.forEach((f) => forkSigns(env, L, f, th));
   /* otoczenie */
   if (th.kind === 'ward') dressWard(env, L, th, R);
   else if (th.kind === 'archive') dressArchive(env, L, th, R);
   else {
-    const zA = 70, zB = -L.len - 170;
-    low.box(-120 - hw - wide, LOW_Y - 1, (zA + zB) / 2, 240, 1, zA - zB, th.low.col);
-    low.box(120 + hw + wide, LOW_Y - 1, (zA + zB) / 2, 240, 1, zA - zB, th.low.col);
-    low.box(0, LOW_Y - 1, zB + 60, 2 * (hw + wide), 1, 120, th.low.col);
-    [-1, 1].forEach((s) => gb.box(s * (hw + wide - 0.1), -26, (zA + L.len * -1) / 2, 0.2, 23, zA + L.len, '#3a3a3e'));
-    gb.box(0, -27, (zA - L.len) / 2, 2 * (hw + wide), 1, zA + L.len, '#232326');
+    /* teren niżej po obu stronach i rów pod dołami, dopasowane do szerokości każdej strefy */
+    const Zs = L.zones;
+    Zs.forEach((Z, i) => {
+      const vw = Z.hw + Z.vis, za = i === 0 ? zA : -Z.d0, zb = i === Zs.length - 1 ? zB + 120 : -Z.d1, zc = (za + zb) / 2, zl = za - zb;
+      [-1, 1].forEach((s) => { low.box(s * (vw + 120), LOW_Y - 1, zc, 240, 1, zl, th.low.col); gb.box(s * (vw - 0.1), -26, zc, 0.2, 23, zl, '#3a3a3e'); });
+      gb.box(0, -27, zc, 2 * vw, 1, zl, '#232326');
+      const N = Zs[i + 1];
+      if (N) { const vn = N.hw + N.vis, a = Math.min(vw, vn), b = Math.max(vw, vn); if (b - a > 0.05) [-1, 1].forEach((s) => gb.box(s * (a + b) / 2, -26, -Z.d1, b - a, 23, 0.2, '#3a3a3e')); }
+    });
+    low.box(0, LOW_Y - 1, zB + 60, 2 * (HW + 1.9), 1, 120, th.low.col);
     const dress = DRESS[th.kind]; if (dress) dress(env, L, th, R);
+    L.plazas.forEach((P, i) => dressPlaza(env, L, th, R, P, i));
+    if (L.zones[0] && L.zones[0].kind === 'plaza' && !L.boss && !L.bonus) dressPlaza(env, L, th, R, { d0: -8, d1: 16, start: true }, 9);
+    lowWalkers(env, L, th, R);
   }
   if (!L.bonus && !L.boss && L.goal) buildGoal(env, L, th);
-  L.checkpoints.forEach((c) => { const g = new THREE.Group(); const gg = new GB(); gg.cyl(0, 0, 0, 0.08, 3.2, '#5c636a', 6); gg.box(0, 3.2, 0, 0.3, 0.12, 0.3, '#2d2d2d'); g.add(gg.mesh()); const fl = new GB(); fl.box(0.55, 0, 0, 1.0, 0.65, 0.04, '#cfd4d8'); fl.box(0.55, 0.22, -0.025, 0.8, 0.12, 0.01, '#9aa1a8'); const fm = fl.mesh(new THREE.MeshLambertMaterial({ vertexColors: true })); fm.position.y = 1.4; g.add(fm); g.position.set(hw + 0.25, 0, c.z); group.add(g); c.mesh = fm; });
+  L.checkpoints.forEach((c) => { const g = new THREE.Group(); const gg = new GB(); gg.cyl(0, 0, 0, 0.08, 3.2, '#5c636a', 6); gg.box(0, 3.2, 0, 0.3, 0.12, 0.3, '#2d2d2d'); g.add(gg.mesh()); const fl = new GB(); fl.box(0.55, 0, 0, 1.0, 0.65, 0.04, '#cfd4d8'); fl.box(0.55, 0.22, -0.025, 0.8, 0.12, 0.01, '#9aa1a8'); const fm = fl.mesh(new THREE.MeshLambertMaterial({ vertexColors: true })); fm.position.y = 1.4; g.add(fm); g.position.set(env.ZH(c.z) + 0.25, 0, c.z); group.add(g); c.mesh = fm; });
   L.boards.forEach((b) => { const g = new GB(); g.box(b.x, 0, b.z, 0.12, 1.3, 0.12, '#6b4a33'); g.box(b.x + 0.75, 0, b.z, 0.12, 1.3, 0.12, '#6b4a33'); g.box(b.x + 0.37, 1.2, b.z, 1.2, 0.8, 0.08, INK); group.add(g.mesh()); const s = signMesh('§', 0.62, { bg: '#ffffff', col: PAL.red, pad: 0.15 }); s.position.set(b.x + 0.37, 1.6, b.z + 0.05); group.add(s); b.mesh = s; });
   L.pipes.forEach((p) => { const g = new GB(); g.cyl(p.x, 0, p.z, 0.7, 1.3, '#b7bec5', 14); g.cyl(p.x, 0.75, p.z, 0.74, 0.28, PAL.red, 14); g.cyl(p.x, 1.28, p.z, 0.55, 0.03, '#2d2d2d', 14); g.cyl(p.x, 1.0, p.z, 0.75, 0.08, '#e3e8ec', 14); group.add(g.mesh()); });
   if (!path.empty) group.add(path.mesh(groundTex(th.path.tex)));
@@ -2233,24 +2440,90 @@ function buildEnv(L, th) {
   if (!glow.empty) group.add(glow.mesh(MATS.glow));
   return env;
 }
+/* jasne krawędzie tam, gdzie podłoga się kończy: widać, dokąd można skoczyć */
+function edgeTrims(env, L, th) {
+  const T = env.glow, col = th.edge || (th.dark ? '#c9b46a' : th.indoor ? '#ffffff' : '#f4e5a1'), F = L.floors, e = 0.06;
+  const same = (a, b) => Math.abs(a.y - b.y) < 0.05;
+  for (const f of F) {
+    const w = f.x1 - f.x0, dz = f.z1 - f.z0, cz = (f.z0 + f.z1) / 2, cx = (f.x0 + f.x1) / 2;
+    const zOpen = (zz) => !F.some((g) => g !== f && same(f, g) && g.x1 > f.x0 + 0.1 && g.x0 < f.x1 - 0.1 && (Math.abs(g.z1 - zz) < e || Math.abs(g.z0 - zz) < e) && (g.z0 < zz - 0.05 || g.z1 > zz + 0.05));
+    const xOpen = (xx) => !F.some((g) => g !== f && same(f, g) && g.z1 > f.z0 + 0.1 && g.z0 < f.z1 - 0.1 && (Math.abs(g.x1 - xx) < e || Math.abs(g.x0 - xx) < e));
+    if (zOpen(f.z0)) T.box(cx, f.y, f.z0 + 0.1, w, 0.025, 0.2, col);
+    if (zOpen(f.z1)) T.box(cx, f.y, f.z1 - 0.1, w, 0.025, 0.2, col);
+    if (f.x0 > -f.zhw + 0.01 && xOpen(f.x0)) T.box(f.x0 + 0.1, f.y, cz, 0.2, 0.025, dz, col);
+    if (f.x1 < f.zhw - 0.01 && xOpen(f.x1)) T.box(f.x1 - 0.1, f.y, cz, 0.2, 0.025, dz, col);
+  }
+}
 /* wygląd brył na ścieżce zależnie od świata */
 function propOnPath(gb, glow, s, th, R) {
-  const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, w = s.x1 - s.x0, d = s.z1 - s.z0, h = s.y1 - s.y0;
+  const cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, w = s.x1 - s.x0, d = s.z1 - s.z0, h = s.y1 - s.y0, k = th.kind, edge = th.dark ? '#c9b46a' : '#f4e5a1';
   if (s.look === 'none') return;
-  if (s.look === 'step') { gb.box(cx, s.y0, cz, w, h, d, shade(th.step, -0.12), { top: th.step }); gb.box(cx, s.y1 - 0.08, cz, w + 0.04, 0.08, d + 0.04, shade(th.step, 0.18)); return; }
+  if (s.look === 'step') { gb.box(cx, s.y0, cz, w, h, d, shade(th.step, -0.12), { top: th.step }); gb.box(cx, s.y1 - 0.08, cz, w + 0.04, 0.08, d + 0.04, shade(th.step, 0.18)); glow.box(cx, s.y1, s.z1 - 0.08, w, 0.02, 0.14, edge); return; }
   if (s.look === 'podium') { gb.box(cx, s.y0, cz, w, h, d, '#8f9297', { top: '#a7aaaf' }); gb.box(cx, s.y1 - 0.1, cz, w + 0.04, 0.1, d + 0.04, PAL.red); gb.box(cx, s.y0, cz + d / 2 + 0.45, w, h / 2, 0.9, '#9a9da2', { top: '#b0b3b8' }); return; }
-  if (s.look === 'shelf') { gb.box(cx, s.y0, cz, w, h, d, shade(th.shelf, -0.1), { top: th.shelf }); gb.box(cx, s.y0 - 0.05, cz, w + 0.06, 0.06, d + 0.06, PAL.red); return; }
+  if (s.look === 'shelf') { gb.box(cx, s.y0, cz, w, h, d, shade(th.shelf, -0.1), { top: th.shelf }); gb.box(cx, s.y0 - 0.05, cz, w + 0.06, 0.06, d + 0.06, PAL.red); glow.box(cx, s.y1, s.z1 - 0.08, w, 0.02, 0.14, edge); glow.box(cx, s.y1, s.z0 + 0.08, w, 0.02, 0.14, edge); return; }
+  if (s.look === 'stage') {
+    /* podest na środku placu: w plenerze scena, we wnętrzu wyspa rejestracji */
+    const top = th.indoor ? (th.ward && th.ward.wood ? '#a7835f' : '#e9eef0') : k === 'spa' ? '#c9a982' : k === 'er' ? '#4a4f5a' : '#b9b2a8';
+    gb.box(cx, s.y0, cz, w, h, d, shade(top, -0.2), { top });
+    gb.box(cx, s.y1 - 0.12, cz, w + 0.06, 0.12, d + 0.06, PAL.red);
+    gb.box(cx, s.y0, cz + d / 2 + 0.4, w * 0.5, h * 0.5, 0.8, shade(top, -0.1), { top });
+    glow.box(cx, s.y1, cz + d / 2 - 0.08, w, 0.02, 0.14, edge); glow.box(cx, s.y0 + h * 0.5, cz + d / 2 + 0.72, w * 0.5, 0.02, 0.14, edge);
+    [-1, 1].forEach((a) => [-1, 1].forEach((b) => { gb.cyl(cx + a * (w / 2 - 0.15), s.y1, cz + b * (d / 2 - 0.15), 0.06, 0.5, '#9aa1a8', 6); glow.sph(cx + a * (w / 2 - 0.15), s.y1 + 0.55, cz + b * (d / 2 - 0.15), 0.1, '#fff0b8', 0); }));
+    return;
+  }
+  if (s.look === 'bench') {
+    if (th.indoor) { gb.box(cx, s.y0, cz, w, h - 0.08, d, '#6c6e70'); gb.box(cx, s.y1 - 0.08, cz, w + 0.04, 0.08, d + 0.04, th.ward && th.ward.wood ? '#8b6243' : '#2c64a0'); for (let z = s.z0 + 0.45; z < s.z1; z += 0.6) gb.box(s.x0 + (cx > 0 ? w - 0.1 : 0.1), s.y1, z, 0.08, 0.45, 0.5, '#2c64a0'); }
+    else { gb.box(cx, s.y1 - 0.1, cz, w, 0.1, d, '#8e6c54'); for (let i = 0; i < 4; i++) gb.box(cx, s.y1 - 0.1, s.z0 + 0.15 + i * (d - 0.3) / 3, w + 0.02, 0.1, 0.06, '#7a5b46'); [s.z0 + 0.3, s.z1 - 0.3].forEach((z) => gb.box(cx, s.y0, z, w - 0.2, h - 0.1, 0.12, '#3d4045')); }
+    glow.box(cx, s.y1, s.z1 - 0.06, w, 0.02, 0.1, edge);
+    return;
+  }
+  if (s.look === 'car') {
+    const ry = 0;
+    if (th.indoor) { gb.box(cx, s.y0, cz, w, h, d, th.ward && th.ward.wood ? '#8b6243' : '#e9eef0', { top: th.ward && th.ward.wood ? '#a7835f' : '#ffffff' }); gb.box(cx, s.y1 - 0.06, cz, w + 0.12, 0.06, d + 0.12, PAL.red); gb.box(cx, s.y0 + 0.3, s.z1 + 0.01, w - 0.3, 0.5, 0.02, th.ward ? th.ward.frame : '#9aa1a8'); }
+    else if (k === 'spa') { gb.box(cx, s.y0, cz, w, h, d, '#f2f2f2', { top: '#e0bd92' }); gb.box(cx, s.y0 + 0.5, s.z1 + 0.01, w - 0.2, 0.4, 0.02, PAL.red); for (let i = 0; i < 5; i++) gb.box(cx - w / 2 + 0.2 + i * (w - 0.4) / 4, s.y1, cz, 0.1, 0.05, d, i % 2 ? '#ffffff' : PAL.red); }
+    else if (k === 'er' || k === 'hospital') { gb.push(cx, s.y0, cz, 0); P3.car(gb, 0, 0, 0, '#f2f2f2', ry, PAL.red); gb.pop(); gb.box(cx, s.y1 - 0.03, cz + 0.2, 1.4, 0.04, 2.0, '#e8e8e8'); }
+    else { gb.push(cx, s.y0, cz, 0); P3.car(gb, 0, 0, 0, ['#9fb3c4', '#b04a3e', '#5c636a', '#c9cdd2'][Math.floor(R() * 4)], ry); gb.pop(); gb.box(cx, s.y1 - 0.03, cz + 0.2, 1.4, 0.04, 2.0, shade('#9fb3c4', -0.1)); }
+    glow.box(cx, s.y1, cz + 1.25, 1.4, 0.02, 0.12, edge);
+    return;
+  }
   if (s.look === 'hurdle') {
-    const k = th.hurdle;
-    if (k === 'hedge') { gb.box(cx, s.y0, cz, w, h, d, th.leaf[0]); gb.box(cx, s.y1, cz, w - 0.06, 0.08, d - 0.06, th.leaf[1]); }
-    else if (k === 'picket') { for (let x = s.x0 + 0.1; x < s.x1; x += 0.32) gb.box(x, s.y0, cz, 0.12, h, 0.06, '#ece2cc'); gb.box(cx, s.y0 + 0.25, cz, w, 0.09, 0.05, '#d9c3a0'); gb.box(cx, s.y0 + 0.6, cz, w, 0.09, 0.05, '#d9c3a0'); }
-    else if (k === 'dunefence') { for (let x = s.x0 + 0.1; x < s.x1; x += 0.28) gb.box(x, s.y0, cz, 0.1, h * (0.85 + R() * 0.2), 0.07, '#b3906b'); gb.box(cx, s.y0 + 0.45, cz, w, 0.05, 0.05, '#8e6c54'); }
-    else if (k === 'crowdbar') P3.barrier(gb, cx, s.y0, cz, w, 0);
-    else if (k === 'bedhurdle') { gb.box(cx, s.y0 + 0.35, cz, w, 0.12, d + 0.3, '#c4c8cc'); gb.box(cx, s.y0 + 0.47, cz, w - 0.2, 0.18, d + 0.2, '#ffffff'); gb.box(cx, s.y0 + 0.6, cz, w * 0.6, 0.14, d + 0.22, '#9fc6de'); [s.x0 + 0.2, s.x1 - 0.2].forEach((x) => gb.box(x, s.y0, cz, 0.08, 0.35, 0.08, '#9aa1a8')); }
+    const k2 = th.hurdle;
+    if (k2 === 'hedge') { gb.box(cx, s.y0, cz, w, h, d, th.leaf[0]); gb.box(cx, s.y1, cz, w - 0.06, 0.08, d - 0.06, th.leaf[1]); }
+    else if (k2 === 'picket') { for (let x = s.x0 + 0.1; x < s.x1; x += 0.32) gb.box(x, s.y0, cz, 0.12, h, 0.06, '#ece2cc'); gb.box(cx, s.y0 + 0.25, cz, w, 0.09, 0.05, '#d9c3a0'); gb.box(cx, s.y0 + 0.6, cz, w, 0.09, 0.05, '#d9c3a0'); }
+    else if (k2 === 'dunefence') { for (let x = s.x0 + 0.1; x < s.x1; x += 0.28) gb.box(x, s.y0, cz, 0.1, h * (0.85 + R() * 0.2), 0.07, '#b3906b'); gb.box(cx, s.y0 + 0.45, cz, w, 0.05, 0.05, '#8e6c54'); }
+    else if (k2 === 'crowdbar') P3.barrier(gb, cx, s.y0, cz, w, 0);
+    else if (k2 === 'bedhurdle') { gb.box(cx, s.y0 + 0.35, cz, w, 0.12, d + 0.3, '#c4c8cc'); gb.box(cx, s.y0 + 0.47, cz, w - 0.2, 0.18, d + 0.2, '#ffffff'); gb.box(cx, s.y0 + 0.6, cz, w * 0.6, 0.14, d + 0.22, '#9fc6de'); [s.x0 + 0.2, s.x1 - 0.2].forEach((x) => gb.box(x, s.y0, cz, 0.08, 0.35, 0.08, '#9aa1a8')); }
     else P3.redwhite(gb, cx, s.y0, cz, w, 0);
     return;
   }
   gb.box(cx, s.y0, cz, w, h, d, th.step);
+}
+/* wysepka rozdzielająca drogi: żywopłot w donicy albo przeszklona ścianka we wnętrzu */
+function islandLook(env, s, th, R) {
+  const { gb, glow } = env, cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, w = s.x1 - s.x0, d = s.z1 - s.z0;
+  if (th.indoor) {
+    const W = th.ward || { wall: '#ece4d6', rail: '#9aa1a8', glass: '#d6ebf2', frame: '#9aa1a8' };
+    gb.box(cx, 0, cz, w, 1.3, d, W.wall); gb.box(cx, 1.3, cz, w + 0.04, 0.08, d + 0.04, W.rail);
+    glow.box(cx, 1.38, cz, w * 0.4, 1.22, d - 0.2, W.glass); gb.box(cx, 2.55, cz, w, 0.1, d, W.frame);
+    for (let z = s.z0 + 2; z < s.z1 - 1; z += 4) gb.box(cx, 1.38, z, w * 0.42, 1.2, 0.08, W.frame);
+    return;
+  }
+  const curb = th.kind === 'er' ? '#6c727c' : '#c9c4bb', soil = '#6b4a33', leaf = th.leaf, hedge = th.dark ? '#3f5442' : th.dusk ? '#5f7a5c' : '#6f8f58';
+  gb.box(cx, 0, cz, w, 0.55, d, curb, { top: soil }); gb.box(cx, 0.5, cz, w + 0.04, 0.08, d + 0.04, PAL.red);
+  gb.box(cx, 0.55, cz, w - 0.3, 1.9, d - 0.3, hedge); gb.box(cx, 2.45, cz, w - 0.4, 0.15, d - 0.4, shade(hedge, 0.12));
+  for (let z = s.z0 + 1.2; z < s.z1 - 0.6; z += 1.6) [-1, 1].forEach((k) => gb.dode(cx + k * (w / 2 - 0.12), 1.2 + ((z * 7) % 1) * 0.6, z, 0.42, shade(hedge, -0.08), { sy: 0.8 }));
+  for (let z = s.z0 + 3; z < s.z1 - 2; z += 7) P3.tree(gb, cx, 2.3, z, 1.1, leaf);
+  for (let z = s.z0 + 6.5; z < s.z1 - 2; z += 9) P3.lamp(gb, glow, cx, 2.6, z, !!th.dark, 2.2);
+}
+/* drogowskazy nad wejściem w rozwidlenie */
+function forkSigns(env, L, f, th) {
+  const z = -f.d0 + 1.2, gb = env.gb, post = th.dark ? '#7d8a93' : '#5c636a';
+  [[-(ISLAND + LANE), '« BEZPIECZNA DROGA', '#2f8f5b'], [ISLAND + LANE, 'TRUDNA DROGA, WIĘCEJ NAGRÓD »', PAL.red]].forEach(([x, t, c]) => {
+    const m = env.sign(t, x, 3.7, z, 0.5, { bg: c, col: '#ffffff' });
+    const w = m.userData.w;
+    gb.box(x, 3.7 - 0.36, z - 0.06, w + 0.16, 0.08, 0.08, post);
+    gb.cyl(x + (x < 0 ? -1 : 1) * (w / 2 + 0.05), 0, z - 0.06, 0.06, 4.0, post, 6);
+  });
 }
 /* meta: maszt z flagą i budynek Izby na końcu ścieżki */
 function buildGoal(env, L, th) {
@@ -2287,8 +2560,8 @@ const DRESS = {
     building(gb, glow, 12, 34, -150, -112, Y, 13, { wall: '#ece4d6', side: -1, R });
     env.sign('DOM STUDENTA', 23, Y + 11.5, -111.85, 1.0, { bg: '#2c4c6e' }); pylon(env, 'DOM STUDENTA', 1, -108, { bg: '#2c4c6e' });
     for (let d = 160; d < L.len + 40; d += 46) { const s = (d / 46) % 2 < 1 ? -1 : 1; building(gb, glow, s > 0 ? 11 : -32, s > 0 ? 32 : -11, -d - 26, -d, Y, 9 + R() * 8, { wall: R() < 0.5 ? '#ece4d6' : '#d9cbb8', side: -s, R }); }
-    rowEdge(env, L, 9, (z) => { [-1, 1].forEach((s) => { if (R() < 0.85) P3.tree(gb, s * (L.hw + 2.8 + R() * 1.6), Y, z + R() * 3, 1.5 + R() * 0.4, R() < 0.5 ? lf : [lf[2], lf[3], lf[0]]); }); });
-    rowEdge(env, L, 14, (z) => { [-1, 1].forEach((s) => { if (lampOK(env, s, z)) P3.lamp(gb, glow, s * (L.hw + 0.35), 0, z, false, 3.6); }); });
+    rowEdge(env, L, 9, (z) => { [-1, 1].forEach((s) => { if (R() < 0.85) P3.tree(gb, s * (env.EW(z) + 2.8 + R() * 1.6), Y, z + R() * 3, 1.5 + R() * 0.4, R() < 0.5 ? lf : [lf[2], lf[3], lf[0]]); }); });
+    rowEdge(env, L, 14, (z) => { [-1, 1].forEach((s) => { if (lampOK(env, s, z)) P3.lamp(gb, glow, s * (env.ZH(z) + 0.35), 0, z, false, 3.6); }); });
     for (let i = 0; i < 6; i++) P3.person(gb, -10.5 + (i % 3) * 0.7, Y, -9 + Math.floor(i / 3) * 0.8, R, Math.PI);
     for (let d = 20; d < L.len; d += 37) P3.bench(gb, 6.2, Y, -d, -Math.PI / 2);
     skyline(env, L, ['#c4d1dd', '#bccbd8'], R, 25);
@@ -2308,8 +2581,8 @@ const DRESS = {
     const blocks = ['#d6dde3', '#e1d9cf', '#d3dccf', '#dcd4de'];
     for (let d = -10; d < L.len + 60; d += 34) [-1, 1].forEach((s) => { if (d < 40 && s > 0) return; const c = blocks[Math.floor(R() * 4)], h = 18 + R() * 16; building(gb, glow, s > 0 ? 36 : -64, s > 0 ? 64 : -36, -d - 24, -d, Y, h, { wall: c, side: -s, R, winW: 1, winH: 1.1, gapX: 1.8, floorH: 2.8 }); });
     gb.box(-11.4, Y, -50, 0.1, 2.5, 3, '#6c6e70'); gb.box(-11.4, Y + 2.5, -50, 1.4, 0.1, 3.6, '#6c6e70'); glow.box(-11.4, Y + 0.3, -50, 0.04, 2.0, 2.6, '#cfe6f2');
-    rowEdge(env, L, 11, (z) => [-1, 1].forEach((s) => { if (R() < 0.7) P3.tree(gb, s * (L.hw + 3.2 + R() * 2), Y, z, 1.4, th.leaf); }));
-    rowEdge(env, L, 15, (z) => [-1, 1].forEach((s) => { if (lampOK(env, s, z + 7)) P3.lamp(gb, glow, s * (L.hw + 0.35), 0, z + 7, false, 3.6); }));
+    rowEdge(env, L, 11, (z) => [-1, 1].forEach((s) => { if (R() < 0.7) P3.tree(gb, s * (env.EW(z) + 3.2 + R() * 2), Y, z, 1.4, th.leaf); }));
+    rowEdge(env, L, 15, (z) => [-1, 1].forEach((s) => { if (lampOK(env, s, z + 7)) P3.lamp(gb, glow, s * (env.ZH(z + 7) + 0.35), 0, z + 7, false, 3.6); }));
     for (let d = 10; d < L.len; d += 23) P3.car(gb, 7.2 + R() * 1.5, Y, -d, ['#9fb3c4', '#c9cdd2', '#b04a3e', '#5c636a'][Math.floor(R() * 4)], R() < 0.5 ? 0 : Math.PI);
     const bus = new GB(); P3.bus(bus, 0, 0, 0, Math.PI); const bm = bus.mesh(); bm.position.set(-14, Y, 0); env.group.add(bm);
     env.anims.push((t) => { bm.position.z = 40 - ((t * 9) % (L.len + 140)); });
@@ -2329,8 +2602,8 @@ const DRESS = {
     for (let d = 100; d < L.len + 40; d += 44) { const s = (d / 44) % 2 < 1 ? 1 : -1; building(gb, glow, s > 0 ? 12 : -36, s > 0 ? 36 : -12, -d - 28, -d, Y, 12 + R() * 10, { wall: R() < 0.5 ? '#eee9e1' : '#e4ded4', side: -s, R }); }
     for (let i = 0; i < 9; i++) P3.car(gb, 8 + (i % 3) * 2.4, Y, -16 - Math.floor(i / 3) * 4.6, ['#9fb3c4', '#c9cdd2', '#b04a3e', '#5c636a'][i % 4], 0);
     P3.ambulance(gb, -8.2, Y, -26, 0);
-    rowEdge(env, L, 10, (z) => [-1, 1].forEach((s) => { if (R() < 0.6) P3.tree(gb, s * (L.hw + 3 + R() * 2), Y, z, 1.4, th.leaf); }));
-    rowEdge(env, L, 14, (z) => [-1, 1].forEach((s) => { if (lampOK(env, s, z)) P3.lamp(gb, glow, s * (L.hw + 0.35), 0, z, false, 3.6); }));
+    rowEdge(env, L, 10, (z) => [-1, 1].forEach((s) => { if (R() < 0.6) P3.tree(gb, s * (env.EW(z) + 3 + R() * 2), Y, z, 1.4, th.leaf); }));
+    rowEdge(env, L, 14, (z) => [-1, 1].forEach((s) => { if (lampOK(env, s, z)) P3.lamp(gb, glow, s * (env.ZH(z) + 0.35), 0, z, false, 3.6); }));
     const heli = new GB(); heli.box(0, 0, 0, 1.6, 1.4, 3.4, PAL.red); heli.box(0, 0.5, 0, 1.62, 0.25, 3.0, '#ffffff'); heli.box(0, 0.45, 2.8, 0.4, 0.4, 3.2, PAL.red); heli.box(0, 0.4, 4.3, 0.1, 1.4, 0.8, PAL.red); heli.box(0, 0.6, -1.5, 1.4, 0.7, 0.4, '#9fb6c6'); heli.box(0, -0.4, 0, 1.6, 0.08, 2.4, '#2d2d2d');
     const hm = heli.mesh(); env.group.add(hm);
     const rot = new GB(); rot.box(0, 0, 0, 9, 0.05, 0.3, '#3d4045'); rot.box(0, 0, 0, 0.3, 0.05, 9, '#3d4045'); const rm = rot.mesh(); rm.position.y = 1.6; hm.add(rm);
@@ -2338,29 +2611,28 @@ const DRESS = {
     skyline(env, L, ['#c9d2da', '#d1cbc6'], R, 22);
   },
   protest(env, L, th, R) {
-    const { gb, glow } = env, Y = LOW_Y, hw = L.hw;
+    const { gb, glow } = env, Y = LOW_Y;
     /* plac na wysokości ścieżki: namioty białego miasteczka i ludzie stoją tuż obok */
     const pw = 16;
-    [-1, 1].forEach((s) => gb.box(s * (hw + 0.7 + pw / 2), Y, -L.len / 2 + 10, pw, -Y, L.len + 60, '#8f9297', { top: '#a7aaaf' }));
+    L.zones.forEach((Z) => { const vw = Z.hw + Z.vis, za = Z.d0 < 0 ? 40 : -Z.d0, zb = -Z.d1; [-1, 1].forEach((s) => gb.box(s * (vw + pw / 2), Y, (za + zb) / 2, pw, -Y - 0.02, za - zb, '#8f9297', { top: '#a7aaaf' })); });
     const gx0 = -62, gx1 = -26, gz0 = -84, gz1 = -30;
     gb.box((gx0 + gx1) / 2, Y, (gz0 + gz1) / 2, gx1 - gx0, 16, gz1 - gz0, '#e3ddd3', { top: '#cfc8bc' });
     gb.box((gx0 + gx1) / 2, Y + 16, (gz0 + gz1) / 2, gx1 - gx0 + 1, 0.8, gz1 - gz0 + 1, '#d6cfc3');
     for (let z = gz0 + 2; z < gz1; z += 3.4) gb.cyl(gx1 + 0.8, Y, z, 0.5, 16, '#f0ebe3', 10);
     for (let x = gx0 + 2; x < gx1; x += 3.4) gb.cyl(x, Y, gz1 + 0.8, 0.5, 16, '#f0ebe3', 10);
     P3.flagpl(gb, (gx0 + gx1) / 2, Y + 16.8, (gz0 + gz1) / 2, 6);
-    for (let z = -4; z > -L.len - 20; z -= 4.6) [-1, 1].forEach((s) => { const x = s * (hw + 4.6 + R() * 9); P3.tent(gb, x, 0, z, R() < 0.5 ? 0 : Math.PI / 2, R() < 0.35); });
-    for (let z = -2; z > -L.len - 10; z -= 1.15) [-1, 1].forEach((s) => { if (R() < 0.6) P3.person(gb, s * (hw + 1.2 + R() * 2.2), 0, z + R() * 0.6, R, s > 0 ? -Math.PI / 2 : Math.PI / 2); });
+    for (let z = -4; z > -L.len - 20; z -= 4.6) [-1, 1].forEach((s) => { const x = s * (env.EW(z) + 4.6 + R() * 9); P3.tent(gb, x, 0, z, R() < 0.5 ? 0 : Math.PI / 2, R() < 0.35); });
+    for (let z = -2; z > -L.len - 10; z -= 1.15) [-1, 1].forEach((s) => { if (R() < 0.6) P3.person(gb, s * (env.EW(z) + 1.2 + R() * 2.2), 0, z + R() * 0.6, R, s > 0 ? -Math.PI / 2 : Math.PI / 2); });
     const slogans = ['BEZPIECZNY PACJENT', 'GODNA PRACA', 'WIĘCEJ RĄK DO OPIEKI'];
     for (let d = 24, i = 0; d < L.len - 10; d += 29, i++) {
-      const s = i % 2 ? 1 : -1, x = s * (hw + 2.6), z = -d;
+      const s = i % 2 ? 1 : -1, z = -d, x = s * (env.EW(z) + 2.6);
       gb.box(x - 1.3, 0, z, 0.08, 3.1, 0.08, '#7a5b46'); gb.box(x + 1.3, 0, z, 0.08, 3.1, 0.08, '#7a5b46');
       const m = env.sign(slogans[i % 3], x, 2.75, z + 0.05, 0.62, { bg: '#ffffff', col: PAL.red, edge: PAL.red });
       const y0 = m.position.y, ph = R() * 6; env.anims.push((t) => { m.position.y = y0 + Math.sin(t * 2.2 + ph) * 0.06; m.rotation.z = Math.sin(t * 1.7 + ph) * 0.03; });
     }
-    gb.box(-hw - 0.3, 0, -20, 0.16, 7.2, 0.16, '#6c6e70'); gb.box(hw + 0.3, 0, -20, 0.16, 7.2, 0.16, '#6c6e70');
-    env.sign('BIAŁE MIASTECZKO', 0, 6.6, -20, 0.95, { bg: '#ffffff', col: PAL.red, edge: PAL.red });
-    rowEdge(env, L, 12, (z) => [-1, 1].forEach((s) => P3.barrier(gb, s * (hw + 0.35), 0, z, 2.2, Math.PI / 2)));
-    rowEdge(env, L, 24, (z) => [-1, 1].forEach((s) => P3.lamp(gb, glow, s * (hw + 0.35), 0, z - 6, false, 3.8)));
+    { const hz = env.ZH(-24); gb.box(-hz - 0.3, 0, -24, 0.16, 7.2, 0.16, '#6c6e70'); gb.box(hz + 0.3, 0, -24, 0.16, 7.2, 0.16, '#6c6e70'); env.sign('BIAŁE MIASTECZKO', 0, 6.6, -24, 0.95, { bg: '#ffffff', col: PAL.red, edge: PAL.red }); }
+    rowEdge(env, L, 12, (z) => [-1, 1].forEach((s) => P3.barrier(gb, s * (env.ZH(z) + 0.35), 0, z, 2.2, Math.PI / 2)));
+    rowEdge(env, L, 24, (z) => [-1, 1].forEach((s) => P3.lamp(gb, glow, s * (env.ZH(z - 6) + 0.35), 0, z - 6, false, 3.8)));
     /* Pałac Kultury i wieżowce w tle */
     const pk = new GB(), pz = -L.len - 90, pc = '#aeb0c2';
     pk.box(0, Y, pz, 34, 22, 26, pc); pk.box(0, Y + 22, pz, 24, 16, 18, pc); pk.box(0, Y + 38, pz, 16, 14, 12, pc); pk.box(0, Y + 52, pz, 10, 12, 8, pc); pk.box(0, Y + 64, pz, 6, 10, 5, pc); pk.cone(0, Y + 74, pz, 2.2, 18, pc, 4);
@@ -2390,9 +2662,9 @@ const DRESS = {
     env.sign('RATOWNIK', 9, Y + 4.1, -38.85, 0.5, { bg: PAL.red });
     const ship = new GB(); ship.box(0, 0, 0, 3, 1.5, 12, '#56606b'); ship.box(0, 1.5, 1, 2.4, 2, 4, '#ffffff'); ship.box(0, 3.5, 1, 0.6, 2, 0.6, PAL.red); const shm = ship.mesh(); env.group.add(shm);
     env.anims.push((t) => { shm.position.set(90, Y - 0.3, -60 - ((t * 3) % 300)); });
-    rowEdge(env, L, 13, (z) => { if (lampOK(env, -1, z)) P3.lamp(gb, glow, -(L.hw + 0.35), 0, z, false, 3.6); });
-    rowEdge(env, L, 4, (z) => [-1, 1].forEach((s) => { const x = s * (L.hw + 1.2 + R() * 3); for (let k = 0; k < 4; k++) gb.box(x + (R() - 0.5) * 0.8, Y, z + (R() - 0.5) * 2, 0.04, 0.5 + R() * 0.5, 0.04, '#9a9f6e'); }));
-    for (let d = 10; d < L.len; d += 30) P3.tree(gb, -(L.hw + 6 + R() * 6), Y, -d, 1.6, ['#5d7c48', '#6f8f58', '#4f6b3c']);
+    rowEdge(env, L, 13, (z) => { if (lampOK(env, -1, z)) P3.lamp(gb, glow, -(env.ZH(z) + 0.35), 0, z, false, 3.6); });
+    rowEdge(env, L, 4, (z) => [-1, 1].forEach((s) => { const x = s * (env.EW(z) + 1.2 + R() * 3); for (let k = 0; k < 4; k++) gb.box(x + (R() - 0.5) * 0.8, Y, z + (R() - 0.5) * 2, 0.04, 0.5 + R() * 0.5, 0.04, '#9a9f6e'); }));
+    for (let d = 10; d < L.len; d += 30) P3.tree(gb, -(env.EW(-d) + 6 + R() * 6), Y, -d, 1.6, ['#5d7c48', '#6f8f58', '#4f6b3c']);
     skyline(env, L, ['#c9d9e2', '#d2e0e7'], R, 10, -1);
   },
   er(env, L, th, R) {
@@ -2411,8 +2683,8 @@ const DRESS = {
     building(gb, glow, 12, 34, -60, -14, Y, 9, { wall: '#30343e', side: -1, R, lit: 0.3, win: '#262a33', litCol: '#e9c97a' });
     const red = []; [[-40, -20], [-17, -20], [-40, -60], [-17, -60]].forEach(([x, z]) => { const sp = new THREE.Sprite(MATS.glowRed); sp.scale.set(1.6, 1.6, 1); sp.position.set(x, Y + 17.4, z); env.group.add(sp); red.push(sp); });
     env.anims.push((t) => red.forEach((sp) => (sp.visible = (t % 1.6) < 0.6)));
-    rowEdge(env, L, 13, (z) => [-1, 1].forEach((s) => { if (!lampOK(env, s, z)) return; P3.lamp(gb, glow, s * (L.hw + 0.35), 0, z, true, 3.6); const sp = new THREE.Sprite(MATS.glowGold); sp.scale.set(3.4, 3.4, 1); sp.position.set(s * (L.hw + 0.35), 3.4, z); env.group.add(sp); }));
-    rowEdge(env, L, 5, (z) => [-1, 1].forEach((s) => { if (R() < 0.4) P3.bollard(gb, s * (L.hw + 0.4), 0, z + 2); }));
+    rowEdge(env, L, 13, (z) => [-1, 1].forEach((s) => { if (!lampOK(env, s, z)) return; P3.lamp(gb, glow, s * (env.ZH(z) + 0.35), 0, z, true, 3.6); const sp = new THREE.Sprite(MATS.glowGold); sp.scale.set(3.4, 3.4, 1); sp.position.set(s * (env.ZH(z) + 0.35), 3.4, z); env.group.add(sp); }));
+    rowEdge(env, L, 5, (z) => [-1, 1].forEach((s) => { if (R() < 0.4) P3.bollard(gb, s * (env.ZH(z + 2) + 0.4), 0, z + 2); }));
     const amb = new GB(); P3.ambulance(amb, 0, 0, 0, Math.PI); const am = amb.mesh(); env.group.add(am);
     const al = [new THREE.Sprite(MATS.glowBlue), new THREE.Sprite(MATS.glowBlue)]; al.forEach((s, i) => { s.scale.set(3, 3, 1); s.position.set(i ? 0.6 : -0.6, 2.7, 1); am.add(s); });
     gb.box(15, Y + 0.01, -L.len / 2, 6, 0.02, L.len + 120, '#24272e');
@@ -2431,8 +2703,8 @@ const DRESS = {
     /* gniazdo bociana */
     gb.cyl(-8, Y, -70, 0.18, 11, '#5c4a42', 6); gb.cyl(-8, Y + 11, -70, 1.4, 0.45, '#7a5b46', 10); gb.box(-8, Y + 11.4, -70, 0.5, 0.5, 1, '#f6f6f4'); gb.cyl(-8, Y + 11.4, -70.6, 0.06, 0.8, '#2d2d2d', 5, { rx: -0.6 }); gb.box(-8, Y + 11.75, -70.5, 0.2, 0.2, 0.35, '#f6f6f4'); gb.box(-8, Y + 11.8, -70.9, 0.05, 0.05, 0.4, '#e8572e');
     for (let d = 90; d < L.len + 40; d += 42) [-1, 1].forEach((s) => building(gb, glow, s > 0 ? 12 : -38, s > 0 ? 38 : -12, -d - 26, -d, Y, 8 + R() * 10, { wall: '#cfc4cc', side: -s, R, lit: 0.45, win: '#6f7698', litCol: '#ffd99c' }));
-    rowEdge(env, L, 13, (z) => [-1, 1].forEach((s) => { if (!lampOK(env, s, z)) return; P3.lamp(gb, glow, s * (L.hw + 0.35), 0, z, true, 3.6); const sp = new THREE.Sprite(MATS.glowGold); sp.scale.set(3, 3, 1); sp.position.set(s * (L.hw + 0.35), 3.4, z); env.group.add(sp); }));
-    rowEdge(env, L, 9, (z) => [-1, 1].forEach((s) => { if (R() < 0.6) P3.tree(gb, s * (L.hw + 3 + R() * 3), Y, z, 1.5, th.leaf); }));
+    rowEdge(env, L, 13, (z) => [-1, 1].forEach((s) => { if (!lampOK(env, s, z)) return; P3.lamp(gb, glow, s * (env.ZH(z) + 0.35), 0, z, true, 3.6); const sp = new THREE.Sprite(MATS.glowGold); sp.scale.set(3, 3, 1); sp.position.set(s * (env.ZH(z) + 0.35), 3.4, z); env.group.add(sp); }));
+    rowEdge(env, L, 9, (z) => [-1, 1].forEach((s) => { if (R() < 0.6) P3.tree(gb, s * (env.EW(z) + 3 + R() * 3), Y, z, 1.5, th.leaf); }));
     for (let d = 16; d < L.len; d += 29) { P3.bench(gb, 6.4, Y, -d, -Math.PI / 2); P3.stroller(gb, 6.2, Y, -d - 1.6, 0.3); }
     const st = new GB(); st.box(0, 0, 0, 0.5, 0.4, 1.2, '#f6f6f4'); st.box(0, 0.25, -0.75, 0.2, 0.2, 0.4, '#f6f6f4'); st.box(0, 0.3, -1.1, 0.06, 0.06, 0.4, '#e8572e');
     st.box(0, -0.6, -1.2, 0.5, 0.45, 0.4, '#ffffff'); st.box(0, -0.4, -1.2, 0.52, 0.06, 0.42, '#f2a6b9');
@@ -2461,7 +2733,7 @@ const DRESS = {
     const ch = -L.len * 0.6; gb.box(-40, Y, ch, 8, 10, 16, '#f3ede1'); gb.wedge(-40, Y + 10, ch - 4, 8.4, 4, 8.2, '#b5573f', { ry: Math.PI / 2 }); gb.wedge(-40, Y + 10, ch + 4, 8.4, 4, 8.2, '#b5573f', { ry: -Math.PI / 2 });
     gb.box(-40, Y, ch + 9, 4, 18, 4, '#f3ede1'); gb.cone(-40, Y + 18, ch + 9, 2.8, 8, '#b5573f', 4); gb.box(-40, Y + 26, ch + 9, 0.15, 1.6, 0.15, '#7a5b46'); gb.box(-40, Y + 26.9, ch + 9, 0.8, 0.15, 0.15, '#7a5b46');
     for (let i = 0; i < 30; i++) gb.box((R() < 0.5 ? -1 : 1) * (60 + R() * 60), Y, -R() * (L.len + 100), 30 + R() * 20, 0.05, 20 + R() * 20, R() < 0.5 ? '#d8cf97' : '#e3cf8e');
-    rowEdge(env, L, 16, (z) => [-1, 1].forEach((s) => { if (R() < 0.5) P3.picket(gb, s * (L.hw + 0.35), 0, z, 3, Math.PI / 2); }));
+    rowEdge(env, L, 16, (z) => [-1, 1].forEach((s) => { if (R() < 0.5) P3.picket(gb, s * (env.ZH(z) + 0.35), 0, z, 3, Math.PI / 2); }));
     const car = new GB(); P3.car(car, 0, 0, 0, '#f4f4f2', Math.PI, PAL.red); const cm = car.mesh(); env.group.add(cm);
     env.anims.push((t) => { cm.position.set(-13, Y, 30 - ((t * 7) % (L.len + 120))); });
     butterflies(env, L);
@@ -2471,7 +2743,7 @@ const DRESS = {
 /* szyld na słupach przy ścieżce, zwrócony do nadchodzącej postaci */
 function pylon(env, text, side, z, o) {
   o = o || {};
-  const gb = env.gb, x = side * (HW + 2.8 + (o.out || 0)), h = o.h || 0.75, y = o.y || 3.3;
+  const gb = env.gb, x = side * (env.EW(z) + 2.8 + (o.out || 0)), h = o.h || 0.75, y = o.y || 3.3;
   (env.avoid = env.avoid || []).push({ side, z });
   const m = env.sign(text, x, y, z, h, o);
   const w = m.userData.w;
@@ -2519,27 +2791,34 @@ function stars(env, n) {
 function butterflies(env, L) {
   const g = new GB(); [-1, 1].forEach((k) => g.box(k * 0.12, 0, 0, 0.22, 0.02, 0.18, '#ffffff')); const base = g.geometry();
   const R = mulberry32(3), list = [];
-  for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(base, i % 2 ? lam(PAL.red) : lam('#ffffff')); env.group.add(m); list.push({ m, x: (R() < 0.5 ? -1 : 1) * (L.hw + 1 + R() * 4), z: -R() * L.len, ph: R() * 6 }); }
+  for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(base, i % 2 ? lam(PAL.red) : lam('#ffffff')); env.group.add(m); const bz = -R() * L.len; list.push({ m, x: (R() < 0.5 ? -1 : 1) * (visHW(L, bz) + 0.3 + R() * 4), z: bz, ph: R() * 6 }); }
   env.anims.push((t) => list.forEach((b) => { b.m.position.set(b.x + Math.sin(t * 0.7 + b.ph) * 1.5, -0.5 + Math.sin(t * 1.3 + b.ph) * 0.8, b.z + Math.cos(t * 0.5 + b.ph) * 2); b.m.scale.x = 0.4 + Math.abs(Math.sin(t * 14 + b.ph)); }));
 }
 /* ---------- wnętrze: korytarz z drzwiami i tabliczkami ---------- */
 function dressWard(env, L, th, R) {
-  const { gb, glow } = env, d = th.ward, hw = L.hw, CH = 5.4;
-  const z0 = 8, z1 = -L.len - 2;
-  [-1, 1].forEach((s) => {
-    const x = s * (hw + 0.12);
-    gb.box(x, -FLOOR_T, (z0 + z1) / 2, 0.24, CH + FLOOR_T, z0 - z1, d.wall);
-    gb.box(x - s * 0.02, -0.1, (z0 + z1) / 2, 0.24, 1.25, z0 - z1, d.low);
-    gb.box(x - s * 0.06, 1.15, (z0 + z1) / 2, 0.14, 0.1, z0 - z1, d.rail);
-    if (d.line) { gb.box(x - s * 0.03, 0.45, (z0 + z1) / 2, 0.22, 0.08, z0 - z1, d.line); gb.box(x - s * 0.03, 0.3, (z0 + z1) / 2, 0.22, 0.08, z0 - z1, '#2c64a0'); }
+  const { gb, glow } = env, d = th.ward, CH = 5.4;
+  /* ściany i sufit osobno dla każdej strefy; szersze strefy to hole i poczekalnie */
+  L.zones.forEach((Z, i) => {
+    const hw = Z.hw, z0 = i === 0 ? 8 : -Z.d0, z1 = i === L.zones.length - 1 ? -L.len - 2 : -Z.d1, zc = (z0 + z1) / 2, zl = z0 - z1;
+    [-1, 1].forEach((s) => {
+      const x = s * (hw + 0.12);
+      gb.box(x, -FLOOR_T, zc, 0.24, CH + FLOOR_T, zl, d.wall);
+      gb.box(x - s * 0.02, -0.1, zc, 0.24, 1.25, zl, d.low);
+      gb.box(x - s * 0.06, 1.15, zc, 0.14, 0.1, zl, d.rail);
+      if (d.line) { gb.box(x - s * 0.03, 0.45, zc, 0.22, 0.08, zl, d.line); gb.box(x - s * 0.03, 0.3, zc, 0.22, 0.08, zl, '#2c64a0'); }
+    });
+    glow.box(0, CH, zc, 2 * hw + 0.5, 0.3, zl, '#d9dde0');
+    for (let z = z0; z > z1; z -= 2.4) glow.box(0, CH - 0.01, z, 2 * hw + 0.4, 0.02, 0.05, '#c3c8cc');
+    for (let z = z0 - 2; z > z1; z -= 6) for (let x = -hw + 2.2; x <= hw - 2.1; x += Math.max(3.4, hw)) glow.box(hw < 4 ? 0 : x, CH - 0.04, z, 1.4, 0.05, 2.6, '#ffffff');
+    const N = L.zones[i + 1];
+    if (N && Math.abs(N.hw - hw) > 0.05) { const a = Math.min(hw, N.hw), b = Math.max(hw, N.hw) + 0.24; [-1, 1].forEach((s) => { gb.box(s * (a + b) / 2, -FLOOR_T, z1, b - a, CH + FLOOR_T, 0.24, d.wall); gb.box(s * (a + b) / 2, -0.1, z1 + (N.hw > hw ? -0.13 : 0.13), b - a, 1.25, 0.04, d.low); }); }
   });
-  env.glow.box(0, CH, (z0 + z1) / 2, 2 * hw + 0.5, 0.3, z0 - z1, '#d9dde0');
-  for (let z = z0; z > z1; z -= 2.4) env.glow.box(0, CH - 0.01, z, 2 * hw + 0.4, 0.02, 0.05, '#c3c8cc');
-  for (let z = 4; z > z1; z -= 6) glow.box(0, CH - 0.04, z, 1.4, 0.05, 2.6, '#ffffff');
+  const hwAt = (z) => env.ZH(z), nearEdge = (z) => L.zones.some((Z) => Math.abs(-Z.d1 - z) < 1.6 || Math.abs(-Z.d0 - z) < 1.6);
   /* drzwi z tabliczkami na przemian po obu stronach; tabliczki wystają ze ściany, więc widać je z daleka */
   let k = 0;
   for (let dist = 9; dist < L.len - 12; dist += 8.5, k++) {
-    const s = k % 2 ? 1 : -1, x = s * (hw + 0.02), z = -dist;
+    const z = -dist; if (nearEdge(z) || nearEdge(z - 4.2)) continue;
+    const s = k % 2 ? 1 : -1, hw = hwAt(z), x = s * (hw + 0.02);
     gb.box(x, 0, z, 0.1, 2.6, 1.5, d.frame); gb.box(x - s * 0.04, 0.05, z, 0.06, 2.45, 1.3, d.door);
     gb.box(x - s * 0.08, 1.35, z + 0.25, 0.04, 0.6, 0.4, d.glass); gb.box(x - s * 0.09, 1.05, z - 0.45, 0.06, 0.06, 0.2, '#9aa1a8');
     const txt = d.signs[(k + L.w) % d.signs.length];
@@ -2548,7 +2827,7 @@ function dressWard(env, L, th, R) {
     gb.box(s * (hw - pw / 2 - 0.03), 3.25 + (txt.indexOf('\n') >= 0 ? 0.31 : 0.23) + 0.05, z, pw + 0.06, 0.05, 0.05, '#9aa1a8');
     const back = pm.clone(); back.rotation.y = Math.PI; back.position.z -= 0.01; env.group.add(back);
     /* rekwizyty przy ścianie (poza ścieżką ruchu nie ma miejsca, więc stoją w pasie przyściennym) */
-    const ex = d.extras[(k + L.w) % d.extras.length], ez = z - 4.2, ox = -s * (hw + 0.0);
+    const ex = d.extras[(k + L.w) % d.extras.length], ez = z - 4.2, ox = -s * hwAt(ez);
     if (ex === 'monitor') { gb.box(ox + s * 0.03, 2.0, ez, 0.08, 0.8, 1.1, '#2d2d2d'); const scr = new GB(); scr.box(ox + s * 0.08, 2.08, ez, 0.02, 0.64, 0.94, '#0f2a22'); env.group.add(scr.mesh(MATS.glow)); const ecg = signMesh('——╱╲——', 0.3, { bg: null, col: '#5df2a0', pad: 0 }); ecg.position.set(ox + s * 0.1, 2.4, ez); ecg.rotation.y = s * Math.PI / 2; env.group.add(ecg); }
     else if (ex === 'clock') { gb.cyl(ox + s * 0.05, 2.9, ez, 0.42, 0.08, '#2d2d2d', 16, { rz: Math.PI / 2 }); glow.cyl(ox + s * 0.09, 2.92, ez, 0.36, 0.02, '#ffffff', 16, { rz: Math.PI / 2 }); gb.box(ox + s * 0.11, 2.95, ez, 0.02, 0.28, 0.04, INK); gb.box(ox + s * 0.11, 3.1, ez + 0.1, 0.02, 0.04, 0.22, INK); }
     else if (ex === 'poster') { gb.box(ox + s * 0.03, 1.7, ez, 0.04, 1.3, 0.95, '#ffffff'); gb.box(ox + s * 0.05, 2.75, ez, 0.02, 0.2, 0.8, PAL.red); for (let i = 0; i < 4; i++) gb.box(ox + s * 0.05, 2.0 + i * 0.16, ez, 0.02, 0.06, 0.6, '#9aa1a8'); }
@@ -2560,7 +2839,7 @@ function dressWard(env, L, th, R) {
     if (k % 2 === 0) { gb.cyl(ox + s * 0.12, 0.6, ez + 1.6, 0.11, 0.5, PAL.red, 8); gb.box(ox + s * 0.12, 1.1, ez + 1.6, 0.05, 0.08, 0.05, '#2d2d2d'); }
   }
   const z2 = -L.len + 8;
-  gb.box(0, -FLOOR_T, z2 - 2, 2 * hw + 0.6, CH + FLOOR_T, 0.3, d.wall);
+  gb.box(0, -FLOOR_T, z2 - 2, 2 * hwAt(z2) + 0.6, CH + FLOOR_T, 0.3, d.wall);
 }
 function dressArchive(env, L, th, R) {
   const { gb, glow } = env, hw = L.hw;
@@ -2577,6 +2856,7 @@ function dressArchive(env, L, th, R) {
 }
 /* niebo, mgła i światło sceny */
 function applySky(scene, th) {
+  if (scene.background && scene.background.isTexture && !scene.background.userData.keep) scene.background.dispose();
   scene.background = gradTex([[0, th.sky[0]], [0.62, th.sky[1]], [1, th.fog || th.sky[1]]]);
   scene.fog = new THREE.Fog(th.fog || th.sky[1], th.fogN || 50, th.fogF || 170);
   const hemi = new THREE.HemisphereLight(th.hemi[0], th.hemi[1], th.hemi[2]);
@@ -2588,38 +2868,179 @@ function applySky(scene, th) {
   }
   return lights;
 }
-
+/* ---------- place: rekwizyty na obrzeżu, posadzka wokół podestu i ludzie ---------- */
+const PLAZA_NPC = {
+  campus: ['student', 'student', 'student', 'visitor', 'nurse'], clinic: ['patient', 'senior', 'nurse', 'visitor', 'mother'], hospital: ['patient', 'doctor', 'nurse', 'visitor', 'patient'],
+  protest: ['nurse', 'nurse', 'midwife', 'nurseM', 'visitor'], spa: ['senior', 'senior', 'visitor', 'nurse', 'patient'], er: ['paramedic', 'nurseM', 'doctor', 'patient', 'paramedic'],
+  maternity: ['mother', 'midwife', 'visitor', 'mother', 'nurse'], homecare: ['senior', 'senior', 'nurse', 'visitor', 'senior'], ward: ['patient', 'nurse', 'visitor', 'doctor', 'senior']
+};
+function spawnWalker(env, kind, R, x, y, z0, z1, spd, o) {
+  const opt = { stroller: kind === 'mother', wheelchair: o && o.wheel };
+  const n = buildNPC(kind === 'mother' ? 'visitor' : kind, R, opt);
+  n.root.position.set(x, y, z0); env.group.add(n.root); env.npcs.push(n);
+  const len = Math.abs(z1 - z0), ph = R() * 10, sp = spd || 0.9 + R() * 0.5;
+  env.anims.push((t) => {
+    const k = ((t * sp + ph) % (2 * len)), fw = k < len, z = fw ? z0 - k * Math.sign(z0 - z1) : z1 + (k - len) * Math.sign(z0 - z1);
+    n.root.position.z = z; n.root.rotation.y = (fw === z1 < z0) ? 0 : Math.PI;
+    stepNPC(n, t * sp * 7 + ph, true);
+  });
+  return n;
+}
+function spawnIdle(env, kind, R, x, y, z, ry) {
+  const n = buildNPC(kind === 'mother' ? 'visitor' : kind, R, { static: true, stroller: kind === 'mother' });
+  n.root.position.set(x, y, z); n.root.rotation.y = ry; env.group.add(n.root);
+  const ph = R() * 6; env.anims.push((t) => { n.body.rotation.y = Math.sin(t * 0.7 + ph) * 0.25; n.body.position.y = Math.sin(t * 2 + ph) * 0.012; });
+  return n;
+}
+function dressPlaza(env, L, th, R, P, idx) {
+  const { gb, glow } = env, k = th.indoor ? 'ward' : th.kind, z0 = -P.d0, z1 = -P.d1, zc = (z0 + z1) / 2, Z = zoneAt(L, zc), hw = Z.hw, vis = Z.vis, lf = th.leaf;
+  const npc = PLAZA_NPC[k] || PLAZA_NPC.campus, pick = () => npc[Math.floor(R() * npc.length)];
+  /* posadzka: rozeta wokół podestu i pas przy krawędzi placu */
+  if (P.pd) {
+    const pz = -P.pd, c1 = th.indoor ? shade(th.path.top, 0.1) : k === 'er' ? '#5d6371' : shade(th.path.top, 0.12), c2 = th.indoor ? shade(th.path.top, -0.08) : shade(th.path.top, -0.1);
+    gb.cyl(0, 0.004, pz, 4.4, 0.01, c2, 28); gb.cyl(0, 0.008, pz, 3.6, 0.01, c1, 28);
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; gb.box(Math.cos(a) * 4.0, 0.012, pz + Math.sin(a) * 4.0, 0.5, 0.01, 0.5, PAL.red, { ry: a }); }
+  }
+  [-1, 1].forEach((s) => gb.box(s * (hw - 0.4), 0.003, zc, 0.5, 0.01, z0 - z1, shade(th.path.top, -0.14)));
+  if (th.indoor) { dressHall(env, L, th, R, P, hw, z0, z1); return; }
+  /* obrzeże placu za niewidzialną ścianą: drzewa, latarnie, ławki, stragany i ludzie */
+  const bx = (s, a) => s * (hw + 0.35 + a * (vis - 0.7));
+  [-1, 1].forEach((s) => {
+    for (let z = z0 - 2; z > z1 + 1; z -= 7) {
+      const r = R();
+      if (r < 0.3) { gb.cyl(bx(s, 0.6), 0, z, 0.7, 0.45, '#c9c4bb', 10); P3.tree(gb, bx(s, 0.6), 0.45, z, 1.2, lf); }
+      else if (r < 0.55) P3.bench(gb, bx(s, 0.25), 0, z, s > 0 ? Math.PI / 2 : -Math.PI / 2);
+      else if (r < 0.8) themeProp(env, k, bx(s, 0.55), z, s, R);
+      else { P3.bush(gb, bx(s, 0.7), 0, z, 1.1, lf); P3.bush(gb, bx(s, 0.5), 0, z - 1.4, 0.9, lf); }
+      if (R() < 0.6) P3.person(gb, bx(s, 0.85), 0, z - 3.2, R, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+    }
+    for (let z = z0 - 5; z > z1 + 2; z -= 11) P3.lamp(gb, glow, s * (hw + 0.3), 0, z, !!(th.dark || th.dusk || th.moon), 3.8);
+    spawnWalker(env, pick(), R, bx(s, 0.95), 0, z0 - 2, z1 + 2, 0.7 + R() * 0.4);
+    spawnIdle(env, pick(), R, bx(s, 0.55), 0, zc + (R() - 0.5) * 8, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+  });
+  /* dwie osoby rozmawiają przy wejściu na plac */
+  const tz = z0 - 1.6, tx = (R() < 0.5 ? -1 : 1) * (hw - 1.0);
+  spawnIdle(env, pick(), R, tx, 0, tz, Math.PI / 2 * Math.sign(-tx)); spawnIdle(env, pick(), R, tx + Math.sign(-tx) * 0.9, 0, tz - 0.3, Math.PI / 2 * Math.sign(tx));
+  if (P.start) return;
+  /* nad placem: girlanda chorągiewek albo baner z nazwą miejsca */
+  const banner = { campus: 'DZIEŃ OTWARTY UCZELNI', clinic: 'DZIEŃ PROFILAKTYKI', hospital: 'BADANIA BEZ KOLEJKI', protest: 'RAZEM DLA PACJENTÓW', spa: 'PROMENADA ZDROJOWA', er: 'PODJAZD DLA KARETEK', maternity: 'OGRÓD DLA RODZICÓW', homecare: 'RYNEK GMINY' }[k];
+  if (banner && idx === 0) { const m = env.sign(banner, 0, 6.2, z1 + 2.2, 0.7, { bg: PAL.red, col: '#ffffff' }); [-1, 1].forEach((s) => gb.cyl(s * (m.userData.w / 2 + 0.2), 0, z1 + 2.2, 0.08, 6.6, '#5c636a', 6)); }
+  else for (let i = 0; i < 18; i++) { const t = i / 17, x = lerp(-hw, hw, t), y = 5.2 - Math.sin(t * Math.PI) * 0.8; gb.cone(x, y - 0.4, z1 + 3, 0.22, 0.4, i % 2 ? '#ffffff' : PAL.red, 3, { rx: Math.PI }); }
+}
+/* rekwizyty typowe dla miejsca */
+function themeProp(env, k, x, z, s, R) {
+  const { gb, glow } = env, ry = s > 0 ? -Math.PI / 2 : Math.PI / 2;
+  if (k === 'campus') { gb.push(x, 0, z, ry); for (let i = 0; i < 4; i++) gb.torus(-0.6 + i * 0.4, 0.42, 0, 0.36, 0.03, '#3d4045', { ry: Math.PI / 2 }); gb.box(0, 0, 0, 1.6, 0.06, 0.3, '#6c6e70'); gb.pop(); gb.box(x, 0, z - 1.4, 0.08, 1.6, 0.08, '#6b4a33'); gb.box(x, 1.2, z - 1.4, 0.1, 0.8, 1.2, '#2c4c6e'); gb.box(x - s * 0.06, 1.3, z - 1.4, 0.02, 0.5, 0.9, '#ffffff'); }
+  else if (k === 'clinic' || k === 'homecare') { P3.car(gb, x, 0, z - 1, ['#9fb3c4', '#c9cdd2', '#b04a3e', '#5c636a', '#e9e4da'][Math.floor(R() * 5)], R() < 0.5 ? 0 : Math.PI); }
+  else if (k === 'hospital') { P3.wheelchair(gb, x, 0, z, ry); P3.bench(gb, x, 0, z - 1.6, ry); }
+  else if (k === 'protest') { P3.tent(gb, x + s * 0.2, 0, z - 1, 0, R() < 0.4); }
+  else if (k === 'spa') { P3.umbrella(gb, x, 0, z, R() < 0.5 ? PAL.red : '#2c4c6e'); P3.deckchair(gb, x, 0, z - 1.2, ry); }
+  else if (k === 'er') { P3.ambulance(gb, x + s * 0.15, 0, z - 1.5, 0); const sp = new THREE.Sprite(MATS.glowBlue); sp.scale.set(2.2, 2.2, 1); sp.position.set(x + s * 0.15, 2.7, z - 2.5); env.group.add(sp); env.anims.push((t) => (sp.visible = Math.floor(t * 5) % 2 === 0)); }
+  else if (k === 'maternity') { P3.stroller(gb, x, 0, z, ry); gb.cyl(x, 0, z - 1.6, 0.6, 0.4, '#9f93a0', 10); P3.bush(gb, x, 0.4, z - 1.6, 0.8, ['#e3a6b4', '#f2c6d0']); }
+  else P3.bench(gb, x, 0, z, ry);
+}
+/* hol we wnętrzu: rzędy krzeseł, rośliny, automat z wodą i czekający pacjenci */
+function dressHall(env, L, th, R, P, hw, z0, z1) {
+  const { gb, glow } = env, d = th.ward, chair = d.wood ? '#8b6243' : '#2c64a0';
+  [-1, 1].forEach((s) => {
+    for (let z = z0 - 3; z > z1 + 3; z -= 6.5) {
+      for (let i = 0; i < 4; i++) { const cz = z - i * 0.62, x = s * (hw - 0.35); gb.box(x, 0, cz, 0.46, 0.44, 0.5, '#9aa1a8'); gb.box(x, 0.44, cz, 0.5, 0.06, 0.52, chair); gb.box(x + s * 0.22, 0.44, cz, 0.06, 0.5, 0.52, chair); }
+      if (R() < 0.7) spawnIdle(env, R() < 0.5 ? 'patient' : 'senior', R, s * (hw - 0.4), 0.05, z - R() * 1.8, s > 0 ? -Math.PI / 2 : Math.PI / 2).root.scale.multiplyScalar(0.94);
+      gb.cyl(s * (hw - 0.4), 0, z - 4.4, 0.3, 0.5, '#e9e4da', 10); P3.bush(gb, s * (hw - 0.4), 0.5, z - 4.4, 0.7, ['#5d7c48', '#6f8f58']);
+    }
+  });
+  spawnWalker(env, R() < 0.5 ? 'nurse' : 'doctor', R, -hw + 1.3, 0, z0 - 2, z1 + 2, 0.8);
+  const t = d.signs[(L.w + 2) % d.signs.length].replace('\n', ' ');
+  const m = env.sign('POCZEKALNIA', 0, 4.4, z1 + 0.3, 0.55, { bg: d.plate, col: d.plateT, stripe: d.stripe || null, edge: d.frame });
+  m.rotation.y = 0;
+  void t;
+}
+/* przechodnie na chodnikach poniżej nasypu */
+function lowWalkers(env, L, th, R) {
+  if (L.boss || L.bonus) return;
+  const kinds = PLAZA_NPC[th.kind] || PLAZA_NPC.campus;
+  for (let d = 30, i = 0; d < L.len - 20; d += 34, i++) {
+    const s = i % 2 ? 1 : -1, z = -d, x = s * (env.EW(z) + 4.2 + R() * 1.5);
+    const n = buildNPC(kinds[Math.floor(R() * kinds.length)], R, { static: true });
+    n.root.position.set(x, LOW_Y, z); env.group.add(n.root);
+    const sp = 0.9 + R() * 0.4, len = 18, ph = R() * 30;
+    env.anims.push((t) => { const k = (t * sp + ph) % (2 * len), fw = k < len; n.root.position.z = z - (fw ? k : 2 * len - k); n.root.rotation.y = fw ? 0 : Math.PI; n.body.position.y = Math.abs(Math.sin(t * sp * 7)) * 0.04; });
+  }
+}
 /* =====================================================================
    ETAPY 3D: ścieżka biegnąca w głąb ekranu (oś −z)
    Odległość d rośnie do przodu, a z = −d. Wysokość podłogi to y = 0.
+   Etap składa się ze stref o różnej szerokości: ścieżka, plac, rozwidlenie.
    ===================================================================== */
-const HW = 3.4, FLOOR_T = 3, BLOCK_Y = 2.35, QUIZ_PER_STAGE = 4;
+const HW = 3.4, FLOOR_T = 3, BLOCK_Y = 2.35, QUIZ_PER_STAGE = 4, PLAZA_HW = 8, FORK_HW = 6.8, ISLAND = 1.3, LANE = (FORK_HW - ISLAND) / 2;
 function stageName(w, s) { return s === BOSS_STAGE ? 'Strażnik rozdziału' : 'Etap ' + s; }
 /* miejsce etapu: plener świata, wnętrze w etapie 3, strażnik w etapie 4 */
 function stagePlace(w, s) { const W = WPU_WORLDS[w - 1]; return s === BOSS_STAGE ? W.boss : s === 3 ? W.inside : W.place; }
 function stageTheme(w, s) { return s === 3 ? wardTheme(w) : THEMES[w]; }
 
+/* prośby postaci spotkanych na starcie: dokument trzeba znaleźć i zanieść do Izby */
+const QUESTS = {
+  1: { who: 'Absolwentka', npc: 'student', items: ['dyplom ukończenia studiów', 'indeks z praktyk'], ask: ['Zgubiłam dyplom ukończenia studiów, a bez niego nie złożę wniosku o prawo wykonywania zawodu. Znajdziesz go?', 'Wypadł mi indeks z praktyk. Opiekunka praktyk czeka na niego w Izbie. Pomożesz?'] },
+  2: { who: 'Pielęgniarka z przychodni', npc: 'nurse', items: ['wniosek do okręgowej rady', 'zaświadczenie o kursie'], ask: ['Mam wniosek do okręgowej rady, ale dyżur się nie kończy, a kartka wypadła mi z teczki. Znajdziesz ją i zaniesiesz do Izby?', 'Zgubiłam zaświadczenie o ukończeniu kursu. Doskonalenie zawodowe trzeba udokumentować. Pomożesz?'] },
+  3: { who: 'Pielęgniarka oddziałowa', npc: 'nurse', items: ['dowód opłacenia składki', 'deklarację członkowską'], ask: ['Mam dowód opłacenia składki członkowskiej, a regularne opłacanie składki to obowiązek członka samorządu. Kartka mi uciekła. Odnajdziesz ją?', 'Nowa koleżanka zostawiła gdzieś deklarację dla Izby. Zaniesiesz ją, gdy ją znajdziesz?'] },
+  4: { who: 'Delegatka na zjazd', npc: 'nurse', items: ['mandat delegata', 'projekt uchwały'], ask: ['Jadę na Krajowy Zjazd jako delegatka, a mój mandat delegata porwał wiatr. Znajdziesz go w tłumie?', 'Zgubiłam projekt uchwały na zjazd. Pomożesz mi go odnaleźć?'] },
+  5: { who: 'Członkini okręgowej rady', npc: 'nurse', items: ['uchwałę okręgowej rady', 'protokół posiedzenia'], ask: ['Niosłam uchwałę okręgowej rady do biura izby i zgubiłam ją na promenadzie. Znajdziesz ją?', 'Wiatr znad morza porwał protokół posiedzenia rady. Pomożesz?'] },
+  6: { who: 'Pielęgniarz z oddziału ratunkowego', npc: 'nurseM', items: ['akta sprawy', 'pismo do rzecznika'], ask: ['Mam akta sprawy dla rzecznika odpowiedzialności zawodowej, a wypadły mi w deszczu. Odnajdziesz je?', 'Zgubiłem pismo do rzecznika odpowiedzialności zawodowej. Pomożesz je znaleźć?'] },
+  7: { who: 'Położna', npc: 'midwife', items: ['odwołanie od orzeczenia', 'wniosek o zatarcie kary'], ask: ['Napisałam odwołanie od orzeczenia i muszę je złożyć w terminie. Zgubiłam je po drodze. Pomożesz?', 'Mam wniosek o zatarcie kary, ale kartka gdzieś mi upadła. Znajdziesz ją?'] },
+  8: { who: 'Pielęgniarka środowiskowa', npc: 'nurse', items: ['sprawozdanie finansowe', 'plan budżetu izby'], ask: ['Wiozłam do izby sprawozdanie finansowe, a teczka otworzyła się na wybojach. Znajdziesz kartki?', 'Zgubiłam plan budżetu izby. Zaniesiesz go do Izby, gdy go znajdziesz?'] }
+};
+const WARD_ITEMS = { 1: 'kartę zaliczeń', 2: 'kartę szczepień', 3: 'kartę obserwacji', 4: 'protokół obrad', 5: 'listę obecności', 6: 'kartę triażu', 7: 'kartę przebiegu porodu', 8: 'plan opieki' };
+function stageQuest(w, s) {
+  if (s === BOSS_STAGE) return null;
+  const Q = QUESTS[w];
+  if (s === 3) return { who: 'Koleżanka z dyżuru', npc: Q.npc === 'nurseM' ? 'nurseM' : 'nurse', item: WARD_ITEMS[w], ask: 'Zgubiłam ' + WARD_ITEMS[w] + ' gdzieś na korytarzu. Bez dokumentacji ani rusz. Znajdziesz ją i zaniesiesz do Izby?' };
+  return { who: Q.who, npc: Q.npc, item: Q.items[s - 1], ask: Q.ask[s - 1] };
+}
+
 function newLevel(w, s, o) {
-  return Object.assign({ w, s, solids: [], floors: [], props: [], blocks: [], slots: [], coins: [], gold: [], goldSlots: [], enemies: [], platforms: [], springs: [], hazards: [], cannons: [], boards: [], checkpoints: [], pipes: [],
+  return Object.assign({ w, s, solids: [], floors: [], props: [], blocks: [], slots: [], coins: [], groups: [], gold: [], goldSlots: [], enemies: [], platforms: [], springs: [], hazards: [], cannons: [], boards: [], checkpoints: [], pipes: [],
+    cartons: [], zones: [], islands: [], forks: [], plazas: [], quest: null, doc: null,
     quizTotal: 0, start: { x: 0, y: 0, z: -2 }, indoor: false, bonus: false, boss: false, len: 0, hw: HW, goal: null, segs: [] }, o || {});
 }
+/* strefa w danym miejscu ścieżki (z = −d) */
+function zoneAt(L, z) {
+  const d = -z, Z = L.zones;
+  for (let i = 0; i < Z.length; i++) if (d < Z[i].d1) return Z[i];
+  return Z[Z.length - 1] || { hw: L.hw, kind: 'path', d0: -99, d1: 999, vis: 0.7 };
+}
+const zoneHW = (L, z) => (L.zones.length ? zoneAt(L, z).hw : L.hw);
+/* połowa szerokości tego, co widać (strefa i jej obrzeże z rekwizytami) */
+const visHW = (L, z) => { if (!L.zones.length) return L.hw + 0.7; const Z = zoneAt(L, z); return Z.hw + Z.vis; };
 function levelKit(L, R) {
   const K = {
-    d: 0, R,
+    d: 0, R, cx: 0, hw: L.hw, zhw: L.hw, grp: -1,
+    X: (x) => K.cx + x,
     solid(x0, x1, y0, y1, d0, d1, kind, ex) { const s = Object.assign({ x0, x1, y0, y1, z0: -d1, z1: -d0, kind }, ex || {}); L.solids.push(s); return s; },
-    floor(d0, d1, x0, x1, y) { x0 = x0 === undefined ? -L.hw : x0; x1 = x1 === undefined ? L.hw : x1; y = y || 0; L.floors.push({ x0, x1, z0: -d1, z1: -d0, y }); return K.solid(x0, x1, y - FLOOR_T, y, d0, d1, 'ground'); },
+    /* podłoga od x0 do x1 względem środka bieżącego pasa */
+    floor(d0, d1, x0, x1, y) {
+      x0 = K.cx + (x0 === undefined ? -K.hw : x0); x1 = K.cx + (x1 === undefined ? K.hw : x1); y = y || 0;
+      L.floors.push({ x0, x1, z0: -d1, z1: -d0, y, zhw: K.zhw });
+      return K.solid(x0, x1, y - FLOOR_T, y, d0, d1, 'ground');
+    },
     /* przeszkoda albo podest stojący na podłodze (wygląd zależy od świata) */
-    box(x, y, d, w, h, dd, look) { const s = K.solid(x - w / 2, x + w / 2, y, y + h, d - dd / 2, d + dd / 2, 'box', { look: look || 'step' }); L.props.push(s); return s; },
-    slot(x, d, y, pref) { L.slots.push({ x, y: y === undefined ? BLOCK_Y : y, z: -d, pref: !!pref }); },
-    block(kind, x, d, y) { L.blocks.push({ kind, x, y: y === undefined ? BLOCK_Y : y, z: -d }); },
-    coin(x, y, d) { L.coins.push({ x, y, z: -d }); },
-    coinLine(x0, x1, d0, d1, y, n) { for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); K.coin(lerp(x0, x1, t), y, lerp(d0, d1, t)); } },
-    coinArc(x, d0, d1, y, h, n) { for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; K.coin(x, y + 0.6 + Math.sin(t * Math.PI) * h, lerp(d0, d1, t)); } },
-    enemy(type, x, d, o) { L.enemies.push(Object.assign({ type, x, y: 0, z: -d }, o || {})); },
-    plat(kind, x, y, d, w, dd, o) { L.platforms.push(Object.assign({ kind, x, y, z: -d, w, d: dd }, o || {})); },
-    spring(x, d, y) { L.springs.push({ x, y: y || 0, z: -d }); },
-    hazard(kind, x, d, o) { L.hazards.push(Object.assign({ kind, x, y: 0, z: -d }, o || {})); },
-    gslot(x, y, d, kind) { L.goldSlots.push({ x, y, z: -d, kind }); }
+    box(x, y, d, w, h, dd, look) { x = K.X(x); const s = K.solid(x - w / 2, x + w / 2, y, y + h, d - dd / 2, d + dd / 2, 'box', { look: look || 'step' }); L.props.push(s); return s; },
+    slot(x, d, y, pref, hint) { L.slots.push({ x: K.X(x), y: y === undefined ? BLOCK_Y : y, z: -d, pref: !!pref, hint: hint || null }); },
+    block(kind, x, d, y) { L.blocks.push({ kind, x: K.X(x), y: y === undefined ? BLOCK_Y : y, z: -d }); },
+    /* paragrafy zawsze w grupach: ścieżka, łuk albo krąg; zebranie całej grupy daje premię */
+    group() { K.grp = L.groups.length; L.groups.push({ n: 0 }); return K.grp; },
+    coin(x, y, d) { if (K.grp < 0) K.group(); L.coins.push({ x: K.X(x), y, z: -d, g: K.grp }); L.groups[K.grp].n++; },
+    trail(x0, d0, x1, d1, y, n, wave) { K.group(); for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); K.coin(lerp(x0, x1, t) + Math.sin(t * Math.PI * 2) * (wave || 0), y, lerp(d0, d1, t)); } K.grp = -1; },
+    coinArc(x, d0, d1, y, h, n) { K.group(); for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; K.coin(x, y + 0.6 + Math.sin(t * Math.PI) * h, lerp(d0, d1, t)); } K.grp = -1; },
+    ring(x, d, y, r, n) { K.group(); for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; K.coin(x + Math.cos(a) * r, y, d + Math.sin(a) * r); } K.grp = -1; },
+    enemy(type, x, d, o) { L.enemies.push(Object.assign({ type, x: K.X(x), y: 0, z: -d }, o || {})); },
+    plat(kind, x, y, d, w, dd, o) { L.platforms.push(Object.assign({ kind, x: K.X(x), y, z: -d, w, d: dd }, o || {})); },
+    spring(x, d, y) { L.springs.push({ x: K.X(x), y: y || 0, z: -d }); },
+    hazard(kind, x, d, o) { L.hazards.push(Object.assign({ kind, x: K.X(x), y: 0, z: -d }, o || {})); },
+    gslot(x, y, d, kind, pri) { L.goldSlots.push({ x: K.X(x), y, z: -d, kind, pri: pri || 0 }); },
+    /* karton do rozbicia: wskocz na niego z góry albo uderz od spodu */
+    carton(x, d, y, content) { L.cartons.push({ x: K.X(x), y: y || 0, z: -d, content: content || 'coins' }); },
+    lane(cx, hw, fn) { const a = K.cx, b = K.hw; K.cx = cx; K.hw = hw; fn(); K.cx = a; K.hw = b; },
+    zone(kind, hw, d1, vis) { const z = { kind, hw, d0: L.zones.length ? L.zones[L.zones.length - 1].d1 : -8, d1, vis: vis === undefined ? 0.7 : vis }; L.zones.push(z); return z; }
   };
   return K;
 }
@@ -2628,38 +3049,44 @@ function levelKit(L, R) {
 const SEGS3 = {
   blocks(K, L, w) {
     const d = K.d; K.floor(d, d + 14);
-    const pat = K.R() < 0.5;
     K.slot(-1.7, d + 7.5); K.slot(0, d + 7.5, undefined, true); K.slot(1.7, d + 7.5);
-    if (pat) K.coinLine(-2, 2, d + 3, d + 3, 0.7, 5); else K.coinLine(0, 0, d + 2, d + 5, 0.7, 4);
+    /* paragrafy prowadzą pod środkowy blok */
+    const sx = K.R() < 0.5 ? -1.6 : 1.6;
+    K.trail(sx, d + 1.5, 0, d + 6.2, 0.7, 4, 0);
+    K.coinArc(0, d + 9, d + 13, 0, 1.2, 3);
     if (w >= 3 && K.R() < 0.5) K.enemy('form', 0, d + 11.5, { ax: 'x', range: 2.6, spd: 1.4 });
     K.d += 14;
   },
   gap(K, L, w) {
-    const d = K.d, pit = clamp(2.2 + w * 0.1 + K.R() * 0.5, 2.2, 3.4);
+    const d = K.d, pit = clamp(2.0 + w * 0.12 + K.R() * 0.5, 2.0, 3.3);
     K.floor(d, d + 4); K.floor(d + 4 + pit, d + 9 + pit);
+    K.trail(0, d + 0.8, 0, d + 2.6, 0.7, 2, 0);
     K.coinArc(0, d + 3.2, d + 4.8 + pit, 0, 1.6, 5);
     L.gapsMid = L.gapsMid || []; L.gapsMid.push({ d: d + 4 + pit / 2 });
     K.d += 9 + pit;
   },
   gap2(K, L, w) {
-    const d = K.d, p1 = 2.2 + w * 0.07, p2 = 2.4 + w * 0.07;
+    const d = K.d, p1 = 2.1 + w * 0.07, p2 = 2.3 + w * 0.07;
     K.floor(d, d + 3); K.floor(d + 3 + p1, d + 6.8 + p1, -1.9, 1.9); K.floor(d + 6.8 + p1 + p2, d + 10.3 + p1 + p2);
     K.slot(0, d + 4.9 + p1, BLOCK_Y, true);
     K.coinArc(0, d + 2.5, d + 3.5 + p1, 0, 1.4, 3); K.coinArc(0, d + 6.3 + p1, d + 7.3 + p1 + p2, 0, 1.4, 3);
     K.d += 10.3 + p1 + p2;
   },
   steps(K, L) {
-    const d = K.d; K.floor(d, d + 17);
-    K.box(0, 0, d + 4, 2 * L.hw, 0.7, 2.4, 'step'); K.box(0, 0, d + 6.4, 2 * L.hw, 1.4, 2.4, 'step'); K.box(0, 0, d + 9.6, 2 * L.hw, 2.1, 4, 'step');
+    const d = K.d, W = 2 * K.hw; K.floor(d, d + 17);
+    K.box(0, 0, d + 4, W, 0.7, 2.4, 'step'); K.box(0, 0, d + 6.4, W, 1.4, 2.4, 'step'); K.box(0, 0, d + 9.6, W, 2.1, 4, 'step');
     K.slot(0, d + 9.6, 2.1 + BLOCK_Y, true);
-    K.coinLine(-1.8, 1.8, d + 9.6, d + 9.6, 2.8, 4);
+    /* paragrafy wchodzą po schodach */
+    K.group(); [[d + 2, 0.7], [d + 4, 1.4], [d + 6.4, 2.1], [d + 8.3, 2.8], [d + 11, 2.8]].forEach(([dd, y], i) => K.coin(i % 2 ? 0.8 : -0.8, y, dd)); K.grp = -1;
     K.d += 17;
   },
   stones(K, L, w) {
-    const d = K.d, s = 3.3, gp = 1.0 + Math.min(0.4, w * 0.04);
+    const d = K.d, s = w <= 2 ? 3.5 : 3.3, gp = 0.9 + Math.min(0.45, w * 0.05);
     K.floor(d, d + 3);
     let dd = d + 3 + gp; const xs = [-1.1, 1.1, -0.3];
-    xs.forEach((x, i) => { K.floor(dd, dd + s, x - s / 2, x + s / 2, i === 1 ? 0.6 : 0.3); K.coin(x, (i === 1 ? 0.6 : 0.3) + 0.8, dd + s / 2); dd += s + gp; });
+    K.group();
+    xs.forEach((x, i) => { const y = i === 1 ? 0.6 : 0.3; K.floor(dd, dd + s, x - s / 2, x + s / 2, y); K.coin(x, y + 0.8, dd + s * 0.3); K.coin(x, y + 0.8, dd + s * 0.7); dd += s + gp; });
+    K.grp = -1;
     K.floor(dd, dd + 3);
     K.d = dd + 3;
   },
@@ -2668,21 +3095,23 @@ const SEGS3 = {
     K.floor(d, d + 3); K.floor(d + 3 + pit, d + 6 + pit);
     const amp = (pit - 2.6 - 0.5) / 2;
     K.plat('mz', 0, 0, d + 3 + pit / 2, 2.8, 2.6, { amp, spd: 0.75 + w * 0.04, ph: K.R() * 6 });
-    K.coinLine(0, 0, d + 5, d + 3 + pit - 2, 1.2, 4);
+    K.trail(0, d + 5, 0, d + 3 + pit - 2, 1.2, 4, 0);
     K.d += 6 + pit;
   },
   slide(K, L, w) {
     const d = K.d, pit = 7;
     K.floor(d, d + 3); K.floor(d + 3 + pit, d + 6 + pit);
     K.plat('mx', 0, 0, d + 3 + pit / 2, 2.6, pit - 1.2, { amp: 1.8, spd: 0.9 + w * 0.05, ph: K.R() * 6 });
-    K.coinLine(-1.6, 1.6, d + 3 + pit / 2, d + 3 + pit / 2, 1.1, 4);
+    K.trail(0, d + 4, 0, d + 2 + pit, 1.1, 4, 0);
     K.d += 6 + pit;
   },
   falling(K, L, w) {
     /* kładka z trzech platform, które spadają chwilę po wejściu: trzeba przebiec bez zatrzymania */
     const d = K.d; K.floor(d, d + 3);
     let dd = d + 3.3;
+    K.group();
     for (let i = 0; i < 3; i++) { K.plat('fall', 0, 0, dd + 1.4, 3.0, 2.8); K.coin(0, 1, dd + 1.4); dd += 2.95; }
+    K.grp = -1;
     K.floor(dd + 0.15, dd + 3.15);
     K.d = dd + 3.15;
   },
@@ -2691,41 +3120,45 @@ const SEGS3 = {
     const spd = 1.2 + w * 0.08;
     K.enemy('form', -1, d + 6, { ax: 'x', range: 2.5, spd });
     K.enemy(w >= 2 ? 'rumor' : 'form', 1, d + 11.5, { ax: 'x', range: 2.5, spd: spd * 0.9 });
-    K.coinLine(-2.4, 2.4, d + 14, d + 14, 0.7, 5);
+    K.trail(-1.4, d + 12.5, 1.4, d + 15.5, 0.7, 4, 0);
     K.d += 16;
   },
   rumors(K, L, w) {
     const d = K.d; K.floor(d, d + 14);
     K.enemy('rumor', -1.4, d + 5, { hop: true }); K.enemy('rumor', 1.4, d + 9.5, { hop: true });
     K.slot(0, d + 7.2);
+    K.trail(0, d + 1.5, 0, d + 4, 0.7, 3, 0);
     K.d += 14;
   },
   trolley(K, L, w) {
     const d = K.d; K.floor(d, d + 15);
-    K.hazard('trolley', 0, d + 6, { range: 2.3, spd: 1.8 + w * 0.12, ph: K.R() * 6 });
-    if (w >= 4) K.hazard('trolley', 0, d + 10.5, { range: 2.3, spd: 2 + w * 0.1, ph: K.R() * 6 + 2 });
-    K.coinLine(0, 0, d + 2, d + 4, 0.7, 3);
+    const r = K.hw - 1.1;
+    K.hazard('trolley', 0, d + 6, { range: r, spd: 1.8 + w * 0.12, ph: K.R() * 6 });
+    if (w >= 4) K.hazard('trolley', 0, d + 10.5, { range: r, spd: 2 + w * 0.1, ph: K.R() * 6 + 2 });
+    K.trail(0, d + 1.5, 0, d + 4, 0.7, 3, 0); K.trail(0, d + 12, 0, d + 14.5, 0.7, 3, 0);
     K.d += 15;
   },
   spring(K, L, w) {
+    /* górna trasa: sprężyna wyrzuca na półkę ze złotym paragrafem */
     const d = K.d; K.floor(d, d + 17);
     K.spring(-1.6, d + 5);
     K.box(1.2, 4.2, d + 10.5, 3.2, 0.5, 3.4, 'shelf');
-    K.gslot(1.2, 4.7 + 0.9, d + 10.5, 'high');
+    K.gslot(1.2, 4.7 + 0.9, d + 10.5, 'high', 2);
+    K.trail(-1.6, d + 1.2, -1.6, d + 3.6, 0.7, 2, 0);
     K.coinArc(-1.6, d + 5, d + 9.2, 0, 3.6, 5);
     K.slot(-1.6, d + 13.5);
     K.d += 17;
   },
   narrow(K, L, w) {
-    const d = K.d, pit = 10, bx = [-1.2, 0, 1.2][Math.floor(K.R() * 3)], bw = Math.max(1.1, 1.6 - w * 0.06);
+    const d = K.d, pit = 10, bx = [-1.2, 0, 1.2][Math.floor(K.R() * 3)], bw = Math.max(1.2, 1.7 - w * 0.06);
     K.floor(d, d + 3); K.floor(d + 3, d + 3 + pit, bx - bw / 2, bx + bw / 2); K.floor(d + 3 + pit, d + 6 + pit);
-    K.coinLine(bx, bx, d + 4, d + 2 + pit, 0.7, 6);
+    K.trail(bx, d + 4, bx, d + 2 + pit, 0.7, 6, 0);
     if (w >= 3) K.enemy('form', bx, d + 3 + pit / 2, { ax: 'z', range: 3, spd: 1 + w * 0.06 });
     K.d += 6 + pit;
   },
   hurdles(K, L, w) {
     const d = K.d; K.floor(d, d + 16);
-    K.box(0, 0, d + 5, 2 * L.hw, 0.8, 0.5, 'hurdle'); K.box(0, 0, d + 10.5, 2 * L.hw, 0.8, 0.5, 'hurdle');
+    K.box(0, 0, d + 5, 2 * K.hw, 0.8, 0.5, 'hurdle'); K.box(0, 0, d + 10.5, 2 * K.hw, 0.8, 0.5, 'hurdle');
     K.slot(0, d + 10.5, 0.8 + BLOCK_Y);
     K.coinArc(0, d + 4, d + 6, 0.8, 1, 3);
     K.d += 16;
@@ -2733,16 +3166,16 @@ const SEGS3 = {
   stamps(K, L, w) {
     const d = K.d; K.floor(d, d + 15);
     K.hazard('stamp', -1.7, d + 6, { ph: 0 }); K.hazard('stamp', 1.7, d + 6, { ph: 1.5 }); K.hazard('stamp', 0, d + 10, { ph: 0.75 });
-    K.coinLine(0, 0, d + 2, d + 4, 0.7, 3);
+    K.trail(0, d + 2, 0, d + 4, 0.7, 3, 0);
     K.d += 15;
   },
   copier(K, L, w) {
     const d = K.d; K.floor(d, d + 18);
     const x = K.R() < 0.5 ? -1.9 : 1.9;
-    L.cannons.push({ x, y: 0, z: -(d + 16.5), every: Math.max(1.5, 2.6 - w * 0.12), t: K.R() });
-    K.solid(x - 0.65, x + 0.65, 0, 1.1, d + 16, d + 17, 'box', { look: 'none' });
+    L.cannons.push({ x: K.X(x), y: 0, z: -(d + 16.5), every: Math.max(1.5, 2.6 - w * 0.12), t: K.R() });
+    K.solid(K.X(x) - 0.65, K.X(x) + 0.65, 0, 1.1, d + 16, d + 17, 'box', { look: 'none' });
     K.slot(-x * 0.6, d + 8);
-    K.coinLine(-x, -x, d + 3, d + 12, 0.7, 5);
+    K.trail(-x, d + 3, -x * 0.4, d + 12, 0.7, 5, 0.4);
     K.d += 18;
   },
   clocks(K, L, w) {
@@ -2757,6 +3190,7 @@ const SEGS3 = {
     K.enemy('folder', 0, d + 8, { ax: 'x', range: 2.4, spd: 1.1 });
     K.enemy('form', 0, d + 13, { ax: 'x', range: 2.4, spd: 1.3 });
     K.slot(1.6, d + 5);
+    K.trail(-1.6, d + 2, -1.6, d + 6, 0.7, 3, 0);
     K.d += 16;
   },
   ledges(K, L, w) {
@@ -2764,23 +3198,23 @@ const SEGS3 = {
     const d = K.d;
     K.floor(d, d + 3);
     K.floor(d + 4.1, d + 7.3, -2.8, -0.2, 0.7); K.floor(d + 8.3, d + 11.5, 0.2, 2.8, 1.4); K.floor(d + 12.5, d + 15.7, -1.4, 1.4, 0.7);
-    K.gslot(1.5, 3.7, d + 9.9, 'ledge');
-    K.coin(-1.5, 1.5, d + 5.7); K.coin(1.5, 2.2, d + 9.9); K.coin(0, 1.5, d + 14.1);
+    K.gslot(1.5, 3.7, d + 9.9, 'ledge', 1);
+    K.group(); K.coin(-1.5, 1.5, d + 5.7); K.coin(0, 2.3, d + 7.8); K.coin(1.5, 2.2, d + 9.9); K.coin(0.7, 2.2, d + 12); K.coin(0, 1.5, d + 14.1); K.grp = -1;
     K.floor(d + 16.7, d + 19.7);
     K.d = d + 19.7;
   },
   pipe(K, L) {
     const d = K.d; K.floor(d, d + 13);
     const x = K.R() < 0.5 ? -2.2 : 2.2;
-    L.pipes.push({ x, y: 0, z: -(d + 6.5) });
-    K.solid(x - 0.7, x + 0.7, 0, 1.3, d + 5.8, d + 7.2, 'pipe');
-    K.coinLine(x, x, d + 2, d + 4.5, 0.7, 3);
+    L.pipes.push({ x: K.X(x), y: 0, z: -(d + 6.5) });
+    K.solid(K.X(x) - 0.7, K.X(x) + 0.7, 0, 1.3, d + 5.8, d + 7.2, 'pipe');
+    K.trail(x * 0.3, d + 1.5, x, d + 4.6, 0.7, 4, 0);
     K.d += 13;
   },
   board(K, L) {
     const d = K.d; K.floor(d, d + 8);
-    L.boards.push({ x: -2.6, z: -(d + 4) });
-    K.coinLine(0, 0, d + 2, d + 6, 0.7, 3);
+    L.boards.push({ x: K.X(-2.6), z: -(d + 4) });
+    K.trail(0, d + 2, 0, d + 6, 0.7, 3, 0);
     K.d += 8;
   }
 };
@@ -2793,68 +3227,174 @@ function segPool(w, indoor) {
   if (indoor) return p.filter((k) => k !== 'clocks');
   return p;
 }
+
+/* ---------- plac: podest z pytaniem, rekwizyty jako platformy, kartony, górna trasa ---------- */
+function buildPlaza(K, L, w, idx) {
+  const d = K.d, P = 32, R = K.R, s = R() < 0.5 ? -1 : 1, o = -s, hw = K.hw;
+  K.floor(d, d + P);
+  const pd = d + 16;
+  /* podest pośrodku placu i blok z pytaniem nad nim */
+  K.box(0, 0, pd, 4.4, 0.9, 4.4, 'stage');
+  K.slot(0, pd, 0.9 + BLOCK_Y, true);
+  K.ring(0, pd, 0.7, 3.2, 10);
+  K.trail(0, d + 1.2, s * 2.6, d + 9.5, 0.7, 5, 0);
+  /* jedna strona: górna trasa po rekwizytach albo na sprężynie */
+  const ex = s * (hw - 2.1);
+  if (idx % 2 === 0) {
+    K.box(ex, 0, d + 6.5, 1.3, 0.55, 2.6, 'bench');
+    K.box(ex, 0, d + 10.6, 2.0, 1.45, 3.8, 'car');
+    K.box(ex, 2.1, d + 18.5, 2.6, 0.5, 7.2, 'shelf');
+    K.group(); K.coin(ex, 1.3, d + 6.5); K.coin(ex, 2.3, d + 9.4); K.coin(ex, 2.3, d + 11.8); K.coin(ex, 3.4, d + 16); K.coin(ex, 3.4, d + 18.5); K.grp = -1;
+    K.gslot(ex, 2.6 + 0.95, d + 21.4, 'upper', 3);
+    L.upper = { x: ex, y: 2.6, z: -(d + 20.5) };
+  } else {
+    K.spring(ex, d + 7.5);
+    K.box(ex, 4.0, d + 17, 2.8, 0.5, 9, 'shelf');
+    K.coinArc(ex, d + 7.5, d + 12.6, 0, 3.6, 4);
+    K.trail(ex, d + 14, ex, d + 19.5, 5.2, 4, 0);
+    K.gslot(ex, 4.5 + 0.95, d + 21, 'upper', 3);
+    L.upper = { x: ex, y: 4.5, z: -(d + 20) };
+  }
+  /* druga strona: kartony do rozbicia */
+  const cx = o * (hw - 2.4);
+  K.carton(cx, d + 8, 0, 'coins'); K.carton(cx + o * 1.05, d + 8.6, 0, R() < 0.5 ? 'item' : 'coins'); K.carton(cx + o * 0.5, d + 8.3, 1, 'coins');
+  K.carton(cx - o * 0.4, d + 24.5, 0, 'coins'); K.carton(cx + o * 0.7, d + 25.3, 0, 'coins');
+  K.slot(o * 3.2, d + 27.2, undefined, false, R() < 0.5 ? 'coin' : 'item');
+  K.trail(cx - o * 1.6, d + 12, cx - o * 1.6, d + 22, 0.7, 5, 0.6);
+  /* przeciwnicy krążą po placu */
+  K.enemy('form', o * 2.6, d + 13, { ax: 'z', range: 3.6, spd: 1.1 + w * 0.06 });
+  if (w >= 2) K.enemy(R() < 0.5 ? 'rumor' : 'form', s * 2.4, d + 26, { ax: 'x', range: 2.2, spd: 1.2, hop: w >= 4 });
+  if (w >= 5) K.enemy('folder', 0, d + 4.5, { ax: 'x', range: 3, spd: 1.0 });
+  K.trail(0, d + 21.5, 0, d + 30.5, 0.7, 4, 1.1);
+  L.plazas.push({ d0: d, d1: d + P, pd, s });
+  K.d += P;
+}
+
+/* ---------- rozwidlenie: bezpieczny pas po lewej, trudny i bogatszy po prawej ---------- */
+function buildFork(K, L, w) {
+  const d = K.d, F = 40, H = 2.6;
+  K.floor(d, d + 4);
+  K.floor(d + 4, d + F - 4, -ISLAND, ISLAND);
+  const isl = K.solid(-ISLAND, ISLAND, 0, H, d + 4, d + F - 4, 'island');
+  L.islands.push(isl);
+  L.forks.push({ d0: d + 4, d1: d + F - 4 });
+  K.trail(0, d + 0.6, 0, d + 2.4, 0.7, 2, 0);
+  /* lewo: spokojnie, mało nagród */
+  K.lane(-(ISLAND + LANE), LANE, () => {
+    K.floor(d + 4, d + F - 4);
+    K.trail(0, d + 6, 0, d + F - 7, 0.7, 7, 0.9);
+    K.slot(0, d + 19, undefined, false, 'coin');
+    K.enemy('form', 0, d + 27, { ax: 'z', range: 3, spd: 1.1 + w * 0.05 });
+  });
+  /* prawo: dół, wózek, spadająca kładka, a w nagrodę złoty paragraf, wzmocnienie i dużo paragrafów */
+  K.lane(ISLAND + LANE, LANE, () => {
+    let dd = d + 4;
+    K.floor(dd, dd + 5); K.trail(0, dd + 0.8, 0, dd + 3.6, 0.7, 3, 0); dd += 5;
+    const pit = 2.4 + Math.min(0.7, w * 0.08);
+    K.coinArc(0, dd - 0.9, dd + pit + 0.9, 0, 1.7, 5); dd += pit;
+    K.floor(dd, dd + 7);
+    K.hazard('trolley', 0, dd + 3.6, { range: LANE - 1.15, spd: 1.7 + w * 0.1, ph: K.R() * 6 });
+    K.trail(0, dd + 0.8, 0, dd + 2.2, 0.7, 2, 0); K.trail(0, dd + 5.2, 0, dd + 6.6, 0.7, 2, 0);
+    dd += 7;
+    K.group();
+    for (let i = 0; i < 3; i++) { K.plat('fall', 0, 0, dd + 1.55 + i * 2.95, 2.8, 2.8); K.coin(0, 1, dd + 1.55 + i * 2.95); }
+    K.grp = -1;
+    K.gslot(0, 2.9, dd + 4.5, 'fork', 4);
+    dd += 9.15;
+    K.floor(dd, d + F - 4);
+    K.slot(0, dd + 2.6, undefined, false, 'item');
+    K.trail(-1.2, dd + 1, 1.2, d + F - 5, 0.7, 4, 0);
+    if (w >= 3) K.enemy(w >= 5 ? 'rumor' : 'form', 0, d + F - 6, { ax: 'x', range: LANE - 0.8, spd: 1.3, hop: w >= 5 });
+    L.hardEnd = { x: K.X(0), z: -(d + F - 6.5) };
+  });
+  K.floor(d + F - 4, d + F);
+  K.d += F;
+}
+
 function buildStage(w, s) {
   if (s === BOSS_STAGE) return buildBossArena(w);
   const R = mulberry32(w * 977 + s * 131 + 7);
   const L = newLevel(w, s, { indoor: s === 3 });
   const K = levelKit(L, R);
-  /* początek */
-  K.floor(-8, 12);
-  K.coinLine(0, 0, 6, 10, 0.7, 3);
-  K.d = 12;
+  /* początek: mały plac z postacią, która prosi o pomoc, i tablicą z przepisem */
+  const SHW = L.indoor ? 4.6 : 5.6;
+  K.hw = K.zhw = SHW;
+  K.floor(-8, 16);
+  K.trail(0, 4.5, 0, 13.5, 0.7, 5, 0.8);
+  L.boards.push({ x: SHW - 2.2, z: -7 });
+  L.quest = Object.assign(stageQuest(w, s), { x: -SHW + 1.6, z: -6 });
+  K.zone('plaza', SHW, 16, L.indoor ? 0 : 2.2);
+  K.d = 16;
+  const path = () => { K.hw = K.zhw = HW; };
+  path();
   const pool = segPool(w, L.indoor);
-  const n = 9 + w + (s === 2 ? 1 : 0);
-  const must = ['blocks', 'spring', 'blocks', 'gap'];
-  if (!L.indoor || true) must.push('pipe');
+  const n = 7 + Math.floor(w * 0.6) + (s === 2 ? 1 : 0);
+  const must = ['blocks', 'spring', 'blocks', 'gap', 'pipe'];
   if (w >= 2) must.push('ledges');
   const order = [];
   for (let i = 0; i < n; i++) order.push(pool[Math.floor(R() * pool.length)]);
   must.forEach((m, i) => { order[Math.floor((i + 0.5) * order.length / must.length)] = m; });
   /* bez dwóch takich samych odcinków pod rząd */
   for (let i = 1; i < order.length; i++) if (order[i] === order[i - 1] && !must.includes(order[i])) order[i] = pool[(pool.indexOf(order[i]) + 3) % pool.length];
-  const cpAt = Math.floor(order.length / 2), boardAt = Math.floor(order.length * 0.3);
+  const cpAt = Math.floor(order.length / 2), boardAt = Math.floor(order.length * 0.15);
+  const plazaAt = [Math.max(1, Math.floor(order.length * 0.25)), Math.floor(order.length * 0.75)], forkAt = Math.floor(order.length * 0.45);
+  let pi = 0;
+  const run = (kind, hw, vis, fn) => { K.hw = K.zhw = hw; fn(); K.zone(kind, hw, K.d, vis); path(); };
   order.forEach((id, i) => {
-    if (i === cpAt) { const d = K.d; K.floor(d, d + 8); L.checkpoints.push({ x: 0, z: -(d + 4), y: 0 }); K.d += 8; }
-    if (i === boardAt) SEGS3.board(K, L);
-    L.segs.push({ id, d0: K.d });
-    SEGS3[id](K, L, w);
+    if (i === cpAt) run('path', HW, 0.7, () => { const d = K.d; K.floor(d, d + 8); L.checkpoints.push({ x: 0, z: -(d + 4), y: 0 }); K.d += 8; });
+    if (i === boardAt) run('path', HW, 0.7, () => SEGS3.board(K, L));
+    if (plazaAt.includes(i)) run('plaza', L.indoor ? 7 : PLAZA_HW, L.indoor ? 0 : 2.6, () => buildPlaza(K, L, w, pi++));
+    if (i === forkAt) run('fork', FORK_HW, L.indoor ? 0 : 0.7, () => buildFork(K, L, w));
+    run('path', HW, 0.7, () => { L.segs.push({ id, d0: K.d }); SEGS3[id](K, L, w); });
   });
   /* meta: podest, maszt z flagą, budynek Izby */
   const d = K.d;
+  K.hw = K.zhw = HW + 1.2;
   K.floor(d, d + 30);
   K.box(0, 0, d + 7, 2.2, 1.2, 2.2, 'podium');
+  K.trail(0, d + 1, 0, d + 5, 0.7, 3, 0);
   L.goal = { x: 0, z: -(d + 10.5), top: 6.2, base: 0, door: -(d + 22) };
-  K.solid(-L.hw, L.hw, 0, 12, d + 23, d + 30, 'wall');
+  K.solid(-K.hw, K.hw, 0, 12, d + 23, d + 30, 'wall');
   L.len = d + 30;
+  K.zone('goal', HW + 1.2, L.len + 10, 0.7);
   /* bloki: cztery pytania rozłożone na całej trasie, reszta to bloki z paragrafami, cegły i wykrzykniki */
   const slots = L.slots.slice();
   const pickQ = [];
-  const prefs = slots.filter((x) => x.pref), others = slots.filter((x) => !x.pref);
+  const prefs = slots.filter((x) => x.pref), others = slots.filter((x) => !x.pref && !x.hint);
   const spread = (arr, k) => { const out = []; for (let i = 0; i < k && arr.length; i++) { const idx = Math.min(arr.length - 1, Math.floor(((i + 0.5) / k) * arr.length)); out.push(arr.splice(idx, 1)[0]); } return out; };
   pickQ.push(...spread(prefs, Math.min(QUIZ_PER_STAGE, prefs.length)));
   if (pickQ.length < QUIZ_PER_STAGE) pickQ.push(...spread(others, QUIZ_PER_STAGE - pickQ.length));
   slots.forEach((sl) => {
-    const kind = pickQ.includes(sl) ? 'quiz' : R() < 0.22 ? 'item' : R() < 0.55 ? 'coin' : 'brick';
+    const kind = pickQ.includes(sl) ? 'quiz' : sl.hint ? sl.hint : R() < 0.22 ? 'item' : R() < 0.55 ? 'coin' : 'brick';
     L.blocks.push({ kind, x: sl.x, y: sl.y, z: sl.z });
   });
   L.quizTotal = L.blocks.filter((b) => b.kind === 'quiz').length;
-  /* złote paragrafy: wysoko, nad dołem i w ukrytym pokoju */
-  const gs = L.goldSlots.slice();
+  /* złote paragrafy: najpierw w miejscach wymagających decyzji (trudna droga, górna trasa), potem wysoko i nad dołem */
+  const gs = L.goldSlots.slice().sort((a, b) => b.pri - a.pri);
   const gaps = (L.gapsMid || []).slice();
-  if (gaps.length) { const g = gaps[Math.floor(gaps.length / 2)]; gs.push({ x: 0, y: 3.4, z: -g.d, kind: 'pit' }); }
+  if (gaps.length) { const g = gaps[Math.floor(gaps.length / 2)]; gs.push({ x: 0, y: 3.4, z: -g.d, kind: 'pit', pri: 0 }); }
   if (!gs.length) gs.push({ x: 0, y: 4.2, z: -(d - 2), kind: 'high' });
   const ids = L.pipes.length ? [0, 1] : [0, 1, 2];
-  ids.forEach((id, i) => { const g = gs[i % gs.length]; L.gold.push({ id, x: g.x + (i >= gs.length ? 1 : 0), y: g.y, z: g.z }); });
+  ids.forEach((id, i) => { const g = gs[i % gs.length]; L.gold.push({ id, x: g.x + (i >= gs.length ? 1 : 0), y: g.y, z: g.z, kind: g.kind }); });
+  /* dokument z prośby: na końcu trudnej drogi albo na górnej trasie */
+  if (L.quest) {
+    const spot = L.hardEnd && (R() < 0.5 || !L.upper) ? { x: L.hardEnd.x, y: 1.25, z: L.hardEnd.z } : L.upper ? { x: L.upper.x, y: L.upper.y + 0.95, z: L.upper.z + 2.4 } : { x: 0, y: 1.2, z: -(d - 6) };
+    L.doc = spot;
+  }
   L.blocks.forEach((b, i) => { b.id = i; L.solids.push({ x0: b.x - 0.5, x1: b.x + 0.5, y0: b.y, y1: b.y + 1, z0: b.z - 0.5, z1: b.z + 0.5, kind: 'block', blk: b }); });
+  L.cartons.forEach((c, i) => { c.id = i; c.sol = { x0: c.x - 0.5, x1: c.x + 0.5, y0: c.y, y1: c.y + 1, z0: c.z - 0.5, z1: c.z + 0.5, kind: 'carton', crt: c }; L.solids.push(c.sol); });
   L.coins.forEach((c, i) => (c.id = i));
   addWalls(L);
   return L;
 }
-/* niewidzialne ściany wzdłuż ścieżki */
+/* niewidzialne ściany wzdłuż każdej strefy (grube, żeby przejścia między strefami różnej szerokości były szczelne) */
 function addWalls(L) {
-  L.solids.push({ x0: -L.hw - 2, x1: -L.hw, y0: -30, y1: 40, z0: -L.len - 10, z1: 30, kind: 'wall', inv: true });
-  L.solids.push({ x0: L.hw, x1: L.hw + 2, y0: -30, y1: 40, z0: -L.len - 10, z1: 30, kind: 'wall', inv: true });
-  L.solids.push({ x0: -L.hw - 2, x1: L.hw + 2, y0: -30, y1: 40, z0: 6, z1: 10, kind: 'wall', inv: true });
+  if (!L.zones.length) L.zones.push({ kind: 'path', hw: L.hw, d0: -12, d1: L.len + 10, vis: 0.7 });
+  for (const Z of L.zones) {
+    L.solids.push({ x0: -Z.hw - 60, x1: -Z.hw, y0: -30, y1: 40, z0: -Z.d1, z1: -Z.d0, kind: 'wall', inv: true });
+    L.solids.push({ x0: Z.hw, x1: Z.hw + 60, y0: -30, y1: 40, z0: -Z.d1, z1: -Z.d0, kind: 'wall', inv: true });
+  }
+  L.solids.push({ x0: -70, x1: 70, y0: -30, y1: 40, z0: 6, z1: 10, kind: 'wall', inv: true });
 }
 /* arena strażnika */
 function buildBossArena(w) {
@@ -2863,11 +3403,14 @@ function buildBossArena(w) {
   K.floor(-6, 26, -8.5, 8.5);
   K.box(-6.5, 0, 9, 2.4, 1.2, 2.4, 'step'); K.box(6.5, 0, 9, 2.4, 1.2, 2.4, 'step');
   K.box(-6.5, 0, 19, 2.4, 1.8, 2.4, 'step'); K.box(6.5, 0, 19, 2.4, 1.8, 2.4, 'step');
-  K.coinLine(-6.5, 6.5, 4, 4, 0.7, 6);
+  K.trail(-3, 1, 3, 6, 0.7, 6, 0.8);
+  K.group(); [[-6.5, 1.9, 9], [6.5, 1.9, 9], [-6.5, 2.5, 19], [6.5, 2.5, 19]].forEach(([x, y, dd]) => K.coin(x, y, dd)); K.grp = -1;
   L.len = 26; L.start = { x: 0, y: 0, z: 2 };
   L.arena = { z: -14, r: 8 };
+  K.zone('arena', 8.5, 40, 0.7);
   addWalls(L);
   L.solids.push({ x0: -10, x1: 10, y0: -30, y1: 40, z0: -32, z1: -26, kind: 'wall', inv: true });
+  L.coins.forEach((c, i) => (c.id = i));
   return L;
 }
 /* ukryty pokój archiwum za rurą poczty pneumatycznej */
@@ -2879,15 +3422,123 @@ function buildBonus(w, s) {
   L.solids.push({ x0: -0.5, x1: 0.5, y0: BLOCK_Y, y1: BLOCK_Y + 1, z0: -7.5, z1: -6.5, kind: 'block', blk: L.blocks[0] });
   K.box(-2.8, 0, 11, 2.4, 1.6, 2, 'shelf');
   L.gold.push({ id: 2, x: -2.8, y: 2.6, z: -11 });
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) K.coin(-2 + c, 0.7 + r * 0.9, 3 + r * 0.6);
+  /* skarbiec: wąż paragrafów, krąg wokół złotego bloku i łuk przy rurze */
+  K.trail(-2.4, 0.6, 2.4, 4.6, 0.7, 9, 1.2);
+  K.ring(0, 7, 0.7, 1.9, 10);
+  K.trail(-2.8, 8.6, -2.8, 12.6, 2.4, 4, 0.5);
   K.coinArc(2.5, 4, 12, 0, 1.6, 6);
   L.pipes.push({ x: 2.6, y: 0, z: -13.5, exit: true });
   K.solid(1.9, 3.3, 0, 1.3, 12.8, 14.2, 'pipe');
   L.coins.forEach((c, i) => (c.id = i));
   L.len = 16; L.start = { x: 0, y: 3, z: -1 };
+  K.zone('room', 4.2, 30, 0.7);
   addWalls(L);
   L.solids.push({ x0: -6, x1: 6, y0: -30, y1: 40, z0: -22, z1: -16, kind: 'wall', inv: true });
   return L;
+}
+/* =====================================================================
+   NAGRODY I STRATEGIA: sklepik, ulepszenia, torba, misje, odznaki
+   Paragrafy to waluta sklepiku, złote paragrafy kupują ulepszenia.
+   ===================================================================== */
+const SHOP = [
+  { id: 'sciaga', kind: 'life', name: 'Ściąga', price: 60, max: 3, tip: 'W pytaniu z czterema odpowiedziami usuwa dwie błędne.' },
+  { id: 'konsult', kind: 'life', name: 'Konsultacja', price: 40, max: 3, tip: 'Pokazuje przepis, którego dotyczy pytanie, i usuwa jedną błędną odpowiedź.' },
+  { id: 'druga', kind: 'life', name: 'Druga szansa', price: 80, max: 2, tip: 'Po błędnej odpowiedzi wybierasz jeszcze raz, bez kary. Za dobrą drugą odpowiedź dostajesz połowę punktów.' },
+  { id: 'pwz', kind: 'inv', name: 'PWZ', price: 40, tip: 'Chroni przed jednym trafieniem.' },
+  { id: 'kodeks', kind: 'inv', name: 'Kodeks', price: 50, tip: 'Rzucasz paragrafami w przeciwników i kartony, a Kodeks chroni przed jednym trafieniem.' },
+  { id: 'mandat', kind: 'inv', name: 'Mandat', price: 60, tip: 'Przez 10 sekund latasz. Przytrzymaj skok.' },
+  { id: 'seal', kind: 'inv', name: 'Pieczęć', price: 70, tip: 'Przez 8 sekund nic Ci nie grozi.' },
+  { id: 'cap', kind: 'cap', name: 'Czepek', price: 150, max: 3, tip: 'Dodatkowe życie na początek następnego etapu.' }
+];
+const LIFELINES = ['sciaga', 'konsult', 'druga'];
+const UPGRADES = [
+  { id: 'shoes', name: 'Wygodne obuwie', tiers: ['Bieg o 5% szybszy', 'Bieg o 10% szybszy, zaczyna się wcześniej', 'Bieg o 15% szybszy, zaczyna się od razu'] },
+  { id: 'jump', name: 'Sprężysty krok', tiers: ['Skok wyżej o 6%', 'Skok wyżej o 12%', 'Skok wyżej o 19%'] },
+  { id: 'magnet', name: 'Magnes na paragrafy', tiers: ['Paragrafy przyciągasz z 1,5 m', 'Paragrafy przyciągasz z 2,5 m', 'Paragrafy przyciągasz z 3,5 m'] },
+  { id: 'bag', name: 'Torba dyżurna', tiers: ['Trzy miejsca w torbie', 'Cztery miejsca w torbie', 'Cztery miejsca i PWZ na start każdego etapu'] },
+  { id: 'watch', name: 'Zegarek', tiers: ['5 s więcej na odpowiedź i 30 s na etap', '10 s więcej na odpowiedź i 60 s na etap', '15 s więcej na odpowiedź i 90 s na etap'] },
+  { id: 'calm', name: 'Opanowanie', tiers: ['Kary zabierają o 20% mniej punktów', 'Kary zabierają o 35% mniej punktów', 'Kary zabierają o połowę mniej punktów, a pierwszy błąd w etapie jest bez kary'] }
+];
+const UP_COST = [1, 2, 4];
+const upT = (id) => ((save.up || {})[id] || 0);
+const goldFree = () => goldTotal() - (save.goldSpent || 0);
+const invSlots = () => 2 + Math.min(2, upT('bag'));
+const shopItem = (id) => SHOP.find((x) => x.id === id);
+function buyItem(id) {
+  const it = shopItem(id); if (!it) return 'Nie ma takiego towaru.';
+  if ((save.coins || 0) < it.price) return 'Brakuje paragrafów.';
+  if (it.kind === 'life') { if ((save.life[id] || 0) >= it.max) return 'Masz już komplet.'; save.life[id] = (save.life[id] || 0) + 1; }
+  else if (it.kind === 'cap') { if ((save.extraLives || 0) >= it.max) return 'Masz już komplet.'; save.extraLives = (save.extraLives || 0) + 1; }
+  else { if (save.inv.length >= invSlots()) return 'Torba jest pełna.'; save.inv.push(id); }
+  save.coins -= it.price; writeSave();
+  return null;
+}
+function buyUpgrade(id) {
+  const t = upT(id); if (t >= 3) return 'To ulepszenie ma już najwyższy poziom.';
+  const c = UP_COST[t]; if (goldFree() < c) return 'Brakuje złotych paragrafów.';
+  save.up[id] = t + 1; save.goldSpent = (save.goldSpent || 0) + c; writeSave();
+  return null;
+}
+
+/* ---------- misje: każda daje jedną pieczęć, a pieczęcie z różnych podejść sumują się ---------- */
+const M3_KINDS = ['quest', 'coins', 'hard', 'gold', 'kills', 'cartons', 'time'];
+function stageMissions(w, s, L) {
+  if (s === BOSS_STAGE) return [{ id: 'fight', t: 'Stań do walki ze strażnikiem' }, { id: 'win', t: 'Rozwiej Wątpliwość' }, { id: 'clean', t: 'Rozwiej ją bez błędnej odpowiedzi' }];
+  const k = M3_KINDS[(w * 3 + s * 2) % M3_KINDS.length], out = [{ id: 'goal', t: 'Dojdź do Izby' }, { id: 'quiz', t: 'Otwórz wszystkie bloki z pytajnikiem i odpowiedz bez błędu' }];
+  const nCoins = L ? Math.round(L.coins.length * 0.6 / 5) * 5 : 60, nKills = L ? Math.max(3, Math.min(8, Math.round(L.enemies.length * 0.6))) : 5;
+  const T = L ? Math.round((L.len / 3.2 + 70) / 10) * 10 : 160;
+  const m3 = {
+    quest: { id: 'quest', t: L && L.quest ? 'Znajdź ' + L.quest.item + ' i zanieś do Izby' : 'Spełnij prośbę postaci ze startu' },
+    coins: { id: 'coins', t: 'Zbierz co najmniej ' + nCoins + ' paragrafów', n: nCoins },
+    hard: { id: 'hard', t: 'Przejdź rozwidlenie trudną drogą' },
+    gold: { id: 'gold', t: 'Zbierz wszystkie trzy złote paragrafy' },
+    kills: { id: 'kills', t: 'Pokonaj ' + nKills + ' przeciwników', n: nKills },
+    cartons: { id: 'cartons', t: 'Rozbij wszystkie kartony', n: L ? L.cartons.length : 10 },
+    time: { id: 'time', t: 'Dojdź do Izby w ciągu ' + T + ' sekund', n: T }
+  }[k];
+  out.push(m3);
+  return out;
+}
+/* które misje są już spełnione (w trakcie etapu albo na mecie) */
+function missionState(list, st, fin) {
+  return list.map((m) => {
+    if (m.id === 'goal' || m.id === 'fight') return !!fin;
+    if (m.id === 'win') return !!(fin && game.bossWon);
+    if (m.id === 'clean') return !!(fin && game.bossWon && st.wrong === 0);
+    if (m.id === 'quiz') return st.n >= (game.lvl && game.lvl.quizTotal || 4) && st.wrong === 0 && (st.n > 0);
+    if (m.id === 'quest') return !!st.quest;
+    if (m.id === 'coins') return st.coins >= m.n;
+    if (m.id === 'hard') return !!st.hard;
+    if (m.id === 'gold') return goldCount(game.persist ? game.persist.gold : 0) >= 3;
+    if (m.id === 'kills') return st.kills >= m.n;
+    if (m.id === 'cartons') return st.cartons >= m.n;
+    if (m.id === 'time') return !!fin && st.t <= m.n;
+    return false;
+  });
+}
+const popcount = (b) => { let n = 0; while (b) { n += b & 1; b >>= 1; } return n; };
+
+/* ---------- odznaki: jednorazowa nagroda w paragrafach ---------- */
+const BADGES = [
+  { id: 'first', name: 'Pierwszy dyżur', t: 'Ukończ pierwszy etap', pay: 20, ok: () => doneCount() >= 1 },
+  { id: 'streak5', name: 'Seria pięciu', t: 'Odpowiedz dobrze pięć razy z rzędu', pay: 30, ok: () => (save.stats.bestStreak || 0) >= 5 },
+  { id: 'streak10', name: 'Seria dziesięciu', t: 'Odpowiedz dobrze dziesięć razy z rzędu', pay: 70, ok: () => (save.stats.bestStreak || 0) >= 10 },
+  { id: 'seal3', name: 'Bez zarzutu', t: 'Zdobądź trzy pieczęcie w jednym etapie', pay: 30, ok: () => Object.values(save.progress).some((p) => (p.stars || 0) >= 3) },
+  { id: 'gold10', name: 'Złota kolekcja', t: 'Zbierz 10 złotych paragrafów', pay: 50, ok: () => goldTotal() >= 10 },
+  { id: 'carton30', name: 'Kartonowy rekord', t: 'Rozbij 30 kartonów', pay: 30, ok: () => (save.stats.cartons || 0) >= 30 },
+  { id: 'quest4', name: 'Pomocna dłoń', t: 'Spełnij cztery prośby postaci', pay: 50, ok: () => (save.stats.quests || 0) >= 4 },
+  { id: 'hard5', name: 'Trudna droga', t: 'Wybierz trudną drogę pięć razy', pay: 40, ok: () => (save.stats.hard || 0) >= 5 },
+  { id: 'room5', name: 'Badacz archiwum', t: 'Odwiedź pięć ukrytych pokoi archiwum', pay: 40, ok: () => (save.stats.rooms || 0) >= 5 },
+  { id: 'kills50', name: 'Pogromca biurokracji', t: 'Pokonaj 50 przeciwników', pay: 40, ok: () => (save.stats.kills || 0) >= 50 },
+  { id: 'boss4', name: 'Bez wątpliwości', t: 'Rozwiej cztery Wątpliwości', pay: 80, ok: () => Object.keys(save.progress).filter((k) => k.slice(-2) === '-' + BOSS_STAGE && save.progress[k].won).length >= 4 },
+  { id: 'know', name: 'Znawstwo ustawy', t: 'Miej 75% dobrych odpowiedzi przy co najmniej 40 pytaniach', pay: 100, ok: () => { const k = qStats(); return k.n >= 40 && k.pct >= 75; } }
+];
+/* przyznaje nowe odznaki i zwraca ich listę */
+function checkBadges() {
+  const got = [];
+  for (const b of BADGES) if (!save.badges[b.id] && b.ok()) { save.badges[b.id] = Date.now(); save.coins = (save.coins || 0) + b.pay; got.push(b); }
+  if (got.length) writeSave();
+  return got;
 }
 
 /* =====================================================================
@@ -2897,9 +3548,9 @@ const PH = { g: 30, maxFall: 26, walk: 4.2, run: 6.2, accG: 32, accA: 18, fric: 
   stomp: 8.2, stompHold: 11.2, spring: 14.6, springHold: 17.4, flyThrust: 46, flyMax: 5, hw: 0.3, h: 1.5, step: 0.45, runAfter: 0.8 };
 const POWER_INFO = {
   pwz: { name: 'PWZ', tip: () => '<b>Prawo wykonywania zawodu</b> chroni Cię przed jednym trafieniem. Członkami samorządu są pielęgniarki i położne ze stwierdzonym lub przyznanym PWZ (art. 5 ust. 1).' },
-  mandat: { name: 'Mandat', tip: () => '<b>Mandat</b> pozwala Ci latać przez 10 sekund. Przytrzymaj skok, a na ekranie dotykowym trzymaj palec po przesunięciu w górę. Kadencja organów izby trwa 4 lata (art. 8 ust. 1).' },
-  kodeks: { name: 'Kodeks', tip: () => '<b>Kodeks</b> pozwala rzucać paragrafami (Shift, X albo dwa szybkie dotknięcia ekranu). Zasady etyki zawodowej określa Krajowy Zjazd (art. 20 pkt 1).' },
-  seal: { name: 'Pieczęć', tip: () => '<b>Pieczęć</b> daje Ci 8 sekund nietykalności. Wzory pieczęci organów samorządu ustala Naczelna Rada (art. 22 ust. 1 pkt 10).' },
+  mandat: { name: 'Mandat', tip: () => '<b>Mandat</b> trafia do torby. Użyj go w dobrym momencie klawiszem E albo dotykając ikony u góry ekranu, a przez 10 sekund polecisz z przytrzymanym skokiem. Kadencja organów izby trwa 4 lata (art. 8 ust. 1).' },
+  kodeks: { name: 'Kodeks', tip: () => '<b>Kodeks</b> pozwala rzucać paragrafami w przeciwników i kartony (Shift, X albo dwa szybkie dotknięcia ekranu). Zasady etyki zawodowej określa Krajowy Zjazd (art. 20 pkt 1).' },
+  seal: { name: 'Pieczęć', tip: () => '<b>Pieczęć</b> trafia do torby. Użyj jej klawiszem E albo dotykając ikony, a przez 8 sekund nic Ci nie grozi i rozbijasz kartony samym dotknięciem. Wzory pieczęci organów samorządu ustala Naczelna Rada (art. 22 ust. 1 pkt 10).' },
   cap: { name: 'Czepek', tip: () => '<b>Czepek</b> to dodatkowe życie. Dostajesz go za serię pięciu dobrych odpowiedzi.' }
 };
 const multOf = (s) => (s >= 8 ? 4 : s >= 5 ? 3 : s >= 3 ? 2 : s >= 2 ? 1.5 : 1);
@@ -2922,10 +3573,9 @@ function addScore(n, pos, noMult) {
 }
 function losePoints(n, pos) { game.score = Math.max(0, game.score - n); game.stageScore -= n; if (pos) FLOATS.add('−' + fmt(n), pos, { big: true, cls: 'red', t: 1.4 }); }
 function addCoin(pos, silent) {
-  game.coins++; addScore(10);
+  game.coins++; if (game.st) game.st.coins++; addScore(10);
   if (!silent) AudioSys.play('coin');
-  if (!save.tips.coin) { save.tips.coin = 1; showToast('<b>Paragrafy</b> to punkty. Za każde 100 dostajesz dodatkowe życie.'); }
-  if (game.coins >= 100) { game.coins -= 100; gainLife(pos); }
+  if (!save.tips.coin) { save.tips.coin = 1; showToast('<b>Paragrafy</b> to waluta. Wydasz je w sklepiku na mapie na koła ratunkowe do pytań, wzmocnienia i dodatkowe życie. Zebrana w całości ścieżka paragrafów daje premię.', 5200); }
 }
 function gainLife(pos) { game.lives++; AudioSys.play('oneup'); FLOATS.add('+1 ŻYCIE', pos || pPos(1.9), { big: true, cls: 'red', t: 1.4 }); }
 const pPos = (dy) => V3(game.player.x, game.player.y + (dy || 1), game.player.z);
@@ -2933,8 +3583,8 @@ function shakeIt(t) { if (!save.settings.reduce) game.shake = Math.max(game.shak
 function flashIt(t, col) { if (save.settings.reduce || !EL.flash) return; EL.flash.style.background = 'rgb(' + (col || '255,255,255') + ')'; EL.flash.style.transition = 'none'; EL.flash.style.opacity = '0.55'; requestAnimationFrame(() => { EL.flash.style.transition = 'opacity ' + Math.max(0.12, t * 2) + 's'; EL.flash.style.opacity = '0'; }); }
 
 /* ---------- start etapu i budowa sceny ---------- */
-function newPersist() { return { used: new Set(), coins: new Set(), bricks: new Set(), cp: -1, gold: 0, room: null }; }
-function newStageStats() { return { ok: 0, n: 0, wrong: 0, maxStreak: 0, pens: [], bn: 0, bok: 0 }; }
+function newPersist() { return { used: new Set(), coins: new Set(), bricks: new Set(), cartons: new Set(), cp: -1, gold: 0, room: null, doc: false, questDone: false, questSeen: false, roomSeen: false }; }
+function newStageStats() { return { ok: 0, n: 0, wrong: 0, maxStreak: 0, pens: [], bn: 0, bok: 0, coins: 0, kills: 0, cartons: 0, hard: false, quest: false, t: 0, calmUsed: false }; }
 function makePlayer(sp, keep) {
   return { x: sp.x, y: sp.y, z: sp.z, vx: 0, vy: 0, vz: 0, onGround: false, yaw: 0, coyote: 0, jumpBuf: 0, jumping: false, runT: 0,
     shield: keep ? keep.shield : false, kodeks: keep ? keep.kodeks : false, fly: keep ? keep.fly : 0, star: keep ? keep.star : 0,
@@ -2960,14 +3610,16 @@ function loadStage(w, s, keepPersist) {
   if (!keepPersist) game.persist = newPersist();
   const L = buildStage(w, s), P = game.persist;
   L.blocks.forEach((b) => { if (P.used.has(b.id)) b.used = true; if (P.bricks.has(b.id)) b.broken = true; });
-  L.solids = L.solids.filter((sd) => !(sd.blk && sd.blk.broken));
+  L.cartons.forEach((c) => { if (P.cartons.has(c.id)) c.broken = true; });
+  L.solids = L.solids.filter((sd) => !(sd.blk && sd.blk.broken) && !(sd.crt && sd.crt.broken));
   L.coins.forEach((c) => { if (P.coins.has(c.id)) c.taken = true; });
   L.gold = L.gold.filter((gd) => !(P.gold & (1 << gd.id)));
   if (P.cp >= 0 && L.checkpoints[P.cp]) for (let i = 0; i <= P.cp; i++) L.checkpoints[i].on = true;
   const sp = P.cp >= 0 && L.checkpoints[P.cp] ? { x: 0, y: 0, z: L.checkpoints[P.cp].z } : L.start;
-  game.player = makePlayer(sp);
+  game.player = makePlayer(sp); game.player.onGround = true;
+  if (upT('bag') >= 3) game.player.shield = true;
   buildScene(L, stageTheme(w, s));
-  game.timeLeft = 300; game.limitT = 0; game.stamp = null; game.trans = null; game.seq = null; game.pendingQuiz = null;
+  game.timeLeft = 300 + 30 * upT('watch'); game.limitT = 0; game.stamp = null; game.trans = null; game.seq = null; game.pendingQuiz = null;
   game.boss = L.boss ? makeBoss(w) : null;
   S3.cam.p.set(game.player.x, game.player.y + 4.9, game.player.z + 7.8); S3.cam.l.set(game.player.x, game.player.y + 0.9, game.player.z - 5.2);
 }
@@ -2989,6 +3641,28 @@ function buildScene(L, th) {
   L.blocks.forEach((b) => { if (b.broken) return; const m = blockMesh(b.used ? 'used' : b.kind === 'coin' ? 'coinb' : b.kind); m.position.set(b.x, b.y + 0.5, b.z); root.add(m); b.mesh = m; b.bump = 0;
     if (b.kind === 'quiz' && !b.used) { const gl = new THREE.Sprite(MATS.glowRed); gl.scale.set(2.6, 2.6, 1); m.add(gl); b.glow = gl; }
     if (b.kind === 'bonus' && !b.used) { const gl = new THREE.Sprite(MATS.glowGold); gl.scale.set(2.8, 2.8, 1); m.add(gl); b.glow = gl; } });
+  /* krąg na podłodze pod każdym blokiem pokazuje, gdzie stanąć, żeby trafić głową */
+  L.blocks.forEach((b) => {
+    if (b.broken) return; const y = floorBelow(L, b.x, b.z, b.y); if (y === null) return;
+    const r = new THREE.Mesh(BLK.ringGeo, b.used ? BLK.rings.used : BLK.rings[b.kind] || BLK.rings.brick); r.position.set(b.x, y + 0.03, b.z); r.scale.set(1.75, 1, 1.75); r.renderOrder = 2; root.add(r); b.ring = r; b.fy = y;
+  });
+  S3.aim = new THREE.Mesh(BLK.ringGeo, BLK.rings.aim); S3.aim.scale.set(1.95, 1, 1.95); S3.aim.visible = false; S3.aim.renderOrder = 3; root.add(S3.aim);
+  S3.aimGlow = new THREE.Sprite(MATS.glowWhite); S3.aimGlow.scale.set(2.4, 2.4, 1); S3.aimGlow.visible = false; root.add(S3.aimGlow);
+  S3.land = new THREE.Mesh(BLK.ringGeo, BLK.land); S3.land.scale.set(0.95, 1, 0.95); S3.land.visible = false; S3.land.renderOrder = 3; root.add(S3.land);
+  /* kartony do rozbicia */
+  L.cartons.forEach((c) => { if (c.broken) return; const m = new THREE.Mesh(BLK.geo, BLK.carton); m.position.set(c.x, c.y + 0.5, c.z); m.rotation.y = ((c.id % 3) - 1) * 0.05; root.add(m); c.mesh = m; });
+  /* grupy paragrafów: ile jeszcze zostało do premii za komplet */
+  (L.groups || []).forEach((g) => (g.left = 0)); L.coins.forEach((c) => { if (!c.taken && L.groups[c.g]) L.groups[c.g].left++; });
+  /* dokument z prośby i postać, która o niego prosi */
+  game.doc = null; game.questNpc = null;
+  const P = game.persist || {};
+  if (L.doc && !P.doc && !P.questDone) { const m = buildDoc(); m.position.set(L.doc.x, L.doc.y, L.doc.z); root.add(m); game.doc = { m, x: L.doc.x, y: L.doc.y, z: L.doc.z }; }
+  if (L.quest) {
+    const n = buildNPC(L.quest.npc, mulberry32(L.w * 5 + L.s), { static: true }); n.root.position.set(L.quest.x, 0, L.quest.z); n.root.rotation.y = Math.PI * 1.25; root.add(n.root);
+    if (!BLK.exclMat) { const t = glyphTex('!', '#ffffff', PAL.red, { border: PAL.redD }); t.userData.keep = true; BLK.exclMat = new THREE.SpriteMaterial({ map: t, depthWrite: false }); BLK.exclMat.userData.keep = true; }
+    const mk = new THREE.Sprite(BLK.exclMat); mk.scale.set(0.62, 0.62, 1); mk.position.set(0, 2.45, 0); n.root.add(mk);
+    game.questNpc = { n, mk, x: L.quest.x, z: L.quest.z };
+  }
   /* paragrafy (jedna siatka instancji) */
   const ci = new THREE.InstancedMesh(BLK.coinGeo, BLK.coinMats, Math.max(1, L.coins.length)); ci.instanceMatrix.setUsage(THREE.DynamicDrawUsage); root.add(ci); S3.coins = ci;
   L.gold.forEach((g) => { const m = new THREE.Mesh(BLK.goldGeo, BLK.goldMats); m.position.set(g.x, g.y, g.z); const gl = new THREE.Sprite(MATS.glowGold); gl.scale.set(2.4, 2.4, 1); m.add(gl); root.add(m); g.mesh = m; });
@@ -3011,7 +3685,7 @@ function buildScene(L, th) {
     const g = new THREE.Group();
     if (h.kind === 'trolley') { const gb = new GB(); P3TrolleyBed(gb, th); g.add(gb.mesh()); }
     else { g.add(buildEnemy('stamp')); }
-    root.add(g);
+    root.add(g); g.position.set(h.x, h.kind === 'stamp' ? 3.2 : 0, h.z);
     const hz = Object.assign({}, h, { mesh: g, t: h.ph || 0, x0: h.x, y: h.kind === 'stamp' ? 3.2 : 0, st: 'up', wt: 1 + (h.ph || 0) });
     if (h.kind === 'trolley') hz.sol = { kind: 'trolley', hz, hurt: true, x0: 0, x1: 0, y0: 0, y1: 0.95, z0: h.z - 0.55, z1: h.z + 0.55 };
     return hz;
@@ -3065,7 +3739,7 @@ function update(dt) {
   if (game.pendingQuiz && game.state === 'play') { game.pendingQuiz.t -= dt; if (game.pendingQuiz.t <= 0) { const c = game.pendingQuiz.ctx; game.pendingQuiz = null; openQuiz(c); return; } }
   if (game.pendingQuiz && game.state !== 'play' && game.state !== 'pause') game.pendingQuiz = null;
   if (game.state === 'play' || game.state === 'dying') {
-    if (game.state === 'play') { game.timeLeft = Math.max(0, game.timeLeft - dt); if (game.limitT > 0) game.limitT = Math.max(0, game.limitT - dt); }
+    if (game.state === 'play') { game.timeLeft = Math.max(0, game.timeLeft - dt); if (game.limitT > 0) game.limitT = Math.max(0, game.limitT - dt); if (game.st && !game.room) game.st.t += dt; }
     updatePlatforms(dt);
     updateHazards(dt);
     updatePlayer(dt);
@@ -3074,6 +3748,7 @@ function update(dt) {
     updateItems(dt);
     updateShots(dt);
     updatePickups(dt);
+    updateDoc();
     updateBoards(dt);
     if (game.boss) updateBoss(dt);
   } else if (game.state === 'clearing') {
@@ -3156,8 +3831,8 @@ function updatePlayer(dt) {
   let mag = Math.hypot(ix, iz);
   if (mag > 1) { ix /= mag; iz /= mag; mag = 1; }
   if (mag > 0.15) p.runT += dt; else p.runT = 0;
-  const running = !limited && (I.run || p.runT > PH.runAfter);
-  const spd = (running ? PH.run : PH.walk) * (limited ? 0.8 : 1);
+  const running = !limited && (I.run || p.runT > PH.runAfter - 0.3 * upT('shoes'));
+  const spd = (running ? PH.run * (1 + 0.05 * upT('shoes')) : PH.walk) * (limited ? 0.8 : 1);
   const tx = ix * spd, tz = iz * spd, acc = p.onGround ? (mag > 0.1 ? PH.accG : PH.fric) : PH.accA;
   const ap = (v, t) => (v < t ? Math.min(t, v + acc * dt) : Math.max(t, v - acc * dt));
   p.vx = ap(p.vx, tx); p.vz = ap(p.vz, tz);
@@ -3167,7 +3842,7 @@ function updatePlayer(dt) {
   if (p.onGround) p.coyote = PH.coyote; else p.coyote = Math.max(0, p.coyote - dt);
   if (p.jumpBuf > 0 && p.coyote > 0) {
     const hs = Math.hypot(p.vx, p.vz);
-    p.vy = PH.jump + (hs / PH.run) * PH.jumpRun; p.onGround = false; p.coyote = 0; p.jumpBuf = 0; p.jumping = true; p.standOn = null;
+    p.vy = (PH.jump + (hs / PH.run) * PH.jumpRun) * (1 + 0.03 * upT('jump')); p.onGround = false; p.coyote = 0; p.jumpBuf = 0; p.jumping = true; p.standOn = null;
     AudioSys.play('jump'); FX.dust(p.x, p.y, p.z, 3);
   }
   if (p.jumping && !I.jump && p.vy > 3) { p.vy *= PH.cut; p.jumping = false; }
@@ -3182,6 +3857,15 @@ function updatePlayer(dt) {
     game.shots.push({ x: p.x + fx * 0.5, y: p.y + 1.0, z: p.z + fz * 0.5, vx: fx * 12 + p.vx * 0.3, vy: 2.5, vz: fz * 12 + p.vz * 0.3, t: 1.6, m });
     p.throwT = 0.2; AudioSys.play('throw');
   }
+  /* pomoc w trafieniu głową: w locie do góry postać lekko dociąga się pod najbliższy blok */
+  if (p.vy > 0) for (const b of game.lvl.blocks) {
+    if (b.broken) continue;
+    const dx = b.x - p.x, dz = b.z - p.z, gap = b.y - (p.y + PH.h);
+    if (Math.abs(dx) < 1.1 && Math.abs(dz) < 1.1 && gap > -0.05 && gap < 1.0) { const k = Math.min(1, dt * 12); p.x += dx * k; p.z += dz * k; break; }
+  }
+  /* przedmiot z torby */
+  if (Input.takeUse()) useItem(0);
+  if (game.useReq !== undefined) { const i = game.useReq; game.useReq = undefined; useItem(i); }
   /* przesunięcie z kolizjami */
   const was = p.onGround;
   if (p.standOn && p.standOn.kind === 'plat') { const pl = p.standOn.pl; p.x += pl.dx; p.z += pl.dz; p.y += pl.dy; }
@@ -3203,6 +3887,23 @@ function updatePlayer(dt) {
   if (Input.takeDown() && p.onGround && p.standOn && p.standOn.kind === 'pipe' && game.state === 'play') {
     const pipe = game.lvl.pipes.find((q) => Math.abs(q.x - p.x) < 0.9 && Math.abs(q.z - p.z) < 0.9);
     if (pipe) startPipe(pipe);
+  }
+  const L = game.lvl;
+  if (p.star > 0) for (const c of L.cartons) if (!c.broken && Math.abs(c.x - p.x) < 0.95 && Math.abs(c.z - p.z) < 0.95 && p.y < c.y + 1 && p.y + PH.h > c.y) breakCarton(c);
+  /* podpowiedzi przy pierwszym rozwidleniu i pierwszym kartonie */
+  if (game.state === 'play' && !save.tips.fork) for (const f of L.forks) if (-p.z > f.d0 - 9 && -p.z < f.d0) { save.tips.fork = 1; writeSave(); showToast('<b>Rozwidlenie.</b> Lewa droga jest bezpieczna. Prawa jest trudniejsza, ale kryje złoty paragraf, wzmocnienie i dużo więcej paragrafów.', 5200); }
+  if (game.state === 'play' && !save.tips.carton) for (const c of L.cartons) if (!c.broken && Math.abs(c.z - p.z) < 4 && Math.abs(c.x - p.x) < 5) { save.tips.carton = 1; writeSave(); showToast('<b>Karton.</b> Wskocz na niego z góry albo uderz go głową od spodu, a wysypią się paragrafy.', 4200); break; }
+  /* trudna droga na rozwidleniu */
+  for (const f of L.forks) if (!game.st.hard && -p.z > f.d0 + 6 && -p.z < f.d1 - 4 && p.x > ISLAND + 0.2) {
+    game.st.hard = true; save.stats.hard = (save.stats.hard || 0) + 1; FLOATS.add('TRUDNA DROGA', pPos(2.3), { big: true, t: 1.4 });
+  }
+  /* postać z prośbą odwraca się do gracza i mówi, czego potrzebuje */
+  const Q = game.questNpc;
+  if (Q) {
+    const dx = p.x - Q.x, dz = p.z - Q.z, dd = Math.hypot(dx, dz);
+    if (dd < 7) { const ty = Math.atan2(-dx, -dz); let a = ty - Q.n.root.rotation.y; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; Q.n.root.rotation.y += a * Math.min(1, dt * 5); }
+    if ((dd < 5.5 || game.st.t < 14) && !game.persist.questSeen && game.state === 'play' && !(EL.toast && EL.toast.classList.contains('on'))) { game.persist.questSeen = true; showToast('<b>' + esc(L.quest.who) + '.</b> ' + esc(L.quest.ask), 7000); AudioSys.play('check'); }
+    Q.mk.position.y = 2.45 + Math.sin(game.t * 4) * 0.08; Q.mk.visible = !game.persist.questDone;
   }
   /* upadek w dół */
   if (p.y < -7) killPlayer(true);
@@ -3229,17 +3930,22 @@ function moveH(p, ax, d, near, wasG) {
 }
 function moveV(p, d, near) {
   p.y += d; p.onGround = false;
-  let hit = null, best = 0;
+  let hit = null, best = 0, crush = null, head = null;
+  const vy0 = p.vy;
   for (const s of near) {
     if (!overlapBox(p, s, d <= 0 ? -1e-6 : 0)) continue;
-    if (d <= 0) { if (s.y1 - p.y < 0.9 || s.kind !== 'wall') { p.y = s.y1; p.vy = 0; p.onGround = true; p.standOn = s; } }
+    if (d <= 0) { if (s.y1 - p.y < 0.9 || s.kind !== 'wall') { p.y = s.y1; p.vy = 0; p.onGround = true; p.standOn = s; if (s.crt && vy0 < -4) crush = s.crt; } }
     else {
       p.y = s.y0 - PH.h - 1e-4; p.vy = Math.min(p.vy, -0.5); p.jumping = false;
       if (s.blk) { const ov = (Math.min(p.x + PH.hw, s.x1) - Math.max(p.x - PH.hw, s.x0)) * (Math.min(p.z + PH.hw, s.z1) - Math.max(p.z - PH.hw, s.z0)); if (ov > best) { best = ov; hit = s.blk; } }
+      if (s.crt) head = s.crt;
     }
   }
   if (!p.onGround) p.standOn = null;
   if (hit) bumpBlock(hit);
+  if (head && game.state === 'play') breakCarton(head);
+  /* skok na karton rozbija go i odbija postać w górę */
+  if (crush && game.state === 'play') { breakCarton(crush); p.vy = Input.st.jump ? PH.stompHold * 0.9 : PH.stomp * 0.85; p.onGround = false; p.standOn = null; p.jumping = true; }
 }
 
 /* ---------- bloki ---------- */
@@ -3255,11 +3961,12 @@ function bumpBlock(b) {
     b.broken = true; game.persist.bricks.add(b.id);
     game.lvl.solids = game.lvl.solids.filter((s) => s.blk !== b); indexSolids(game.lvl);
     if (b.mesh) { S3.level.remove(b.mesh); b.mesh = null; }
+    if (b.ring) { S3.level.remove(b.ring); b.ring = null; }
     for (let i = 0; i < 10; i++) FX.spawn(b.x + (rnd() - 0.5) * 0.8, b.y + 0.5, b.z + (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 6, 5 + rnd() * 4, (rnd() - 0.5) * 6, 0.9, '#b77d66', 20);
     addScore(50, pos); AudioSys.play('brick'); shakeIt(0.08);
   }
 }
-function setUsed(b) { if (b.mesh) { b.mesh.material = BLK.used; if (b.glow) { b.mesh.remove(b.glow); b.glow = null; } } }
+function setUsed(b) { if (b.mesh) { b.mesh.material = BLK.used; if (b.glow) { b.mesh.remove(b.glow); b.glow = null; } } if (b.ring) b.ring.material = BLK.rings.used; }
 function popCoin(b) {
   const m = new THREE.Mesh(BLK.coinGeo, BLK.coinMats); m.position.set(b.x, b.y + 1.1, b.z); S3.level.add(m);
   game.fcoins.push({ m, t: 0, vx: 0, vy: 6, vz: 0 });
@@ -3296,23 +4003,41 @@ function collect(kind, pos) {
   if (kind === 'cap') gainLife(pos);
   else {
     AudioSys.play('power');
-    if (kind === 'pwz') { if (p.shield) addScore(1000, pos); p.shield = true; }
-    if (kind === 'kodeks') { p.shield = true; p.kodeks = true; }
-    if (kind === 'mandat') p.fly = 10;
-    if (kind === 'seal') { p.star = 8; AudioSys.play('oneup'); }
+    /* Mandat i Pieczęć trafiają do torby, żeby użyć ich w dobrym momencie; nadmiarowe PWZ i Kodeks też */
+    const bag = (k) => { if (save.inv.length >= invSlots()) return false; save.inv.push(k); FLOATS.add('DO TORBY', pos, { t: 1.3 }); return true; };
+    if (kind === 'pwz') { if (p.shield) { if (!bag('pwz')) addScore(1000, pos); } else p.shield = true; }
+    if (kind === 'kodeks') { if (p.kodeks) { if (!bag('kodeks')) addScore(1000, pos); } else { p.shield = true; p.kodeks = true; } }
+    if (kind === 'mandat') { if (!bag('mandat')) p.fly = 10; }
+    if (kind === 'seal') { if (!bag('seal')) { p.star = 8; AudioSys.play('oneup'); } }
     if (kind !== 'pwz') addScore(500, pos);
   }
   FX.burst(pos.x, pos.y, pos.z, PAL.gold, 10, 3);
   if (!save.tips['p_' + kind]) { save.tips['p_' + kind] = 1; showToast(POWER_INFO[kind].tip(), 5200); writeSave(); }
 }
 /* paragrafy i złote paragrafy */
+function takeCoin(c, direct) {
+  const L = game.lvl;
+  c.taken = true; game.persist.coins.add(c.id);
+  if (direct) { addCoin(V3(c.x, c.y + 0.4, c.z)); FX.burst(c.x, c.y, c.z, PAL.redL, 4, 1.6); }
+  else { const m = new THREE.Mesh(BLK.coinGeo, BLK.coinMats); m.position.set(c.x, c.y, c.z); S3.level.add(m); game.fcoins.push({ m, t: 0.4, vx: 0, vy: 0, vz: 0 }); }
+  /* cała ścieżka, łuk albo krąg zebrany: premia w paragrafach */
+  const g = L.groups && L.groups[c.g];
+  if (g && g.left > 0) {
+    g.left--;
+    if (g.left === 0 && g.n >= 3 && !L.bonus) { const b = g.n >= 8 ? 5 : g.n >= 5 ? 3 : 2; game.coins += b; FLOATS.add('KOMPLET +' + b + ' §', V3(c.x, c.y + 1.1, c.z), { big: true, cls: 'ok', t: 1.3 }); AudioSys.play('streak'); }
+  }
+}
 function updatePickups(dt) {
   const L = game.lvl, p = game.player, ci = S3.coins;
   const cy = p.y + 0.8, rot = game.t * 2.4;
-  const M = tmpM, q = new THREE.Quaternion();
+  const M = tmpM, q = new THREE.Quaternion(), mr = [0, 1.5, 2.5, 3.5][upT('magnet')];
   for (let i = 0; i < L.coins.length; i++) {
     const c = L.coins[i];
-    if (!c.taken && !p.dead && Math.abs(c.z - p.z) < 0.7 && Math.abs(c.x - p.x) < 0.7 && Math.abs(c.y - cy) < 1.0) { c.taken = true; game.persist.coins.add(c.id); addCoin(V3(c.x, c.y + 0.4, c.z)); FX.burst(c.x, c.y, c.z, PAL.redL, 4, 1.6); }
+    if (!c.taken && !p.dead) {
+      const dx = c.x - p.x, dz = c.z - p.z;
+      if (Math.abs(dz) < 0.7 && Math.abs(dx) < 0.7 && Math.abs(c.y - cy) < 1.0) takeCoin(c, true);
+      else if (mr && dx * dx + dz * dz < mr * mr && Math.abs(c.y - cy) < mr * 0.8) takeCoin(c, false);
+    }
     if (c.taken) M.makeScale(0, 0, 0); else { q.setFromAxisAngle(UP, rot + c.z * 0.3); M.compose(tmpV.set(c.x, c.y + Math.sin(game.t * 3 + c.z) * 0.06, c.z), q, V3(1, 1, 1)); }
     ci.setMatrixAt(i, M);
   }
@@ -3329,6 +4054,54 @@ function updatePickups(dt) {
   }
 }
 const goldCount = (b) => (b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1);
+/* dokument z prośby postaci */
+function updateDoc() {
+  const D = game.doc, p = game.player, L = game.lvl; if (!D || D.taken) return;
+  D.m.rotation.y = game.t * 2; D.m.position.y = D.y + Math.sin(game.t * 2.5) * 0.12;
+  if (!p.dead && Math.abs(D.x - p.x) < 0.9 && Math.abs(D.z - p.z) < 0.9 && Math.abs(D.y - (p.y + 0.8)) < 1.3) {
+    D.taken = true; game.persist.doc = true; S3.level.remove(D.m);
+    AudioSys.play('gold'); FX.confetti(D.x, D.y, D.z, 14);
+    showToast('<b>Masz ' + esc(L.quest.item) + '.</b> Zanieś dokument do Izby na końcu etapu.', 3800);
+  }
+}
+/* najwyższa podłoga pod punktem (do kręgów pod blokami) */
+function floorBelow(L, x, z, y) {
+  let best = null;
+  for (const s of L.solids) { if (s.inv || s.kind === 'wall' || s.kind === 'block' || s.kind === 'carton') continue; if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1 && s.y1 <= y + 0.01 && (best === null || s.y1 > best)) best = s.y1; }
+  return best;
+}
+/* karton pęka: paragrafy albo wzmocnienie, a karton stojący wyżej opada */
+function breakCarton(c) {
+  if (!c || c.broken) return;
+  const L = game.lvl;
+  c.broken = true; game.persist.cartons.add(c.id);
+  L.solids = L.solids.filter((s) => s.crt !== c);
+  if (c.mesh) { S3.level.remove(c.mesh); c.mesh = null; }
+  for (let i = 0; i < 12; i++) FX.spawn(c.x + (rnd() - 0.5) * 0.8, c.y + 0.5, c.z + (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 6, 4 + rnd() * 4, (rnd() - 0.5) * 6, 0.9, rnd() < 0.5 ? '#c99a62' : '#e8d3a6', 22);
+  AudioSys.play('brick'); shakeIt(0.06); addScore(100, V3(c.x, c.y + 1.4, c.z));
+  if (game.st) game.st.cartons++; save.stats.cartons = (save.stats.cartons || 0) + 1;
+  if (c.content === 'item') { spawnItem(pickPower(false), { block: { x: c.x, y: c.y - 0.3, z: c.z } }); AudioSys.play('sprout'); }
+  else coinShower(V3(c.x, c.y + 0.7, c.z), 3);
+  for (const o of L.cartons) {
+    if (o.broken || o.y < c.y + 0.5 || Math.abs(o.x - c.x) > 1 || Math.abs(o.z - c.z) > 1) continue;
+    const held = L.cartons.some((u) => u !== o && !u.broken && Math.abs(u.y + 1 - o.y) < 0.05 && Math.abs(u.x - o.x) < 1 && Math.abs(u.z - o.z) < 1);
+    if (!held) { o.y -= 1; o.sol.y0 -= 1; o.sol.y1 -= 1; }
+  }
+  indexSolids(L);
+}
+/* przedmiot z torby, użyty w wybranym momencie */
+function useItem(i) {
+  const p = game.player, k = save.inv[i];
+  if (!k || p.dead || game.state !== 'play') return;
+  if ((k === 'pwz' && p.shield) || (k === 'kodeks' && p.kodeks)) { showToast('To wzmocnienie już działa. Zachowaj je na później.', 2200); return; }
+  save.inv.splice(i, 1); writeSave();
+  if (k === 'pwz') p.shield = true;
+  if (k === 'kodeks') { p.shield = true; p.kodeks = true; }
+  if (k === 'mandat') p.fly = 10;
+  if (k === 'seal') { p.star = 8; AudioSys.play('oneup'); }
+  AudioSys.play('power'); FX.burst(p.x, p.y + 1, p.z, PAL.gold, 12, 3);
+  FLOATS.add(POWER_INFO[k].name.toUpperCase(), pPos(2.2), { big: true, t: 1.2 });
+}
 /* rzucone paragrafy */
 function updateShots(dt) {
   for (const s of game.shots) {
@@ -3337,6 +4110,7 @@ function updateShots(dt) {
     s.m.position.set(s.x, s.y, s.z); s.m.rotation.y += dt * 14;
     for (const e of game.enemies) if (!e.dead && Math.abs(e.x - s.x) < e.r + 0.3 && Math.abs(e.z - s.z) < e.r + 0.3 && s.y > e.y - 0.2 && s.y < e.y + e.h + 0.3) { killEnemy(e, true); s.t = 0; break; }
     for (const l of game.letters) if (!l.dead && Math.abs(l.x - s.x) < 0.5 && Math.abs(l.z - s.z) < 0.5 && Math.abs(l.y - s.y) < 0.6) { l.dead = true; s.t = 0; addScore(100, V3(l.x, l.y + 0.5, l.z)); }
+    if (s.t > 0) for (const c of game.lvl.cartons) if (!c.broken && Math.abs(c.x - s.x) < 0.75 && Math.abs(c.z - s.z) < 0.75 && s.y > c.y - 0.2 && s.y < c.y + 1.3) { breakCarton(c); s.t = 0; break; }
   }
   game.shots = game.shots.filter((s) => { if (s.t <= 0) { S3.level.remove(s.m); return false; } return true; });
   /* pociski strażnika */
@@ -3447,6 +4221,7 @@ function updateCannons(dt) {
 function killEnemy(e, fly) {
   if (e.dead) return;
   e.dead = true;
+  if (game.st) game.st.kills++; save.stats.kills = (save.stats.kills || 0) + 1;
   if (fly) { e.squash = false; e.vy = 7; e.deadT = 1.2; AudioSys.play('kick'); }
   else { e.squash = true; e.deadT = 0.45; AudioSys.play('stomp'); }
   game.combo = (game.player.onGround ? 0 : game.combo || 0) + 1;
@@ -3495,6 +4270,7 @@ function updatePipe(dt) {
 }
 function enterRoom(pipe) {
   game.room = { lvl: game.lvl, pipe, timeLeft: game.timeLeft, player: game.player };
+  if (!game.persist.roomSeen) { game.persist.roomSeen = true; save.stats.rooms = (save.stats.rooms || 0) + 1; }
   const L = game.persist.room || buildBonus(game.w, game.s);
   game.persist.room = L;
   L.gold = L.gold.filter((gd) => !(game.persist.gold & (1 << gd.id)));
@@ -3595,6 +4371,11 @@ function startClear() {
   const h = clamp((p.y - G.base) / (G.top - G.base), 0, 1);
   const flagPts = [100, 400, 800, 2000, 5000][Math.min(4, Math.floor(h * 5))];
   game.bonus.flag = addScore(flagPts, V3(G.x, p.y + 1.6, G.z));
+  if (game.persist.doc && !game.persist.questDone && game.lvl.quest) {
+    game.persist.questDone = true; game.st.quest = true; save.stats.quests = (save.stats.quests || 0) + 1;
+    game.coins += 40; game.bonus.quest = addScore(1500);
+    FLOATS.add('PROŚBA SPEŁNIONA +40 §', V3(G.x, 3.6, G.z), { big: true, cls: 'ok', t: 2.2 });
+  }
   game.seq = { phase: 'slide', t: 0 };
   p.vx = p.vz = 0; p.vy = 0; p.fly = 0; p.x = G.x + 0.35; p.z = G.z + 0.1; p.yaw = 0;
   AudioSys.stopMusic(); AudioSys.play('flag');
@@ -3657,14 +4438,17 @@ function applyAnswer(ok, Z) {
     game.streak++; game.bestStreak = Math.max(game.bestStreak, game.streak); game.st.maxStreak = Math.max(game.st.maxStreak, game.streak);
     res.streak = game.streak; res.mult = multOf(game.streak);
     res.timeBonus = Z.max ? Math.ceil(Math.max(0, Z.t)) * 25 : 0;
-    res.pts = addScore((1000 + res.timeBonus) * (Z.ctx.bonus ? 2 : 1));
+    res.pts = addScore((1000 + res.timeBonus) * (Z.ctx.bonus ? 2 : 1) * (Z.stake ? 2 : 1) * (Z.second ? 0.5 : 1));
+    save.stats.bestStreak = Math.max(save.stats.bestStreak || 0, game.streak);
     if (game.penLvl > 0) { res.erased = WPU_PENALTIES[game.penLvl - 1].name; game.penLvl--; }
     return res;
   }
   game.streak = 0;
   if (Z.ctx.bonus) return res;
   game.st.wrong++;
-  game.penLvl = Math.min(5, game.penLvl + 1);
+  /* Opanowanie na najwyższym poziomie: pierwszy błąd w etapie bez kary */
+  if (upT('calm') >= 3 && !game.st.calmUsed) { game.st.calmUsed = true; res.calm = true; return res; }
+  game.penLvl = Math.min(5, game.penLvl + (Z.stake ? 2 : 1));
   const P = WPU_PENALTIES[game.penLvl - 1];
   res.pen = P;
   game.st.pens.push(P.name);
@@ -3673,9 +4457,10 @@ function applyAnswer(ok, Z) {
 /* skutki kary uruchamiane po zamknięciu okna pytania, razem z pieczęcią na ekranie */
 function enforcePenalty(P) {
   const p = game.player;
-  showStamp(P.name.toUpperCase(), '−' + fmt(P.pts) + ' pkt · ' + P.art, true, 2.1);
+  const pts = Math.round(P.pts * [1, 0.8, 0.65, 0.5][upT('calm')]);
+  showStamp(P.name.toUpperCase(), '−' + fmt(pts) + ' pkt · ' + P.art, true, 2.1);
   AudioSys.play('stamp'); shakeIt(0.35); flashIt(0.18, '227,5,19');
-  losePoints(P.pts, pPos(2.1));
+  losePoints(pts, pPos(2.1));
   if (P.lvl >= 2) { if (p.shield || p.kodeks || p.fly || p.star) FX.burst(p.x, p.y + 1, p.z, PAL.red, 12, 3); p.shield = false; p.kodeks = false; p.fly = 0; p.star = 0; }
   if (P.coins) {
     const n = Math.min(game.coins, P.coins); game.coins -= n;
@@ -3766,6 +4551,21 @@ function updatePlayerModel(dt) {
     if (y === null || p.hidden) sh.visible = false;
     else { sh.visible = true; const h = p.y - y, s = clamp(1.05 - h * 0.12, 0.35, 1.05); sh.position.set(p.x, y + 0.03, p.z); sh.scale.set(s, 1, s); }
   }
+  /* w locie znacznik pokazuje, gdzie postać wyląduje */
+  const lm = S3.land;
+  if (lm) {
+    lm.visible = false;
+    if (game.lvl && !p.dead && !p.onGround && game.state === 'play' && p.airT > 0.05 && !(p.fly > 0 && Input.st.jump)) {
+      let x = p.x, y = p.y, z = p.z, vy = p.vy; const h = 1 / 30;
+      for (let i = 0; i < 60; i++) {
+        const ny = y + vy * h - 0.5 * PH.g * h * h; vy -= PH.g * h; x += p.vx * h; z += p.vz * h;
+        if (vy < 0) { const top = shadowY(x, z, y); if (top !== null && ny <= top) { lm.visible = true; lm.position.set(x, top + 0.035, z); break; } }
+        y = ny; if (y < -8) break;
+      }
+      if (lm.visible && Math.hypot(lm.position.x - p.x, lm.position.z - p.z) < 0.6) lm.visible = false;
+      if (lm.visible) lm.rotation.y += dt * 2.5;
+    }
+  }
 }
 function animWorld(dt) {
   const L = game.lvl; if (!L) return;
@@ -3775,6 +4575,15 @@ function animWorld(dt) {
     else b.mesh.position.y = b.y + 0.5;
     if (b.glow) b.glow.material.opacity = 0.55 + 0.45 * Math.sin(game.t * 3);
   }
+  /* blok nad głową: krąg pod nim rozjaśnia się, gdy stoisz we właściwym miejscu */
+  const p = game.player; let aim = null;
+  if (p && !p.dead) for (const b of L.blocks) { if (b.broken || b.used || !b.ring) continue; if (Math.abs(b.x - p.x) < 0.8 && Math.abs(b.z - p.z) < 0.8 && b.y > p.y + 0.4 && b.y - p.y < 4.4) { aim = b; break; } }
+  if (S3.aim) {
+    S3.aim.visible = S3.aimGlow.visible = !!aim;
+    if (aim && !save.tips.ring && game.state === 'play') { save.tips.ring = 1; writeSave(); showToast('<b>Krąg pod blokiem</b> rozbłyska, gdy stoisz we właściwym miejscu. Teraz podskocz, a trafisz głową.', 4200); }
+    if (aim) { const k = 1.8 + Math.sin(game.t * 11) * 0.14; S3.aim.position.set(aim.x, aim.fy + 0.045, aim.z); S3.aim.scale.set(k, 1, k); S3.aimGlow.position.set(aim.x, aim.y + 0.05, aim.z); }
+  }
+  for (const c of L.cartons) if (c.mesh && !c.broken) c.mesh.position.y += (c.y + 0.5 - c.mesh.position.y) * Math.min(1, dt * 12);
   for (const sp of L.springs) if (sp.top) { sp.squash = Math.max(0, (sp.squash || 0) - dt); sp.top.position.y = sp.y + 0.62 - (sp.squash > 0 ? Math.sin((sp.squash / 0.25) * Math.PI) * 0.35 : 0); }
   for (const c of game.lvl.checkpoints) if (c.on && c.mesh && c.mesh.position.y < 2.4) c.mesh.position.y = Math.min(2.4, c.mesh.position.y + dt * 3);
 }
@@ -3794,8 +4603,34 @@ function updateCamera(dt, snap) {
   S3.cam.p.lerp(tp, k);
   S3.cam.l.lerp(V3(px * 0.9 + look[0], py + look[1], pz + look[2]), snap ? 1 : 1 - Math.exp(-dt * 8));
   cam.position.copy(S3.cam.p);
+  /* kamera nie wchodzi w półki i wysepki: przysuwa się do postaci, gdy coś stoi pomiędzy */
+  if (L && !L.boss && game.state !== 'clear' && game.state !== 'clearing') {
+    const H = V3(p.x, Math.max(p.y, -0.6) + 1.5, p.z), C = cam.position.clone(), t = camBlock(L, H, C);
+    if (t < 1) cam.position.lerpVectors(H, C, Math.max(0.22, t - 0.06));
+  }
   if (game.shake > 0) cam.position.add(V3((rnd() - 0.5) * game.shake * 0.8, (rnd() - 0.5) * game.shake * 0.6, 0));
   cam.lookAt(S3.cam.l);
+}
+/* odcinek od głowy postaci do kamery a bryły na planszy (metoda płyt), zwraca ułamek drogi do pierwszej przeszkody */
+function camBlock(L, H, C) {
+  if (!L.cells) return 1;
+  const D = [C.x - H.x, C.y - H.y, C.z - H.z], O = [H.x, H.y, H.z], e = 0.25;
+  let best = 1;
+  for (let c = Math.floor(Math.min(H.z, C.z) / 4); c <= Math.floor(Math.max(H.z, C.z) / 4); c++) {
+    const a = L.cells.get(c); if (!a) continue;
+    for (const s of a) {
+      if (s.inv || s.gone || s.y1 < 1.2 || s.kind === 'wall' || s.kind === 'ground' || s.kind === 'block' || s.kind === 'carton' || s.kind === 'pipe') continue;
+      const lo = [s.x0 - e, s.y0 - e, s.z0 - e], hi = [s.x1 + e, s.y1 + e, s.z1 + e];
+      let t0 = 0, t1 = best, ok = true;
+      for (let k = 0; k < 3 && ok; k++) {
+        if (Math.abs(D[k]) < 1e-6) { if (O[k] < lo[k] || O[k] > hi[k]) ok = false; continue; }
+        let a1 = (lo[k] - O[k]) / D[k], a2 = (hi[k] - O[k]) / D[k]; if (a1 > a2) { const t = a1; a1 = a2; a2 = t; }
+        t0 = Math.max(t0, a1); t1 = Math.min(t1, a2); if (t0 > t1) ok = false;
+      }
+      if (ok && t0 > 0.02 && t0 < best) best = t0;
+    }
+  }
+  return best;
 }
 function followSky(cam) {
   if (!S3.lights) return;
@@ -3987,7 +4822,7 @@ function renderMapInfo() {
 /* =====================================================================
    INTERFEJS: ekrany, pytania, raport, układ, sterowanie
    ===================================================================== */
-const SCREENS = ['title', 'char', 'map', 'list', 'intro', 'quiz', 'pause', 'clear', 'over', 'report', 'komp', 'help', 'settings', 'ask'];
+const SCREENS = ['title', 'char', 'map', 'list', 'intro', 'quiz', 'pause', 'clear', 'over', 'report', 'komp', 'help', 'settings', 'ask', 'shop', 'badges'];
 let current = null; const stack = [];
 let cv = null;
 const EL = {};
@@ -3997,7 +4832,7 @@ function show(id) {
   EL.root.classList.toggle('inmenu', !!id && id !== 'intro');
   EL.root.classList.toggle('playing', !id);
   if (id && EL.gest) gestReset();
-  EL.hud.hidden = !game.lvl || ['title', 'char', 'map', 'list'].includes(id);
+  EL.hud.hidden = !game.lvl || ['title', 'char', 'map', 'list', 'shop', 'badges'].includes(id);
   if (id && id !== 'intro') {
     const scr = EL['scr-' + id];
     scr.scrollTop = 0;
@@ -4015,6 +4850,8 @@ function openSub(id, opts) {
   if (id === 'settings') renderSettings();
   if (id === 'help') renderHelp();
   if (id === 'list') renderList();
+  if (id === 'shop') renderShop();
+  if (id === 'badges') renderBadges();
   show(id);
 }
 function back() {
@@ -4054,33 +4891,43 @@ function goMap() {
   game.state = 'map'; game.lvl = null; stack.length = 0;
   setAttract(Math.max(1, Math.min(8, parseInt((save.mapAt || '1-1').split('-')[0], 10) || 1)));
   G.fem = charById(save.char).fem;
+  const nbg = checkBadges();
   renderMap(); show('map'); AudioSys.music('map');
+  if (nbg.length) showToast('<b>Nowa odznaka.</b> ' + nbg.map((b) => esc(b.name) + ', nagroda ' + b.pay + ' paragrafów').join('. ') + '.', 4500);
 }
 let introTimer = 0;
 function startStage(w, s, fresh) {
   game.mode = MODES[save.mode] || MODES.std;
   G.fem = charById(save.char).fem;
-  if (fresh) { game.lives = game.mode.lives; game.score = save.score || 0; game.coins = save.coins || 0; game.streak = 0; }
-  game.stageScore = 0; game.st = newStageStats(); game.penLvl = 0; game.bonus = { time: 0, flag: 0, boss: 0, full: 0, clean: 0 }; game.bossWon = false; game.bossClean = false;
+  if (fresh) { game.lives = game.mode.lives; game.score = save.score || 0; game.streak = 0; }
+  game.coins = save.coins || 0;
+  if (save.extraLives) { game.lives += save.extraLives; save.extraLives = 0; writeSave(); }
+  game.stageScore = 0; game.st = newStageStats(); game.penLvl = 0; game.bonus = { time: 0, flag: 0, boss: 0, full: 0, clean: 0, quest: 0 }; game.bossWon = false; game.bossClean = false;
   loadStage(w, s, false);
   showIntro();
 }
 const INTRO_TIPS = [
-  'Każda dobra odpowiedź z rzędu zwiększa mnożnik serii, który mnoży wszystkie punkty w grze: ×1,5, ×2, ×3, aż do ×4.',
-  'Błędna odpowiedź to kara jak z art. 60 ustawy. Najpierw upomnienie, potem nagana, kara pieniężna, ograniczenie zakresu czynności i zawieszenie prawa wykonywania zawodu.',
-  'Dobra odpowiedź zaciera jeden stopień kary, którą masz w tym etapie.',
-  'W każdym etapie ukryto trzy złote paragrafy. Jeden z nich czeka w ukrytym pokoju za rurą poczty pneumatycznej.',
-  'Otwórz wszystkie bloki z pytaniami w etapie, a dostaniesz premię za komplet. Bez błędu dostaniesz też premię za bezbłędny etap i trzecią pieczęć.',
-  'Tablice na trasie przypominają przepisy, które sprawiły Ci kłopot. To dobra powtórka przed kolejnym pytaniem.'
+  'Każda dobra odpowiedź z rzędu zwiększa mnożnik serii, który mnoży wszystkie punkty w grze, od ×1,5 aż do ×4.',
+  'Na rozwidleniu wybierasz drogę. Bezpieczna jest spokojna, a trudna kryje złoty paragraf, wzmocnienie i dużo więcej paragrafów.',
+  'Krąg na podłodze pokazuje, gdzie stanąć pod blokiem. Gdy rozbłyśnie, skacz, a trafisz głową.',
+  'Kartony rozbijesz skokiem z góry, uderzeniem od spodu albo rzuconym paragrafem. W środku są paragrafy, czasem wzmocnienie.',
+  'Paragrafy wydasz w sklepiku na mapie. Ściąga, Konsultacja i Druga szansa pomogą przy trudnym pytaniu.',
+  'Każda misja to jedna pieczęć. Pieczęcie zdobyte w różnych podejściach do etapu sumują się.',
+  'Postać na starcie prosi o pomoc. Znajdź dokument na trasie i zanieś go do Izby, a dostaniesz 40 paragrafów.',
+  'Mandat i Pieczęć trafiają do torby. Użyj ich klawiszem E albo dotykając ikony, gdy naprawdę ich potrzebujesz.',
+  'Podwójna stawka w pytaniu daje dwa razy więcej punktów, ale błąd podnosi karę o dwa stopnie.',
+  'W każdym etapie ukryto trzy złote paragrafy. Kupisz za nie w sklepiku trwałe ulepszenia.'
 ];
 function showIntro() {
   const W = WPU_WORLDS[game.w - 1];
-  game.state = 'intro'; introTimer = 3;
+  game.state = 'intro'; introTimer = 5;
   EL.introK.textContent = 'Świat ' + game.w + ' · ' + W.chapter;
   EL.introT.innerHTML = game.s === BOSS_STAGE ? 'Strażnik <b>rozdziału</b>' : 'Etap <b>' + game.s + '</b>';
   EL.introP.textContent = nb(W.title + ' · ' + W.arts + ' · ' + (game.s === BOSS_STAGE ? W.place : stagePlace(game.w, game.s)));
   EL.introLives.textContent = '× ' + game.lives;
   EL.introTip.textContent = nb(INTRO_TIPS[(game.w * 3 + game.s) % INTRO_TIPS.length]);
+  const ms = stageMissions(game.w, game.s, game.lvl), pm = (save.progress[game.w + '-' + game.s] || {}).m || 0;
+  EL.introMiss.innerHTML = ms.map((m, i) => '<li class="' + (pm & (1 << i) ? 'on' : '') + '"><i></i><span>' + esc(nb(m.t)) + '</span></li>').join('');
   const fc = EL.introFace.getContext('2d'); fc.clearRect(0, 0, EL.introFace.width, EL.introFace.height); fc.drawImage(charPortrait(charById(save.char), EL.introFace.width, EL.introFace.height), 0, 0);
   show('intro'); AudioSys.stopMusic();
 }
@@ -4098,6 +4945,9 @@ function pauseGame() {
   if (game.state !== 'play') return;
   game.state = 'pause'; Input.clearAll();
   EL.pauseK.textContent = 'Świat ' + game.w + ' · ' + stageName(game.w, game.s).toLowerCase();
+  const ms = stageMissions(game.w, game.s, game.lvl), now = missionState(ms, game.st, false), pm = (save.progress[game.w + '-' + game.s] || {}).m || 0;
+  EL.pauseMiss.innerHTML = ms.map((m, i) => '<li class="' + (now[i] || pm & (1 << i) ? 'on' : '') + '"><i></i><span>' + esc(nb(m.t)) + missionNote(m) + '</span></li>').join('');
+  EL.pauseInv.textContent = nb(invText());
   show('pause'); AudioSys.stopMusic(); AudioSys.play('pause');
 }
 function resumeGame() {
@@ -4116,25 +4966,25 @@ function stageCleared() {
   game.state = 'clear'; AudioSys.stopMusic();
   const boss = game.s === BOSS_STAGE, L = game.lvl, st = game.st, qt = L.quizTotal || 0;
   if (!boss && qt && st.n >= qt) { game.bonus.full = addScore(2000); if (st.wrong === 0) game.bonus.clean = addScore(3000); }
-  let stars;
-  if (boss) stars = game.bossWon ? (st.wrong === 0 ? 3 : 2) : 1;
-  else { stars = 1; if (qt && st.ok >= Math.ceil(qt / 2)) stars = 2; if (qt && st.n >= qt && st.wrong === 0) stars = 3; }
+  const ms = stageMissions(game.w, game.s, L), mdone = missionState(ms, st, true);
+  let mrun = 0; mdone.forEach((d, i) => { if (d) mrun |= 1 << i; });
   const gold = game.persist.gold;
-  const key = game.w + '-' + game.s, prev = save.progress[key] || {};
-  save.progress[key] = { done: true, best: Math.max(prev.best || 0, game.stageScore), ok: st.ok, n: st.n, stars: Math.max(prev.stars || 0, stars), gold: (prev.gold || 0) | gold, won: boss ? !!game.bossWon || !!prev.won : true };
+  const key = game.w + '-' + game.s, prev = save.progress[key] || {}, mAll = (prev.m || 0) | mrun, stars = Math.max(prev.stars || 0, popcount(mAll));
+  save.progress[key] = { done: true, best: Math.max(prev.best || 0, game.stageScore), ok: st.ok, n: st.n, stars, m: mAll, gold: (prev.gold || 0) | gold, won: boss ? !!game.bossWon || !!prev.won : true };
   save.score = game.score; save.coins = game.coins; save.best = Math.max(save.best || 0, game.score);
-  const next = game.s < BOSS_STAGE ? [game.w, game.s + 1] : game.w < 8 ? [game.w + 1, 1] : null;
+  const badges = checkBadges(); game.coins = save.coins;
+  const next = nextTarget(game.w, game.s);
   if (next) save.mapAt = next[0] + '-' + next[1];
   writeSave();
   const W = WPU_WORLDS[game.w - 1];
   EL.clearK.textContent = 'Świat ' + game.w + ' · ' + stageName(game.w, game.s).toLowerCase();
   if (boss && game.bossWon) EL.clearT.innerHTML = 'Wątpliwość <b>rozwiana!</b>';
   else if (boss) EL.clearT.innerHTML = 'Wątpliwość <b>odeszła</b>';
-  else EL.clearT.innerHTML = stars === 3 ? 'Etap <b>bez zarzutu!</b>' : 'Etap <b>zaliczony!</b>';
+  else EL.clearT.innerHTML = popcount(mrun) === 3 ? 'Etap <b>bez zarzutu!</b>' : 'Etap <b>zaliczony!</b>';
   let p;
   if (boss && game.bossWon) p = g('Pokonałaś strażnika rozdziału „' + W.title + '”.', 'Pokonałeś strażnika rozdziału „' + W.title + '”.');
   else if (boss) p = 'Tym razem zabrakło dobrych odpowiedzi, ale kolejny świat stoi otworem. Zajrzyj do kompendium i wróć po trzy pieczęcie.';
-  else p = g('Dotarłaś do Izby.', 'Dotarłeś do Izby.') + (st.n < qt ? ' Pominięte bloki z pytaniami odbierają premię za komplet i trzecią pieczęć.' : '');
+  else p = g('Dotarłaś do Izby.', 'Dotarłeś do Izby.') + (st.n < qt ? ' Pominięte bloki z pytaniami odbierają premię za komplet i misję z pytaniami.' : '');
   EL.clearP.textContent = nb(p);
   EL.clearSeals.innerHTML = [0, 1, 2].map((k) => '<i class="' + (k < stars ? 'on' : '') + '"></i>').join('') + '<small>pieczęcie</small>';
   EL.clearGolds.innerHTML = boss ? '' : [0, 1, 2].map((k) => '<i class="' + (gold & (1 << k) ? 'on' : '') + '"></i>').join('') + '<small>złote paragrafy</small>';
@@ -4147,22 +4997,52 @@ function stageCleared() {
     boss ? [fmt(game.bonus.boss), 'Premia za strażnika'] : [fmt(game.bonus.flag), 'Premia za flagę'],
     [fmt(game.bonus.time), 'Premia za czas'],
     [game.bonus.full ? fmt(game.bonus.full) : '–', 'Premia za komplet'],
-    [game.bonus.clean ? fmt(game.bonus.clean) : '–', 'Bezbłędny etap']
+    [game.bonus.clean ? fmt(game.bonus.clean) : '–', 'Bezbłędny etap'],
+    boss ? null : [fmt(st.coins), 'Zebrane paragrafy'],
+    boss ? null : [st.quest ? fmt(game.bonus.quest) : '–', 'Premia za prośbę']
   ];
   const shown = stats.filter(Boolean);
   if (boss) shown.splice(4, 3);
   EL.clearStats.innerHTML = shown.map(([v, l]) => '<div class="wpu-stat"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>').join('');
+  EL.clearMiss.innerHTML = ms.map((x, i) => '<li class="' + (mdone[i] || (prev.m || 0) & (1 << i) ? 'on' : '') + '"><i></i><span>' + esc(nb(x.t)) + (mdone[i] ? '<small>zaliczona teraz</small>' : (prev.m || 0) & (1 << i) ? '<small>zaliczona wcześniej</small>' : '<small>do zrobienia w kolejnym podejściu</small>') + '</span></li>').join('');
+  const extra = [];
+  if (st.quest) extra.push('Prośba spełniona, dostajesz 40 paragrafów.');
+  badges.forEach((b) => extra.push('Nowa odznaka „' + b.name + '”, nagroda ' + b.pay + ' paragrafów.'));
+  extra.push('W portfelu masz ' + fmt(save.coins) + ' paragrafów, a złotych paragrafów do wydania ' + goldFree() + '.');
+  EL.clearExtra.textContent = nb(extra.join(' '));
   EL.clearPens.textContent = st.pens.length ? nb('Kary w tym etapie ' + st.pens.join(', ').toLowerCase() + '. Każda dobra odpowiedź zaciera jeden stopień kary.') : '';
   const last = game.w === 8 && boss;
   EL.btnNext.querySelector('span').textContent = last ? 'Zobacz raport wiedzy' : 'Dalej';
   EL.btnNext.dataset.act = last ? 'final' : 'next';
   show('clear');
 }
+/* następny etap: najpierw nieukończone etapy świata, potem strażnik, potem kolejny świat */
+function nextTarget(w, s) {
+  const done = (a, b) => !!(save.progress[a + '-' + b] || {}).done;
+  for (let k = 1; k < BOSS_STAGE; k++) if (!done(w, k) && stageUnlocked(w, k)) return [w, k];
+  if (stageUnlocked(w, BOSS_STAGE) && !done(w, BOSS_STAGE)) return [w, BOSS_STAGE];
+  return w < 8 ? [w + 1, 1] : null;
+}
 function nextStage() {
-  let w = game.w, s = game.s + 1;
-  if (s > BOSS_STAGE) { w++; s = 1; }
-  if (w > 8) { goMap(); return; }
-  startStage(w, s, false);
+  const t = nextTarget(game.w, game.s);
+  if (!t || !stageUnlocked(t[0], t[1])) { goMap(); return; }
+  startStage(t[0], t[1], false);
+}
+function missionNote(m) {
+  const st = game.st; if (!st) return '';
+  if (m.id === 'coins') return '<small>zebrane ' + st.coins + ' z ' + m.n + '</small>';
+  if (m.id === 'kills') return '<small>pokonani ' + st.kills + ' z ' + m.n + '</small>';
+  if (m.id === 'cartons') return '<small>rozbite ' + st.cartons + ' z ' + m.n + '</small>';
+  if (m.id === 'time') return '<small>upłynęło ' + Math.floor(st.t) + ' s</small>';
+  if (m.id === 'quiz') return '<small>otwarte ' + st.n + ' z ' + (game.lvl.quizTotal || 0) + ', błędy ' + st.wrong + '</small>';
+  if (m.id === 'gold') return '<small>zebrane ' + goldCount(game.persist.gold) + ' z 3</small>';
+  if (m.id === 'quest') return '<small>' + (game.persist.doc ? 'dokument masz przy sobie' : 'dokument jeszcze czeka na trasie') + '</small>';
+  return '';
+}
+function invText() {
+  const names = save.inv.map((k) => POWER_INFO[k].name);
+  const L = save.life;
+  return (names.length ? 'W torbie ' + names.join(', ') + '.' : 'Torba jest pusta.') + ' Koła ratunkowe, Ściąga ' + (L.sciaga || 0) + ', Konsultacja ' + (L.konsult || 0) + ', Druga szansa ' + (L.druga || 0) + '.';
 }
 
 /* ---------- okno pytania ---------- */
@@ -4171,14 +5051,16 @@ function openQuiz(ctx2) {
   const q = pickQuestion(game.w, final);
   game.asked.add(q.id);
   const opts = q.tf ? [{ t: 'Prawda', ok: q.ans === true }, { t: 'Fałsz', ok: q.ans === false }] : shuffle(q.o.map((t, i) => ({ t, ok: i === 0 })));
-  game.quiz = { q, ctx: ctx2, opts, answered: false, ok: false, t: game.mode.time, max: game.mode.time, res: null };
+  const qt = game.mode.time ? game.mode.time + 5 * upT('watch') : 0;
+  game.quiz = { q, ctx: ctx2, opts, answered: false, ok: false, t: qt, max: qt, res: null, stake: false, second: false, secondArmed: false, usedL: {} };
   game.state = 'quiz'; Input.clearAll(); AudioSys.duck(true);
   game.qshots = []; EL.toast.classList.remove('on');
   const W = WPU_WORLDS[q.w - 1];
   EL.quizMeta.textContent = (ctx2.bonus ? 'Pytanie premiowe · bez kary · ' : ctx2.boss ? 'Strażnik rozdziału · ' : 'Pytanie · ') + W.chapter;
   const nextMult = multOf(game.streak + 1);
   EL.quizStreak.hidden = false;
-  EL.quizStreak.firstChild.textContent = game.streak ? 'Seria ' + game.streak + ' · stawka ' + fmtMult(nextMult) : 'Stawka ' + fmtMult(nextMult) + (game.penLvl ? ' · kara ' + WPU_PENALTIES[game.penLvl - 1].name.toLowerCase() : '');
+  game.quizLabel = (st2) => (game.streak ? 'Seria ' + game.streak + ' · stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) : 'Stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) + (game.penLvl ? ' · kara ' + WPU_PENALTIES[game.penLvl - 1].name.toLowerCase() : '')) + (st2 ? ' · podwójna' : '');
+  EL.quizStreak.firstChild.textContent = game.quizLabel(false);
   EL.quizQ.textContent = nb(q.q);
   EL.quizTimer.hidden = !game.mode.time;
   EL.quizBar.style.width = '100%';
@@ -4190,15 +5072,50 @@ function openQuiz(ctx2) {
     b.addEventListener('click', () => answerQuiz(i));
     EL.quizOpts.appendChild(b);
   });
-  EL.quizFb.hidden = true; EL.quizNext.hidden = true;
+  EL.quizFb.hidden = true; EL.quizNext.hidden = true; EL.quizHint.hidden = true;
+  renderLife();
   show('quiz');
+}
+/* koła ratunkowe i podwójna stawka w oknie pytania */
+function renderLife() {
+  const Z = game.quiz; if (!Z) return;
+  const L = save.life, four = !Z.q.tf, a = Z.answered;
+  const btn = (id, label, n, en, on, title) => '<button type="button" data-life="' + id + '"' + (en ? '' : ' disabled') + ' class="' + (on ? 'on' : '') + (id === 'stake' ? ' stake' : '') + '" title="' + esc(title) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(label) + (n !== null ? ' <b>' + n + '</b>' : '') + '</button>';
+  EL.quizLife.innerHTML =
+    btn('sciaga', 'Ściąga', L.sciaga || 0, !a && four && L.sciaga > 0 && !Z.usedL.sciaga, Z.usedL.sciaga, 'Usuwa dwie błędne odpowiedzi. Klawisz Q') +
+    btn('konsult', 'Konsultacja', L.konsult || 0, !a && L.konsult > 0 && !Z.usedL.konsult, Z.usedL.konsult, 'Pokazuje przepis i usuwa jedną błędną odpowiedź. Klawisz W') +
+    btn('druga', 'Druga szansa', L.druga || 0, !a && L.druga > 0 && !Z.secondArmed && !Z.second, Z.secondArmed, 'Po błędzie wybierzesz jeszcze raz, bez kary. Klawisz E') +
+    (Z.ctx.bonus ? '' : btn('stake', 'Podwójna stawka', null, !a && !Z.second, Z.stake, 'Dwa razy więcej punktów, ale błąd podnosi karę o dwa stopnie. Klawisz R'));
+}
+function useLife(id) {
+  const Z = game.quiz; if (!Z || Z.answered) return;
+  const btns = $$('.wpu-opt', EL.quizOpts), wrong = Z.opts.map((o, i) => (!o.ok && !btns[i].disabled ? i : -1)).filter((i) => i >= 0);
+  const L = save.life;
+  if (id === 'stake') { if (Z.second || Z.ctx.bonus) return; Z.stake = !Z.stake; AudioSys.play('tick'); EL.quizStreak.firstChild.textContent = game.quizLabel(Z.stake); }
+  else if (id === 'sciaga') { if (Z.q.tf || !(L.sciaga > 0) || Z.usedL.sciaga) return; L.sciaga--; Z.usedL.sciaga = 1; shuffle(wrong).slice(0, 2).forEach((i) => { btns[i].disabled = true; btns[i].classList.add('fade'); }); AudioSys.play('power'); }
+  else if (id === 'konsult') {
+    if (!(L.konsult > 0) || Z.usedL.konsult) return; L.konsult--; Z.usedL.konsult = 1;
+    if (!Z.q.tf && wrong.length > 1) { const i = wrong[Math.floor(rnd() * wrong.length)]; btns[i].disabled = true; btns[i].classList.add('fade'); }
+    EL.quizHint.innerHTML = '<b>Konsultacja.</b> ' + esc(nb('To pytanie dotyczy przepisu ' + Z.q.art + ' ustawy o samorządzie pielęgniarek i położnych.')); EL.quizHint.hidden = false; AudioSys.play('power');
+  }
+  else if (id === 'druga') { if (!(L.druga > 0) || Z.secondArmed || Z.second) return; Z.secondArmed = true; AudioSys.play('power'); }
+  writeSave(); renderLife(); fitFrame();
 }
 function answerQuiz(i) {
   const Z = game.quiz; if (!Z || Z.answered) return;
-  Z.answered = true;
   const ok = i >= 0 && Z.opts[i].ok;
+  /* Druga szansa: pierwszy błąd bez skutków, wybierasz jeszcze raz (do raportu trafia pierwsza odpowiedź) */
+  if (!ok && i >= 0 && Z.secondArmed && !Z.second) {
+    Z.secondArmed = false; Z.second = true; Z.stake = false; EL.quizStreak.firstChild.textContent = game.quizLabel(false); save.life.druga = Math.max(0, (save.life.druga || 0) - 1);
+    recordAnswer(Z.q, false); knowCache = null;
+    const b = $$('.wpu-opt', EL.quizOpts)[i]; b.disabled = true; b.classList.add('bad');
+    EL.quizHint.innerHTML = '<b>Druga szansa.</b> ' + esc(nb('Ta odpowiedź jest błędna. Wybierz jeszcze raz, bez kary za pierwszy błąd.')); EL.quizHint.hidden = false;
+    AudioSys.play('wrong'); renderLife(); fitFrame(); return;
+  }
+  Z.answered = true;
   Z.ok = ok;
-  recordAnswer(Z.q, ok);
+  if (Z.second) { const a = save.answers[Z.q.id]; if (a) { a.last = ok; writeSave(); } } else recordAnswer(Z.q, ok);
+  renderLife();
   knowCache = null;
   const res = applyAnswer(ok, Z); Z.res = res;
   const btns = $$('.wpu-opt', EL.quizOpts);
@@ -4211,7 +5128,7 @@ function answerQuiz(i) {
   let rp = '';
   if (ok) {
     const items = [];
-    items.push('1000 pkt za odpowiedź' + (res.timeBonus ? ' i ' + fmt(res.timeBonus) + ' pkt za czas' : '') + (res.bonus ? ', razy 2 za pytanie premiowe' : '') + (res.mult > 1 ? ', razy ' + fmtMult(res.mult).slice(1) + ' za serię' : ''));
+    items.push('1000 pkt za odpowiedź' + (res.timeBonus ? ' i ' + fmt(res.timeBonus) + ' pkt za czas' : '') + (res.bonus ? ', razy 2 za pytanie premiowe' : '') + (Z.stake ? ', razy 2 za podwójną stawkę' : '') + (Z.second ? ', połowa za drugą szansę' : '') + (res.mult > 1 ? ', razy ' + fmtMult(res.mult).slice(1) + ' za serię' : ''));
     items.push('Seria ' + res.streak + (res.streak === 1 ? ' dobrej odpowiedzi' : ' dobrych odpowiedzi') + '. Mnożnik ' + fmtMult(multOf(res.streak)) + ' działa teraz na wszystkie punkty w grze.');
     if (res.erased) items.push('Zatarcie kary. Twoja kara „' + res.erased.toLowerCase() + '” spada o jeden stopień.');
     if (Z.ctx.boss) items.push('Strażnik traci jedno pole wytrzymałości.');
@@ -4220,11 +5137,15 @@ function answerQuiz(i) {
     else if (game.streak > 0 && game.streak % 3 === 0) items.push('Nagroda w bloku to deszcz paragrafów i Pieczęć, czyli 8 sekund nietykalności.');
     else items.push('Nagroda w bloku to deszcz paragrafów i wzmocnienie.');
     rp = '<div class="wpu-rp ok"><span class="wpu-label">Nagroda</span><span class="big">+' + fmt(res.pts) + ' pkt</span><ul>' + items.map((x) => '<li>' + esc(nb(x)) + '</li>').join('') + '</ul></div>';
+  } else if (res.calm) {
+    rp = '<div class="wpu-rp"><span class="wpu-label">Opanowanie</span><ul><li>' + esc(nb('Pierwszy błąd w etapie nie niesie kary dzięki ulepszeniu Opanowanie. Seria dobrych odpowiedzi wraca jednak do zera.')) + '</li></ul></div>';
   } else if (res.bonus) {
     rp = '<div class="wpu-rp"><span class="wpu-label">Pytanie premiowe</span><ul><li>' + esc(nb('To pytanie nie niesie kary. Seria dobrych odpowiedzi wraca jednak do zera.')) + '</li></ul></div>';
   } else {
     const P = res.pen;
     const items = [P.effect, 'Seria dobrych odpowiedzi wraca do zera.'];
+    if (Z.stake) items.unshift('Podwójna stawka podniosła karę o dwa stopnie.');
+    if (upT('calm')) items.push('Opanowanie zmniejsza utratę punktów za karę.');
     if (P.life && game.mode.soft) items[0] = 'Tracisz 2000 pkt, a przez 20 sekund nie możesz biegać ani rzucać. W trybie Nauka nie tracisz życia.';
     if (Z.ctx.boss) items.push('Wątpliwość rośnie w siłę i odzyskuje jedno pole wytrzymałości.');
     if (P.lvl < 5) items.push('Następny błąd w tym etapie to „' + WPU_PENALTIES[P.lvl].name.toLowerCase() + '”. Dobra odpowiedź zaciera jeden stopień kary.');
@@ -4282,6 +5203,10 @@ function updateHUD() {
   if (hudCache.sk !== sk) { hudCache.sk = sk; EL.hudStreakChip.hidden = !sk; EL['hud-streak'].textContent = sk; EL.hudStreakChip.classList.toggle('hot', game.streak >= 3); }
   const pk = game.limitT > 0 ? 'Ograniczenie ' + Math.ceil(game.limitT) + ' s' : game.penLvl ? WPU_PENALTIES[game.penLvl - 1].name : '';
   if (hudCache.pk !== pk) { hudCache.pk = pk; EL.hudPenChip.hidden = !pk; EL['hud-pen'].textContent = pk; }
+  const ik = save.inv.join(',') + '|' + invSlots();
+  if (hudCache.ik !== ik) { hudCache.ik = ik; renderInv(); }
+  const dk = game.persist && game.persist.doc && !game.persist.questDone ? 1 : 0;
+  if (hudCache.dk !== dk) { hudCache.dk = dk; EL.hudDoc.hidden = !dk; }
   const gk = game.lvl.boss ? -1 : game.persist.gold;
   if (hudCache.gk !== gk) { hudCache.gk = gk; EL.hudGoldChip.hidden = gk < 0; $$('i', EL.hudGold).forEach((ii, k) => ii.classList.toggle('on', gk >= 0 && !!(gk & (1 << k)))); }
   let pw = null, frac = 1;
@@ -4292,6 +5217,44 @@ function updateHUD() {
     hudCache.pw = pwKey; EL.hudPw.hidden = !pw;
     if (pw) { EL.hudPwn.textContent = pw; EL.hudPwb.style.width = Math.round(frac * 100) + '%'; }
   }
+}
+
+/* torba: ikony przedmiotów u góry ekranu, dotknięcie albo klawisz używa przedmiotu */
+const invIcons = {};
+function invIcon(k) { if (!invIcons[k]) { const o = buildPower(k); o.rotation.y = Math.PI; invIcons[k] = modelIcon(o, 64, { zoom: 0.75 }); disposeTree(o); } return invIcons[k]; }
+function renderInv() {
+  const n = invSlots(); EL.hudInv.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const k = save.inv[i], b = document.createElement('button'); b.type = 'button'; b.className = 'wpu-ib' + (k ? '' : ' empty');
+    if (k) {
+      const c = document.createElement('canvas'); c.width = c.height = 64; c.getContext('2d').drawImage(invIcon(k), 0, 0); b.appendChild(c);
+      const sm = document.createElement('small'); sm.textContent = String(i + 1); b.appendChild(sm);
+      b.dataset.slot = String(i); b.title = POWER_INFO[k].name; b.setAttribute('aria-label', 'Użyj, ' + POWER_INFO[k].name);
+    } else { b.disabled = true; b.setAttribute('aria-label', 'Puste miejsce w torbie'); }
+    EL.hudInv.appendChild(b);
+  }
+}
+
+/* ---------- sklepik i odznaki ---------- */
+function renderShop(msg) {
+  EL.shopWallet.innerHTML = '<span><b>' + fmt(save.coins || 0) + '</b> paragrafów</span><span class="g"><b>' + goldFree() + '</b> złotych do wydania</span><span>W torbie <b>' + save.inv.length + '</b> z ' + invSlots() + '</span>' + (save.extraLives ? '<span>Czepki na start <b>' + save.extraLives + '</b></span>' : '');
+  EL.shopItems.innerHTML = SHOP.map((it) => {
+    const have = it.kind === 'life' ? 'masz ' + (save.life[it.id] || 0) + ' z ' + it.max : it.kind === 'cap' ? 'masz ' + (save.extraLives || 0) + ' z ' + it.max : save.inv.filter((k) => k === it.id).length + ' w torbie';
+    const room = it.kind === 'life' ? (save.life[it.id] || 0) < it.max : it.kind === 'cap' ? (save.extraLives || 0) < it.max : save.inv.length < invSlots();
+    const can = (save.coins || 0) >= it.price && room;
+    return '<div class="wpu-shopc"><h4>' + esc(it.name) + '<small>' + esc(have) + '</small></h4><p>' + esc(nb(it.tip)) + '</p><div class="row"><b>' + it.price + ' §</b><button class="wpu-btn" type="button" data-buy="' + it.id + '"' + (can ? '' : ' disabled') + '><span>Kup</span></button></div></div>';
+  }).join('');
+  EL.shopUps.innerHTML = UPGRADES.map((u) => {
+    const t = upT(u.id), c = UP_COST[Math.min(2, t)], can = t < 3 && goldFree() >= c;
+    const cost = t >= 3 ? 'komplet' : c === 1 ? '1 złoty §' : c + ' złote §';
+    return '<div class="wpu-shopc up"><h4>' + esc(u.name) + '<small>poziom ' + t + ' z 3</small></h4><div class="tiers">' + [0, 1, 2].map((k) => '<i class="' + (k < t ? 'on' : '') + '"></i>').join('') + '</div><p>' + esc(nb(t < 3 ? 'Następny poziom. ' + u.tiers[t] + '.' : 'Najwyższy poziom. ' + u.tiers[2] + '.')) + '</p><div class="row"><b>' + esc(cost) + '</b><button class="wpu-btn" type="button" data-up="' + u.id + '"' + (can ? '' : ' disabled') + '><span>' + (t < 3 ? 'Ulepsz' : 'Gotowe') + '</span></button></div></div>';
+  }).join('');
+  EL.shopMsg.textContent = msg ? nb(msg) : '';
+}
+function renderBadges() {
+  const n = BADGES.filter((b) => save.badges[b.id]).length;
+  EL.badgesP.textContent = nb('Zdobyte odznaki ' + n + ' z ' + BADGES.length + '. Każda odznaka to jednorazowa nagroda w paragrafach, które wydasz w sklepiku.');
+  EL.badgesList.innerHTML = BADGES.map((b) => { const on = !!save.badges[b.id]; return '<div class="wpu-badge' + (on ? ' on' : '') + '"><i>' + (on ? '§' : '?') + '</i><div><b>' + esc(b.name) + '</b><span>' + esc(nb(b.t)) + '</span><small>' + (on ? 'zdobyta, nagroda ' : 'nagroda ') + b.pay + ' §</small></div></div>'; }).join('');
 }
 
 /* ---------- wybór postaci ---------- */
@@ -4323,11 +5286,13 @@ function pickMode(id) { chosenMode = id; $$('.wpu-mode', EL.modeList).forEach((b
 function animateChars() {}
 
 /* ---------- mapa i lista etapów ---------- */
+/* etapy 1–3 świata w dowolnej kolejności, strażnik po dwóch z nich, nowy świat po strażniku */
 function stageUnlocked(w, s) {
   if (save.settings.free) return true;
-  if (w === 1 && s === 1) return true;
-  if (s > 1) return !!(save.progress[w + '-' + (s - 1)] || {}).done;
-  return !!(save.progress[(w - 1) + '-' + BOSS_STAGE] || {}).done;
+  const done = (a, b) => !!(save.progress[a + '-' + b] || {}).done;
+  if (w > 1 && !done(w - 1, BOSS_STAGE)) return false;
+  if (s < BOSS_STAGE) return true;
+  return [1, 2, 3].filter((k) => done(w, k)).length >= 2 || done(w, BOSS_STAGE);
 }
 function doneCount() { let n = 0; for (const k in save.progress) if (save.progress[k].done) n++; return n; }
 function renderMap() {
@@ -4335,7 +5300,7 @@ function renderMap() {
   EL.mapStats.innerHTML = [
     ['Postać', c.name], ['Tryb', (MODES[save.mode] || MODES.std).name], ['Punkty', fmt(save.score || 0)],
     ['Wiedza', k.pct === null ? 'brak odpowiedzi' : k.pct + '%'], ['Etapy', doneCount() + ' z ' + TOTAL_STAGES],
-    ['Pieczęcie', starsTotal() + ' z ' + TOTAL_STAGES * 3], ['Złote paragrafy', goldTotal() + ' z ' + 8 * 3 * 3]
+    ['Pieczęcie', starsTotal() + ' z ' + TOTAL_STAGES * 3], ['Złote paragrafy', goldTotal() + ' z ' + 8 * 3 * 3], ['Portfel', fmt(save.coins || 0) + ' §'], ['Odznaki', BADGES.filter((b) => save.badges[b.id]).length + ' z ' + BADGES.length]
   ].map(([l, v]) => '<span>' + esc(l) + ' <b>' + esc(v) + '</b></span>').join('');
   let [w, s] = (save.mapAt || '1-1').split('-').map(Number);
   if (!stageUnlocked(w, s)) { const open = mapNodes().filter((n) => stageUnlocked(n.w, n.s)); const l = open[open.length - 1]; w = l.w; s = l.s; }
@@ -4432,11 +5397,16 @@ function renderHelp() {
     ['rw', 'Dobra odpowiedź', '1000 pkt, w trybach z limitem także 25 pkt za każdą pozostałą sekundę. Do tego wzmocnienie i deszcz paragrafów z bloku.'],
     ['rw', 'Seria dobrych odpowiedzi', 'Mnożnik wszystkich punktów w grze. Dwie z rzędu ×1,5, trzy ×2, pięć ×3, osiem ×4. Za trzecią z rzędu Pieczęć, za piątą Czepek.'],
     ['rw', 'Zatarcie kary', 'Każda dobra odpowiedź obniża o jeden stopień karę, którą masz w etapie.'],
-    ['rw', 'Pytanie premiowe', 'Złoty blok w ukrytym pokoju. Podwójne punkty i dodatkowe życie, a za błąd nie ma kary.']
+    ['rw', 'Pytanie premiowe', 'Złoty blok w ukrytym pokoju. Podwójne punkty i dodatkowe życie, a za błąd nie ma kary.'],
+    ['rw', 'Podwójna stawka', 'Włączasz ją w oknie pytania. Dobra odpowiedź daje dwa razy więcej punktów, a błędna podnosi karę o dwa stopnie.'],
+    ['rw', 'Koła ratunkowe', 'Ściąga usuwa dwie błędne odpowiedzi, Konsultacja pokazuje przepis i usuwa jedną, Druga szansa pozwala wybrać jeszcze raz bez kary. Kupisz je w sklepiku za paragrafy.'],
+    ['rw', 'Prośba postaci', 'Postać na starcie etapu zgubiła dokument. Znajdź go na trasie i zanieś do Izby, a dostaniesz 40 paragrafów i 1500 pkt.'],
+    ['rw', 'Komplet paragrafów', 'Zebrana w całości ścieżka, łuk albo krąg paragrafów daje od 2 do 5 paragrafów premii.']
   ];
   WPU_PENALTIES.forEach((P) => rows.push(['pen', (P.lvl === 1 ? 'Pierwszy' : P.lvl === 2 ? 'Drugi' : P.lvl === 3 ? 'Trzeci' : P.lvl === 4 ? 'Czwarty' : 'Piąty i kolejny') + ' błąd w etapie · ' + P.name, P.effect + (P.life ? ' W trybie Nauka zamiast tego 20 sekund ograniczenia.' : '') + ' Wzorem jest ' + P.art + '.']));
   rows.push(['rw', 'Premie etapu', 'Flaga do 5000 pkt, czas 10 pkt za sekundę, komplet pytań 2000 pkt, bezbłędny etap 3000 pkt, złoty paragraf 2000 pkt. Wszystko razy mnożnik serii.']);
-  rows.push(['rw', 'Pieczęcie etapu', 'Jedna za ukończenie, druga za co najmniej połowę dobrych odpowiedzi, trzecia za komplet pytań bez błędu. U strażnika druga za zwycięstwo, trzecia za zwycięstwo bez błędu.']);
+  rows.push(['rw', 'Pieczęcie etapu', 'Każdy etap ma trzy misje i każda daje jedną pieczęć. Pierwsza za dojście do Izby, druga za wszystkie pytania bez błędu, trzecia jest inna w każdym etapie. Pieczęcie z różnych podejść sumują się. U strażnika pieczęć za walkę, za zwycięstwo i za zwycięstwo bez błędu.']);
+  rows.push(['rw', 'Odznaki', 'Dwanaście osiągnięć, każde z jednorazową nagrodą w paragrafach. Zobaczysz je na mapie.']);
   EL.helpScore.innerHTML = '<div class="wpu-tablewrap"><table class="wpu-table"><thead><tr><th>Sytuacja</th><th>Co się dzieje</th></tr></thead><tbody>' +
     rows.map(([c, a, b]) => '<tr class="' + c + '"><td><b>' + esc(a) + '</b></td><td>' + esc(nb(b)) + '</td></tr>').join('') + '</tbody></table></div>';
   const blk = (k) => { const m = blockMesh(k); return m; };
@@ -4451,13 +5421,17 @@ function renderHelp() {
     [blk('bonus'), 'Złoty blok', 'Pytanie premiowe w ukrytym pokoju.'],
     [blk('item'), 'Blok z wykrzyknikiem', 'Wzmocnienie bez pytania.'],
     [blk('brick'), 'Cegły', 'Rozbijesz je głową. Blok z paragrafem daje kilka paragrafów.'],
-    [coin(), 'Paragraf', 'Każde 100 paragrafów to dodatkowe życie.'],
-    [gold(), 'Złoty paragraf', 'Trzy w każdym etapie, część w trudno dostępnych miejscach.'],
+    [coin(), 'Paragraf', 'Waluta sklepiku i 10 pkt. Paragrafy układają się w ścieżki, które prowadzą Cię po planszy.'],
+    [new THREE.Mesh(BLK.geo, BLK.carton), 'Karton', 'Rozbij go skokiem z góry, głową od spodu albo rzuconym paragrafem. W środku są paragrafy, czasem wzmocnienie.'],
+    [new THREE.Mesh(BLK.ringGeo, BLK.rings.quiz), 'Krąg pod blokiem', 'Pokazuje, gdzie stanąć. Gdy jasno rozbłyśnie, podskocz, a trafisz głową w blok.'],
+    [new THREE.Mesh(BLK.ringGeo, BLK.land), 'Znacznik lądowania', 'W locie pokazuje, gdzie wylądujesz.'],
+    [buildDoc(), 'Dokument z prośby', 'Zanieś go do Izby na końcu etapu.'],
+    [gold(), 'Złoty paragraf', 'Trzy w każdym etapie, na trudnej drodze, na górnej trasie i w ukrytym pokoju. Kupisz za nie ulepszenia.'],
     [pipe(), 'Rura poczty pneumatycznej', 'Stań na niej i naciśnij strzałkę w dół albo szybko przesuń palec w dół. Prowadzi do ukrytego pokoju.'],
     [turn(buildPower('pwz')), 'PWZ', 'Prawo wykonywania zawodu chroni przed jednym trafieniem.'],
-    [turn(buildPower('mandat')), 'Mandat', '10 sekund lotu. Przytrzymaj skok.'],
+    [turn(buildPower('mandat')), 'Mandat', 'Trafia do torby. Po użyciu 10 sekund lotu z przytrzymanym skokiem.'],
     [turn(buildPower('kodeks')), 'Kodeks', 'Rzut paragrafem klawiszem Shift albo X albo dwoma szybkimi dotknięciami ekranu.'],
-    [turn(buildPower('seal')), 'Pieczęć', '8 sekund nietykalności.'],
+    [turn(buildPower('seal')), 'Pieczęć', 'Trafia do torby. Po użyciu 8 sekund nietykalności.'],
     [turn(buildPower('cap')), 'Czepek', 'Dodatkowe życie.'],
     [turn(buildEnemy('form')), 'Zaległy formularz', 'Wskocz na niego z góry.'],
     [turn(buildEnemy('rumor')), 'Plotka', 'Podskakuje. Wskocz na nią albo traf paragrafem.'],
@@ -4700,6 +5674,8 @@ const ACTIONS = {
   map: () => { AudioSys.duck(false); goMap(); },
   mapplay: () => { if (stageUnlocked(MAP.sel.w, MAP.sel.s)) { AudioSys.init(); startStage(MAP.sel.w, MAP.sel.s, true); } },
   list: () => openSub('list'),
+  shop: () => openSub('shop'),
+  badges: () => openSub('badges'),
   help: () => openSub('help'),
   komp: () => openSub('komp'),
   report: () => openSub('report'),
@@ -4738,10 +5714,12 @@ function init() {
     pauseK: $('#pause-k'), clearK: $('#clear-k'), clearT: $('#clear-t'), clearP: $('#clear-p'), clearStats: $('#clear-stats'), clearSeals: $('#clear-seals'), clearGolds: $('#clear-golds'), clearPens: $('#clear-pens'), btnNext: $('#btn-next'), overP: $('#over-p'),
     repK: $('#rep-k'), repT: $('#rep-t'), repP: $('#rep-p'), repPct: $('#rep-pct'), repRank: $('#rep-rank'), repStats: $('#rep-stats'), repBars: $('#rep-bars'), repMiss: $('#rep-miss'),
     kompP: $('#komp-p'), kompAll: $('#komp-all'), kompList: $('#komp-list'), helpLegend: $('#help-legend'), helpScore: $('#help-score'),
-    askT: $('#ask-t'), askP: $('#ask-p'), askYes: $('#ask-yes'), askNo: $('#ask-no')
+    askT: $('#ask-t'), askP: $('#ask-p'), askYes: $('#ask-yes'), askNo: $('#ask-no'),
+    hudInv: $('#hud-inv'), hudDoc: $('#hud-doc'), introMiss: $('#intro-miss'), pauseMiss: $('#pause-miss'), pauseInv: $('#pause-inv'), clearMiss: $('#clear-miss'), clearExtra: $('#clear-extra'),
+    quizLife: $('#quiz-life'), quizHint: $('#quiz-hint'), shopWallet: $('#shop-wallet'), shopItems: $('#shop-items'), shopUps: $('#shop-ups'), shopMsg: $('#shop-msg'), badgesP: $('#badges-p'), badgesList: $('#badges-list')
   });
   cv = $('#wpu-canvas');
-  initRenderer(cv); initBlocks();
+  initRenderer(cv); initBlocks(); initExtras();
   EL.stamp = $('#wpu-stamp'); EL.iris = $('#wpu-iris'); EL.flash = $('#wpu-flash'); EL.ring = $('#gest-ring'); EL.knob = $('#gest-knob');
   FLOATS.el = $('#wpu-floats');
   $('#wpu-logo').src = LOGO_SRC;
@@ -4764,6 +5742,15 @@ function init() {
   EL.kompList.addEventListener('toggle', () => fitFrame(), true);
   EL.repMiss.addEventListener('toggle', () => fitFrame(), true);
   $('#hud-pause').addEventListener('click', () => { AudioSys.init(); pauseGame(); });
+  EL.hudInv.addEventListener('click', (e) => { const b = e.target.closest('[data-slot]'); if (b && game.state === 'play') { e.preventDefault(); game.useReq = +b.dataset.slot; } });
+  EL.quizLife.addEventListener('click', (e) => { const b = e.target.closest('[data-life]'); if (b) useLife(b.dataset.life); });
+  EL['scr-shop'].addEventListener('click', (e) => {
+    const b = e.target.closest('[data-buy],[data-up]'); if (!b || b.disabled) return;
+    const err = b.dataset.buy ? buyItem(b.dataset.buy) : buyUpgrade(b.dataset.up);
+    AudioSys.play(err ? 'bump' : 'coin');
+    const nm = b.dataset.buy ? shopItem(b.dataset.buy).name : UPGRADES.find((u) => u.id === b.dataset.up).name;
+    renderShop(err || (b.dataset.buy ? 'Kupione. ' + nm + ' czeka na Ciebie.' : 'Ulepszone. ' + nm + ' działa od następnego etapu.'));
+  });
   EL.gest.addEventListener('pointerdown', gestDown);
   EL.gest.addEventListener('pointermove', gestMove);
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => EL.gest.addEventListener(t, gestUp));
@@ -4807,6 +5794,8 @@ function onKey(e) {
     if (!Z.answered && !e.repeat) {
       const m = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, KeyA: 0, KeyB: 1, KeyC: 2, KeyD: 3 }[e.code];
       if (m !== undefined && m < Z.opts.length) { e.preventDefault(); answerQuiz(m); return; }
+      const lf = { KeyQ: 'sciaga', KeyW: 'konsult', KeyE: 'druga', KeyR: 'stake' }[e.code];
+      if (lf) { e.preventDefault(); useLife(lf); return; }
       if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
         e.preventDefault();
         const bs = $$('.wpu-opt', EL.quizOpts), i = bs.indexOf(document.activeElement);
@@ -4823,9 +5812,11 @@ function onKey(e) {
   }
   if (st === 'intro' && (e.code === 'Enter' || e.code === 'Space') && !e.repeat) { e.preventDefault(); beginPlay(); return; }
   if (st === 'pause' && (e.code === 'KeyP' || e.code === 'Escape') && current === 'pause' && !e.repeat) { e.preventDefault(); resumeGame(); return; }
-  if (e.code === 'Escape' && ['report', 'komp', 'help', 'settings', 'list'].includes(current)) { e.preventDefault(); back(); return; }
+  if (e.code === 'Escape' && ['report', 'komp', 'help', 'settings', 'list', 'shop', 'badges'].includes(current)) { e.preventDefault(); back(); return; }
   if (st === 'play' || st === 'dying' || st === 'clearing' || st === 'pipe') {
     if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) { e.preventDefault(); pauseGame(); return; }
+    const slot = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 }[e.code];
+    if (slot !== undefined && !e.repeat && st === 'play') { e.preventDefault(); game.useReq = slot; return; }
     if (e.code === 'KeyM' && !e.repeat) { save.settings.music = !save.settings.music; writeSave(); AudioSys.refreshMusic(); if (save.settings.music && game.state === 'play') AudioSys.music(game.room ? 'bonus' : game.boss ? 'boss' : game.theme.music); return; }
     const k = Input.KEYMAP[e.code];
     if (k) { e.preventDefault(); Input.setSrc('k', k, true); }
