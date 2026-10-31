@@ -281,16 +281,20 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
 /* sterowanie gestami: prawa połowa ekranu to ruch w prawo, lewa w lewo, przesunięcie w górę to skok */
 .wpu-gest{display:none;position:absolute;inset:0;z-index:2;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-size:14px;overflow:hidden}
 .wpu.touch.playing:not(.padon) .wpu-gest{display:block}
-.wpu-gest .ring,.wpu-gest .knob{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .15s}
+.wpu-gest .ring,.wpu-gest .knob,.wpu-gest .jpad{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .15s}
 .wpu-gest .ring{width:108px;height:108px;margin:-54px 0 0 -54px;border:3px solid rgba(255,255,255,.6);background:rgba(26,23,24,.14)}
 .wpu-gest .knob{width:44px;height:44px;margin:-22px 0 0 -22px;background:rgba(255,255,255,.75);border:3px solid var(--red)}
+.wpu-gest .jpad{width:76px;height:76px;margin:-38px 0 0 -38px;border:3px solid rgba(255,255,255,.75);background:rgba(227,5,19,.35)}
 .wpu-gest.held .ring,.wpu-gest.held .knob{opacity:1}
-.wpu-gest .gh{position:absolute;left:50%;transform:translateX(-50%);display:block;color:#fff;background:rgba(26,23,24,.66);border-left:.28em solid var(--red);
-  padding:.4em .75em;font-weight:600;line-height:1.25;max-width:82%;width:max-content;text-align:center;opacity:0;transition:opacity .5s;pointer-events:none}
-.wpu-gest .gh.c{bottom:4.6em}
-.wpu-gest .gh.u{bottom:1em}
-.wpu-gest.hint .gh{opacity:1}
-/* napisy nad planszą, pieczęć, błysk i przejście */
+.wpu-gest.act .jpad{opacity:1}
+.wpu-gest .gz{position:absolute;bottom:0;top:0;width:50%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 1em 1.4em;opacity:0;transition:opacity .4s;text-align:center;color:#fff}
+.wpu-gest .gz.m{left:0;background:linear-gradient(90deg,rgba(255,255,255,.1),rgba(255,255,255,0))}
+.wpu-gest .gz.j{right:0;background:linear-gradient(270deg,rgba(227,5,19,.16),rgba(227,5,19,0))}
+.wpu-gest.lefty .gz.m{left:auto;right:0;background:linear-gradient(270deg,rgba(255,255,255,.1),rgba(255,255,255,0))}
+.wpu-gest.lefty .gz.j{right:auto;left:0;background:linear-gradient(90deg,rgba(227,5,19,.16),rgba(227,5,19,0))}
+.wpu-gest .gz b{font-size:1.6em;letter-spacing:.2em;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.wpu-gest .gz span{font-size:.86em;line-height:1.3;max-width:16em;background:rgba(26,23,24,.66);padding:.35em .6em;margin-top:.4em;border-left:.28em solid var(--red)}
+.wpu-gest.hint .gz{opacity:1}
 .wpu-floats{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
 .wpu-float{position:absolute;left:0;top:0;font-weight:700;font-size:1.05em;color:#fff;text-shadow:0 1px 0 #1a1718,0 0 6px rgba(0,0,0,.55);white-space:nowrap;will-change:transform}
 .wpu-float.big{font-size:1.45em;letter-spacing:.04em}
@@ -400,6 +404,28 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
 .wpu-badge b{display:block;font-size:.92em}
 .wpu-badge span{display:block;font-size:.78em;color:var(--g3);line-height:1.3}
 .wpu-badge small{display:block;font-size:.72em;font-weight:600;color:var(--g4);margin-top:.15em}
+.wpu-qstrip{position:absolute;left:50%;top:2.8em;transform:translateX(-50%);width:max-content;max-width:min(88%,40em);z-index:3;pointer-events:none;background:rgba(26,23,24,.88);color:#fff;border-left:.32em solid var(--red);padding:.45em .8em;font-size:.86em;line-height:1.35;text-align:left}
+.wpu-qstrip small{display:block;font-size:.72em;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#ff8a90;margin-bottom:.15em}
+.wpu-qstrip.done{opacity:.6}
+.wpu.strip .wpu-toast{top:7.6em}
+.gapm{display:inline-block;min-width:3em;border-bottom:2px solid var(--red);text-align:center;color:var(--red);font-weight:700;line-height:1}
+.wpu-opt[aria-pressed="true"]{background:#fff;box-shadow:inset 0 0 0 2px var(--ink)}
+.wpu-opt .n{margin-left:auto;flex:none;min-width:1.4em;height:1.4em;display:inline-grid;place-items:center;background:var(--red);color:#fff;font-weight:700;font-size:.8em}
+.wpu-opt .n:empty{display:none}
+.wpu-float.say{font-weight:400;font-size:.82em;white-space:normal;max-width:15em;text-align:center;background:rgba(255,255,255,.94);color:var(--ink);text-shadow:none;padding:.35em .6em;border-left:.28em solid var(--red);box-shadow:0 .2em .6em rgba(0,0,0,.2);line-height:1.25}
+.wpu-mems{display:grid;grid-template-columns:repeat(auto-fill,minmax(14em,1fr));gap:.5em}
+.wpu-mem{background:var(--l3);border-left:6px solid var(--l1);padding:.55em .7em;display:flex;gap:.7em;align-items:flex-start;min-width:0}
+.wpu-mem.on{border-left-color:#e7b416;background:#fffaf0}
+.wpu-mem canvas{flex:none;width:3.4em;height:3.4em;background:#fff;border:1px solid var(--l1)}
+.wpu-mem i{flex:none;width:3.4em;height:3.4em;display:grid;place-items:center;font-style:normal;font-weight:700;font-size:1.4em;color:#fff;background:var(--l1)}
+.wpu-mem b{display:block;font-size:.95em}
+.wpu-mem span{display:block;font-size:.78em;color:var(--g3);line-height:1.35;margin-top:.15em}
+.wpu-mem small{display:block;font-size:.68em;color:var(--g4);margin-top:.2em;word-break:break-all}
+.wpu-chron{list-style:none;margin:0;padding:0;display:grid;gap:.4em}
+.wpu-chron li{display:grid;grid-template-columns:4.2em minmax(0,1fr);gap:.6em;background:var(--l3);border-left:6px solid var(--l1);padding:.45em .7em;font-size:.86em;line-height:1.35}
+.wpu-chron li.on{border-left-color:var(--red)}
+.wpu-chron li b{color:var(--red);font-variant-numeric:tabular-nums}
+.wpu-izba p{margin:.3em 0;font-size:.9em;line-height:1.45}
 </style>
 <style id="wpu-fonts">
 /* Titillium Web (SIL Open Font License), osadzony w pliku */
@@ -437,6 +463,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
       <button class="wpu-hbtn rotb" id="hud-rot" type="button" aria-label="Obróć grę na bok" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 9.4A5.4 5.4 0 1 1 11.6 4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.6 1.4v5.2H9.4z" fill="currentColor"/></svg></button>
       <button class="wpu-hbtn" id="hud-pause" type="button" aria-label="Pauza">II</button>
     </div>
+    <div class="wpu-qstrip" id="wpu-qstrip" role="status" hidden><small id="qstrip-k"></small><span id="qstrip-t"></span></div>
     <div class="wpu-floats" id="wpu-floats" aria-hidden="true"></div>
     <div class="wpu-stampbox" id="wpu-stamp" aria-hidden="true"></div>
     <div class="wpu-flash" id="wpu-flash" aria-hidden="true"></div>
@@ -451,7 +478,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <span class="wpu-logo"><img id="wpu-logo" alt="Okręgowa Izba Pielęgniarek i Położnych w Słupsku"></span>
             <span class="wpu-kicker">Gra edukacyjna</span>
             <h1 class="wpu-h1">Wyprawa przez <b>Ustawę</b></h1>
-            <p class="wpu-lead" data-nb>Przemierz osiem światów ustawy o samorządzie pielęgniarek i położnych, od kampusu uczelni przez szpital i porodówkę po dom pacjenta. Skacz, wybieraj drogi, rozbijaj kartony, pomagaj spotkanym osobom i uderzaj w bloki z pytajnikiem. Każdy blok to pytanie, a każda odpowiedź trafia do Twojego raportu wiedzy. Za zebrane paragrafy kupisz w sklepiku koła ratunkowe i ulepszenia.</p>
+            <p class="wpu-lead" data-nb>Przemierz osiem światów ustawy o samorządzie pielęgniarek i położnych, od kampusu uczelni przez szpital i porodówkę po dom pacjenta. Skacz, wybieraj drogi, rozbijaj kartony i pomagaj spotkanym osobom. Wiedzę sprawdzisz w blokach z pytajnikiem, w bramkach prawdy, w lukach w przepisach i we właściwych drzwiach, a każda odpowiedź trafia do Twojego raportu wiedzy. W zakątkach czekają pamiątki zawodu pielęgniarki i położnej.</p>
           </div>
           <div class="wpu-pbody">
             <div class="wpu-btns">
@@ -512,6 +539,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <button class="wpu-btn big" type="button" data-act="mapplay" id="map-play" data-focus><span>Graj</span></button>
             <button class="wpu-btn alt" type="button" data-act="shop"><span>Sklepik</span></button>
             <button class="wpu-btn alt" type="button" data-act="badges"><span>Odznaki</span></button>
+            <button class="wpu-btn alt" type="button" data-act="chron"><span>Kronika zawodu</span></button>
             <button class="wpu-btn ghost" type="button" data-act="list"><span>Lista etapów</span></button>
             <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="komp"><span>Kompendium</span></button>
@@ -557,7 +585,9 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <p class="wpu-q" id="quiz-q"></p>
           <div class="wpu-life" id="quiz-life"></div>
           <p class="wpu-qhint" id="quiz-hint" hidden></p>
+          <p class="wpu-small" id="quiz-how" hidden></p>
           <div class="wpu-opts" id="quiz-opts"></div>
+          <div class="wpu-btns" id="quiz-confirm" hidden><button class="wpu-btn" type="button" data-act="quiz-confirm"><span>Zatwierdź</span></button><button class="wpu-btn ghost" type="button" data-act="quiz-undo" id="quiz-undo"><span>Cofnij</span></button></div>
           <div class="wpu-fb" id="quiz-fb" hidden>
             <div class="v" id="quiz-v"></div>
             <div class="wpu-rp" id="quiz-rp"></div>
@@ -603,6 +633,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-btns">
             <button class="wpu-btn big" type="button" data-act="next" id="btn-next"><span>Dalej</span></button>
             <button class="wpu-btn alt" type="button" data-act="shop"><span>Sklepik</span></button>
+            <button class="wpu-btn ghost" type="button" data-act="chron"><span>Kronika zawodu</span></button>
             <button class="wpu-btn ghost" type="button" data-act="map"><span>Mapa ustawy</span></button>
             <button class="wpu-btn ghost" type="button" data-act="report"><span>Raport wiedzy</span></button>
           </div>
@@ -634,6 +665,22 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <p class="wpu-lead" id="badges-p"></p></div>
         <div class="wpu-pbody">
           <div class="wpu-badges" id="badges-list"></div>
+          <div class="wpu-btns"><button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KRONIKA ZAWODU -->
+    <div class="wpu-screen dim" id="scr-chron">
+      <div class="wpu-panel wide">
+        <div class="wpu-phead"><span class="wpu-kicker">Kronika zawodu</span><h2 class="wpu-h2">Pamiątki i <b>historia</b></h2><p class="wpu-lead" id="chron-p"></p></div>
+        <div class="wpu-pbody">
+          <div class="wpu-sec"><h3>Pamiątki zawodu</h3></div>
+          <div class="wpu-mems" id="chron-mem"></div>
+          <div class="wpu-sec"><h3>Kronika</h3></div>
+          <ul class="wpu-chron" id="chron-list"></ul>
+          <div class="wpu-sec"><h3>O Izbie</h3></div>
+          <div class="wpu-izba" id="chron-izba"></div>
           <div class="wpu-btns"><button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button></div>
         </div>
       </div>
@@ -689,7 +736,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
     <div class="wpu-screen dim" id="scr-help">
       <div class="wpu-panel wide">
         <div class="wpu-phead"><span class="wpu-kicker">Instrukcja</span><h2 class="wpu-h2">Jak <b>grać?</b></h2>
-          <p class="wpu-lead" data-nb>Dojdź do flagi przed Izbą na końcu każdego etapu. Uderzaj głową w czerwone bloki z pytajnikiem, bo każdy z nich kryje pytanie z ustawy. Krąg na podłodze pokazuje, gdzie stanąć pod blokiem, a w locie znacznik pokazuje, gdzie wylądujesz. Po drodze miniesz place pełne ludzi, rozwidlenia z bezpieczną i trudną drogą, górne trasy i kartony do rozbicia. Każdy etap ma trzy misje, a każda misja to pieczęć. Paragrafy wydasz w sklepiku na koła ratunkowe, wzmocnienia i dodatkowe życie, a złote paragrafy na trwałe ulepszenia. Światy to miejsca, w których pracują pielęgniarki, pielęgniarze, położne i położni, od kampusu i przychodni, przez szpital, oddział ratunkowy i porodówkę, po dom pacjenta. Etapy 1, 2 i 3 świata przechodzisz w dowolnej kolejności, a strażnik rozdziału, czyli Wątpliwość, czeka po dwóch z nich.</p></div>
+          <p class="wpu-lead" data-nb>Dojdź do flagi przed Izbą na końcu każdego etapu. Uderzaj głową w czerwone bloki z pytajnikiem, bo każdy z nich kryje pytanie z ustawy. Na trasie czekają też próby wiedzy bez okna, czyli bramki prawdy, luki w przepisach i właściwe drzwi, w których odpowiadasz ruchem postaci. Pytania mają różne formy, od jednokrotnego wyboru przez prawdę i fałsz po wskazanie wszystkich poprawnych odpowiedzi i ułożenie kroków w kolejności. Krąg na podłodze pokazuje, gdzie stanąć pod blokiem, a w locie znacznik pokazuje, gdzie wylądujesz. Po drodze miniesz place pełne ludzi, rozwidlenia z bezpieczną i trudną drogą, górne trasy i kartony do rozbicia. Każdy etap ma trzy misje, a każda misja to pieczęć. Paragrafy wydasz w sklepiku na koła ratunkowe, wzmocnienia i dodatkowe życie, a złote paragrafy na trwałe ulepszenia. Światy to miejsca, w których pracują pielęgniarki, pielęgniarze, położne i położni, od kampusu i przychodni, przez szpital, oddział ratunkowy i porodówkę, po dom pacjenta. Etapy 1, 2 i 3 świata przechodzisz w dowolnej kolejności, a strażnik rozdziału, czyli Wątpliwość, czeka po dwóch z nich.</p></div>
         <div class="wpu-pbody">
           <div class="wpu-sec"><h3>Sterowanie</h3></div>
           <div class="wpu-keys">
@@ -702,7 +749,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <kbd>Q W E R</kbd><span>w oknie pytania Ściąga, Konsultacja, Druga szansa i podwójna stawka</span>
             <kbd>1–4</kbd><span>wybór odpowiedzi (także A, B, C, D)</span>
             <kbd>P Esc</kbd><span>pauza</span>
-            <kbd>Ekran dotykowy</kbd><span>przytrzymaj palec w dowolnym miejscu, aby iść naprzód, i przesuwaj go w lewo albo w prawo, aby skręcać. Przeciągnij palec w dół, aby się cofnąć. Szybko przesuń palec w górę albo dotknij ekranu drugim palcem, aby skoczyć, a przytrzymaj, aby skoczyć wyżej. Szybkie przesunięcie w dół na rurze to wejście do ukrytego pokoju, a dwa szybkie dotknięcia to rzut paragrafem. Przyciski na ekranie włączysz w ustawieniach</span>
+            <kbd>Ekran dotykowy</kbd><span>lewa część ekranu to ruch, prawa to skok. Przytrzymaj palec po lewej, aby iść naprzód, i przesuwaj go, aby skręcać albo się cofać. Dotknij po prawej, aby skoczyć, przytrzymaj dłużej, aby skoczyć wyżej (z Mandatem lecisz). Dwa szybkie dotknięcia po prawej to rzut paragrafem, a szybkie przesunięcie palca w dół po prawej na rurze to wejście do ukrytego pokoju. Stojąc na rurze, możesz też przytrzymać palec ruchu pociągnięty w dół. Strony zamienisz w ustawieniach, a przyciski na ekranie też tam włączysz</span>
             <kbd>Pad</kbd><span>gałka albo krzyżak to ruch, przycisk A skok, X bieg i rzut, Y przedmiot z torby, Start pauza</span>
           </div>
           <div class="wpu-sec"><h3>Zasady punktacji</h3></div>
@@ -722,8 +769,10 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
           <div class="wpu-toggle"><span>Efekty dźwiękowe</span><button type="button" data-set="sfx" aria-pressed="true">Tak</button></div>
           <div class="wpu-toggle"><span>Muzyka</span><button type="button" data-set="music" aria-pressed="true">Tak</button></div>
           <div class="wpu-toggle"><span>Ograniczenie ruchu (bez wstrząsów i błysków)</span><button type="button" data-set="reduce" aria-pressed="false">Nie</button></div>
+          <div class="wpu-toggle"><span>Cienie (ładniejszy obraz, więcej pracy dla telefonu)</span><button type="button" data-set="shadows" aria-pressed="false">Nie</button></div>
           <div class="wpu-toggle"><span>Swobodny wybór świata (dla szkoleń)</span><button type="button" data-set="free" aria-pressed="false">Nie</button></div>
           <div class="wpu-toggle"><span>Przyciski sterowania na ekranie dotykowym zamiast gestów</span><button type="button" data-set="pad" aria-pressed="false">Nie</button></div>
+          <div class="wpu-toggle"><span>Ruch prawym kciukiem, skok lewym (dla leworęcznych)</span><button type="button" data-set="lefty" aria-pressed="false">Nie</button></div>
           <div class="wpu-btns">
             <button class="wpu-btn alt" type="button" data-act="wipe"><span>Wyczyść postęp</span></button>
             <button class="wpu-btn ghost" type="button" data-act="back"><span>Wróć</span></button>
@@ -746,9 +795,9 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
   </div>
 
   <div class="wpu-gest" id="wpu-gest" aria-hidden="true">
-    <i class="ring" id="gest-ring"></i><i class="knob" id="gest-knob"></i>
-    <div class="gh c"><span>Przytrzymaj palec, aby iść naprzód, i przesuwaj go w lewo albo w prawo, aby skręcać</span></div>
-    <div class="gh u"><span>Szybko przesuń palec w górę albo dotknij drugim palcem, aby skoczyć</span></div>
+    <i class="ring" id="gest-ring"></i><i class="knob" id="gest-knob"></i><i class="jpad" id="gest-jpad"></i>
+    <div class="gz m"><b>RUCH</b><span>Przytrzymaj palec po tej stronie, aby iść naprzód. Przesuwaj go, aby skręcać albo się cofać</span></div>
+    <div class="gz j"><b>SKOK</b><span>Dotknij po tej stronie, aby skoczyć. Przytrzymaj dłużej, a skoczysz wyżej. Dwa szybkie dotknięcia to rzut</span></div>
   </div>
   <div class="wpu-pad" id="wpu-pad" aria-hidden="true">
     <div class="grp">
@@ -811,6 +860,10 @@ const WPU_PENALTIES = [
 ];
 
 const WPU_QUESTIONS = [
+  { id: '1-g1', w: 1, kind: 'gap', art: 'art. 2 ust. 3', q: 'Przynależność pielęgniarek i położnych do samorządu jest ___.', o: ['obowiązkowa', 'dobrowolna', 'odpłatna'],
+    e: 'Przynależność do samorządu jest obowiązkowa. Członkiem samorządu zostaje każda osoba, która ma stwierdzone albo przyznane prawo wykonywania zawodu.' },
+  { id: '2-g1', w: 2, kind: 'gap', art: 'art. 8 ust. 1', q: 'Kadencja organów izby trwa ___.', o: ['4 lata', '3 lata', '5 lat'],
+    e: 'Kadencja organów izby trwa 4 lata. Tę samą funkcję w organach izby można pełnić nie dłużej niż przez dwie następujące po sobie kadencje.' },
   /* ---------- ŚWIAT 1 · Rozdział 1 · art. 1–3 ---------- */
   { id: '1-01', w: 1, art: 'art. 1', q: 'Co określa ustawa o samorządzie pielęgniarek i położnych?',
     o: ['Organizację i zadania samorządu zawodowego pielęgniarek i położnych oraz prawa i obowiązki jego członków', 'Zasady wynagradzania pielęgniarek i położnych', 'Programy studiów pielęgniarskich i położniczych', 'Zasady finansowania świadczeń przez NFZ'],
@@ -1260,6 +1313,9 @@ const WPU_QUESTIONS = [
     e: 'Prawda. To jedno z zadań finansowanych z budżetu państwa wymienionych w art. 91 ust. 1.' }
 ];
 
+/* Treści kulturowe (zastępcze; pełne dane z researchu wczytuje build) */
+const WPU_CULTURE = { mementos: [], npcLines: [], tips: [], posters: [], izba: [], chronicle: [] };
+
 </script>
 <script>
 (() => {
@@ -1333,7 +1389,7 @@ const g = (f, m) => (G.fem ? f : m);
 const SAVE_KEY = 'wpu-save-v2', OLD_KEY = 'wpu-save-v1';
 function newSave() {
   return { v: 2, char: null, name: '', mode: 'std', progress: {}, answers: {}, score: 0, coins: 0, best: 0,
-    tips: {}, mapAt: '1-1', settings: { sfx: true, music: true, reduce: false, free: false },
+    tips: {}, mapAt: '1-1', settings: { sfx: true, music: true, reduce: false, free: false, lefty: false, shadows: 'auto' }, mementos: {},
     inv: [], life: { sciaga: 0, konsult: 0, druga: 0 }, up: {}, goldSpent: 0, extraLives: 0, badges: {},
     stats: { cartons: 0, quests: 0, hard: 0, rooms: 0, kills: 0, bossWon: 0, bestStreak: 0 } };
 }
@@ -1795,11 +1851,12 @@ const FLOATS = {
     s.className = 'wpu-float' + (o.big ? ' big' : '') + (o.cls ? ' ' + o.cls : '');
     s.textContent = txt;
     this.el.appendChild(s);
-    this.list.push({ s, p: pos.clone(), t: o.t || 1, t0: o.t || 1, rise: o.rise === undefined ? 1.2 : o.rise });
+    this.list.push({ s, p: pos.clone(), t: o.t || 1, t0: o.t || 1, rise: o.rise === undefined ? (o.follow ? 0 : 1.2) : o.rise, follow: o.follow || null, oy: o.oy || 0 });
   },
   update(dt, camera, w, h) {
     for (const f of this.list) {
       f.t -= dt; f.p.y += f.rise * dt;
+      if (f.follow) f.p.set(f.follow.position.x, f.follow.position.y + f.oy, f.follow.position.z);
       tmpV.copy(f.p).project(camera);
       const vis = tmpV.z < 1 && f.t > 0;
       f.s.style.opacity = vis ? Math.min(1, f.t / (f.t0 * 0.35)).toFixed(2) : '0';
@@ -1818,11 +1875,23 @@ function initRenderer(canvas) {
   const r = new THREE.WebGLRenderer({ canvas, antialias: (window.devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
   R3.dpr = Math.min(window.devicePixelRatio || 1, touch ? 1.6 : 2);
   r.setPixelRatio(R3.dpr);
+  R3.touch = touch;
+  r.shadowMap.enabled = shadowsOn(); r.shadowMap.type = THREE.PCFSoftShadowMap;
   maxAniso = Math.min(8, r.capabilities.getMaxAnisotropy());
   R3.renderer = r;
   R3.camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 400);
   initMats();
   FX.init();
+}
+/* cienie: na komputerze włączone, na ekranie dotykowym wyłączone, chyba że gracz zdecyduje inaczej */
+function shadowsOn() { const v = save.settings.shadows; return v === true || (v !== false && !R3.touch); }
+function setShadows(on) {
+  const r = R3.renderer; if (!r) return;
+  r.shadowMap.enabled = on; r.shadowMap.needsUpdate = true;
+  if (S3.scene) S3.scene.traverse((o) => { if (o.isLight && o.isDirectionalLight) o.castShadow = on; if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); });
+}
+function shadowFlags(root) {
+  root.traverse((o) => { if ((o.isMesh || o.isInstancedMesh) && !o.userData.noShadow) { o.castShadow = true; o.receiveShadow = true; } });
 }
 function resizeRenderer(w, h) {
   R3.w = w; R3.h = h;
@@ -2184,6 +2253,23 @@ function buildDoc() {
   return g;
 }
 
+/* ---------- pamiątki zawodu: małe modele na piedestale w zakątku ---------- */
+function buildMemento(kind) {
+  const gb = new GB(), g = new THREE.Group();
+  if (kind === 'lamp') { gb.cyl(0, 0, 0, 0.26, 0.08, '#b08d3a', 12); gb.sph(0, 0.22, 0, 0.26, '#d4ad52', 1, { sy: 0.62 }); gb.cyl(0.28, 0.2, 0, 0.06, 0.3, '#b08d3a', 6, { rz: Math.PI / 2 }); gb.torus(0, 0.42, 0, 0.14, 0.025, '#b08d3a', { seg: 10 }); const fl = new THREE.Sprite(MATS.glowGold); fl.scale.set(0.9, 0.9, 1); fl.position.set(0.44, 0.28, 0); g.add(fl); }
+  else if (kind === 'cap') { gb.box(0, 0, 0, 0.56, 0.22, 0.4, '#ffffff'); gb.box(0, 0.22, 0.02, 0.5, 0.16, 0.3, '#ffffff'); gb.box(0, 0.1, -0.205, 0.56, 0.07, 0.01, INK); }
+  else if (kind === 'badge') { gb.cyl(0, 0, 0, 0.3, 0.05, PAL.gold, 20, { rx: Math.PI / 2 }); gb.cyl(0, 0, -0.026, 0.22, 0.01, PAL.red, 20, { rx: Math.PI / 2 }); gb.box(0, 0.3, 0, 0.18, 0.34, 0.03, '#ffffff'); gb.box(0, 0.3, 0.001, 0.06, 0.34, 0.03, PAL.red); }
+  else if (kind === 'book') { gb.box(0, 0, 0, 0.5, 0.64, 0.14, PAL.red, { side: '#f2f2f2' }); gb.box(-0.24, 0, 0, 0.04, 0.64, 0.15, PAL.redD); gb.box(0, 0.26, -0.071, 0.3, 0.05, 0.01, PAL.gold); gb.box(0, 0.16, -0.071, 0.18, 0.04, 0.01, PAL.gold); }
+  else if (kind === 'banner') { gb.cyl(0, 0, 0, 0.03, 1.1, '#9aa1a8', 6); gb.box(0.26, 0.5, 0, 0.5, 0.5, 0.02, '#ffffff'); gb.box(0.26, 0.5, -0.011, 0.5, 0.12, 0.01, PAL.red); gb.sph(0, 1.12, 0, 0.05, PAL.gold, 0); }
+  else if (kind === 'pwz') { gb.box(0, 0, 0, 0.62, 0.42, 0.04, '#ffffff', { side: '#d9dde1' }); gb.box(0, 0.3, -0.021, 0.62, 0.1, 0.01, PAL.red); gb.box(-0.17, 0.08, -0.022, 0.18, 0.2, 0.01, '#9fb3c4'); gb.box(0.12, 0.17, -0.022, 0.24, 0.03, 0.01, '#6c6e70'); }
+  else if (kind === 'stethoscope') { gb.torus(0, 0.2, 0, 0.22, 0.025, '#2d2d2d', { seg: 14 }); gb.cyl(0.1, -0.05, 0, 0.09, 0.04, '#c4c8cc', 12); gb.cyl(-0.18, 0.4, 0, 0.02, 0.2, '#9aa1a8', 6, { rz: 0.4 }); gb.cyl(0.18, 0.4, 0, 0.02, 0.2, '#9aa1a8', 6, { rz: -0.4 }); }
+  else if (kind === 'bell') { gb.cone(0, 0, 0, 0.3, 0.42, PAL.gold, 14); gb.sph(0, 0.42, 0, 0.07, PAL.goldD, 0); gb.sph(0, 0.0, 0, 0.06, PAL.goldD, 0); }
+  else if (kind === 'hymn') { gb.box(0, 0, 0, 0.52, 0.66, 0.02, '#fffdf5', { rx: -0.25 }); for (let i = 0; i < 5; i++) gb.box(0, 0.12 + i * 0.1, -0.012, 0.4, 0.012, 0.005, INK, { rx: -0.25 }); gb.sph(-0.1, 0.3, -0.02, 0.03, INK, 0); gb.sph(0.08, 0.42, -0.02, 0.03, INK, 0); }
+  else { gb.cyl(0, 0.1, 0, 0.08, 0.6, '#fffdf5', 12, { rz: Math.PI / 2 }); gb.box(0, 0.1, 0, 0.5, 0.36, 0.01, '#fffdf5'); gb.box(0, 0.15, -0.006, 0.36, 0.02, 0.005, '#9aa1a8'); gb.box(0, 0.08, -0.006, 0.3, 0.02, 0.005, '#9aa1a8'); gb.cyl(0, 0.06, -0.01, 0.06, 0.012, PAL.red, 10, { rx: Math.PI / 2 }); }
+  g.add(gb.mesh());
+  return g;
+}
+
 /* =====================================================================
    MIEJSCA ŚWIATÓW W 3D: kolory, światło, otoczenie ścieżki, szyldy
    Ścieżka biegnie po nasypie, a budynki stoją niżej po obu stronach.
@@ -2363,6 +2449,7 @@ function building(gb, glow, x0, x1, z0, z1, y, h, o) {
   if (EL0 && EL0.zones && EL0.zones.length) {
     let clear = 0;
     for (const Z of EL0.zones) if (-Z.d0 > z0 && -Z.d1 < z1) clear = Math.max(clear, Z.hw + Z.vis + 0.6);
+    for (const G of EL0.gardens || []) if (-G.d0 + 2 > z0 && -G.d1 - 2 < z1 && ((G.side > 0 && x0 > 0) || (G.side < 0 && x1 < 0))) clear = Math.max(clear, G.hw + G.w + 2.2);
     if (x0 > 0 && x0 < clear) { const k = clear - x0; x0 += k; x1 += k; }
     else if (x1 < 0 && x1 > -clear) { const k = clear + x1; x0 -= k; x1 -= k; }
   }
@@ -2427,11 +2514,23 @@ function buildEnv(L, th) {
     low.box(0, LOW_Y - 1, zB + 60, 2 * (HW + 1.9), 1, 120, th.low.col);
     const dress = DRESS[th.kind]; if (dress) dress(env, L, th, R);
     L.plazas.forEach((P, i) => dressPlaza(env, L, th, R, P, i));
+    (L.gardens || []).forEach((G) => dressGarden(env, L, th, R, G));
+    ambientLife(env, L, th, R);
     if (L.zones[0] && L.zones[0].kind === 'plaza' && !L.boss && !L.bonus) dressPlaza(env, L, th, R, { d0: -8, d1: 16, start: true }, 9);
     lowWalkers(env, L, th, R);
   }
   if (!L.bonus && !L.boss && L.goal) buildGoal(env, L, th);
-  L.checkpoints.forEach((c) => { const g = new THREE.Group(); const gg = new GB(); gg.cyl(0, 0, 0, 0.08, 3.2, '#5c636a', 6); gg.box(0, 3.2, 0, 0.3, 0.12, 0.3, '#2d2d2d'); g.add(gg.mesh()); const fl = new GB(); fl.box(0.55, 0, 0, 1.0, 0.65, 0.04, '#cfd4d8'); fl.box(0.55, 0.22, -0.025, 0.8, 0.12, 0.01, '#9aa1a8'); const fm = fl.mesh(new THREE.MeshLambertMaterial({ vertexColors: true })); fm.position.y = 1.4; g.add(fm); g.position.set(env.ZH(c.z) + 0.25, 0, c.z); group.add(g); c.mesh = fm; });
+  L.checkpoints.forEach((c) => {
+    /* lampka oliwna jak lampa Florence Nightingale: zapala się po minięciu punktu kontrolnego */
+    const g = new THREE.Group(), gg = new GB();
+    gg.cyl(0, 0, 0, 0.3, 0.12, '#5c636a', 10); gg.cyl(0, 0.12, 0, 0.06, 1.3, '#5c636a', 6); gg.box(-0.45, 1.36, 0, 0.9, 0.06, 0.06, '#5c636a');
+    gg.cyl(-0.8, 1.0, 0, 0.17, 0.08, '#b08d3a', 10); gg.sph(-0.8, 1.19, 0, 0.21, '#d4ad52', 1, { sy: 0.62 }); gg.cyl(-1.02, 1.17, 0, 0.05, 0.24, '#b08d3a', 6, { rz: Math.PI / 2 }); gg.torus(-0.8, 1.36, 0, 0.1, 0.02, '#b08d3a', { seg: 8 });
+    g.add(gg.mesh());
+    const fl = new THREE.Sprite(MATS.glowGold); fl.scale.set(1.2, 1.2, 1); fl.position.set(-1.16, 1.24, 0); fl.visible = !!c.on; g.add(fl);
+    const gl = new THREE.Sprite(MATS.glowWhite); gl.scale.set(2.2, 2.2, 1); gl.position.set(-0.9, 1.3, 0); gl.visible = !!c.on; g.add(gl);
+    const pm = signMesh('PUNKT KONTROLNY', 0.24, { bg: '#ffffff', col: INK, edge: PAL.red }); pm.position.set(0, 0.6, 0.08); g.add(pm);
+    g.position.set(env.ZH(c.z) + 0.3, 0, c.z); group.add(g); c.mesh = g; c.flame = fl; c.glow = gl;
+  });
   L.boards.forEach((b) => { const g = new GB(); g.box(b.x, 0, b.z, 0.12, 1.3, 0.12, '#6b4a33'); g.box(b.x + 0.75, 0, b.z, 0.12, 1.3, 0.12, '#6b4a33'); g.box(b.x + 0.37, 1.2, b.z, 1.2, 0.8, 0.08, INK); group.add(g.mesh()); const s = signMesh('§', 0.62, { bg: '#ffffff', col: PAL.red, pad: 0.15 }); s.position.set(b.x + 0.37, 1.6, b.z + 0.05); group.add(s); b.mesh = s; });
   L.pipes.forEach((p) => { const g = new GB(); g.cyl(p.x, 0, p.z, 0.7, 1.3, '#b7bec5', 14); g.cyl(p.x, 0.75, p.z, 0.74, 0.28, PAL.red, 14); g.cyl(p.x, 1.28, p.z, 0.55, 0.03, '#2d2d2d', 14); g.cyl(p.x, 1.0, p.z, 0.75, 0.08, '#e3e8ec', 14); group.add(g.mesh()); });
   if (!path.empty) group.add(path.mesh(groundTex(th.path.tex)));
@@ -2484,6 +2583,13 @@ function propOnPath(gb, glow, s, th, R) {
     else if (k === 'er' || k === 'hospital') { gb.push(cx, s.y0, cz, 0); P3.car(gb, 0, 0, 0, '#f2f2f2', ry, PAL.red); gb.pop(); gb.box(cx, s.y1 - 0.03, cz + 0.2, 1.4, 0.04, 2.0, '#e8e8e8'); }
     else { gb.push(cx, s.y0, cz, 0); P3.car(gb, 0, 0, 0, ['#9fb3c4', '#b04a3e', '#5c636a', '#c9cdd2'][Math.floor(R() * 4)], ry); gb.pop(); gb.box(cx, s.y1 - 0.03, cz + 0.2, 1.4, 0.04, 2.0, shade('#9fb3c4', -0.1)); }
     glow.box(cx, s.y1, cz + 1.25, 1.4, 0.02, 0.12, edge);
+    return;
+  }
+  if (s.look === 'liftrail') { gb.box(cx, s.y0, cz, w, h, d, '#5c636a'); for (let y = 0.6; y < h; y += 1.2) gb.box(cx, s.y0 + y, cz, w + 0.1, 0.08, d + 0.1, PAL.gold); return; }
+  if (s.look === 'gatewall') {
+    gb.box(cx, s.y0, cz, w, 0.5, d, th.indoor ? '#c9ced2' : '#c9c4bb'); gb.box(cx, s.y0 + 0.5, cz, w - 0.3, h - 0.5, d - 0.3, th.indoor ? '#cfe3ee' : th.dark ? '#3f5442' : '#6f8f58');
+    gb.box(cx, s.y1 - 0.06, cz, w - 0.2, 0.06, d - 0.2, PAL.red);
+    [s.z0 + 0.1, s.z1 - 0.1].forEach((z) => [s.x0 + 0.1, s.x1 - 0.1].forEach((x) => gb.box(x, s.y0, z, 0.14, h + 0.3, 0.14, '#9aa1a8')));
     return;
   }
   if (s.look === 'hurdle') {
@@ -2802,10 +2908,12 @@ function dressWard(env, L, th, R) {
     const hw = Z.hw, z0 = i === 0 ? 8 : -Z.d0, z1 = i === L.zones.length - 1 ? -L.len - 2 : -Z.d1, zc = (z0 + z1) / 2, zl = z0 - z1;
     [-1, 1].forEach((s) => {
       const x = s * (hw + 0.12);
-      gb.box(x, -FLOOR_T, zc, 0.24, CH + FLOOR_T, zl, d.wall);
-      gb.box(x - s * 0.02, -0.1, zc, 0.24, 1.25, zl, d.low);
-      gb.box(x - s * 0.06, 1.15, zc, 0.14, 0.1, zl, d.rail);
-      if (d.line) { gb.box(x - s * 0.03, 0.45, zc, 0.22, 0.08, zl, d.line); gb.box(x - s * 0.03, 0.3, zc, 0.22, 0.08, zl, '#2c64a0'); }
+      /* ściana w odcinkach, z przerwą na wejście do zakątka */
+      const cuts = (L.gardens || []).filter((g) => g.side === s && -g.d1 < z0 && -g.d0 > z1).map((g) => [-g.d0, -g.d1]).sort((a, b) => b[0] - a[0]);
+      let za = z0;
+      const seg = (a, b) => { if (a - b < 0.05) return; const c = (a + b) / 2, l = a - b; gb.box(x, -FLOOR_T, c, 0.24, CH + FLOOR_T, l, d.wall); gb.box(x - s * 0.02, -0.1, c, 0.24, 1.25, l, d.low); gb.box(x - s * 0.06, 1.15, c, 0.14, 0.1, l, d.rail); if (d.line) { gb.box(x - s * 0.03, 0.45, c, 0.22, 0.08, l, d.line); gb.box(x - s * 0.03, 0.3, c, 0.22, 0.08, l, '#2c64a0'); } };
+      for (const [ga, gb2] of cuts) { seg(za, ga); gb.box(x, 2.6, (ga + gb2) / 2, 0.24, CH - 2.6, ga - gb2, d.wall); za = gb2; }
+      seg(za, z1);
     });
     glow.box(0, CH, zc, 2 * hw + 0.5, 0.3, zl, '#d9dde0');
     for (let z = z0; z > z1; z -= 2.4) glow.box(0, CH - 0.01, z, 2 * hw + 0.4, 0.02, 0.05, '#c3c8cc');
@@ -2818,6 +2926,7 @@ function dressWard(env, L, th, R) {
   let k = 0;
   for (let dist = 9; dist < L.len - 12; dist += 8.5, k++) {
     const z = -dist; if (nearEdge(z) || nearEdge(z - 4.2)) continue;
+    if (L.zones.some((Z) => Z.kind === 'doors' && -z <= Z.d1 + 1 && -z >= Z.d0 - 1)) continue;
     const s = k % 2 ? 1 : -1, hw = hwAt(z), x = s * (hw + 0.02);
     gb.box(x, 0, z, 0.1, 2.6, 1.5, d.frame); gb.box(x - s * 0.04, 0.05, z, 0.06, 2.45, 1.3, d.door);
     gb.box(x - s * 0.08, 1.35, z + 0.25, 0.04, 0.6, 0.4, d.glass); gb.box(x - s * 0.09, 1.05, z - 0.45, 0.06, 0.06, 0.2, '#9aa1a8');
@@ -2861,10 +2970,13 @@ function applySky(scene, th) {
   scene.fog = new THREE.Fog(th.fog || th.sky[1], th.fogN || 50, th.fogF || 170);
   const hemi = new THREE.HemisphereLight(th.hemi[0], th.hemi[1], th.hemi[2]);
   const sun = new THREE.DirectionalLight(th.sun[0], th.sun[1]); sun.position.set(-0.45, 1, 0.55);
+  sun.castShadow = shadowsOn(); sun.shadow.mapSize.set(R3.touch ? 1024 : 2048, R3.touch ? 1024 : 2048);
+  const sc = sun.shadow.camera; sc.left = -26; sc.right = 26; sc.top = 26; sc.bottom = -26; sc.near = 1; sc.far = 140; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
+  sun.userData.off = th.evening ? [-42, 20, 24] : [-20, 40, 25];
   const lights = new THREE.Group(); lights.add(hemi); lights.add(sun); lights.add(sun.target);
   if (!th.indoor) {
     const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex(th.moon ? 'rgba(238,240,246,1)' : 'rgba(255,248,225,1)', th.moon ? 'rgba(238,240,246,0)' : 'rgba(255,248,225,0)'), transparent: true, fog: false, depthWrite: false }));
-    disc.scale.set(th.moon ? 22 : 40, th.moon ? 22 : 40, 1); disc.position.set(70, 70, -240); disc.userData.follow = true; lights.add(disc);
+    disc.scale.set(th.moon ? 22 : 40, th.moon ? 22 : 40, 1); disc.position.set(70, 70, -240); disc.userData.follow = true; disc.userData.sunY = th.evening ? 26 : 70; lights.add(disc);
   }
   return lights;
 }
@@ -2877,7 +2989,7 @@ const PLAZA_NPC = {
 function spawnWalker(env, kind, R, x, y, z0, z1, spd, o) {
   const opt = { stroller: kind === 'mother', wheelchair: o && o.wheel };
   const n = buildNPC(kind === 'mother' ? 'visitor' : kind, R, opt);
-  n.root.position.set(x, y, z0); env.group.add(n.root); env.npcs.push(n);
+  n.root.position.set(x, y, z0); env.group.add(n.root); n.kind = kind; env.npcs.push(n);
   const len = Math.abs(z1 - z0), ph = R() * 10, sp = spd || 0.9 + R() * 0.5;
   env.anims.push((t) => {
     const k = ((t * sp + ph) % (2 * len)), fw = k < len, z = fw ? z0 - k * Math.sign(z0 - z1) : z1 + (k - len) * Math.sign(z0 - z1);
@@ -2888,7 +3000,7 @@ function spawnWalker(env, kind, R, x, y, z0, z1, spd, o) {
 }
 function spawnIdle(env, kind, R, x, y, z, ry) {
   const n = buildNPC(kind === 'mother' ? 'visitor' : kind, R, { static: true, stroller: kind === 'mother' });
-  n.root.position.set(x, y, z); n.root.rotation.y = ry; env.group.add(n.root);
+  n.root.position.set(x, y, z); n.root.rotation.y = ry; env.group.add(n.root); n.kind = kind; env.npcs.push(n);
   const ph = R() * 6; env.anims.push((t) => { n.body.rotation.y = Math.sin(t * 0.7 + ph) * 0.25; n.body.position.y = Math.sin(t * 2 + ph) * 0.012; });
   return n;
 }
@@ -2902,11 +3014,19 @@ function dressPlaza(env, L, th, R, P, idx) {
     for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; gb.box(Math.cos(a) * 4.0, 0.012, pz + Math.sin(a) * 4.0, 0.5, 0.01, 0.5, PAL.red, { ry: a }); }
   }
   [-1, 1].forEach((s) => gb.box(s * (hw - 0.4), 0.003, zc, 0.5, 0.01, z0 - z1, shade(th.path.top, -0.14)));
+  if (P.car) {
+    /* przejście dla pieszych: pasy na całej szerokości placu i słupki ostrzegawcze */
+    for (let x = -hw + 0.5; x < hw; x += 1.0) gb.box(x, 0.014, P.car.z, 0.5, 0.01, 2.4, '#f2f2f2');
+    [-1, 1].forEach((s) => { gb.cyl(s * (hw + 0.25), 0, P.car.z - 1.9, 0.07, 2.6, '#3d4045', 6); gb.box(s * (hw + 0.25), 2.6, P.car.z - 1.9, 0.5, 0.5, 0.12, '#2c64a0'); glow.box(s * (hw + 0.25), 2.7, P.car.z - 1.83, 0.3, 0.3, 0.02, '#ffffff'); });
+  }
   if (th.indoor) { dressHall(env, L, th, R, P, hw, z0, z1); return; }
   /* obrzeże placu za niewidzialną ścianą: drzewa, latarnie, ławki, stragany i ludzie */
   const bx = (s, a) => s * (hw + 0.35 + a * (vis - 0.7));
+  const G = (L.gardens || []).find((g) => g.d0 >= P.d0 && g.d1 <= P.d1);
+  const inG = (s, z) => G && G.side === s && -z > G.d0 - 1.5 && -z < G.d1 + 1.5;
   [-1, 1].forEach((s) => {
     for (let z = z0 - 2; z > z1 + 1; z -= 7) {
+      if (inG(s, z) || inG(s, z - 3.2)) continue;
       const r = R();
       if (r < 0.3) { gb.cyl(bx(s, 0.6), 0, z, 0.7, 0.45, '#c9c4bb', 10); P3.tree(gb, bx(s, 0.6), 0.45, z, 1.2, lf); }
       else if (r < 0.55) P3.bench(gb, bx(s, 0.25), 0, z, s > 0 ? Math.PI / 2 : -Math.PI / 2);
@@ -2914,18 +3034,19 @@ function dressPlaza(env, L, th, R, P, idx) {
       else { P3.bush(gb, bx(s, 0.7), 0, z, 1.1, lf); P3.bush(gb, bx(s, 0.5), 0, z - 1.4, 0.9, lf); }
       if (R() < 0.6) P3.person(gb, bx(s, 0.85), 0, z - 3.2, R, s > 0 ? -Math.PI / 2 : Math.PI / 2);
     }
-    for (let z = z0 - 5; z > z1 + 2; z -= 11) P3.lamp(gb, glow, s * (hw + 0.3), 0, z, !!(th.dark || th.dusk || th.moon), 3.8);
-    spawnWalker(env, pick(), R, bx(s, 0.95), 0, z0 - 2, z1 + 2, 0.7 + R() * 0.4);
-    spawnIdle(env, pick(), R, bx(s, 0.55), 0, zc + (R() - 0.5) * 8, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+    for (let z = z0 - 5; z > z1 + 2; z -= 11) if (!inG(s, z)) P3.lamp(gb, glow, s * (hw + 0.3), 0, z, !!(th.dark || th.dusk || th.moon || th.evening), 3.8);
+    if (G && G.side === s) spawnWalker(env, pick(), R, s * (hw - 1.2), 0, z0 - 2, -G.d0 + 1.5, 0.7 + R() * 0.4);
+    else { spawnWalker(env, pick(), R, bx(s, 0.95), 0, z0 - 2, z1 + 2, 0.7 + R() * 0.4); spawnIdle(env, pick(), R, bx(s, 0.55), 0, zc + (R() - 0.5) * 8, s > 0 ? -Math.PI / 2 : Math.PI / 2); }
   });
   /* dwie osoby rozmawiają przy wejściu na plac */
   const tz = z0 - 1.6, tx = (R() < 0.5 ? -1 : 1) * (hw - 1.0);
   spawnIdle(env, pick(), R, tx, 0, tz, Math.PI / 2 * Math.sign(-tx)); spawnIdle(env, pick(), R, tx + Math.sign(-tx) * 0.9, 0, tz - 0.3, Math.PI / 2 * Math.sign(tx));
   if (P.start) return;
   /* nad placem: girlanda chorągiewek albo baner z nazwą miejsca */
-  const banner = { campus: 'DZIEŃ OTWARTY UCZELNI', clinic: 'DZIEŃ PROFILAKTYKI', hospital: 'BADANIA BEZ KOLEJKI', protest: 'RAZEM DLA PACJENTÓW', spa: 'PROMENADA ZDROJOWA', er: 'PODJAZD DLA KARETEK', maternity: 'OGRÓD DLA RODZICÓW', homecare: 'RYNEK GMINY' }[k];
+  const cp = (WPU_CULTURE.posters || []).find((x) => x.w === L.w);
+  const banner = cp ? cp.text.toUpperCase() : { campus: 'DZIEŃ OTWARTY UCZELNI', clinic: 'DZIEŃ PROFILAKTYKI', hospital: 'BADANIA BEZ KOLEJKI', protest: 'RAZEM DLA PACJENTÓW', spa: 'PROMENADA ZDROJOWA', er: 'PODJAZD DLA KARETEK', maternity: 'OGRÓD DLA RODZICÓW', homecare: 'RYNEK GMINY' }[k];
   if (banner && idx === 0) { const m = env.sign(banner, 0, 6.2, z1 + 2.2, 0.7, { bg: PAL.red, col: '#ffffff' }); [-1, 1].forEach((s) => gb.cyl(s * (m.userData.w / 2 + 0.2), 0, z1 + 2.2, 0.08, 6.6, '#5c636a', 6)); }
-  else for (let i = 0; i < 18; i++) { const t = i / 17, x = lerp(-hw, hw, t), y = 5.2 - Math.sin(t * Math.PI) * 0.8; gb.cone(x, y - 0.4, z1 + 3, 0.22, 0.4, i % 2 ? '#ffffff' : PAL.red, 3, { rx: Math.PI }); }
+  else { const gz = z1 + 1.4; [-1, 1].forEach((s) => gb.cyl(s * (hw + 0.2), 0, gz, 0.06, 5.4, '#5c636a', 6)); for (let i = 0; i < 18; i++) { const t = i / 17, x = lerp(-hw, hw, t), y = 5.2 - Math.sin(t * Math.PI) * 0.8; gb.cone(x, y - 0.34, gz, 0.16, 0.34, i % 2 ? '#ffffff' : PAL.red, 3, { rx: Math.PI }); if (i < 17) { const t2 = (i + 1) / 17, y2 = 5.2 - Math.sin(t2 * Math.PI) * 0.8; gb.box((x + lerp(-hw, hw, t2)) / 2, (y + y2) / 2, gz, Math.hypot(lerp(-hw, hw, t2) - x, y2 - y), 0.03, 0.03, '#5c636a', { rz: Math.atan2(y2 - y, lerp(-hw, hw, t2) - x) }); } } }
 }
 /* rekwizyty typowe dla miejsca */
 function themeProp(env, k, x, z, s, R) {
@@ -2967,6 +3088,73 @@ function lowWalkers(env, L, th, R) {
     env.anims.push((t) => { const k = (t * sp + ph) % (2 * len), fw = k < len; n.root.position.z = z - (fw ? k : 2 * len - k); n.root.rotation.y = fw ? 0 : Math.PI; n.body.position.y = Math.abs(Math.sin(t * sp * 7)) * 0.04; });
   }
 }
+
+/* ---------- zakątek pamiątek: ogródek za placem z żywopłotem, ławką i piedestałem ---------- */
+function dressGarden(env, L, th, R, G) {
+  const { gb, glow } = env, s = G.side, x0 = s * (G.hw + 0.7), x1 = s * (G.hw + 0.7 + G.w), xa = Math.min(x0, x1), xb = Math.max(x0, x1), z0 = -G.d0, z1 = -G.d1, zc = (z0 + z1) / 2;
+  const hedge = th.dark ? '#3f5442' : th.indoor ? null : '#6f8f58', lf = th.leaf;
+  if (th.indoor) {
+    /* we wnętrzu zakątek to pokój socjalny: ściany, okno, stolik z kwiatami */
+    const d = th.ward, CH = 3.4;
+    gb.box(s > 0 ? xb + 0.15 : xa - 0.15, 0, zc, 0.3, CH, z0 - z1 + 0.6, d.wall); [z0 + 0.15, z1 - 0.15].forEach((z) => gb.box((xa + xb) / 2 + s * 0.1, 0, z, xb - xa + 0.3, CH, 0.3, d.wall));
+    gb.box((xa + xb) / 2, CH, zc, xb - xa + 0.6, 0.2, z0 - z1 + 0.6, '#d9dde0');
+    glow.box(s > 0 ? xb - 0.02 : xa + 0.02, 1.2, zc, 0.04, 1.6, 2.4, d.night ? '#28305a' : d.sunset ? '#f6c890' : '#bcd8ea'); gb.box(s > 0 ? xb - 0.06 : xa + 0.06, 1.2, zc, 0.04, 1.6, 0.08, '#c9ced2');
+    for (let z = z0 - 1.2; z > z1 + 1; z -= 2.4) { gb.box(s > 0 ? xb - 0.5 : xa + 0.5, 0, z, 0.5, 0.44, 0.5, '#9aa1a8'); gb.box(s > 0 ? xb - 0.5 : xa + 0.5, 0.44, z, 0.54, 0.06, 0.54, d.wood ? '#8b6243' : '#2c64a0'); }
+    gb.cyl(xa + 1.2, 0, z1 + 1.2, 0.3, 0.5, '#e9e4da', 10); P3.bush(gb, xa + 1.2, 0.5, z1 + 1.2, 0.7, ['#5d7c48', '#6f8f58']);
+  } else {
+    /* żywopłot z trzech stron i furtka od placu */
+    gb.box(s > 0 ? xb + 0.3 : xa - 0.3, 0.03, zc, 0.7, 1.2, z0 - z1 + 1.2, hedge); gb.box(s > 0 ? xb + 0.3 : xa - 0.3, 1.2, zc, 0.6, 0.1, z0 - z1 + 1.1, shade(hedge, 0.12));
+    [z0 + 0.35, z1 - 0.35].forEach((z) => { gb.box((xa + xb) / 2 + s * 0.3, 0.03, z, xb - xa + 0.6, 1.2, 0.7, hedge); gb.box((xa + xb) / 2 + s * 0.3, 1.2, z, xb - xa + 0.5, 0.1, 0.6, shade(hedge, 0.12)); });
+    for (let z = z0 - 1; z > z1 + 0.5; z -= 1.1) { P3.sunflower(gb, s > 0 ? xb - 0.6 : xa + 0.6, 0.03, z, 0.9 + R() * 0.5); }
+    for (let i = 0; i < 10; i++) gb.sph(xa + 0.8 + R() * (xb - xa - 1.6), 0.18, z1 + 1 + R() * (z0 - z1 - 2), 0.14, [PAL.red, '#f2a6b9', '#ffffff', '#e7b416'][i % 4], 0);
+    P3.bench(gb, s > 0 ? xb - 1.2 : xa + 1.2, 0.03, z0 - 2.2, s > 0 ? Math.PI / 2 : -Math.PI / 2);
+    P3.tree(gb, s > 0 ? xb - 1.4 : xa + 1.4, 0.03, z1 + 1.8, 1.3, lf);
+    P3.lamp(gb, glow, (xa + xb) / 2, 0.03, z1 + 1.2, !!(th.dark || th.dusk || th.moon || th.evening), 3.2);
+  }
+  /* furtka z szyldem na wejściu */
+  const gx = s * (G.hw + 0.1);
+  [z0 - 0.3, z1 + 0.3].forEach((z) => gb.box(gx, 0, z, 0.16, 3.0, 0.16, '#5c636a'));
+  gb.box(gx, 3.0, zc, 0.16, 0.12, z0 - z1, '#5c636a');
+  const m = env.sign(G.kind === 'memento' ? 'ZAKĄTEK PAMIĄTEK' : 'KRONIKA ZAWODU', gx - s * 0.1, 3.4, zc, 0.42, { bg: '#ffffff', col: PAL.red, edge: PAL.red }, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+  void m;
+  /* piedestał */
+  const px = G.x, pz = G.z;
+  gb.cyl(px, 0.03, pz, 0.7, 0.3, '#c9c4bb', 14); gb.cyl(px, 0.33, pz, 0.55, 0.7, '#e3ddd3', 14); gb.cyl(px, 1.03, pz, 0.66, 0.1, PAL.red, 14);
+  G.topY = 1.13;
+}
+/* ptaki krążące nad placami, opadające liście albo płatki, pies przy płocie */
+function ambientLife(env, L, th, R) {
+  if (L.boss || L.bonus) return;
+  const k = th.kind;
+  const birdCol = k === 'spa' ? '#ffffff' : k === 'er' ? null : '#3d3a38';
+  if (birdCol && L.plazas.length) {
+    const g = new GB(); g.box(-0.22, 0, 0, 0.44, 0.02, 0.12, birdCol); g.box(0.22, 0, 0, 0.44, 0.02, 0.12, birdCol); g.box(0, 0.02, 0.02, 0.1, 0.06, 0.26, birdCol); const geo = g.geometry();
+    L.plazas.forEach((P, pi) => {
+      const cz = -(P.d0 + P.d1) / 2, n = 5, flock = [];
+      for (let i = 0; i < n; i++) { const m = new THREE.Mesh(geo, lam(birdCol)); env.group.add(m); flock.push({ m, ph: i * 1.3 + pi, r: 6 + i * 1.1, h: 9 + i * 0.7 }); }
+      env.anims.push((t) => flock.forEach((b) => { const a = t * 0.35 + b.ph; b.m.position.set(Math.cos(a) * b.r, b.h + Math.sin(t * 1.1 + b.ph) * 0.6, cz + Math.sin(a) * b.r * 0.7); b.m.rotation.y = -a - Math.PI / 2; b.m.rotation.z = Math.sin(t * 9 + b.ph) * 0.5; }));
+    });
+  }
+  const driftCol = k === 'campus' ? ['#d39b4f', '#c9783f', '#e6bb68'] : k === 'maternity' ? ['#f2c6d0', '#ffffff', '#e3a6b4'] : k === 'homecare' ? ['#ffffff', '#f6f0d8'] : null;
+  if (driftCol) drift(env, L, 90, driftCol, k === 'homecare' ? 0.16 : 0.26);
+  if (k === 'homecare' || k === 'campus') {
+    /* pies biegający wzdłuż płotu */
+    const d = new GB(); d.box(0, 0.3, 0, 0.32, 0.3, 0.7, '#8e6c54'); d.sph(0, 0.55, -0.4, 0.17, '#8e6c54', 1); d.box(0, 0.62, -0.5, 0.26, 0.1, 0.1, '#6b4a33'); [[-0.1, 0.22], [0.1, 0.22], [-0.1, -0.22], [0.1, -0.22]].forEach(([a, b]) => d.box(a, 0, b, 0.08, 0.3, 0.08, '#6b4a33')); d.box(0, 0.5, 0.42, 0.06, 0.06, 0.3, '#8e6c54', { rx: 0.6 });
+    const dm = d.mesh(); env.group.add(dm); const z0 = -40, len = 26, x = (L.plazas[0] ? -L.plazas[0].s : 1) * (visHW(L, z0) + 1.6);
+    env.anims.push((t) => { const kk = (t * 2.2) % (2 * len), fw = kk < len; dm.position.set(x, LOW_Y + Math.abs(Math.sin(t * 9)) * 0.08, z0 - (fw ? kk : 2 * len - kk)); dm.rotation.y = fw ? 0 : Math.PI; });
+  }
+}
+function drift(env, L, n, cols, size) {
+  const g = new THREE.BufferGeometry(), pos = new Float32Array(n * 3), col = new Float32Array(n * 3), R = mulberry32(21), seeds = [];
+  for (let i = 0; i < n; i++) { seeds.push([(R() - 0.5) * 40, R() * 14, -R() * 40, R() * 6.28]); const c = new THREE.Color(cols[i % cols.length]); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size, vertexColors: true, transparent: true, opacity: 0.9, sizeAttenuation: true, depthWrite: false })); pts.frustumCulled = false; env.group.add(pts);
+  env.anims.push((t, dt, cam) => {
+    if (save.settings.reduce) { pts.visible = false; return; }
+    for (let i = 0; i < n; i++) { const s = seeds[i]; const y = ((s[1] - t * 0.9) % 14 + 14) % 14; pos[i * 3] = cam.position.x + s[0] + Math.sin(t * 0.8 + s[3]) * 1.2; pos[i * 3 + 1] = y - 1; pos[i * 3 + 2] = cam.position.z - 8 + s[2]; }
+    g.attributes.position.needsUpdate = true;
+  });
+}
 /* =====================================================================
    ETAPY 3D: ścieżka biegnąca w głąb ekranu (oś −z)
    Odległość d rośnie do przodu, a z = −d. Wysokość podłogi to y = 0.
@@ -2976,7 +3164,13 @@ const HW = 3.4, FLOOR_T = 3, BLOCK_Y = 2.35, QUIZ_PER_STAGE = 4, PLAZA_HW = 8, F
 function stageName(w, s) { return s === BOSS_STAGE ? 'Strażnik rozdziału' : 'Etap ' + s; }
 /* miejsce etapu: plener świata, wnętrze w etapie 3, strażnik w etapie 4 */
 function stagePlace(w, s) { const W = WPU_WORLDS[w - 1]; return s === BOSS_STAGE ? W.boss : s === 3 ? W.inside : W.place; }
-function stageTheme(w, s) { return s === 3 ? wardTheme(w) : THEMES[w]; }
+/* drugi etap każdego dziennego świata rozgrywa się pod wieczór */
+function stageTheme(w, s) {
+  if (s === 3) return wardTheme(w);
+  const th = THEMES[w];
+  if (s === 2 && !th.dark && !th.dusk) return Object.assign({}, th, { sky: ['#e7a06a', '#fbe4cb'], fog: '#f5dcc3', hemi: ['#ffe0bd', th.hemi[1], th.hemi[2] * 0.96], sun: ['#ffc287', Math.min(0.95, th.sun[1] + 0.12)], evening: true, sunDisc: '#ffd59a' });
+  return th;
+}
 
 /* prośby postaci spotkanych na starcie: dokument trzeba znaleźć i zanieść do Izby */
 const QUESTS = {
@@ -2999,7 +3193,7 @@ function stageQuest(w, s) {
 
 function newLevel(w, s, o) {
   return Object.assign({ w, s, solids: [], floors: [], props: [], blocks: [], slots: [], coins: [], groups: [], gold: [], goldSlots: [], enemies: [], platforms: [], springs: [], hazards: [], cannons: [], boards: [], checkpoints: [], pipes: [],
-    cartons: [], zones: [], islands: [], forks: [], plazas: [], quest: null, doc: null,
+    cartons: [], zones: [], islands: [], forks: [], plazas: [], tests: [], gardens: [], quest: null, doc: null,
     quizTotal: 0, start: { x: 0, y: 0, z: -2 }, indoor: false, bonus: false, boss: false, len: 0, hw: HW, goal: null, segs: [] }, o || {});
 }
 /* strefa w danym miejscu ścieżki (z = −d) */
@@ -3024,6 +3218,8 @@ function levelKit(L, R) {
     },
     /* przeszkoda albo podest stojący na podłodze (wygląd zależy od świata) */
     box(x, y, d, w, h, dd, look) { x = K.X(x); const s = K.solid(x - w / 2, x + w / 2, y, y + h, d - dd / 2, d + dd / 2, 'box', { look: look || 'step' }); L.props.push(s); return s; },
+    /* ozdoba bez kolizji */
+    deco(x, y, d, w, h, dd, look) { x = K.X(x); L.props.push({ x0: x - w / 2, x1: x + w / 2, y0: y, y1: y + h, z0: -(d + dd / 2), z1: -(d - dd / 2), look }); },
     slot(x, d, y, pref, hint) { L.slots.push({ x: K.X(x), y: y === undefined ? BLOCK_Y : y, z: -d, pref: !!pref, hint: hint || null }); },
     block(kind, x, d, y) { L.blocks.push({ kind, x: K.X(x), y: y === undefined ? BLOCK_Y : y, z: -d }); },
     /* paragrafy zawsze w grupach: ścieżka, łuk albo krąg; zebranie całej grupy daje premię */
@@ -3203,6 +3399,33 @@ const SEGS3 = {
     K.floor(d + 16.7, d + 19.7);
     K.d = d + 19.7;
   },
+  lift(K, L, w) {
+    /* winda: platforma jedzie w górę na balkon ze złotym paragrafem, a ścieżka na dole biegnie dalej */
+    const d = K.d; K.floor(d, d + 18);
+    K.plat('my', 1.9, 0.3, d + 5, 2.6, 2.4, { amp: 4.3, spd: 0.55 + w * 0.03, ph: 0 });
+    K.deco(0.5, 0, d + 5, 0.14, 5.6, 0.14, 'liftrail'); K.deco(3.3, 0, d + 5, 0.14, 5.6, 0.14, 'liftrail');
+    K.floor(d + 6.8, d + 14, 0.4, 3.4, 4.6);
+    K.gslot(1.9, 5.6, d + 13.2, 'lift', 2);
+    K.trail(1.9, d + 7.6, 1.9, d + 12.6, 5.3, 4, 0);
+    K.trail(-1.6, d + 1.5, -1.6, d + 16, 0.7, 5, 0.4);
+    K.slot(-1.6, d + 10, undefined, false, 'coin');
+    K.d += 18;
+  },
+  gate(K, L, w) {
+    /* bramka prawdy: zdanie z ustawy nad drogą, pas po lewej i po prawej z napisem PRAWDA albo FAŁSZ */
+    const d = K.d; K.floor(d, d + 16);
+    K.box(0, 0, d + 10, 1.4, 1.7, 6, 'gatewall');
+    L.tests.push({ kind: 'gate', d0: d + 7, d1: d + 13, zq: -(d + 4) });
+    K.trail(-1.9, d + 7.5, -1.9, d + 12.5, 0.7, 3, 0); K.trail(1.9, d + 7.5, 1.9, d + 12.5, 0.7, 3, 0);
+    K.d += 16;
+  },
+  luka(K, L, w) {
+    /* luka w przepisie: nad ścieżką trzy żetony z odpowiedziami, dotknięcie wybiera */
+    const d = K.d; K.floor(d, d + 16);
+    L.tests.push({ kind: 'luka', zq: -(d + 3), z: -(d + 9), xs: [-2.1, 0, 2.1], y: 1.45 });
+    K.trail(0, d + 11.5, 0, d + 15, 0.7, 3, 0);
+    K.d += 16;
+  },
   pipe(K, L) {
     const d = K.d; K.floor(d, d + 13);
     const x = K.R() < 0.5 ? -2.2 : 2.2;
@@ -3221,7 +3444,7 @@ const SEGS3 = {
 /* odcinki dostępne w świecie: im dalej, tym trudniej */
 function segPool(w, indoor) {
   const p = ['blocks', 'gap', 'steps', 'stones', 'enemies', 'hurdles', 'moving', 'falling'];
-  if (w >= 2) p.push('rumors', 'trolley', 'gap2', 'clocks', 'folders', 'slide');
+  if (w >= 2) p.push('rumors', 'trolley', 'gap2', 'clocks', 'folders', 'slide', 'lift');
   if (w >= 3) p.push('copier', 'narrow', 'ledges');
   if (w >= 4) p.push('stamps');
   if (indoor) return p.filter((k) => k !== 'clocks');
@@ -3266,7 +3489,18 @@ function buildPlaza(K, L, w, idx) {
   if (w >= 2) K.enemy(R() < 0.5 ? 'rumor' : 'form', s * 2.4, d + 26, { ax: 'x', range: 2.2, spd: 1.2, hop: w >= 4 });
   if (w >= 5) K.enemy('folder', 0, d + 4.5, { ax: 'x', range: 3, spd: 1.0 });
   K.trail(0, d + 21.5, 0, d + 30.5, 0.7, 4, 1.1);
-  L.plazas.push({ d0: d, d1: d + P, pd, s });
+  /* zakątek pamiątek: ogródek za placem, od strony kartonów, z pamiątką zawodu albo tablicą kroniki */
+  if (idx === 0) {
+    const gw = 8, gx0 = o * (hw + 0.7), gx1 = o * (hw + 0.7 + gw);
+    K.floor(d + 11.5, d + 20.5, Math.min(gx0, gx1) - K.cx, Math.max(gx0, gx1) - K.cx, 0.03);
+    const G = { side: o, d0: d + 11.5, d1: d + 20.5, w: gw, hw, kind: L.s === 1 ? 'memento' : 'board', x: o * (hw + 0.7 + gw * 0.62), z: -(d + 16), zin: -(d + 16) };
+    L.gardens.push(G); L.garden = G;
+    K.group(); for (let i = 0; i < 5; i++) K.coin(o * (hw + 1.6 + i * 0.9) , 0.75, d + 12.6 + i * 0.5); K.grp = -1;
+    K.ring(o * (hw + 0.7 + gw * 0.62) - K.cx, d + 16, 0.75, 1.9, 8);
+  }
+  const PZ = { d0: d, d1: d + P, pd, s };
+  if (L.cars) { const hz = { kind: 'car', x: 0, y: 0, z: -(d + 23.2), dir: s, spd: 6.5 + w * 0.35, every: Math.max(3.2, 5.6 - w * 0.25), ph: R() * 3, hw }; L.hazards.push(hz); PZ.car = hz; }
+  L.plazas.push(PZ);
   K.d += P;
 }
 
@@ -3311,10 +3545,21 @@ function buildFork(K, L, w) {
   K.d += F;
 }
 
+/* ---------- właściwe drzwi: trzy drzwi z tabliczkami przy jednej ścianie, wejście wybiera odpowiedź ---------- */
+function buildDoors(K, L, w) {
+  const d = K.d, side = K.R() < 0.5 ? -1 : 1, hw = K.hw;
+  K.floor(d, d + 18);
+  const zs = [d + 5, d + 9.5, d + 14];
+  L.tests.push({ kind: 'doors', d0: d, d1: d + 18, zq: -(d + 1.5), side, hw, zs: zs.map((z) => -z) });
+  K.trail(-side * 1.5, d + 1.5, side * (hw - 1.6), d + 7, 0.7, 4, 0);
+  K.trail(side * (hw - 1.6), d + 11, 0, d + 16.5, 0.7, 4, 0);
+  K.d += 18;
+}
 function buildStage(w, s) {
   if (s === BOSS_STAGE) return buildBossArena(w);
   const R = mulberry32(w * 977 + s * 131 + 7);
   const L = newLevel(w, s, { indoor: s === 3 });
+  L.cars = !L.indoor && [1, 2, 3, 6, 7, 8].includes(w);
   const K = levelKit(L, R);
   /* początek: mały plac z postacią, która prosi o pomoc, i tablicą z przepisem */
   const SHW = L.indoor ? 4.6 : 5.6;
@@ -3328,9 +3573,10 @@ function buildStage(w, s) {
   const path = () => { K.hw = K.zhw = HW; };
   path();
   const pool = segPool(w, L.indoor);
-  const n = 7 + Math.floor(w * 0.6) + (s === 2 ? 1 : 0);
+  const n = 8 + Math.floor(w * 0.6) + (s === 2 ? 1 : 0);
   const must = ['blocks', 'spring', 'blocks', 'gap', 'pipe'];
   if (w >= 2) must.push('ledges');
+  if (w >= 3) must.push('lift');
   const order = [];
   for (let i = 0; i < n; i++) order.push(pool[Math.floor(R() * pool.length)]);
   must.forEach((m, i) => { order[Math.floor((i + 0.5) * order.length / must.length)] = m; });
@@ -3338,6 +3584,7 @@ function buildStage(w, s) {
   for (let i = 1; i < order.length; i++) if (order[i] === order[i - 1] && !must.includes(order[i])) order[i] = pool[(pool.indexOf(order[i]) + 3) % pool.length];
   const cpAt = Math.floor(order.length / 2), boardAt = Math.floor(order.length * 0.15);
   const plazaAt = [Math.max(1, Math.floor(order.length * 0.25)), Math.floor(order.length * 0.75)], forkAt = Math.floor(order.length * 0.45);
+  const gateAt = [Math.max(1, Math.floor(order.length * 0.12)), Math.floor(order.length * 0.62)], lukaAt = Math.floor(order.length * 0.38), doorsAt = Math.floor(order.length * 0.85);
   let pi = 0;
   const run = (kind, hw, vis, fn) => { K.hw = K.zhw = hw; fn(); K.zone(kind, hw, K.d, vis); path(); };
   order.forEach((id, i) => {
@@ -3345,6 +3592,9 @@ function buildStage(w, s) {
     if (i === boardAt) run('path', HW, 0.7, () => SEGS3.board(K, L));
     if (plazaAt.includes(i)) run('plaza', L.indoor ? 7 : PLAZA_HW, L.indoor ? 0 : 2.6, () => buildPlaza(K, L, w, pi++));
     if (i === forkAt) run('fork', FORK_HW, L.indoor ? 0 : 0.7, () => buildFork(K, L, w));
+    if (gateAt.includes(i)) run('path', HW, 0.7, () => SEGS3.gate(K, L, w));
+    if (i === lukaAt) run('path', HW, 0.7, () => SEGS3.luka(K, L, w));
+    if (i === doorsAt) run('doors', HW + 2, L.indoor ? 0 : 1.4, () => buildDoors(K, L, w));
     run('path', HW, 0.7, () => { L.segs.push({ id, d0: K.d }); SEGS3[id](K, L, w); });
   });
   /* meta: podest, maszt z flagą, budynek Izby */
@@ -3390,9 +3640,21 @@ function buildStage(w, s) {
 /* niewidzialne ściany wzdłuż każdej strefy (grube, żeby przejścia między strefami różnej szerokości były szczelne) */
 function addWalls(L) {
   if (!L.zones.length) L.zones.push({ kind: 'path', hw: L.hw, d0: -12, d1: L.len + 10, vis: 0.7 });
+  const wall = (side, d0, d1, hw) => { if (d1 <= d0) return; L.solids.push({ x0: side < 0 ? -hw - 60 : hw, x1: side < 0 ? -hw : hw + 60, y0: -30, y1: 40, z0: -d1, z1: -d0, kind: 'wall', inv: true }); };
   for (const Z of L.zones) {
-    L.solids.push({ x0: -Z.hw - 60, x1: -Z.hw, y0: -30, y1: 40, z0: -Z.d1, z1: -Z.d0, kind: 'wall', inv: true });
-    L.solids.push({ x0: Z.hw, x1: Z.hw + 60, y0: -30, y1: 40, z0: -Z.d1, z1: -Z.d0, kind: 'wall', inv: true });
+    [-1, 1].forEach((side) => {
+      /* ściana z przerwą na zakątek, a zakątek ma własne ściany poprzeczne i tylną */
+      const gs = (L.gardens || []).filter((g) => g.side === side && g.d0 < Z.d1 && g.d1 > Z.d0).sort((a, b) => a.d0 - b.d0);
+      let d = Z.d0;
+      for (const g of gs) {
+        wall(side, d, g.d0, Z.hw); wall(side, g.d0, g.d1, Z.hw + g.w + 0.7);
+        const xa = Math.min(side * Z.hw, side * (Z.hw + g.w + 0.7)), xb = Math.max(side * Z.hw, side * (Z.hw + g.w + 0.7));
+        L.solids.push({ x0: xa, x1: xb, y0: -30, y1: 40, z0: -g.d0, z1: -g.d0 + 1, kind: 'wall', inv: true });
+        L.solids.push({ x0: xa, x1: xb, y0: -30, y1: 40, z0: -g.d1 - 1, z1: -g.d1, kind: 'wall', inv: true });
+        d = g.d1;
+      }
+      wall(side, d, Z.d1, Z.hw);
+    });
   }
   L.solids.push({ x0: -70, x1: 70, y0: -30, y1: 40, z0: 6, z1: 10, kind: 'wall', inv: true });
 }
@@ -3481,7 +3743,7 @@ function buyUpgrade(id) {
 }
 
 /* ---------- misje: każda daje jedną pieczęć, a pieczęcie z różnych podejść sumują się ---------- */
-const M3_KINDS = ['quest', 'coins', 'hard', 'gold', 'kills', 'cartons', 'time'];
+const M3_KINDS = ['quest', 'tests', 'coins', 'hard', 'tests', 'gold', 'kills', 'cartons', 'time', 'tests'];
 function stageMissions(w, s, L) {
   if (s === BOSS_STAGE) return [{ id: 'fight', t: 'Stań do walki ze strażnikiem' }, { id: 'win', t: 'Rozwiej Wątpliwość' }, { id: 'clean', t: 'Rozwiej ją bez błędnej odpowiedzi' }];
   const k = M3_KINDS[(w * 3 + s * 2) % M3_KINDS.length], out = [{ id: 'goal', t: 'Dojdź do Izby' }, { id: 'quiz', t: 'Otwórz wszystkie bloki z pytajnikiem i odpowiedz bez błędu' }];
@@ -3489,6 +3751,7 @@ function stageMissions(w, s, L) {
   const T = L ? Math.round((L.len / 3.2 + 70) / 10) * 10 : 160;
   const m3 = {
     quest: { id: 'quest', t: L && L.quest ? 'Znajdź ' + L.quest.item + ' i zanieś do Izby' : 'Spełnij prośbę postaci ze startu' },
+    tests: { id: 'tests', t: 'Zalicz wszystkie próby wiedzy na trasie, czyli bramki, luki i drzwi', n: L ? L.tests.length : 4 },
     coins: { id: 'coins', t: 'Zbierz co najmniej ' + nCoins + ' paragrafów', n: nCoins },
     hard: { id: 'hard', t: 'Przejdź rozwidlenie trudną drogą' },
     gold: { id: 'gold', t: 'Zbierz wszystkie trzy złote paragrafy' },
@@ -3507,6 +3770,7 @@ function missionState(list, st, fin) {
     if (m.id === 'clean') return !!(fin && game.bossWon && st.wrong === 0);
     if (m.id === 'quiz') return st.n >= (game.lvl && game.lvl.quizTotal || 4) && st.wrong === 0 && (st.n > 0);
     if (m.id === 'quest') return !!st.quest;
+    if (m.id === 'tests') return m.n > 0 && st.inwOk >= m.n;
     if (m.id === 'coins') return st.coins >= m.n;
     if (m.id === 'hard') return !!st.hard;
     if (m.id === 'gold') return goldCount(game.persist ? game.persist.gold : 0) >= 3;
@@ -3531,6 +3795,9 @@ const BADGES = [
   { id: 'room5', name: 'Badacz archiwum', t: 'Odwiedź pięć ukrytych pokoi archiwum', pay: 40, ok: () => (save.stats.rooms || 0) >= 5 },
   { id: 'kills50', name: 'Pogromca biurokracji', t: 'Pokonaj 50 przeciwników', pay: 40, ok: () => (save.stats.kills || 0) >= 50 },
   { id: 'boss4', name: 'Bez wątpliwości', t: 'Rozwiej cztery Wątpliwości', pay: 80, ok: () => Object.keys(save.progress).filter((k) => k.slice(-2) === '-' + BOSS_STAGE && save.progress[k].won).length >= 4 },
+  { id: 'mem3', name: 'Zbieracz pamiątek', t: 'Odnajdź trzy pamiątki zawodu', pay: 40, ok: () => Object.keys(save.mementos || {}).length >= 3 },
+  { id: 'mem8', name: 'Kolekcja pamiątek', t: 'Odnajdź wszystkie osiem pamiątek zawodu', pay: 120, ok: () => Object.keys(save.mementos || {}).length >= 8 },
+  { id: 'tests20', name: 'Egzamin w biegu', t: 'Zalicz 20 prób wiedzy na trasie', pay: 50, ok: () => (save.stats.tests || 0) >= 20 },
   { id: 'know', name: 'Znawstwo ustawy', t: 'Miej 75% dobrych odpowiedzi przy co najmniej 40 pytaniach', pay: 100, ok: () => { const k = qStats(); return k.n >= 40 && k.pct >= 75; } }
 ];
 /* przyznaje nowe odznaki i zwraca ich listę */
@@ -3584,7 +3851,7 @@ function flashIt(t, col) { if (save.settings.reduce || !EL.flash) return; EL.fla
 
 /* ---------- start etapu i budowa sceny ---------- */
 function newPersist() { return { used: new Set(), coins: new Set(), bricks: new Set(), cartons: new Set(), cp: -1, gold: 0, room: null, doc: false, questDone: false, questSeen: false, roomSeen: false }; }
-function newStageStats() { return { ok: 0, n: 0, wrong: 0, maxStreak: 0, pens: [], bn: 0, bok: 0, coins: 0, kills: 0, cartons: 0, hard: false, quest: false, t: 0, calmUsed: false }; }
+function newStageStats() { return { ok: 0, n: 0, wrong: 0, maxStreak: 0, pens: [], bn: 0, bok: 0, coins: 0, kills: 0, cartons: 0, hard: false, quest: false, t: 0, calmUsed: false, inw: 0, inwOk: 0, inwWrong: 0 }; }
 function makePlayer(sp, keep) {
   return { x: sp.x, y: sp.y, z: sp.z, vx: 0, vy: 0, vz: 0, onGround: false, yaw: 0, coyote: 0, jumpBuf: 0, jumping: false, runT: 0,
     shield: keep ? keep.shield : false, kodeks: keep ? keep.kodeks : false, fly: keep ? keep.fly : 0, star: keep ? keep.star : 0,
@@ -3613,6 +3880,7 @@ function loadStage(w, s, keepPersist) {
   L.cartons.forEach((c) => { if (P.cartons.has(c.id)) c.broken = true; });
   L.solids = L.solids.filter((sd) => !(sd.blk && sd.blk.broken) && !(sd.crt && sd.crt.broken));
   L.coins.forEach((c) => { if (P.coins.has(c.id)) c.taken = true; });
+  setupTests(L);
   L.gold = L.gold.filter((gd) => !(P.gold & (1 << gd.id)));
   if (P.cp >= 0 && L.checkpoints[P.cp]) for (let i = 0; i <= P.cp; i++) L.checkpoints[i].on = true;
   const sp = P.cp >= 0 && L.checkpoints[P.cp] ? { x: 0, y: 0, z: L.checkpoints[P.cp].z } : L.start;
@@ -3684,21 +3952,38 @@ function buildScene(L, th) {
   game.hazards = L.hazards.map((h) => {
     const g = new THREE.Group();
     if (h.kind === 'trolley') { const gb = new GB(); P3TrolleyBed(gb, th); g.add(gb.mesh()); }
+    else if (h.kind === 'car') {
+      const gb = new GB();
+      if (th.kind === 'er') P3.ambulance(gb, 0, 0, 0.3, -h.dir * Math.PI / 2); else P3.car(gb, 0, 0, 0, ['#9fb3c4', '#b04a3e', '#5c636a', '#e9e4da', '#2c4c6e'][(L.w + Math.round(h.ph * 10)) % 5], -h.dir * Math.PI / 2);
+      g.add(gb.mesh());
+      if (th.kind === 'er') [-0.6, 0.6].forEach((k) => { const sp = new THREE.Sprite(MATS.glowBlue); sp.scale.set(2.4, 2.4, 1); sp.position.set(k, 2.7, 0.3); g.add(sp); });
+    }
     else { g.add(buildEnemy('stamp')); }
     root.add(g); g.position.set(h.x, h.kind === 'stamp' ? 3.2 : 0, h.z);
-    const hz = Object.assign({}, h, { mesh: g, t: h.ph || 0, x0: h.x, y: h.kind === 'stamp' ? 3.2 : 0, st: 'up', wt: 1 + (h.ph || 0) });
+    const hz = Object.assign({}, h, { mesh: g, t: h.ph || 0, x0: h.x, y: h.kind === 'stamp' ? 3.2 : 0, st: h.kind === 'car' ? 'wait' : 'up', wt: 1 + (h.ph || 0) });
     if (h.kind === 'trolley') hz.sol = { kind: 'trolley', hz, hurt: true, x0: 0, x1: 0, y0: 0, y1: 0.95, z0: h.z - 0.55, z1: h.z + 0.55 };
+    if (h.kind === 'car') {
+      const span = h.hw + 10; hz.span = span; hz.x = -h.dir * span; g.position.x = hz.x; g.visible = false;
+      hz.sol = { kind: 'car', hz, hurt: true, x0: hz.x - 1.9, x1: hz.x + 1.9, y0: 0, y1: th.kind === 'er' ? 2.4 : 1.42, z0: h.z - 0.9, z1: h.z + 0.9 };
+      hz.lamps = [-1, 1].map((s) => { const sp = new THREE.Sprite(MATS.glowRed); sp.scale.set(1.8, 1.8, 1); sp.position.set(s * (h.hw + 0.25), 2.7, h.z - 1.9); sp.visible = false; root.add(sp); return sp; });
+    }
     return hz;
   });
   game.cannons = L.cannons.map((c) => { const m = buildEnemy('copier'); m.position.set(c.x, 0, c.z); m.rotation.y = Math.PI; root.add(m); return Object.assign({}, c, { mesh: m, cd: c.every * (0.5 + c.t) }); });
   game.letters = [];
   game.enemies = L.enemies.map((e) => makeEnemy(e, root));
   game.items = []; game.shots = []; game.qshots = []; game.fcoins = [];
+  buildTests(L, root, th); stripHide();
+  buildGarden(L, root, th);
+  game.talkCd = 2; (game.env.npcs || []).forEach((n) => (n.said = false));
   /* postać */
   ensureCharacter();
   root.add(S3.ch.root);
-  S3.shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), MATS.shadow); root.add(S3.shadow);
+  S3.shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), MATS.shadow); S3.shadow.userData.noShadow = true; root.add(S3.shadow);
   S3.ch.wings.visible = false; S3.ch.card.visible = false;
+  [S3.aim, S3.aimGlow, S3.land].forEach((m) => { if (m) m.userData.noShadow = true; });
+  L.blocks.forEach((b) => { if (b.ring) b.ring.userData.noShadow = true; });
+  shadowFlags(root);
 }
 function ensureCharacter() {
   const id = save.char || CHARS[0].id;
@@ -3749,6 +4034,9 @@ function update(dt) {
     updateShots(dt);
     updatePickups(dt);
     updateDoc();
+    updateTests(dt);
+    updateGarden(dt);
+    updateTalk(dt);
     updateBoards(dt);
     if (game.boss) updateBoss(dt);
   } else if (game.state === 'clearing') {
@@ -3777,6 +4065,7 @@ function updatePlatforms(dt) {
     const ox = pl.x, oy = pl.y, oz = pl.z;
     if (pl.kind === 'mz') { pl.t += dt; pl.z = pl.z0 + Math.sin(pl.t * pl.spd + pl.ph) * pl.amp; }
     else if (pl.kind === 'mx') { pl.t += dt; pl.x = pl.x0 + Math.sin(pl.t * pl.spd + pl.ph) * pl.amp; }
+    else if (pl.kind === 'my') { pl.t += dt; const k = (Math.sin(pl.t * pl.spd + pl.ph) + 1) / 2; pl.y = pl.y0 + (k < 0.5 ? 0 : (k - 0.5) * 2) * 0 + Math.pow(k, 1.2) * pl.amp; }
     else if (pl.kind === 'fall') {
       if (pl.gone) { pl.resp -= dt; if (pl.resp <= 0) { pl.gone = false; pl.fall = 0; pl.vy = 0; pl.y = pl.y0; pl.mesh.visible = true; } }
       else if (pl.fall > 0) { pl.fall += dt; if (pl.fall > 0.45) { pl.vy -= 22 * dt; pl.y += pl.vy * dt; } if (pl.y < -12) { pl.gone = true; pl.resp = 2.6; pl.mesh.visible = false; } }
@@ -3797,6 +4086,20 @@ function updateHazards(dt) {
       if (!p.dead && game.state === 'play' && p.standOn !== s && overlapBox(p, s, 0.02)) {
         if (p.y >= s.y1 - 0.3) { p.y = s.y1; p.vy = Math.max(0, p.vy); }
         else { p.x += h.dx; hurtPlayer(); p.vx = Math.sign(p.x - h.x || 1) * 5; }
+      }
+    } else if (h.kind === 'car') {
+      /* samochód przejeżdża przez plac po przejściu dla pieszych: chwila ostrzeżenia, potem przejazd */
+      const ox = h.x;
+      if (h.st === 'wait') { if (h.t > h.every) { h.st = 'warn'; h.t = 0; } }
+      else if (h.st === 'warn') { if (h.t > 1.3) { h.st = 'go'; h.t = 0; h.x = -h.dir * h.span; h.mesh.visible = true; AudioSys.play('fire'); } }
+      else { h.x += h.dir * h.spd * dt; if (h.dir * h.x > h.span) { h.st = 'wait'; h.t = 0; h.mesh.visible = false; } }
+      h.dx = h.x - ox;
+      const s = h.sol; s.x0 = h.x - 1.9; s.x1 = h.x + 1.9; if (h.st !== 'go') { s.x0 = 9e3; s.x1 = 9e3 + 1; }
+      h.mesh.position.set(h.x, 0, h.z);
+      const blink = h.st === 'warn' || h.st === 'go'; h.lamps.forEach((l, i) => (l.visible = blink && Math.floor(game.t * 6 + i) % 2 === 0));
+      if (h.st === 'go' && !p.dead && game.state === 'play' && p.standOn !== s && overlapBox(p, s, 0.02)) {
+        if (p.y >= s.y1 - 0.3) { p.y = s.y1; p.vy = Math.max(0, p.vy); }
+        else { p.x += h.dx; hurtPlayer(); p.vx = h.dir * 6; p.vz = 2; }
       }
     } else {
       if (h.st === 'up') { h.wt -= dt; if (h.wt <= 0) h.st = 'down'; }
@@ -3861,7 +4164,7 @@ function updatePlayer(dt) {
   if (p.vy > 0) for (const b of game.lvl.blocks) {
     if (b.broken) continue;
     const dx = b.x - p.x, dz = b.z - p.z, gap = b.y - (p.y + PH.h);
-    if (Math.abs(dx) < 1.1 && Math.abs(dz) < 1.1 && gap > -0.05 && gap < 1.0) { const k = Math.min(1, dt * 12); p.x += dx * k; p.z += dz * k; break; }
+    if (Math.abs(dx) < 0.8 && Math.abs(dz) < 0.8 && gap > -0.05 && gap < 0.7) { const k = Math.min(1, dt * 10); p.x += dx * k; p.z += dz * k; break; }
   }
   /* przedmiot z torby */
   if (Input.takeUse()) useItem(0);
@@ -3869,7 +4172,7 @@ function updatePlayer(dt) {
   /* przesunięcie z kolizjami */
   const was = p.onGround;
   if (p.standOn && p.standOn.kind === 'plat') { const pl = p.standOn.pl; p.x += pl.dx; p.z += pl.dz; p.y += pl.dy; }
-  if (p.standOn && p.standOn.kind === 'trolley') p.x += p.standOn.hz.dx || 0;
+  if (p.standOn && (p.standOn.kind === 'trolley' || p.standOn.kind === 'car')) p.x += p.standOn.hz.dx || 0;
   const near = nearSolids(p.z - 3, p.z + 3);
   moveH(p, 'x', p.vx * dt, near, was);
   moveH(p, 'z', p.vz * dt, near, was);
@@ -3883,10 +4186,12 @@ function updatePlayer(dt) {
     if (s.kind === 'spring') { p.vy = I.jump ? PH.springHold : PH.spring; p.onGround = false; p.jumping = true; p.standOn = null; s.sp.squash = 0.25; AudioSys.play('spring'); }
     else if (s.kind === 'plat' && s.pl.kind === 'fall' && s.pl.fall === 0) s.pl.fall = 0.0001;
   }
-  /* rura poczty pneumatycznej */
-  if (Input.takeDown() && p.onGround && p.standOn && p.standOn.kind === 'pipe' && game.state === 'play') {
+  /* rura poczty pneumatycznej: strzałka w dół, szybki ruch palca w dół albo gałka pociągnięta w dół przez chwilę */
+  const onPipe = p.onGround && p.standOn && p.standOn.kind === 'pipe' && game.state === 'play';
+  if (onPipe && A && A.y > 0.8) p.pipeT = (p.pipeT || 0) + dt; else p.pipeT = 0;
+  if ((Input.takeDown() && onPipe) || p.pipeT > 0.35) {
     const pipe = game.lvl.pipes.find((q) => Math.abs(q.x - p.x) < 0.9 && Math.abs(q.z - p.z) < 0.9);
-    if (pipe) startPipe(pipe);
+    if (pipe) { p.pipeT = 0; startPipe(pipe); }
   }
   const L = game.lvl;
   if (p.star > 0) for (const c of L.cartons) if (!c.broken && Math.abs(c.x - p.x) < 0.95 && Math.abs(c.z - p.z) < 0.95 && p.y < c.y + 1 && p.y + PH.h > c.y) breakCarton(c);
@@ -3902,7 +4207,12 @@ function updatePlayer(dt) {
   if (Q) {
     const dx = p.x - Q.x, dz = p.z - Q.z, dd = Math.hypot(dx, dz);
     if (dd < 7) { const ty = Math.atan2(-dx, -dz); let a = ty - Q.n.root.rotation.y; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; Q.n.root.rotation.y += a * Math.min(1, dt * 5); }
-    if ((dd < 5.5 || game.st.t < 14) && !game.persist.questSeen && game.state === 'play' && !(EL.toast && EL.toast.classList.contains('on'))) { game.persist.questSeen = true; showToast('<b>' + esc(L.quest.who) + '.</b> ' + esc(L.quest.ask), 7000); AudioSys.play('check'); }
+    if (dd < 7.5 && game.st.t > 1.0 && !game.persist.questSeen && game.state === 'play' && !game.pendingQuiz) {
+      game.persist.questSeen = true; AudioSys.play('check');
+      const nq = pickQuestionKind(L.w, ['mc', 'tf', 'organ', 'gap']);
+      if (nq) { showToast('<b>' + esc(L.quest.who) + '.</b> Zanim poproszę Cię o pomoc, sprawdźmy, czy znasz ten rozdział.', 2400); game.pendingQuiz = { ctx: { npc: true, q: nq }, t: 1.5 }; }
+      else showToast('<b>' + esc(L.quest.who) + '.</b> ' + esc(L.quest.ask), 7000);
+    }
     Q.mk.position.y = 2.45 + Math.sin(game.t * 4) * 0.08; Q.mk.visible = !game.persist.questDone;
   }
   /* upadek w dół */
@@ -3911,14 +4221,14 @@ function updatePlayer(dt) {
   const G = game.lvl.goal;
   if (G && game.state === 'play' && p.z < G.z + 0.55 && Math.abs(p.x - G.x) < 1.2) startClear();
   /* punkty kontrolne */
-  game.lvl.checkpoints.forEach((c, i) => { if (!c.on && p.z < c.z) { c.on = true; game.persist.cp = Math.max(game.persist.cp, i); AudioSys.play('check'); if (c.mesh) { c.mesh.material.color.set(PAL.red); c.mesh.position.y = 2.4; } FLOATS.add('PUNKT KONTROLNY', V3(game.lvl.hw, 3.4, c.z), { big: true, t: 1.6 }); } });
+  game.lvl.checkpoints.forEach((c, i) => { if (!c.on && p.z < c.z) { c.on = true; game.persist.cp = Math.max(game.persist.cp, i); AudioSys.play('check'); if (c.flame) { c.flame.visible = true; c.glow.visible = true; FX.burst(c.mesh.position.x - 0.9, 1.3, c.z, PAL.gold, 10, 2); } FLOATS.add('LAMPKA ZAPALONA', V3(zoneHW(game.lvl, c.z), 3.2, c.z), { big: true, t: 1.6 }); if (!save.tips.lamp) { save.tips.lamp = 1; writeSave(); showToast('<b>Lampka oliwna</b> to punkt kontrolny. Po utracie życia wracasz tutaj. Lampa oliwna jest symbolem pielęgniarstwa, bo z taką lampą Florence Nightingale obchodziła nocą sale chorych.', 6000); } } });
 }
 function moveH(p, ax, d, near, wasG) {
   if (!d) return;
   p[ax] += d;
   for (const s of near) {
     if (!overlapBox(p, s, 0.02)) continue;
-    if (s.kind === 'trolley') continue;
+    if (s.kind === 'trolley' || s.kind === 'car') continue;
     if (wasG && s.y1 - p.y <= PH.step && s.y1 > p.y && !s.inv) {
       const oy = p.y; p.y = s.y1;
       if (!near.some((o) => o !== s && overlapBox(p, o, 0.02))) continue;
@@ -3945,7 +4255,7 @@ function moveV(p, d, near) {
   if (hit) bumpBlock(hit);
   if (head && game.state === 'play') breakCarton(head);
   /* skok na karton rozbija go i odbija postać w górę */
-  if (crush && game.state === 'play') { breakCarton(crush); p.vy = Input.st.jump ? PH.stompHold * 0.9 : PH.stomp * 0.85; p.onGround = false; p.standOn = null; p.jumping = true; }
+  if (crush && game.state === 'play') { breakCarton(crush); p.vy = Input.st.jump ? PH.stomp : 2.6; p.onGround = false; p.standOn = null; p.jumping = !!Input.st.jump; }
 }
 
 /* ---------- bloki ---------- */
@@ -4431,10 +4741,11 @@ function recordAnswer(q, ok) {
 }
 /* zwraca opis tego, co gracz zyskał albo stracił (do okna pytania) */
 function applyAnswer(ok, Z) {
-  const res = { ok, pts: 0, mult: 1, streak: 0, erased: null, pen: null, bonus: !!Z.ctx.bonus, timeBonus: 0, lifeLost: false };
-  if (Z.ctx.bonus) game.st.bn++; else game.st.n++;
+  const res = { ok, pts: 0, mult: 1, streak: 0, erased: null, pen: null, bonus: !!Z.ctx.bonus, npc: !!Z.ctx.npc, timeBonus: 0, lifeLost: false };
+  const side = Z.ctx.bonus || Z.ctx.npc;
+  if (side) game.st.bn++; else game.st.n++;
   if (ok) {
-    if (Z.ctx.bonus) game.st.bok++; else game.st.ok++;
+    if (side) game.st.bok++; else game.st.ok++;
     game.streak++; game.bestStreak = Math.max(game.bestStreak, game.streak); game.st.maxStreak = Math.max(game.st.maxStreak, game.streak);
     res.streak = game.streak; res.mult = multOf(game.streak);
     res.timeBonus = Z.max ? Math.ceil(Math.max(0, Z.t)) * 25 : 0;
@@ -4444,7 +4755,7 @@ function applyAnswer(ok, Z) {
     return res;
   }
   game.streak = 0;
-  if (Z.ctx.bonus) return res;
+  if (Z.ctx.bonus || Z.ctx.npc) return res;
   game.st.wrong++;
   /* Opanowanie na najwyższym poziomie: pierwszy błąd w etapie bez kary */
   if (upT('calm') >= 3 && !game.st.calmUsed) { game.st.calmUsed = true; res.calm = true; return res; }
@@ -4497,6 +4808,219 @@ function iris(open, dur, cb) {
   el.style.transition = 'none'; el.classList.toggle('closed', open); void el.offsetWidth;
   el.style.transition = ['width', 'height', 'margin'].map((k) => k + ' ' + dur + 's ease-in-out').join(','); el.classList.toggle('closed', !open);
   if (cb) setTimeout(cb, dur * 1000);
+}
+
+/* ---------- zakątek pamiątek i kronika zawodu ---------- */
+const MEMENTO_DEFAULT = [
+  { w: 1, id: 'lamp', name: 'Lampka oliwna', model: 'lamp', desc: 'Lampa oliwna jest symbolem pielęgniarstwa. Florence Nightingale obchodziła z nią nocą sale chorych, a dziś lampkę zapala się podczas uroczystości czepkowania.' },
+  { w: 2, id: 'pwz', name: 'Prawo wykonywania zawodu', model: 'pwz', desc: 'Dokument, który potwierdza prawo wykonywania zawodu pielęgniarki albo położnej. Bez niego nie można pracować w zawodzie.' },
+  { w: 3, id: 'cap', name: 'Czepek z paskiem', model: 'cap', desc: 'Czepek pielęgniarski z czarnym paskiem i czepek położnej z czerwonym paskiem. Dziś noszony głównie podczas uroczystości, zwłaszcza czepkowania.' },
+  { w: 4, id: 'banner', name: 'Sztandar samorządu', model: 'banner', desc: 'Sztandar towarzyszy uroczystościom samorządu zawodowego, od czepkowania po jubileusze izb.' },
+  { w: 5, id: 'badge', name: 'Odznaczenie samorządu', model: 'badge', desc: 'Odznaczenie samorządu zawodowego dla osób zasłużonych dla pielęgniarek, pielęgniarzy, położnych i położnych.' },
+  { w: 6, id: 'book', name: 'Kodeks etyki zawodowej', model: 'book', desc: 'Kodeks Etyki Zawodowej Pielęgniarki i Położnej Rzeczypospolitej Polskiej. Zasady etyki zawodowej uchwala Krajowy Zjazd Pielęgniarek i Położnych.' },
+  { w: 7, id: 'scroll', name: 'Przyrzeczenie zawodowe', model: 'scroll', desc: 'Słowa przyrzeczenia, które pielęgniarki, pielęgniarze, położne i położni składają na początku drogi zawodowej.' },
+  { w: 8, id: 'hymn', name: 'Hymn pielęgniarski', model: 'hymn', desc: 'Pieśń śpiewana podczas uroczystości zawodowych, między innymi czepkowania.' }
+];
+const GENERIC_LINES = ['Dzień dobry! Dziś spokojny dyżur.', 'Powodzenia na trasie!', 'Pamiętaj o składce członkowskiej.', 'Czepkowanie już w maju.', 'Izba czeka na Ciebie na końcu drogi.', 'Dwunastego maja świętujemy razem.'];
+function mementoOf(w) { return (WPU_CULTURE.mementos || []).find((m) => m.w === w) || MEMENTO_DEFAULT[w - 1]; }
+function chronicleList() { return (WPU_CULTURE.chronicle || []).slice().sort((a, b) => String(a.year).localeCompare(String(b.year))); }
+function chronicleOf(w, s) { const C = chronicleList(); if (!C.length) return null; const i = ((w - 1) * 2 + Math.max(0, s - 2)) % C.length; return Object.assign({ i }, C[i]); }
+function wrapLines(t, n) { const out = []; let line = ''; for (const wd of String(t).split(' ')) { if ((line + ' ' + wd).trim().length > n) { out.push(line.trim()); line = wd; } else line += ' ' + wd; } if (line.trim()) out.push(line.trim()); return out.join('\n'); }
+function buildGarden(L, root, th) {
+  game.garden = null; const G = L.garden; if (!G || !game.persist) return;
+  const w = L.w, s = G.side, M = mementoOf(w), face = s > 0 ? -Math.PI / 2 : Math.PI / 2;
+  const g = new THREE.Group(); g.position.set(G.x, G.topY || 1.13, G.z); root.add(g);
+  if (G.kind === 'memento' && !save.mementos[w]) {
+    const m = buildMemento(M.model); m.position.y = 0.04; m.rotation.y = face; g.add(m);
+    const gl = new THREE.Sprite(MATS.glowGold); gl.scale.set(2.8, 2.8, 1); gl.position.y = 0.45; g.add(gl);
+    game.garden = { kind: 'memento', g, m, gl, x: G.x, z: G.z, M };
+  } else if (G.kind === 'memento') {
+    const m = buildMemento(M.model); m.position.y = 0.04; m.rotation.y = face; m.scale.setScalar(0.8); g.add(m);
+    const pl = signMesh(M.name.toUpperCase(), 0.24, { bg: '#ffffff', col: INK, edge: PAL.red }); pl.position.set(-s * 0.7, 0.3, 0); pl.rotation.y = face; g.add(pl);
+    game.garden = { kind: 'seen', g, x: G.x, z: G.z, M };
+  } else {
+    const C = chronicleOf(w, L.s), txt = C ? wrapLines(C.year + '. ' + C.text, 34) : wrapLines(M.name + '. ' + M.desc, 34);
+    const pl = signMesh(txt, 0.26, { bg: '#ffffff', col: INK, edge: PAL.red, size: 44 }); pl.position.set(-s * 0.3, 1.1, 0); pl.rotation.y = face; g.add(pl);
+    const back = pl.clone(); back.rotation.y = face + Math.PI; back.position.x = -s * 0.28; g.add(back);
+    const gb = new GB(); gb.box(-s * 0.29, 0, 0, 0.08, 0.6, 0.08, '#5c636a'); g.add(gb.mesh());
+    game.garden = { kind: 'board', g, x: G.x, z: G.z, C, M };
+  }
+}
+function updateGarden(dt) {
+  const Gd = game.garden, p = game.player; if (!Gd || p.dead) return;
+  if (Gd.kind === 'memento') {
+    Gd.m.rotation.y += dt * 1.2; Gd.m.position.y = 0.04 + Math.sin(game.t * 2.2) * 0.06;
+    if (Math.abs(p.x - Gd.x) < 1.35 && Math.abs(p.z - Gd.z) < 1.35 && game.state === 'play') {
+      const M = Gd.M; save.mementos[game.w] = M.id; game.coins += 50; writeSave();
+      Gd.g.remove(Gd.m); Gd.g.remove(Gd.gl); Gd.kind = 'seen';
+      AudioSys.play('gold'); FX.confetti(Gd.x, 1.6, Gd.z, 28); flashIt(0.1);
+      FLOATS.add('PAMIĄTKA ZAWODU +50 §', V3(Gd.x, 2.4, Gd.z), { big: true, cls: 'ok', t: 2 });
+      showToast('<b>' + esc(M.name) + '.</b> ' + esc(nb(M.desc)) + ' Pamiątkę znajdziesz w Kronice zawodu na mapie.', 9000);
+      checkBadges();
+    }
+  } else if (Gd.kind === 'board' && !Gd.read && Math.abs(p.x - Gd.x) < 2.2 && Math.abs(p.z - Gd.z) < 2.2 && game.state === 'play') {
+    Gd.read = true; save.chronRead = save.chronRead || {};
+    const key = Gd.C ? 'c' + Gd.C.i : 'm' + game.w, fresh = !save.chronRead[key];
+    if (fresh) { save.chronRead[key] = 1; game.coins += 20; writeSave(); FLOATS.add('KRONIKA +20 §', V3(Gd.x, 2.6, Gd.z), { big: true, cls: 'ok', t: 1.8 }); AudioSys.play('check'); }
+    showToast('<b>Kronika zawodu' + (Gd.C ? ', ' + esc(Gd.C.year) : '') + '.</b> ' + esc(nb(Gd.C ? Gd.C.text : Gd.M.desc)), 8000);
+  }
+}
+/* przechodnie zagadują, gdy postać przechodzi obok */
+function updateTalk(dt) {
+  game.talkCd -= dt; if (game.talkCd > 0 || !game.env || !game.env.npcs) return;
+  const p = game.player; if (p.dead) return;
+  for (const n of game.env.npcs) {
+    if (n.said) continue;
+    const dx = n.root.position.x - p.x, dz = n.root.position.z - p.z;
+    if (dx * dx + dz * dz < 3.4 * 3.4 && Math.abs(n.root.position.y - p.y) < 2) {
+      n.said = true; game.talkCd = 2.2;
+      const pool = (WPU_CULTURE.npcLines || []).filter((l) => l.w === game.w).map((l) => l.text), all = pool.length ? pool : GENERIC_LINES;
+      game.talkI = (game.talkI || 0) + 1; const line = all[(game.talkI + game.w) % all.length];
+      FLOATS.add(line, V3(n.root.position.x, n.root.position.y + 2.2, n.root.position.z), { follow: n.root, oy: 2.25, t: 3.6, cls: 'say' });
+      return;
+    }
+  }
+}
+
+/* =====================================================================
+   PRÓBY WIEDZY NA TRASIE: bramki prawdy, luka w przepisie, właściwe drzwi
+   Odpowiada się ruchem postaci, bez okna. Wynik trafia do raportu wiedzy.
+   ===================================================================== */
+const TEST_INFO = { gate: 'Prawda czy fałsz?', luka: 'Uzupełnij przepis', doors: 'Wejdź we właściwe drzwi' };
+const qKind = (q) => q.kind || (q.tf ? 'tf' : 'mc');
+const shortOpts = (q, n) => q.o && q.o.length >= 3 && q.o.slice(0, 4).every((o) => o.length <= n);
+/* pytanie określonego rodzaju: najpierw nieodkryte z tego świata, potem błędne, potem pozostałe */
+function pickQuestionKind(w, kinds, pred) {
+  const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+  const pool = WPU_QUESTIONS.filter((q) => kinds.includes(qKind(q)) && (!pred || pred(q)));
+  if (!pool.length) return null;
+  const own = pool.filter((q) => q.w === w), notAsked = (q) => !game.asked.has(q.id);
+  const fresh = (q) => !save.answers[q.id] && notAsked(q), wrong = (q) => save.answers[q.id] && !save.answers[q.id].last && notAsked(q);
+  let c;
+  if ((c = own.filter(fresh)).length) return pick(c);
+  if ((c = own.filter(wrong)).length) return pick(c);
+  if ((c = own.filter(notAsked)).length) return pick(c);
+  if ((c = pool.filter(fresh)).length) return pick(c);
+  if ((c = pool.filter(notAsked)).length) return pick(c);
+  return pick(own.length ? own : pool);
+}
+/* losowanie pytań do prób raz na podejście do etapu (po utracie życia wracają te same) */
+function setupTests(L) {
+  const P = game.persist; P.tests = P.tests || {};
+  L.tests.forEach((t, i) => {
+    t.i = i;
+    if (P.tests[i]) return;
+    let q = null, r = { done: false, ok: null };
+    if (t.kind === 'gate') { q = pickQuestionKind(L.w, ['tf']); r.leftTrue = rnd() < 0.5; }
+    else if (t.kind === 'luka') { q = pickQuestionKind(L.w, ['gap'], (x) => shortOpts(x, 22)); r.perm = shuffle([0, 1, 2]); }
+    else { q = pickQuestionKind(L.w, ['organ', 'mc'], (x) => shortOpts(x, 26)); r.perm = shuffle([0, 1, 2]); }
+    if (!q) { r.off = true; } else { r.qid = q.id; game.asked.add(q.id); }
+    P.tests[i] = r;
+  });
+}
+const testQ = (t) => { const r = game.persist.tests[t.i]; return r && r.qid ? WPU_QUESTIONS.find((q) => q.id === r.qid) : null; };
+function plate(text, h, o) { const m = signMesh(text, h, Object.assign({ bg: '#ffffff', col: INK, edge: PAL.red, pad: 0.16 }, o || {})); return m; }
+/* modele prób: napisy, żetony z odpowiedziami, drzwi z tabliczkami */
+function buildTests(L, root, th) {
+  game.tests = [];
+  if (!game.persist || !game.persist.tests) return;
+  for (const t of L.tests) {
+    const r = game.persist.tests[t.i], q = testQ(t); if (!r || r.off || !q) continue;
+    const T = { t, r, q, meshes: [], tokens: [], doors: [] };
+    const add = (m) => { root.add(m); T.meshes.push(m); return m; };
+    if (t.kind === 'gate') {
+      const head = add(signMesh('PRAWDA CZY FAŁSZ?', 0.5, { bg: PAL.red, col: '#ffffff' })); head.position.set(0, 4.2, -(t.d0) + 0.4);
+      const gb = new GB(); [-1, 1].forEach((k) => gb.cyl(k * (head.userData.w / 2 + 0.15), 0, -(t.d0) + 0.3, 0.06, 4.4, '#5c636a', 6)); gb.box(0, 4.2 - 0.33, -(t.d0) + 0.3, head.userData.w + 0.3, 0.06, 0.06, '#5c636a'); add(gb.mesh());
+      [[-1.9, r.leftTrue], [1.9, !r.leftTrue]].forEach(([x, isTrue]) => {
+        const m = add(signMesh(isTrue ? 'PRAWDA' : 'FAŁSZ', 0.52, { bg: isTrue ? PAL.ok : PAL.red, col: '#ffffff' })); m.position.set(x, 2.7, -(t.d0) + 1.2);
+        const g = new GB(); g.cyl(x, 0, -(t.d0) + 1.1, 0.05, 2.45, '#9aa1a8', 6); add(g.mesh());
+        const gl = new THREE.Sprite(isTrue ? MATS.glowWhite : MATS.glowRed); gl.scale.set(2.2, 1.2, 1); gl.position.set(x, 2.7, -(t.d0) + 1.1); add(gl);
+      });
+      if (r.done) T.meshes.forEach((m) => { if (m.isSprite) m.visible = false; });
+    } else if (t.kind === 'luka') {
+      const head = add(signMesh('UZUPEŁNIJ PRZEPIS', 0.5, { bg: PAL.red, col: '#ffffff' })); head.position.set(0, 4.0, t.zq);
+      const gb = new GB(); [-1, 1].forEach((k) => gb.cyl(k * (head.userData.w / 2 + 0.15), 0, t.zq - 0.1, 0.06, 4.2, '#5c636a', 6)); add(gb.mesh());
+      if (!r.done) t.xs.forEach((x, k) => {
+        const g = new THREE.Group(); const pl = plate(q.o[r.perm[k]], 0.4, { size: 56 }); g.add(pl);
+        const back = pl.clone(); back.rotation.y = Math.PI; back.position.z = -0.01; g.add(back);
+        const gl = new THREE.Sprite(MATS.glowWhite); gl.scale.set(2.6, 1.6, 1); g.add(gl);
+        g.position.set(x, t.y, t.z); add(g); T.tokens.push({ k, g, x });
+      });
+    } else {
+      const s = t.side, hw = t.hw;
+      const head = add(signMesh('WŁAŚCIWE DRZWI', 0.5, { bg: PAL.red, col: '#ffffff' })); head.position.set(s * (hw - 2.2), 4.0, t.zq);
+      const gb = new GB(); [-1, 1].forEach((k) => gb.cyl(s * (hw - 2.2) + k * (head.userData.w / 2 + 0.15), 0, t.zq - 0.1, 0.06, 4.2, '#5c636a', 6)); add(gb.mesh());
+      const wall = th.indoor ? (th.ward ? th.ward.wall : '#ece4d6') : shade(th.step, 0.05), frame = th.ward ? th.ward.frame : '#6b4a33', doorC = th.ward ? th.ward.door : '#8b6243';
+      t.zs.forEach((z, k) => {
+        const g = new THREE.Group(); const w0 = new GB();
+        w0.box(0, 0, 0, 0.3, 3.0, 2.6, wall); w0.box(-s * 0.12, 0, 0, 0.1, 2.5, 1.5, frame); add(g); g.add(w0.mesh());
+        const dr = new GB(); dr.box(0, 0, 0.65, 0.07, 2.4, 1.3, doorC); dr.box(-s * 0.05, 1.3, 0.2, 0.03, 0.5, 0.35, th.ward ? th.ward.glass : '#cfe3ee'); dr.box(-s * 0.06, 1.05, 1.05, 0.05, 0.05, 0.18, '#9aa1a8');
+        const dm = dr.mesh(); dm.position.set(-s * 0.16, 0.03, -0.65); g.add(dm);
+        const pl = plate(q.o[r.perm[k]], 0.5, { size: 64 }); pl.position.set(-s * (pl.userData.w / 2 + 0.2), 2.85, 0); pl.rotation.y = 0; g.add(pl);
+        const back = pl.clone(); back.rotation.y = Math.PI; back.position.z = -0.01; g.add(back);
+        const bar = new GB(); bar.box(-s * (pl.userData.w / 2 + 0.2), 2.85 + 0.29, 0, pl.userData.w + 0.1, 0.05, 0.05, '#9aa1a8'); g.add(bar.mesh());
+        g.position.set(s * (hw + 0.02), 0, z);
+        T.doors.push({ k, g, dm, z, open: r.done && r.ok && r.perm[k] === 0 });
+      });
+    }
+    game.tests.push(T);
+  }
+}
+/* pasek z treścią próby u góry ekranu, gdy postać podchodzi */
+function stripShow(T) {
+  const el = EL.qstrip; if (!el) return;
+  const q = T.q, raw = q.q.replace(/^Prawda czy fałsz\?\s*/i, ''), txt = T.t.kind === 'luka' ? esc(nb(raw)).replace('___', '<span class="gapm">…</span>') : esc(nb(raw));
+  const key = T.t.i + ':' + T.r.done;
+  if (el.dataset.key !== key) { el.dataset.key = key; EL.qstripK.textContent = TEST_INFO[T.t.kind]; EL.qstripT.innerHTML = txt; el.classList.toggle('done', !!T.r.done); }
+  el.hidden = false; game.stripOn = true; EL.root.classList.add('strip');
+}
+function stripHide() { if (EL.qstrip && !EL.qstrip.hidden) { EL.qstrip.hidden = true; EL.qstrip.dataset.key = ''; } game.stripOn = false; if (EL.root) EL.root.classList.remove('strip'); }
+function updateTests(dt) {
+  const p = game.player, L = game.lvl; let near = null;
+  for (const T of game.tests || []) {
+    const t = T.t, r = T.r, q = T.q;
+    if (t.kind === 'gate') {
+      if (!r.done && p.z < -t.d0 + 7 && p.z > -t.d1 - 1) near = T;
+      if (!r.done && p.z < -t.d1 && p.z > -t.d1 - 3 && !p.dead) { const leftLane = p.x < 0, chosenTrue = leftLane ? r.leftTrue : !r.leftTrue; answerTest(T, chosenTrue === q.ans, chosenTrue ? 'Prawda' : 'Fałsz'); }
+    } else if (t.kind === 'luka') {
+      if (!r.done && p.z < t.zq + 6 && p.z > t.z - 2) near = T;
+      T.tokens.forEach((tk) => { tk.g.position.y = t.y + Math.sin(game.t * 2.6 + tk.k) * 0.1; tk.g.rotation.y = Math.sin(game.t * 1.3 + tk.k) * 0.18; });
+      if (!r.done && !p.dead) for (const tk of T.tokens) if (Math.abs(tk.x - p.x) < 0.95 && Math.abs(t.z - p.z) < 0.8 && Math.abs(t.y - (p.y + 0.9)) < 1.3) { answerTest(T, r.perm[tk.k] === 0, q.o[r.perm[tk.k]]); break; }
+    } else {
+      if (!r.done && p.z < -t.d0 + 2 && p.z > -t.d1 + 1) near = T;
+      for (const D of T.doors) { const a = D.open ? -t.side * 1.35 : 0; D.dm.rotation.y += (a - D.dm.rotation.y) * Math.min(1, dt * 6); }
+      if (!r.done && !p.dead && p.onGround) for (const D of T.doors) if (Math.abs(D.z - p.z) < 0.9 && t.side * p.x > t.hw - 0.75) { D.open = r.perm[D.k] === 0; answerTest(T, D.open, q.o[r.perm[D.k]]); if (!D.open) { p.vx = -t.side * 4; p.vz = 3; } break; }
+    }
+  }
+  if (near && game.state === 'play') stripShow(near); else if (game.stripOn) stripHide();
+}
+/* wynik próby: punkty, paragrafy i seria jak przy pytaniu, bez kary z art. 60 za błąd */
+function answerTest(T, ok, chosen) {
+  const t = T.t, r = T.r, q = T.q, p = game.player, st = game.st;
+  r.done = true; r.ok = ok; st.inw++;
+  recordAnswer(q, ok); knowCache = null;
+  const pos = pPos(2.2);
+  if (ok) {
+    st.inwOk++; save.stats.tests = (save.stats.tests || 0) + 1; game.streak++; game.bestStreak = Math.max(game.bestStreak, game.streak); st.maxStreak = Math.max(st.maxStreak, game.streak);
+    save.stats.bestStreak = Math.max(save.stats.bestStreak || 0, game.streak);
+    const pts = addScore(600, pos);
+    coinShower(V3(p.x, p.y + 1.2, p.z), 5);
+    AudioSys.play('correct'); FX.confetti(p.x, p.y + 1.5, p.z, 20); flashIt(0.08);
+    showStamp('DOBRZE!', '+' + fmt(pts) + ' pkt · ' + q.art, false, 1.4);
+    showToast('<b>Dobrze.</b> ' + esc(nb(q.e)), 5200);
+  } else {
+    game.streak = 0; st.inwWrong++;
+    losePoints(300, pos);
+    const n = Math.min(game.coins, 10); game.coins -= n;
+    AudioSys.play('wrong'); shakeIt(0.15); flashIt(0.12, '227,5,19');
+    const right = qKind(q) === 'tf' ? (q.ans ? 'Prawda' : 'Fałsz') : q.o[0];
+    showStamp('BŁĄD', '−300 pkt · −' + n + ' §', true, 1.6);
+    showToast('<b>Niestety.</b> Poprawna odpowiedź to „' + esc(nb(right)) + '”. ' + esc(nb(q.e)), 6500);
+  }
+  if (t.kind === 'luka') { T.tokens.forEach((tk) => { if (r.perm[tk.k] === 0 && !ok) { tk.g.children.forEach((c) => { if (c.isSprite) c.material = MATS.glowGold; }); setTimeout(() => { if (tk.g.parent) tk.g.parent.remove(tk.g); }, 1600); } else if (tk.g.parent) tk.g.parent.remove(tk.g); }); T.tokens = []; }
+  if (t.kind === 'gate') T.meshes.forEach((m) => { if (m.isSprite) m.visible = false; });
+  stripHide();
+  void chosen;
 }
 
 /* =====================================================================
@@ -4585,7 +5109,7 @@ function animWorld(dt) {
   }
   for (const c of L.cartons) if (c.mesh && !c.broken) c.mesh.position.y += (c.y + 0.5 - c.mesh.position.y) * Math.min(1, dt * 12);
   for (const sp of L.springs) if (sp.top) { sp.squash = Math.max(0, (sp.squash || 0) - dt); sp.top.position.y = sp.y + 0.62 - (sp.squash > 0 ? Math.sin((sp.squash / 0.25) * Math.PI) * 0.35 : 0); }
-  for (const c of game.lvl.checkpoints) if (c.on && c.mesh && c.mesh.position.y < 2.4) c.mesh.position.y = Math.min(2.4, c.mesh.position.y + dt * 3);
+  for (const c of game.lvl.checkpoints) if (c.flame && c.flame.visible) { const k = 1 + Math.sin(game.t * 9 + c.z) * 0.14; c.flame.scale.set(1.2 * k, 1.2 * k, 1); }
 }
 /* kamera za plecami postaci, z wyprzedzeniem w głąb ścieżki */
 function updateCamera(dt, snap) {
@@ -4634,7 +5158,7 @@ function camBlock(L, H, C) {
 }
 function followSky(cam) {
   if (!S3.lights) return;
-  S3.lights.children.forEach((o) => { if (o.userData.follow) o.position.set(cam.position.x + 70, 70, cam.position.z - 240); if (o.isDirectionalLight) { o.position.set(cam.position.x - 20, cam.position.y + 40, cam.position.z + 25); o.target.position.set(cam.position.x, 0, cam.position.z - 10); } });
+  S3.lights.children.forEach((o) => { if (o.userData.follow) o.position.set(cam.position.x + 70, o.userData.sunY || 70, cam.position.z - 240); if (o.isDirectionalLight) { const f = o.userData.off || [-20, 40, 25]; o.position.set(cam.position.x + f[0], cam.position.y + f[1], cam.position.z + f[2]); o.target.position.set(cam.position.x, 0, cam.position.z - 12); } });
   if (game.env && game.env.stars) game.env.stars.position.set(cam.position.x, 0, cam.position.z);
 }
 let renderSkip = 0;
@@ -4822,7 +5346,7 @@ function renderMapInfo() {
 /* =====================================================================
    INTERFEJS: ekrany, pytania, raport, układ, sterowanie
    ===================================================================== */
-const SCREENS = ['title', 'char', 'map', 'list', 'intro', 'quiz', 'pause', 'clear', 'over', 'report', 'komp', 'help', 'settings', 'ask', 'shop', 'badges'];
+const SCREENS = ['title', 'char', 'map', 'list', 'intro', 'quiz', 'pause', 'clear', 'over', 'report', 'komp', 'help', 'settings', 'ask', 'shop', 'badges', 'chron'];
 let current = null; const stack = [];
 let cv = null;
 const EL = {};
@@ -4832,7 +5356,7 @@ function show(id) {
   EL.root.classList.toggle('inmenu', !!id && id !== 'intro');
   EL.root.classList.toggle('playing', !id);
   if (id && EL.gest) gestReset();
-  EL.hud.hidden = !game.lvl || ['title', 'char', 'map', 'list', 'shop', 'badges'].includes(id);
+  EL.hud.hidden = !game.lvl || ['title', 'char', 'map', 'list', 'shop', 'badges', 'chron'].includes(id);
   if (id && id !== 'intro') {
     const scr = EL['scr-' + id];
     scr.scrollTop = 0;
@@ -4852,6 +5376,7 @@ function openSub(id, opts) {
   if (id === 'list') renderList();
   if (id === 'shop') renderShop();
   if (id === 'badges') renderBadges();
+  if (id === 'chron') renderChron();
   show(id);
 }
 function back() {
@@ -4998,6 +5523,7 @@ function stageCleared() {
     [fmt(game.bonus.time), 'Premia za czas'],
     [game.bonus.full ? fmt(game.bonus.full) : '–', 'Premia za komplet'],
     [game.bonus.clean ? fmt(game.bonus.clean) : '–', 'Bezbłędny etap'],
+    boss ? null : [st.inwOk + ' z ' + (L.tests.length || 0), 'Próby wiedzy na trasie'],
     boss ? null : [fmt(st.coins), 'Zebrane paragrafy'],
     boss ? null : [st.quest ? fmt(game.bonus.quest) : '–', 'Premia za prośbę']
   ];
@@ -5037,6 +5563,7 @@ function missionNote(m) {
   if (m.id === 'quiz') return '<small>otwarte ' + st.n + ' z ' + (game.lvl.quizTotal || 0) + ', błędy ' + st.wrong + '</small>';
   if (m.id === 'gold') return '<small>zebrane ' + goldCount(game.persist.gold) + ' z 3</small>';
   if (m.id === 'quest') return '<small>' + (game.persist.doc ? 'dokument masz przy sobie' : 'dokument jeszcze czeka na trasie') + '</small>';
+  if (m.id === 'tests') return '<small>zaliczone ' + st.inwOk + ' z ' + m.n + ', błędne ' + st.inwWrong + '</small>';
   return '';
 }
 function invText() {
@@ -5046,32 +5573,42 @@ function invText() {
 }
 
 /* ---------- okno pytania ---------- */
+const KIND_LABEL = { mc: 'Pytanie', organ: 'Kto albo co?', tf: 'Prawda czy fałsz?', gap: 'Uzupełnij lukę', multi: 'Wskaż wszystkie poprawne', order: 'Ułóż w kolejności' };
 function openQuiz(ctx2) {
   const final = !!(ctx2.boss && game.w === 8);
-  const q = pickQuestion(game.w, final);
+  const q = ctx2.q || pickQuestion(game.w, final), kind = qKind(q);
   game.asked.add(q.id);
-  const opts = q.tf ? [{ t: 'Prawda', ok: q.ans === true }, { t: 'Fałsz', ok: q.ans === false }] : shuffle(q.o.map((t, i) => ({ t, ok: i === 0 })));
-  const qt = game.mode.time ? game.mode.time + 5 * upT('watch') : 0;
-  game.quiz = { q, ctx: ctx2, opts, answered: false, ok: false, t: qt, max: qt, res: null, stake: false, second: false, secondArmed: false, usedL: {} };
+  let opts;
+  if (kind === 'tf') opts = [{ t: 'Prawda', ok: q.ans === true }, { t: 'Fałsz', ok: q.ans === false }];
+  else if (kind === 'multi') opts = shuffle(q.o.map((t, i) => ({ t, ok: (q.ok || [0]).includes(i) })));
+  else if (kind === 'order') opts = shuffle(q.o.map((t, i) => ({ t, ok: true, pos: i })));
+  else opts = shuffle(q.o.map((t, i) => ({ t, ok: i === 0 })));
+  const multi = kind === 'multi' || kind === 'order';
+  const qt = game.mode.time ? game.mode.time + 5 * upT('watch') + (multi ? 10 : 0) : 0;
+  game.quiz = { q, kind, ctx: ctx2, opts, sel: [], answered: false, ok: false, t: qt, max: qt, res: null, stake: false, second: false, secondArmed: false, usedL: {} };
   game.state = 'quiz'; Input.clearAll(); AudioSys.duck(true);
-  game.qshots = []; EL.toast.classList.remove('on');
+  game.qshots = []; EL.toast.classList.remove('on'); stripHide();
   const W = WPU_WORLDS[q.w - 1];
-  EL.quizMeta.textContent = (ctx2.bonus ? 'Pytanie premiowe · bez kary · ' : ctx2.boss ? 'Strażnik rozdziału · ' : 'Pytanie · ') + W.chapter;
+  EL.quizMeta.textContent = (ctx2.bonus ? 'Pytanie premiowe · bez kary · ' : ctx2.boss ? 'Strażnik rozdziału · ' : ctx2.npc ? 'Pytanie od postaci · bez kary · ' : KIND_LABEL[kind] + ' · ') + W.chapter;
   const nextMult = multOf(game.streak + 1);
   EL.quizStreak.hidden = false;
   game.quizLabel = (st2) => (game.streak ? 'Seria ' + game.streak + ' · stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) : 'Stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) + (game.penLvl ? ' · kara ' + WPU_PENALTIES[game.penLvl - 1].name.toLowerCase() : '')) + (st2 ? ' · podwójna' : '');
   EL.quizStreak.firstChild.textContent = game.quizLabel(false);
-  EL.quizQ.textContent = nb(q.q);
-  EL.quizTimer.hidden = !game.mode.time;
+  if (kind === 'gap') EL.quizQ.innerHTML = esc(nb(q.q)).replace('___', '<span class="gapm">…</span>'); else EL.quizQ.textContent = nb(q.q);
+  EL.quizHow.hidden = !multi;
+  EL.quizHow.textContent = kind === 'multi' ? nb('Zaznacz wszystkie poprawne odpowiedzi, a potem zatwierdź.') : kind === 'order' ? nb('Dotykaj odpowiedzi po kolei, od pierwszej do ostatniej, a potem zatwierdź.') : '';
+  EL.quizTimer.hidden = !qt;
   EL.quizBar.style.width = '100%';
   EL.quizOpts.innerHTML = '';
   opts.forEach((o, i) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'wpu-opt';
-    b.innerHTML = '<span class="k">' + 'ABCD'[i] + '</span><span>' + esc(nb(o.t)) + '</span>';
+    b.innerHTML = '<span class="k">' + 'ABCD'[i] + '</span><span>' + esc(nb(o.t)) + '</span>' + (kind === 'order' ? '<i class="n"></i>' : '');
+    if (multi) b.setAttribute('aria-pressed', 'false');
     b.addEventListener('click', () => answerQuiz(i));
     EL.quizOpts.appendChild(b);
   });
+  EL.quizConfirm.hidden = !multi; EL.quizUndo.hidden = kind !== 'order';
   EL.quizFb.hidden = true; EL.quizNext.hidden = true; EL.quizHint.hidden = true;
   renderLife();
   show('quiz');
@@ -5079,37 +5616,65 @@ function openQuiz(ctx2) {
 /* koła ratunkowe i podwójna stawka w oknie pytania */
 function renderLife() {
   const Z = game.quiz; if (!Z) return;
-  const L = save.life, four = !Z.q.tf, a = Z.answered;
+  const L = save.life, a = Z.answered, single = Z.kind === 'mc' || Z.kind === 'organ' || Z.kind === 'gap';
   const btn = (id, label, n, en, on, title) => '<button type="button" data-life="' + id + '"' + (en ? '' : ' disabled') + ' class="' + (on ? 'on' : '') + (id === 'stake' ? ' stake' : '') + '" title="' + esc(title) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(label) + (n !== null ? ' <b>' + n + '</b>' : '') + '</button>';
   EL.quizLife.innerHTML =
-    btn('sciaga', 'Ściąga', L.sciaga || 0, !a && four && L.sciaga > 0 && !Z.usedL.sciaga, Z.usedL.sciaga, 'Usuwa dwie błędne odpowiedzi. Klawisz Q') +
+    btn('sciaga', 'Ściąga', L.sciaga || 0, !a && single && Z.opts.length >= 3 && L.sciaga > 0 && !Z.usedL.sciaga, Z.usedL.sciaga, 'Usuwa błędne odpowiedzi, dwie przy czterech opcjach. Klawisz Q') +
     btn('konsult', 'Konsultacja', L.konsult || 0, !a && L.konsult > 0 && !Z.usedL.konsult, Z.usedL.konsult, 'Pokazuje przepis i usuwa jedną błędną odpowiedź. Klawisz W') +
     btn('druga', 'Druga szansa', L.druga || 0, !a && L.druga > 0 && !Z.secondArmed && !Z.second, Z.secondArmed, 'Po błędzie wybierzesz jeszcze raz, bez kary. Klawisz E') +
-    (Z.ctx.bonus ? '' : btn('stake', 'Podwójna stawka', null, !a && !Z.second, Z.stake, 'Dwa razy więcej punktów, ale błąd podnosi karę o dwa stopnie. Klawisz R'));
+    (Z.ctx.bonus || Z.ctx.npc ? '' : btn('stake', 'Podwójna stawka', null, !a && !Z.second, Z.stake, 'Dwa razy więcej punktów, ale błąd podnosi karę o dwa stopnie. Klawisz R'));
 }
 function useLife(id) {
   const Z = game.quiz; if (!Z || Z.answered) return;
-  const btns = $$('.wpu-opt', EL.quizOpts), wrong = Z.opts.map((o, i) => (!o.ok && !btns[i].disabled ? i : -1)).filter((i) => i >= 0);
-  const L = save.life;
-  if (id === 'stake') { if (Z.second || Z.ctx.bonus) return; Z.stake = !Z.stake; AudioSys.play('tick'); EL.quizStreak.firstChild.textContent = game.quizLabel(Z.stake); }
-  else if (id === 'sciaga') { if (Z.q.tf || !(L.sciaga > 0) || Z.usedL.sciaga) return; L.sciaga--; Z.usedL.sciaga = 1; shuffle(wrong).slice(0, 2).forEach((i) => { btns[i].disabled = true; btns[i].classList.add('fade'); }); AudioSys.play('power'); }
+  const btns = $$('.wpu-opt', EL.quizOpts), wrong = Z.opts.map((o, i) => (!o.ok && !btns[i].disabled && !Z.sel.includes(i) ? i : -1)).filter((i) => i >= 0);
+  const L = save.life, single = Z.kind === 'mc' || Z.kind === 'organ' || Z.kind === 'gap';
+  const drop = (i) => { btns[i].disabled = true; btns[i].classList.add('fade'); btns[i].setAttribute('aria-pressed', 'false'); };
+  if (id === 'stake') { if (Z.second || Z.ctx.bonus || Z.ctx.npc) return; Z.stake = !Z.stake; AudioSys.play('tick'); EL.quizStreak.firstChild.textContent = game.quizLabel(Z.stake); }
+  else if (id === 'sciaga') { if (!single || Z.opts.length < 3 || !(L.sciaga > 0) || Z.usedL.sciaga) return; L.sciaga--; Z.usedL.sciaga = 1; shuffle(wrong).slice(0, Z.opts.length >= 4 ? 2 : 1).forEach(drop); AudioSys.play('power'); }
   else if (id === 'konsult') {
     if (!(L.konsult > 0) || Z.usedL.konsult) return; L.konsult--; Z.usedL.konsult = 1;
-    if (!Z.q.tf && wrong.length > 1) { const i = wrong[Math.floor(rnd() * wrong.length)]; btns[i].disabled = true; btns[i].classList.add('fade'); }
+    if (Z.kind !== 'tf' && Z.kind !== 'order' && wrong.length > 1) drop(wrong[Math.floor(rnd() * wrong.length)]);
     EL.quizHint.innerHTML = '<b>Konsultacja.</b> ' + esc(nb('To pytanie dotyczy przepisu ' + Z.q.art + ' ustawy o samorządzie pielęgniarek i położnych.')); EL.quizHint.hidden = false; AudioSys.play('power');
   }
   else if (id === 'druga') { if (!(L.druga > 0) || Z.secondArmed || Z.second) return; Z.secondArmed = true; AudioSys.play('power'); }
   writeSave(); renderLife(); fitFrame();
 }
+/* zaznaczanie w pytaniach wielokrotnego wyboru i porządkowania */
+function quizSelect(i) {
+  const Z = game.quiz; if (!Z || Z.answered) return;
+  const btns = $$('.wpu-opt', EL.quizOpts), b = btns[i]; if (!b || b.disabled) return;
+  if (Z.kind === 'multi') { const on = b.getAttribute('aria-pressed') === 'true'; b.setAttribute('aria-pressed', String(!on)); Z.sel = btns.map((x, k) => (x.getAttribute('aria-pressed') === 'true' ? k : -1)).filter((k) => k >= 0); }
+  else if (Z.kind === 'order') { if (Z.sel.includes(i)) return; Z.sel.push(i); b.setAttribute('aria-pressed', 'true'); b.querySelector('.n').textContent = String(Z.sel.length); }
+  AudioSys.play('tick');
+}
+function quizUndo() {
+  const Z = game.quiz; if (!Z || Z.answered || Z.kind !== 'order' || !Z.sel.length) return;
+  const i = Z.sel.pop(), b = $$('.wpu-opt', EL.quizOpts)[i]; b.setAttribute('aria-pressed', 'false'); b.querySelector('.n').textContent = '';
+}
+function quizClearSel() { const Z = game.quiz; Z.sel = []; $$('.wpu-opt', EL.quizOpts).forEach((b) => { b.setAttribute('aria-pressed', 'false'); const n = b.querySelector('.n'); if (n) n.textContent = ''; }); }
+function quizCorrect(Z, i) {
+  if (Z.kind === 'multi') { const want = Z.opts.map((o, k) => (o.ok ? k : -1)).filter((k) => k >= 0); return want.length === Z.sel.length && want.every((k) => Z.sel.includes(k)); }
+  if (Z.kind === 'order') return Z.sel.length === Z.opts.length && Z.sel.every((k, n) => Z.opts[k].pos === n);
+  return i >= 0 && Z.opts[i].ok;
+}
+function correctOf(Z) {
+  if (Z.kind === 'multi') return Z.opts.filter((o) => o.ok).map((o) => o.t).join(', ');
+  if (Z.kind === 'order') return Z.q.o.join(', potem ');
+  return Z.opts.find((o) => o.ok).t;
+}
 function answerQuiz(i) {
   const Z = game.quiz; if (!Z || Z.answered) return;
-  const ok = i >= 0 && Z.opts[i].ok;
+  const multi = Z.kind === 'multi' || Z.kind === 'order';
+  if (multi && i !== 'confirm' && i !== -1) { quizSelect(i); return; }
+  if (multi && i === 'confirm' && !Z.sel.length) return;
+  const ok = quizCorrect(Z, i);
   /* Druga szansa: pierwszy błąd bez skutków, wybierasz jeszcze raz (do raportu trafia pierwsza odpowiedź) */
-  if (!ok && i >= 0 && Z.secondArmed && !Z.second) {
+  if (!ok && i !== -1 && Z.secondArmed && !Z.second) {
     Z.secondArmed = false; Z.second = true; Z.stake = false; EL.quizStreak.firstChild.textContent = game.quizLabel(false); save.life.druga = Math.max(0, (save.life.druga || 0) - 1);
     recordAnswer(Z.q, false); knowCache = null;
-    const b = $$('.wpu-opt', EL.quizOpts)[i]; b.disabled = true; b.classList.add('bad');
-    EL.quizHint.innerHTML = '<b>Druga szansa.</b> ' + esc(nb('Ta odpowiedź jest błędna. Wybierz jeszcze raz, bez kary za pierwszy błąd.')); EL.quizHint.hidden = false;
+    if (multi) { quizClearSel(); EL.quizHint.innerHTML = '<b>Druga szansa.</b> ' + esc(nb('Ten układ odpowiedzi jest błędny. Spróbuj jeszcze raz, bez kary za pierwszy błąd.')); }
+    else { const b = $$('.wpu-opt', EL.quizOpts)[i]; b.disabled = true; b.classList.add('bad'); EL.quizHint.innerHTML = '<b>Druga szansa.</b> ' + esc(nb('Ta odpowiedź jest błędna. Wybierz jeszcze raz, bez kary za pierwszy błąd.')); }
+    EL.quizHint.hidden = false;
     AudioSys.play('wrong'); renderLife(); fitFrame(); return;
   }
   Z.answered = true;
@@ -5119,11 +5684,14 @@ function answerQuiz(i) {
   knowCache = null;
   const res = applyAnswer(ok, Z); Z.res = res;
   const btns = $$('.wpu-opt', EL.quizOpts);
-  btns.forEach((b, k) => { b.disabled = true; if (Z.opts[k].ok) b.classList.add('good'); else if (k === i) b.classList.add('bad'); else b.classList.add('fade'); });
+  if (Z.kind === 'multi') btns.forEach((b, k) => { b.disabled = true; const on = Z.sel.includes(k); if (Z.opts[k].ok) b.classList.add('good'); else if (on) b.classList.add('bad'); else b.classList.add('fade'); });
+  else if (Z.kind === 'order') btns.forEach((b, k) => { b.disabled = true; const n = Z.sel.indexOf(k); b.querySelector('.n').textContent = String(Z.opts[k].pos + 1); b.classList.add(n === Z.opts[k].pos ? 'good' : 'bad'); });
+  else btns.forEach((b, k) => { b.disabled = true; if (Z.opts[k].ok) b.classList.add('good'); else if (k === i) b.classList.add('bad'); else b.classList.add('fade'); });
+  EL.quizConfirm.hidden = true;
   AudioSys.play(ok ? 'correct' : 'wrong');
-  const correct = Z.opts.find((o) => o.ok).t;
+  const correct = correctOf(Z);
   EL.quizV.className = 'v ' + (ok ? 'ok' : 'no');
-  EL.quizV.textContent = ok ? g('Dobrze! Odpowiedziałaś poprawnie.', 'Dobrze! Odpowiedziałeś poprawnie.') : i < 0 ? 'Czas minął.' : 'Niestety, to nie ta odpowiedź.';
+  EL.quizV.textContent = ok ? g('Dobrze! Odpowiedziałaś poprawnie.', 'Dobrze! Odpowiedziałeś poprawnie.') : i === -1 ? 'Czas minął.' : 'Niestety, to nie ta odpowiedź.';
   /* nagroda albo kara */
   let rp = '';
   if (ok) {
@@ -5132,6 +5700,7 @@ function answerQuiz(i) {
     items.push('Seria ' + res.streak + (res.streak === 1 ? ' dobrej odpowiedzi' : ' dobrych odpowiedzi') + '. Mnożnik ' + fmtMult(multOf(res.streak)) + ' działa teraz na wszystkie punkty w grze.');
     if (res.erased) items.push('Zatarcie kary. Twoja kara „' + res.erased.toLowerCase() + '” spada o jeden stopień.');
     if (Z.ctx.boss) items.push('Strażnik traci jedno pole wytrzymałości.');
+    else if (Z.ctx.npc) items.push('Nagroda to 20 paragrafów i wdzięczność postaci.');
     else if (res.bonus) items.push('Nagroda w bloku to deszcz paragrafów i dodatkowe życie.');
     else if (game.streak > 0 && game.streak % 5 === 0) items.push('Nagroda w bloku to deszcz paragrafów i Czepek, czyli dodatkowe życie.');
     else if (game.streak > 0 && game.streak % 3 === 0) items.push('Nagroda w bloku to deszcz paragrafów i Pieczęć, czyli 8 sekund nietykalności.');
@@ -5139,6 +5708,8 @@ function answerQuiz(i) {
     rp = '<div class="wpu-rp ok"><span class="wpu-label">Nagroda</span><span class="big">+' + fmt(res.pts) + ' pkt</span><ul>' + items.map((x) => '<li>' + esc(nb(x)) + '</li>').join('') + '</ul></div>';
   } else if (res.calm) {
     rp = '<div class="wpu-rp"><span class="wpu-label">Opanowanie</span><ul><li>' + esc(nb('Pierwszy błąd w etapie nie niesie kary dzięki ulepszeniu Opanowanie. Seria dobrych odpowiedzi wraca jednak do zera.')) + '</li></ul></div>';
+  } else if (res.npc) {
+    rp = '<div class="wpu-rp"><span class="wpu-label">Pytanie od postaci</span><ul><li>' + esc(nb('To pytanie nie niesie kary, ale seria dobrych odpowiedzi wraca do zera. Postać i tak poprosi Cię o pomoc.')) + '</li></ul></div>';
   } else if (res.bonus) {
     rp = '<div class="wpu-rp"><span class="wpu-label">Pytanie premiowe</span><ul><li>' + esc(nb('To pytanie nie niesie kary. Seria dobrych odpowiedzi wraca jednak do zera.')) + '</li></ul></div>';
   } else {
@@ -5171,12 +5742,14 @@ function closeQuiz() {
     celebrate(res, Z);
     if (Z.ctx.boss) bossAnswered(true);
     else if (Z.ctx.bonus) spawnItem('cap', Z.ctx);
+    else if (Z.ctx.npc) { game.coins += 20; FLOATS.add('+20 §', pPos(2.3), { big: true, cls: 'ok', t: 1.4 }); }
     else spawnItem(pickPower(true), Z.ctx);
   } else {
     if (res.pen) enforcePenalty(res.pen);
     if (Z.ctx.boss) bossAnswered(false);
   }
   game.player.inv = Math.max(game.player.inv, Z.ctx.boss ? 1.3 : 0.35);
+  if (Z.ctx.npc && game.lvl.quest) setTimeout(() => { if (game.state === 'play') showToast('<b>' + esc(game.lvl.quest.who) + '.</b> ' + esc(game.lvl.quest.ask), 7500); }, 400);
 }
 function updateQuiz(dt) {
   const Z = game.quiz; if (!Z || Z.answered || !Z.max) return;
@@ -5250,6 +5823,23 @@ function renderShop(msg) {
     return '<div class="wpu-shopc up"><h4>' + esc(u.name) + '<small>poziom ' + t + ' z 3</small></h4><div class="tiers">' + [0, 1, 2].map((k) => '<i class="' + (k < t ? 'on' : '') + '"></i>').join('') + '</div><p>' + esc(nb(t < 3 ? 'Następny poziom. ' + u.tiers[t] + '.' : 'Najwyższy poziom. ' + u.tiers[2] + '.')) + '</p><div class="row"><b>' + esc(cost) + '</b><button class="wpu-btn" type="button" data-up="' + u.id + '"' + (can ? '' : ' disabled') + '><span>' + (t < 3 ? 'Ulepsz' : 'Gotowe') + '</span></button></div></div>';
   }).join('');
   EL.shopMsg.textContent = msg ? nb(msg) : '';
+}
+const memIcons = {};
+function memIcon(model) { if (!memIcons[model]) { const o = buildMemento(model); memIcons[model] = modelIcon(o, 80, { zoom: 0.8 }); disposeTree(o); } return memIcons[model]; }
+function renderChron() {
+  const got = Object.keys(save.mementos || {}).length;
+  EL.chronP.textContent = nb('Pamiątki zawodu ' + got + ' z 8. Każdy świat kryje w zakątku za pierwszym placem jedną pamiątkę, a w kolejnych etapach tablicę kroniki.');
+  EL.chronMem.innerHTML = '';
+  for (let w = 1; w <= 8; w++) {
+    const M = mementoOf(w), on = !!save.mementos[w], d = document.createElement('div'); d.className = 'wpu-mem' + (on ? ' on' : '');
+    if (on) { const c = document.createElement('canvas'); c.width = c.height = 80; c.getContext('2d').drawImage(memIcon(M.model), 0, 0); d.appendChild(c); }
+    else { const i = document.createElement('i'); i.textContent = '?'; d.appendChild(i); }
+    const t = document.createElement('div'); t.innerHTML = '<b>' + esc(on ? M.name : 'Pamiątka ze świata ' + w) + '</b><span>' + esc(nb(on ? M.desc : 'Do odnalezienia w zakątku za pierwszym placem w pierwszym etapie świata ' + w + '.')) + '</span>' + (M.source && on ? '<small>' + esc(M.source.replace(/^https?:\/\//, '')) + '</small>' : '');
+    d.appendChild(t); EL.chronMem.appendChild(d);
+  }
+  const C = chronicleList(), rd = save.chronRead || {};
+  EL.chronList.innerHTML = C.length ? C.map((c, i) => '<li class="' + (rd['c' + i] ? 'on' : '') + '"><b>' + esc(c.year) + '</b><span>' + esc(nb(c.text)) + '</span></li>').join('') : '<li><span>' + esc(nb('Wpisy kroniki odkrywasz przy tablicach w zakątkach drugiego i trzeciego etapu każdego świata.')) + '</span></li>';
+  EL.chronIzba.innerHTML = (WPU_CULTURE.izba || []).length ? (WPU_CULTURE.izba || []).map((x) => '<p>' + esc(nb(x.text)) + '</p>').join('') : '<p>' + esc(nb('Okręgowa Izba Pielęgniarek i Położnych w Słupsku jest wydawcą tej gry.')) + '</p>';
 }
 function renderBadges() {
   const n = BADGES.filter((b) => save.badges[b.id]).length;
@@ -5351,6 +5941,7 @@ function renderReport(final) {
     : 'Nie ma jeszcze żadnych odpowiedzi. Zagraj w pierwszy etap i uderzaj w bloki z pytajnikiem.');
   EL.repPct.textContent = k.pct === null ? '–' : k.pct + '%';
   EL.repRank.textContent = rankFor(k.pct, k.n);
+  if (final && (WPU_CULTURE.izba || []).length) EL.repP.textContent += ' ' + nb((WPU_CULTURE.izba || []).map((x) => x.text).join(' '));
   EL.repStats.innerHTML = [
     [k.ok + ' z ' + k.n, 'Dobrze za pierwszym razem'], [k.n + ' z ' + total, 'Odkryte pytania'],
     [doneCount() + ' z ' + TOTAL_STAGES, 'Zaliczone etapy'], [starsTotal() + ' z ' + TOTAL_STAGES * 3, 'Pieczęcie'],
@@ -5365,7 +5956,7 @@ function renderReport(final) {
   EL.repMiss.innerHTML = miss.length ? '<ul class="wpu-list">' + miss.map((q) => qItem(q, save.answers[q.id].last ? 'ok' : '', save.answers[q.id].last ? 'Później odpowiedziano poprawnie.' : '')).join('') + '</ul>'
     : '<p class="wpu-small">' + esc(k.n ? 'Brak błędnych odpowiedzi. Świetnie!' : 'Lista pojawi się po pierwszych odpowiedziach.') + '</p>';
 }
-function correctText(q) { return q.tf ? (q.ans ? 'Prawda' : 'Fałsz') : q.o[0]; }
+function correctText(q) { const k = qKind(q); return k === 'tf' ? (q.ans ? 'Prawda' : 'Fałsz') : k === 'multi' ? (q.ok || [0]).map((i) => q.o[i]).join(', ') : k === 'order' ? q.o.join(', potem ') : q.o[0]; }
 function qItem(q, cls, note) {
   return '<li class="' + cls + '"><span class="qq">' + esc(nb(q.q)) + '</span><span class="aa"><b>Poprawna odpowiedź</b> ' + esc(nb(correctText(q))) + '</span>' +
     '<span class="ee">' + esc(nb(q.e)) + '</span><span class="ar">' + esc(q.art) + (note ? ' · ' + esc(note) : '') + '</span></li>';
@@ -5426,6 +6017,12 @@ function renderHelp() {
     [new THREE.Mesh(BLK.ringGeo, BLK.rings.quiz), 'Krąg pod blokiem', 'Pokazuje, gdzie stanąć. Gdy jasno rozbłyśnie, podskocz, a trafisz głową w blok.'],
     [new THREE.Mesh(BLK.ringGeo, BLK.land), 'Znacznik lądowania', 'W locie pokazuje, gdzie wylądujesz.'],
     [buildDoc(), 'Dokument z prośby', 'Zanieś go do Izby na końcu etapu.'],
+    [(() => { const g = new GB(); g.cyl(0, 0, 0, 0.3, 0.12, '#5c636a', 10); g.cyl(0, 0.12, 0, 0.06, 1.3, '#5c636a', 6); g.box(-0.45, 1.36, 0, 0.9, 0.06, 0.06, '#5c636a'); g.sph(-0.8, 1.19, 0, 0.21, '#d4ad52', 1, { sy: 0.62 }); return g.mesh(); })(), 'Lampka oliwna', 'Punkt kontrolny w połowie etapu. Po utracie życia wracasz do zapalonej lampki. Lampa oliwna to symbol pielęgniarstwa, pamiątka po Florence Nightingale.'],
+    [signMesh('PRAWDA', 0.5, { bg: PAL.ok, col: '#ffffff' }), 'Bramka prawdy', 'Nad drogą pojawia się zdanie z ustawy. Przebiegnij pasem PRAWDA albo FAŁSZ. Dobra odpowiedź to punkty, paragrafy i seria, błędna to utrata punktów i paragrafów.'],
+    [signMesh('4 lata', 0.4, { bg: '#ffffff', col: INK, edge: PAL.red, pad: 0.16 }), 'Luka w przepisie', 'Nad ścieżką wiszą trzy żetony z odpowiedziami. Dotknij tego, który uzupełnia przepis widoczny u góry ekranu.'],
+    [(() => { const g = new GB(); g.box(0, 0, 0, 0.3, 3.0, 2.6, '#ece4d6'); g.box(-0.12, 0, 0, 0.1, 2.5, 1.5, '#6b4a33'); g.box(-0.16, 0.03, 0, 0.07, 2.4, 1.3, '#8b6243'); return g.mesh(); })(), 'Właściwe drzwi', 'Trzy drzwi z tabliczkami przy jednej ścianie. Wejdź w te, które odpowiadają na pytanie z paska u góry ekranu.'],
+    [buildMemento('lamp'), 'Pamiątka zawodu', 'W zakątku za pierwszym placem każdego świata czeka pamiątka związana z zawodem pielęgniarki i położnej. Zebrane pamiątki i wpisy kroniki znajdziesz w Kronice zawodu.'],
+    [(() => { const g = new GB(); P3.car(g, 0, 0, 0, '#b04a3e', Math.PI / 2); return g.mesh(); })(), 'Przejście dla pieszych', 'Przez place przejeżdżają samochody. Migające światła ostrzegają przed przejazdem. Przeskocz, poczekaj albo wskocz na dach.'],
     [gold(), 'Złoty paragraf', 'Trzy w każdym etapie, na trudnej drodze, na górnej trasie i w ukrytym pokoju. Kupisz za nie ulepszenia.'],
     [pipe(), 'Rura poczty pneumatycznej', 'Stań na niej i naciśnij strzałkę w dół albo szybko przesuń palec w dół. Prowadzi do ukrytego pokoju.'],
     [turn(buildPower('pwz')), 'PWZ', 'Prawo wykonywania zawodu chroni przed jednym trafieniem.'],
@@ -5440,7 +6037,7 @@ function renderHelp() {
     [turn(buildEnemy('copier')), 'Kopiarka', 'Wysyła pisma wzdłuż ścieżki. Przeskocz je, wskocz na nie albo zejdź z ich drogi.'],
     [turn(buildEnemy('stamp')), 'Pieczątka', 'Spada z góry i nie da się jej pokonać. Przejdź, gdy się podnosi.'],
     [bed(), 'Wózek szpitalny', 'Jeździ w poprzek ścieżki. Przeskocz go albo przejdź, gdy odjedzie.'],
-    [plat(), 'Ruchome i spadające platformy', 'Żółta krawędź oznacza platformę, która spada chwilę po wejściu.'],
+    [plat(), 'Ruchome i spadające platformy', 'Żółta krawędź oznacza platformę, która spada chwilę po wejściu. Winda między żółtymi prowadnicami wjeżdża na balkon ze złotym paragrafem.'],
     [spring(), 'Sprężyna', 'Wybija wysoko, zwłaszcza gdy przytrzymasz skok.'],
     [turn(buildEnemy('boss')), 'Wątpliwość', 'Strażniczka rozdziału. Wskocz na nią i odpowiedz na pytanie. Błąd ją wzmacnia.']
   ];
@@ -5455,7 +6052,7 @@ function renderHelp() {
 
 /* ---------- ustawienia ---------- */
 function renderSettings() {
-  $$('[data-set]', EL['scr-settings']).forEach((b) => { const on = !!save.settings[b.dataset.set]; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Tak' : 'Nie'; });
+  $$('[data-set]', EL['scr-settings']).forEach((b) => { const on = b.dataset.set === 'shadows' ? shadowsOn() : !!save.settings[b.dataset.set]; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Tak' : 'Nie'; });
 }
 
 /* ---------- karta wyniku do druku ---------- */
@@ -5538,8 +6135,10 @@ function onMotion(e) {
    przesuwanie w lewo i w prawo skręca, przeciągnięcie w dół cofa. Szybkie przesunięcie w górę to skok
    (trzymanie palca wydłuża skok i lot z Mandatem), szybkie w dół to wejście do rury. Drugi palec to skok,
    a dwa szybkie dotknięcia to rzut paragrafem. Po chwili marszu postać biegnie sama. */
-const Gest = { ptrs: new Map(), dirId: null, lastTap: 0, hintT: 0 };
-const STICK = 54, FLICK = 28;
+const Gest = { ptrs: new Map(), dirId: null, lastTap: 0, hintT: 0, actT: 0 };
+const STICK = 54, FLICK = 30;
+/* strefa ruchu to lewa część ekranu (prawa dla leworęcznych); reszta ekranu to skok i akcje */
+function moveZone(q) { const k = q.x / q.w; return save.settings.lefty ? k > 0.44 : k < 0.56; }
 function gestSync() {
   const d = Gest.dirId !== null ? Gest.ptrs.get(Gest.dirId) : null;
   if (d) {
@@ -5549,7 +6148,9 @@ function gestSync() {
     EL.ring.style.transform = 'translate(' + d.ax + 'px,' + d.ay + 'px)';
   } else Input.setAnalog('t', 0, 0, false);
   EL.gest.classList.toggle('held', !!d);
-  let j = false; for (const p of Gest.ptrs.values()) if (p.jump) j = true;
+  let j = false, act = null; for (const p of Gest.ptrs.values()) if (p.act) { j = true; act = p; }
+  if (act && EL.jpad) { EL.jpad.style.transform = 'translate(' + act.ax + 'px,' + act.ay + 'px)'; }
+  EL.gest.classList.toggle('act', !!act);
   Input.setSrc('t', 'jump', j);
 }
 function gestPulse(k, ms) { Input.setSrc('t', k, true); setTimeout(() => Input.setSrc('t', k, false), ms); }
@@ -5558,8 +6159,13 @@ function gestDown(ev) {
   ev.preventDefault(); AudioSys.init();
   try { EL.gest.setPointerCapture(ev.pointerId); } catch (e) {}
   const q = localPoint(ev, EL.gest), now = performance.now();
-  const p = { x: q.x, y: q.y, ax: q.x, ay: q.y, t0: now, jump: false, moved: false, second: false, hist: [[now, q.y]], lowY: q.y };
-  if (Gest.dirId === null) Gest.dirId = ev.pointerId; else { p.jump = true; p.second = true; save.tips.gj = (save.tips.gj || 0) + 1; }
+  const p = { x: q.x, y: q.y, ax: q.x, ay: q.y, t0: now, act: false, moved: false, hist: [[now, q.y]] };
+  /* pierwszy palec w strefie ruchu prowadzi postać; każdy inny dotyk to skok, a dwa szybkie dotknięcia to rzut */
+  if (Gest.dirId === null && moveZone(q)) Gest.dirId = ev.pointerId;
+  else {
+    p.act = true; save.tips.gj = (save.tips.gj || 0) + 1;
+    if (now - Gest.actT < 300) { gestPulse('run', 90); Gest.actT = 0; } else Gest.actT = now;
+  }
   Gest.ptrs.set(ev.pointerId, p); gestSync();
 }
 function gestMove(ev) {
@@ -5568,31 +6174,23 @@ function gestMove(ev) {
   const q = localPoint(ev, EL.gest), now = performance.now();
   p.x = q.x; p.y = q.y;
   if (Math.hypot(q.x - p.ax, q.y - p.ay) > 10) p.moved = true;
-  /* gałka podąża za palcem, gdy wyjedzie poza swój zasięg */
-  const dx = q.x - p.ax, dy = q.y - p.ay, dd = Math.hypot(dx, dy);
-  if (dd > STICK * 1.25) { p.ax = q.x - (dx / dd) * STICK * 1.25; p.ay = q.y - (dy / dd) * STICK * 1.25; }
-  if (p.ay > q.y) p.ay = q.y;
-  if (!p.second) {
+  if (!p.act) {
+    /* gałka podąża za palcem, gdy wyjedzie poza swój zasięg */
+    const dx = q.x - p.ax, dy = q.y - p.ay, dd = Math.hypot(dx, dy);
+    if (dd > STICK * 1.25) { p.ax = q.x - (dx / dd) * STICK * 1.25; p.ay = q.y - (dy / dd) * STICK * 1.25; }
+    if (p.ay > q.y) p.ay = q.y;
+  } else {
+    /* szybkie przesunięcie palca akcji w dół to wejście do rury */
     p.hist.push([now, q.y]); while (p.hist.length > 2 && now - p.hist[0][0] > 260) p.hist.shift();
-    if (!p.jump) {
-      let hi = -1e9, lo = 1e9; for (const h of p.hist) { hi = Math.max(hi, h[1]); lo = Math.min(lo, h[1]); }
-      if (hi - q.y > FLICK) { p.jump = true; p.lowY = q.y; save.tips.gj = (save.tips.gj || 0) + 1; }
-      else if (q.y - lo > FLICK * 1.4 && now - p.hist[0][0] < 240) { gestPulse('down', 140); p.hist = [[now, q.y]]; }
-    } else {
-      p.lowY = Math.min(p.lowY, q.y);
-      if (q.y - p.lowY > FLICK * 0.8) { p.jump = false; p.hist = [[now, q.y]]; }
-    }
+    let lo = 1e9; for (const h of p.hist) lo = Math.min(lo, h[1]);
+    if (q.y - lo > FLICK * 1.4) { gestPulse('down', 140); p.hist = [[now, q.y]]; }
   }
   gestSync();
 }
 function gestUp(ev) {
   const p = Gest.ptrs.get(ev.pointerId); if (!p) return;
   Gest.ptrs.delete(ev.pointerId);
-  const now = performance.now();
-  if (ev.pointerId === Gest.dirId) {
-    Gest.dirId = null;
-    if (!p.moved && now - p.t0 < 230) { if (now - Gest.lastTap < 320) { gestPulse('run', 90); Gest.lastTap = 0; } else Gest.lastTap = now; }
-  }
+  if (ev.pointerId === Gest.dirId) Gest.dirId = null;
   gestSync();
 }
 /* co klatkę: znikanie podpowiedzi */
@@ -5601,8 +6199,9 @@ function gestTick() {
   if (Gest.hintT && now > Gest.hintT) { Gest.hintT = 0; EL.gest.classList.remove('hint'); }
 }
 function gestHint() {
-  if (!isTouch || save.settings.pad || (save.tips.gj || 0) >= 6) return;
-  EL.gest.classList.add('hint'); Gest.hintT = performance.now() + 6000;
+  if (!isTouch || save.settings.pad || (save.tips.gj || 0) >= 8) return;
+  EL.gest.classList.toggle('lefty', !!save.settings.lefty);
+  EL.gest.classList.add('hint'); Gest.hintT = performance.now() + 7000;
 }
 /* punkt dotknięcia we współrzędnych elementu, także gdy gra jest obrócona */
 function localPoint(ev, el) {
@@ -5676,6 +6275,7 @@ const ACTIONS = {
   list: () => openSub('list'),
   shop: () => openSub('shop'),
   badges: () => openSub('badges'),
+  chron: () => openSub('chron'),
   help: () => openSub('help'),
   komp: () => openSub('komp'),
   report: () => openSub('report'),
@@ -5686,6 +6286,8 @@ const ACTIONS = {
   retry: () => { game.lives = game.mode.lives; game.persist.cp = -1; game.stageScore = 0; game.st = newStageStats(); game.penLvl = 0; game.streak = 0; loadStage(game.w, game.s, true); showIntro(); },
   next: () => nextStage(),
   'quiz-next': () => closeQuiz(),
+  'quiz-confirm': () => answerQuiz('confirm'),
+  'quiz-undo': () => quizUndo(),
   print: () => printCard(),
   wipe: () => ask('Wyczyścić <b>postęp?</b>', 'Usuniesz postęp, punkty i raport wiedzy zapisane w tej przeglądarce.', () => { const st = save.settings; save = newSave(); save.settings = st; writeSave(); knowCache = null; goTitle(); }),
   fullscreen: () => toggleFullscreen(),
@@ -5715,12 +6317,14 @@ function init() {
     repK: $('#rep-k'), repT: $('#rep-t'), repP: $('#rep-p'), repPct: $('#rep-pct'), repRank: $('#rep-rank'), repStats: $('#rep-stats'), repBars: $('#rep-bars'), repMiss: $('#rep-miss'),
     kompP: $('#komp-p'), kompAll: $('#komp-all'), kompList: $('#komp-list'), helpLegend: $('#help-legend'), helpScore: $('#help-score'),
     askT: $('#ask-t'), askP: $('#ask-p'), askYes: $('#ask-yes'), askNo: $('#ask-no'),
-    hudInv: $('#hud-inv'), hudDoc: $('#hud-doc'), introMiss: $('#intro-miss'), pauseMiss: $('#pause-miss'), pauseInv: $('#pause-inv'), clearMiss: $('#clear-miss'), clearExtra: $('#clear-extra'),
-    quizLife: $('#quiz-life'), quizHint: $('#quiz-hint'), shopWallet: $('#shop-wallet'), shopItems: $('#shop-items'), shopUps: $('#shop-ups'), shopMsg: $('#shop-msg'), badgesP: $('#badges-p'), badgesList: $('#badges-list')
+    hudInv: $('#hud-inv'), hudDoc: $('#hud-doc'), chronP: $('#chron-p'), chronMem: $('#chron-mem'), chronList: $('#chron-list'), chronIzba: $('#chron-izba'), introMiss: $('#intro-miss'), pauseMiss: $('#pause-miss'), pauseInv: $('#pause-inv'), clearMiss: $('#clear-miss'), clearExtra: $('#clear-extra'),
+    quizLife: $('#quiz-life'), quizHint: $('#quiz-hint'), quizHow: $('#quiz-how'), quizConfirm: $('#quiz-confirm'), quizUndo: $('#quiz-undo'), qstrip: $('#wpu-qstrip'), qstripK: $('#qstrip-k'), qstripT: $('#qstrip-t'), shopWallet: $('#shop-wallet'), shopItems: $('#shop-items'), shopUps: $('#shop-ups'), shopMsg: $('#shop-msg'), badgesP: $('#badges-p'), badgesList: $('#badges-list')
   });
   cv = $('#wpu-canvas');
+  WPU_QUESTIONS.forEach((q) => { if (!q.kind) q.kind = q.tf ? 'tf' : 'mc'; });
+  (WPU_CULTURE.tips || []).forEach((t) => INTRO_TIPS.push(t));
   initRenderer(cv); initBlocks(); initExtras();
-  EL.stamp = $('#wpu-stamp'); EL.iris = $('#wpu-iris'); EL.flash = $('#wpu-flash'); EL.ring = $('#gest-ring'); EL.knob = $('#gest-knob');
+  EL.stamp = $('#wpu-stamp'); EL.iris = $('#wpu-iris'); EL.flash = $('#wpu-flash'); EL.ring = $('#gest-ring'); EL.knob = $('#gest-knob'); EL.jpad = $('#gest-jpad');
   FLOATS.el = $('#wpu-floats');
   $('#wpu-logo').src = LOGO_SRC;
   $$('[data-nb]').forEach((n) => { n.childNodes.forEach((t) => { if (t.nodeType === 3) t.textContent = nb(t.textContent); }); });
@@ -5734,9 +6338,11 @@ function init() {
     const f = ACTIONS[b.dataset.act]; if (f) { e.preventDefault(); f(); }
   });
   $$('[data-set]').forEach((b) => b.addEventListener('click', () => {
-    const k = b.dataset.set; save.settings[k] = !save.settings[k]; writeSave(); renderSettings();
+    const k = b.dataset.set;
+    if (k === 'shadows') { save.settings.shadows = !shadowsOn(); setShadows(shadowsOn()); } else save.settings[k] = !save.settings[k];
+    writeSave(); renderSettings();
     if (k === 'music') AudioSys.refreshMusic();
-    if (k === 'pad') { Input.clearAll(); gestReset(); layout(); }
+    if (k === 'pad' || k === 'lefty') { Input.clearAll(); gestReset(); layout(); EL.gest.classList.toggle('lefty', !!save.settings.lefty); }
   }));
   EL.kompAll.addEventListener('click', () => { kompAll = !kompAll; renderKomp(); fitFrame(); });
   EL.kompList.addEventListener('toggle', () => fitFrame(), true);
@@ -5780,7 +6386,7 @@ function init() {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 200));
   layout();
-  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, S3, R3, save: () => save, onMotion, Gest, getRot: () => rot, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, render, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom, leaveRoom, startClear, bumpBlock, setAttract, killPlayer };
+  if (location.search.indexOf('debug') >= 0) window.__wpu = { game, S3, R3, setShadows, shadowsOn, useLife, quizUndo, save: () => save, onMotion, Gest, getRot: () => rot, startStage, openQuiz, buildStage, buildBonus, ACTIONS, layout, update, render, Input, loadStage, beginPlay, answerQuiz, closeQuiz, MAP, mapSelect, enterRoom, leaveRoom, startClear, bumpBlock, setAttract, killPlayer };
   goTitle();
   requestAnimationFrame(loop);
   window.__ready = true;
@@ -5796,6 +6402,8 @@ function onKey(e) {
       if (m !== undefined && m < Z.opts.length) { e.preventDefault(); answerQuiz(m); return; }
       const lf = { KeyQ: 'sciaga', KeyW: 'konsult', KeyE: 'druga', KeyR: 'stake' }[e.code];
       if (lf) { e.preventDefault(); useLife(lf); return; }
+      if ((e.code === 'Enter' || e.code === 'NumpadEnter') && (Z.kind === 'multi' || Z.kind === 'order') && Z.sel.length) { e.preventDefault(); answerQuiz('confirm'); return; }
+      if (e.code === 'Backspace' && Z.kind === 'order') { e.preventDefault(); quizUndo(); return; }
       if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
         e.preventDefault();
         const bs = $$('.wpu-opt', EL.quizOpts), i = bs.indexOf(document.activeElement);
