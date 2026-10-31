@@ -152,7 +152,7 @@ html.wpu-framed .wpu{min-height:0}
 .wpu-opt{appearance:none;font:inherit;color:var(--ink);text-align:left;cursor:pointer;display:flex;gap:.6em;align-items:flex-start;
   background:var(--l3);border:0;border-left:6px solid var(--red);padding:.5em .7em;line-height:1.3;font-size:.95em}
 .wpu-opt .k{flex:none;font-weight:700;color:var(--red);min-width:1.1em}
-.wpu-opt:hover:not([disabled]){background:#fff;box-shadow:inset 0 0 0 2px var(--l1)}
+@media (hover:hover){.wpu-opt:hover:not([disabled]){background:#fff;box-shadow:inset 0 0 0 2px var(--l1)}}
 .wpu-opt:focus-visible{outline:3px solid var(--ink);outline-offset:1px}
 .wpu-opt[disabled]{cursor:default}
 .wpu-opt.good{background:var(--ok);border-left-color:#1d5e3b;color:#fff}
@@ -311,6 +311,7 @@ details.wpu-det summary{cursor:pointer;font-weight:700;padding:.35em 0}
 .wpu-iris.closed{width:0;height:0;margin:0}
 .wpu-pad .tri.u{border-left:.65em solid transparent;border-right:.65em solid transparent;border-bottom:.9em solid #fff;border-top:0}
 .wpu-toast{pointer-events:none}
+.wpu-toast.on{pointer-events:auto}
 .wpu-hint{display:none;margin-top:.9em;font-size:.85em;color:#d7d7d7}
 /* gra obrócona na bok, gdy ekran telefonu sam się nie obraca (blokada obrotu, aplikacja) */
 html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
@@ -404,12 +405,13 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
 .wpu-badge b{display:block;font-size:.92em}
 .wpu-badge span{display:block;font-size:.78em;color:var(--g3);line-height:1.3}
 .wpu-badge small{display:block;font-size:.72em;font-weight:600;color:var(--g4);margin-top:.15em}
-.wpu-qstrip{position:absolute;left:50%;top:2.8em;transform:translateX(-50%);width:max-content;max-width:min(88%,40em);z-index:3;pointer-events:none;background:rgba(26,23,24,.88);color:#fff;border-left:.32em solid var(--red);padding:.45em .8em;font-size:.86em;line-height:1.35;text-align:left}
+.wpu-qstrip{position:absolute;left:50%;top:2.8em;transform:translateX(-50%);width:max-content;max-width:min(88%,40em,calc(100% - 7.5em));z-index:3;pointer-events:auto;background:rgba(26,23,24,.88);color:#fff;border-left:.32em solid var(--red);padding:.45em .8em;font-size:.86em;line-height:1.35;text-align:left}
 .wpu-qstrip small{display:block;font-size:.72em;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#ff8a90;margin-bottom:.15em}
 .wpu-qstrip.done{opacity:.6}
-.wpu.strip .wpu-toast{top:7.6em}
+.wpu.strip .wpu-toast{top:calc(var(--strip-b,7.6em) + .5em)}
 .gapm{display:inline-block;min-width:3em;border-bottom:2px solid var(--red);text-align:center;color:var(--red);font-weight:700;line-height:1}
-.wpu-opt[aria-pressed="true"]{background:#fff;box-shadow:inset 0 0 0 2px var(--ink)}
+.wpu-opt[aria-pressed="true"],.wpu-opt[aria-pressed="true"]:hover{background:#fff6d6;box-shadow:inset 0 0 0 3px var(--ink)}
+.wpu-opt[aria-pressed="true"] .k::after{content:" ✓"}
 .wpu-opt .n{margin-left:auto;flex:none;min-width:1.4em;height:1.4em;display:inline-grid;place-items:center;background:var(--red);color:#fff;font-weight:700;font-size:.8em}
 .wpu-opt .n:empty{display:none}
 .wpu-float.say{font-weight:400;font-size:.82em;white-space:normal;max-width:15em;text-align:center;background:rgba(255,255,255,.94);color:var(--ink);text-shadow:none;padding:.35em .6em;border-left:.28em solid var(--red);box-shadow:0 .2em .6em rgba(0,0,0,.2);line-height:1.25}
@@ -747,6 +749,7 @@ html.wpu-rot,html.wpu-rot body{overflow:hidden;height:100%}
             <kbd>Shift X</kbd><span>bieg od razu, a z Kodeksem rzut paragrafem (także J). Po chwili marszu postać i tak biegnie sama</span>
             <kbd>E 1–4</kbd><span>użycie przedmiotu z torby (E pierwszego, cyfry wybranego). Możesz też dotknąć ikony torby w prawym górnym rogu</span>
             <kbd>Q W E R</kbd><span>w oknie pytania Ściąga, Konsultacja, Druga szansa i podwójna stawka</span>
+            <kbd>Enter Backspace</kbd><span>w pytaniach wielokrotnego wyboru i porządkowania zatwierdzenie i cofnięcie ostatniego wyboru</span>
             <kbd>1–4</kbd><span>wybór odpowiedzi (także A, B, C, D)</span>
             <kbd>P Esc</kbd><span>pauza</span>
             <kbd>Ekran dotykowy</kbd><span>lewa część ekranu to ruch, prawa to skok. Przytrzymaj palec po lewej, aby iść naprzód, i przesuwaj go, aby skręcać albo się cofać. Dotknij po prawej, aby skoczyć, przytrzymaj dłużej, aby skoczyć wyżej (z Mandatem lecisz). Dwa szybkie dotknięcia po prawej to rzut paragrafem, a szybkie przesunięcie palca w dół po prawej na rurze to wejście do ukrytego pokoju. Stojąc na rurze, możesz też przytrzymać palec ruchu pociągnięty w dół. Strony zamienisz w ustawieniach, a przyciski na ekranie też tam włączysz</span>
@@ -1720,7 +1723,7 @@ class GB {
     g.computeBoundingSphere();
     return g;
   }
-  mesh(mat) { const m = new THREE.Mesh(this.geometry(), mat || MATS.vc); m.matrixAutoUpdate = true; return m; }
+  mesh(mat) { const m = new THREE.Mesh(this.geometry(), mat || MATS.vc); m.matrixAutoUpdate = true; if (mat === MATS.glow) m.userData.noShadow = true; return m; }
 }
 
 /* ---------- materiały wspólne ---------- */
@@ -1754,7 +1757,15 @@ function gradTex(stops) {
 }
 let maxAniso = 1;
 /* napis na tabliczce; zwraca teksturę i proporcje (szerokość do wysokości) */
+/* tabliczki z tym samym napisem dzielą teksturę (bez ponownego rysowania przy każdej przebudowie sceny) */
+const TEXT_CACHE = new Map();
 function textTex(text, o) {
+  const k = String(text) + '|' + JSON.stringify(o || {});
+  let T = TEXT_CACHE.get(k);
+  if (!T) { T = textTexRaw(text, o); T.tex.userData.keep = true; if (TEXT_CACHE.size > 700) TEXT_CACHE.delete(TEXT_CACHE.keys().next().value); TEXT_CACHE.set(k, T); }
+  return T;
+}
+function textTexRaw(text, o) {
   o = Object.assign({ size: 64, weight: 700, col: '#ffffff', bg: PAL.red, pad: 0.45, stripe: null, edge: null, minW: 0, align: 'center', lh: 1.12 }, o || {});
   const lines = String(text).split('\n');
   const c = document.createElement('canvas'), x = c.getContext('2d');
@@ -1778,7 +1789,7 @@ function textTex(text, o) {
 function signMesh(text, h, o) {
   const T = textTex(text, o);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(h * T.aspect, h), new THREE.MeshBasicMaterial({ map: T.tex, transparent: !!(o && o.bg === null) }));
-  m.userData.w = h * T.aspect;
+  m.userData.w = h * T.aspect; m.userData.noShadow = true;
   return m;
 }
 /* tekstura ściany z siatką okien (dla fasad budynków w tle) */
@@ -2651,7 +2662,7 @@ function buildGoal(env, L, th) {
 
 /* ---------- światy: rozmieszczenie budynków i rekwizytów ---------- */
 const SIDE = (s, x) => s * x;
-function rowEdge(env, L, step, fn) { for (let d = 4; d < L.len - 6; d += step) fn(-d); }
+function rowEdge(env, L, step, fn) { for (let d = 4; d < L.len - 6; d += step) { if ((L.gardens || []).some((g) => d > g.d0 - 3 && d < g.d1 + 3)) continue; fn(-d); } }
 const DRESS = {
   campus(env, L, th, R) {
     const { gb, glow } = env, lf = th.leaf, Y = LOW_Y;
@@ -2927,6 +2938,8 @@ function dressWard(env, L, th, R) {
   for (let dist = 9; dist < L.len - 12; dist += 8.5, k++) {
     const z = -dist; if (nearEdge(z) || nearEdge(z - 4.2)) continue;
     if (L.zones.some((Z) => Z.kind === 'doors' && -z <= Z.d1 + 1 && -z >= Z.d0 - 1)) continue;
+    const inGarden = (dd, side) => (L.gardens || []).some((g) => g.side === side && dd > g.d0 - 1.5 && dd < g.d1 + 1.5);
+    if (inGarden(dist, k % 2 ? 1 : -1) || inGarden(dist + 4.2, k % 2 ? -1 : 1) || inGarden(dist + 2.6, k % 2 ? -1 : 1)) continue;
     const s = k % 2 ? 1 : -1, hw = hwAt(z), x = s * (hw + 0.02);
     gb.box(x, 0, z, 0.1, 2.6, 1.5, d.frame); gb.box(x - s * 0.04, 0.05, z, 0.06, 2.45, 1.3, d.door);
     gb.box(x - s * 0.08, 1.35, z + 0.25, 0.04, 0.6, 0.4, d.glass); gb.box(x - s * 0.09, 1.05, z - 0.45, 0.06, 0.06, 0.2, '#9aa1a8');
@@ -3024,9 +3037,10 @@ function dressPlaza(env, L, th, R, P, idx) {
   const bx = (s, a) => s * (hw + 0.35 + a * (vis - 0.7));
   const G = (L.gardens || []).find((g) => g.d0 >= P.d0 && g.d1 <= P.d1);
   const inG = (s, z) => G && G.side === s && -z > G.d0 - 1.5 && -z < G.d1 + 1.5;
+  const inCar = (z) => P.car && Math.abs(z - P.car.z) < 2.8;
   [-1, 1].forEach((s) => {
     for (let z = z0 - 2; z > z1 + 1; z -= 7) {
-      if (inG(s, z) || inG(s, z - 3.2)) continue;
+      if (inG(s, z) || inG(s, z - 3.2) || inCar(z) || inCar(z - 3.2)) continue;
       const r = R();
       if (r < 0.3) { gb.cyl(bx(s, 0.6), 0, z, 0.7, 0.45, '#c9c4bb', 10); P3.tree(gb, bx(s, 0.6), 0.45, z, 1.2, lf); }
       else if (r < 0.55) P3.bench(gb, bx(s, 0.25), 0, z, s > 0 ? Math.PI / 2 : -Math.PI / 2);
@@ -3035,8 +3049,9 @@ function dressPlaza(env, L, th, R, P, idx) {
       if (R() < 0.6) P3.person(gb, bx(s, 0.85), 0, z - 3.2, R, s > 0 ? -Math.PI / 2 : Math.PI / 2);
     }
     for (let z = z0 - 5; z > z1 + 2; z -= 11) if (!inG(s, z)) P3.lamp(gb, glow, s * (hw + 0.3), 0, z, !!(th.dark || th.dusk || th.moon || th.evening), 3.8);
-    if (G && G.side === s) spawnWalker(env, pick(), R, s * (hw - 1.2), 0, z0 - 2, -G.d0 + 1.5, 0.7 + R() * 0.4);
-    else { spawnWalker(env, pick(), R, bx(s, 0.95), 0, z0 - 2, z1 + 2, 0.7 + R() * 0.4); spawnIdle(env, pick(), R, bx(s, 0.55), 0, zc + (R() - 0.5) * 8, s > 0 ? -Math.PI / 2 : Math.PI / 2); }
+    const zEnd = P.car ? Math.max(z1 + 2, P.car.z + 3) : z1 + 2;
+    if (G && G.side === s) spawnWalker(env, pick(), R, s * (hw - 0.5), 0, z0 - 2, Math.max(-G.d0 + 1.5, zEnd), 0.7 + R() * 0.4);
+    else { spawnWalker(env, pick(), R, bx(s, 0.95), 0, z0 - 2, zEnd, 0.7 + R() * 0.4); if (!inCar(zc + 2)) spawnIdle(env, pick(), R, bx(s, 0.55), 0, zc + (R() - 0.5) * 6, s > 0 ? -Math.PI / 2 : Math.PI / 2); }
   });
   /* dwie osoby rozmawiają przy wejściu na plac */
   const tz = z0 - 1.6, tx = (R() < 0.5 ? -1 : 1) * (hw - 1.0);
@@ -3095,7 +3110,7 @@ function dressGarden(env, L, th, R, G) {
   const hedge = th.dark ? '#3f5442' : th.indoor ? null : '#6f8f58', lf = th.leaf;
   if (th.indoor) {
     /* we wnętrzu zakątek to pokój socjalny: ściany, okno, stolik z kwiatami */
-    const d = th.ward, CH = 3.4;
+    const d = th.ward, CH = 5.4;
     gb.box(s > 0 ? xb + 0.15 : xa - 0.15, 0, zc, 0.3, CH, z0 - z1 + 0.6, d.wall); [z0 + 0.15, z1 - 0.15].forEach((z) => gb.box((xa + xb) / 2 + s * 0.1, 0, z, xb - xa + 0.3, CH, 0.3, d.wall));
     gb.box((xa + xb) / 2, CH, zc, xb - xa + 0.6, 0.2, z0 - z1 + 0.6, '#d9dde0');
     glow.box(s > 0 ? xb - 0.02 : xa + 0.02, 1.2, zc, 0.04, 1.6, 2.4, d.night ? '#28305a' : d.sunset ? '#f6c890' : '#bcd8ea'); gb.box(s > 0 ? xb - 0.06 : xa + 0.06, 1.2, zc, 0.04, 1.6, 0.08, '#c9ced2');
@@ -3401,12 +3416,12 @@ const SEGS3 = {
   },
   lift(K, L, w) {
     /* winda: platforma jedzie w górę na balkon ze złotym paragrafem, a ścieżka na dole biegnie dalej */
-    const d = K.d; K.floor(d, d + 18);
-    K.plat('my', 1.9, 0.3, d + 5, 2.6, 2.4, { amp: 4.3, spd: 0.55 + w * 0.03, ph: 0 });
-    K.deco(0.5, 0, d + 5, 0.14, 5.6, 0.14, 'liftrail'); K.deco(3.3, 0, d + 5, 0.14, 5.6, 0.14, 'liftrail');
-    K.floor(d + 6.8, d + 14, 0.4, 3.4, 4.6);
-    K.gslot(1.9, 5.6, d + 13.2, 'lift', 2);
-    K.trail(1.9, d + 7.6, 1.9, d + 12.6, 5.3, 4, 0);
+    const d = K.d, top = L.indoor ? 3.0 : 4.6; K.floor(d, d + 18);
+    K.plat('my', 1.9, 0.3, d + 5, 2.6, 2.4, { amp: top - 0.3, spd: 0.55 + w * 0.03, ph: 0 });
+    K.deco(0.5, 0, d + 5, 0.14, top + 1, 0.14, 'liftrail'); K.deco(3.3, 0, d + 5, 0.14, top + 1, 0.14, 'liftrail');
+    K.floor(d + 6.8, d + 14, 0.4, 3.4, top);
+    K.gslot(1.9, top + 1.0, d + 13.2, 'lift', 2);
+    K.trail(1.9, d + 7.6, 1.9, d + 12.6, top + 0.7, 4, 0);
     K.trail(-1.6, d + 1.5, -1.6, d + 16, 0.7, 5, 0.4);
     K.slot(-1.6, d + 10, undefined, false, 'coin');
     K.d += 18;
@@ -3491,7 +3506,7 @@ function buildPlaza(K, L, w, idx) {
   K.trail(0, d + 21.5, 0, d + 30.5, 0.7, 4, 1.1);
   /* zakątek pamiątek: ogródek za placem, od strony kartonów, z pamiątką zawodu albo tablicą kroniki */
   if (idx === 0) {
-    const gw = 8, gx0 = o * (hw + 0.7), gx1 = o * (hw + 0.7 + gw);
+    const gw = 8, gx0 = o * (hw - 0.5), gx1 = o * (hw + 0.7 + gw);
     K.floor(d + 11.5, d + 20.5, Math.min(gx0, gx1) - K.cx, Math.max(gx0, gx1) - K.cx, 0.03);
     const G = { side: o, d0: d + 11.5, d1: d + 20.5, w: gw, hw, kind: L.s === 1 ? 'memento' : 'board', x: o * (hw + 0.7 + gw * 0.62), z: -(d + 16), zin: -(d + 16) };
     L.gardens.push(G); L.garden = G;
@@ -3897,7 +3912,7 @@ function buildScene(L, th) {
   if (S3.ch && S3.ch.root.parent) S3.ch.root.parent.remove(S3.ch.root);
   if (FX.pts && FX.pts.parent) FX.pts.parent.remove(FX.pts);
   if (S3.level) { sc.remove(S3.level); disposeTree(S3.level); }
-  if (S3.lights) { sc.remove(S3.lights); disposeTree(S3.lights); }
+  if (S3.lights) { S3.lights.traverse((o) => { if (o.isLight && o.shadow && o.shadow.map) { o.shadow.map.dispose(); o.shadow.map = null; } }); sc.remove(S3.lights); disposeTree(S3.lights); }
   FX.clear(); FLOATS.clear();
   game.lvl = L; game.theme = th;
   indexSolids(L);
@@ -3944,6 +3959,8 @@ function buildScene(L, th) {
     pl.sol = { kind: 'plat', pl, x0: 0, x1: 0, y0: 0, y1: 0, z0: 0, z1: 0 }; syncPlat(pl);
     return pl;
   });
+  /* platformy od razu w położeniu wynikającym z fazy ruchu, bez skoku w pierwszej klatce */
+  updatePlatforms(0); game.platforms.forEach((pl) => { pl.dx = pl.dy = pl.dz = 0; });
   /* sprężyny */
   L.springs.forEach((sp) => { const gb = new GB(); gb.cyl(0, 0, 0, 0.7, 0.12, PAL.g2, 12); for (let i = 0; i < 4; i++) gb.torus(0, 0.18 + i * 0.12, 0, 0.45, 0.05, i % 2 ? PAL.red : '#c4c8cc', { rx: Math.PI / 2, seg: 10 }); const top = new GB(); top.cyl(0, 0, 0, 0.72, 0.14, PAL.red, 12); top.cyl(0, 0.14, 0, 0.5, 0.02, '#ffffff', 12);
     const base = gb.mesh(), tm = top.mesh(); base.position.set(sp.x, sp.y, sp.z); tm.position.set(sp.x, sp.y + 0.62, sp.z); root.add(base); root.add(tm); sp.top = tm; sp.base = base; sp.squash = 0;
@@ -3984,6 +4001,8 @@ function buildScene(L, th) {
   [S3.aim, S3.aimGlow, S3.land].forEach((m) => { if (m) m.userData.noShadow = true; });
   L.blocks.forEach((b) => { if (b.ring) b.ring.userData.noShadow = true; });
   shadowFlags(root);
+  /* sprężyny dopisały swoje bryły po pierwszym indeksowaniu, więc siatka musi powstać jeszcze raz */
+  indexSolids(L);
 }
 function ensureCharacter() {
   const id = save.char || CHARS[0].id;
@@ -4086,6 +4105,7 @@ function updateHazards(dt) {
       if (!p.dead && game.state === 'play' && p.standOn !== s && overlapBox(p, s, 0.02)) {
         if (p.y >= s.y1 - 0.3) { p.y = s.y1; p.vy = Math.max(0, p.vy); }
         else { p.x += h.dx; hurtPlayer(); p.vx = Math.sign(p.x - h.x || 1) * 5; }
+        clampToZone(p);
       }
     } else if (h.kind === 'car') {
       /* samochód przejeżdża przez plac po przejściu dla pieszych: chwila ostrzeżenia, potem przejazd */
@@ -4100,6 +4120,7 @@ function updateHazards(dt) {
       if (h.st === 'go' && !p.dead && game.state === 'play' && p.standOn !== s && overlapBox(p, s, 0.02)) {
         if (p.y >= s.y1 - 0.3) { p.y = s.y1; p.vy = Math.max(0, p.vy); }
         else { p.x += h.dx; hurtPlayer(); p.vx = h.dir * 6; p.vz = 2; }
+        clampToZone(p);
       }
     } else {
       if (h.st === 'up') { h.wt -= dt; if (h.wt <= 0) h.st = 'down'; }
@@ -4111,6 +4132,8 @@ function updateHazards(dt) {
     }
   }
 }
+/* postać wieziona przez wózek albo samochód nie wyjeżdża poza niewidzialne ściany strefy */
+function clampToZone(p) { const zh = zoneHW(game.lvl, p.z) - PH.hw - 0.02; if (Math.abs(p.x) > zh) { p.x = Math.sign(p.x) * zh; p.standOn = null; } }
 const overlapBox = (p, s, e) => p.x + PH.hw > s.x0 && p.x - PH.hw < s.x1 && p.z + PH.hw > s.z0 && p.z - PH.hw < s.z1 && p.y + PH.h > s.y0 && p.y + (e === undefined ? 0.01 : e) < s.y1;
 
 /* ---------- gracz ---------- */
@@ -4131,6 +4154,10 @@ function updatePlayer(dt) {
   let ix = (I.right ? 1 : 0) - (I.left ? 1 : 0), iz = (I.down ? 1 : 0) - (I.up ? 1 : 0);
   const A = Input.analog();
   if (A) { ix = A.x; iz = A.y; }
+  /* gałka pociągnięta w dół na rurze: postać stoi i po chwili wchodzi do rury, zamiast schodzić do tyłu */
+  const pullPipe = A && A.y > 0.8 && p.onGround && p.standOn && p.standOn.kind === 'pipe';
+  if (pullPipe) { ix = 0; iz = 0; }
+  if (Input.takeDown()) p.downBuf = 0.45; else p.downBuf = Math.max(0, (p.downBuf || 0) - dt);
   let mag = Math.hypot(ix, iz);
   if (mag > 1) { ix /= mag; iz /= mag; mag = 1; }
   if (mag > 0.15) p.runT += dt; else p.runT = 0;
@@ -4172,7 +4199,7 @@ function updatePlayer(dt) {
   /* przesunięcie z kolizjami */
   const was = p.onGround;
   if (p.standOn && p.standOn.kind === 'plat') { const pl = p.standOn.pl; p.x += pl.dx; p.z += pl.dz; p.y += pl.dy; }
-  if (p.standOn && (p.standOn.kind === 'trolley' || p.standOn.kind === 'car')) p.x += p.standOn.hz.dx || 0;
+  if (p.standOn && (p.standOn.kind === 'trolley' || p.standOn.kind === 'car')) { p.x += p.standOn.hz.dx || 0; clampToZone(p); }
   const near = nearSolids(p.z - 3, p.z + 3);
   moveH(p, 'x', p.vx * dt, near, was);
   moveH(p, 'z', p.vz * dt, near, was);
@@ -4189,9 +4216,9 @@ function updatePlayer(dt) {
   /* rura poczty pneumatycznej: strzałka w dół, szybki ruch palca w dół albo gałka pociągnięta w dół przez chwilę */
   const onPipe = p.onGround && p.standOn && p.standOn.kind === 'pipe' && game.state === 'play';
   if (onPipe && A && A.y > 0.8) p.pipeT = (p.pipeT || 0) + dt; else p.pipeT = 0;
-  if ((Input.takeDown() && onPipe) || p.pipeT > 0.35) {
+  if ((p.downBuf > 0 && onPipe) || p.pipeT > 0.25) {
     const pipe = game.lvl.pipes.find((q) => Math.abs(q.x - p.x) < 0.9 && Math.abs(q.z - p.z) < 0.9);
-    if (pipe) { p.pipeT = 0; startPipe(pipe); }
+    if (pipe) { p.pipeT = 0; p.downBuf = 0; startPipe(pipe); }
   }
   const L = game.lvl;
   if (p.star > 0) for (const c of L.cartons) if (!c.broken && Math.abs(c.x - p.x) < 0.95 && Math.abs(c.z - p.z) < 0.95 && p.y < c.y + 1 && p.y + PH.h > c.y) breakCarton(c);
@@ -4207,7 +4234,7 @@ function updatePlayer(dt) {
   if (Q) {
     const dx = p.x - Q.x, dz = p.z - Q.z, dd = Math.hypot(dx, dz);
     if (dd < 7) { const ty = Math.atan2(-dx, -dz); let a = ty - Q.n.root.rotation.y; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; Q.n.root.rotation.y += a * Math.min(1, dt * 5); }
-    if (dd < 7.5 && game.st.t > 1.0 && !game.persist.questSeen && game.state === 'play' && !game.pendingQuiz) {
+    if ((dd < 4.5 || game.st.t > 8) && game.st.t > 1.0 && !game.persist.questSeen && game.state === 'play' && !game.pendingQuiz) {
       game.persist.questSeen = true; AudioSys.play('check');
       const nq = pickQuestionKind(L.w, ['mc', 'tf', 'organ', 'gap']);
       if (nq) { showToast('<b>' + esc(L.quest.who) + '.</b> Zanim poproszę Cię o pomoc, sprawdźmy, czy znasz ten rozdział.', 2400); game.pendingQuiz = { ctx: { npc: true, q: nq }, t: 1.5 }; }
@@ -4221,7 +4248,7 @@ function updatePlayer(dt) {
   const G = game.lvl.goal;
   if (G && game.state === 'play' && p.z < G.z + 0.55 && Math.abs(p.x - G.x) < 1.2) startClear();
   /* punkty kontrolne */
-  game.lvl.checkpoints.forEach((c, i) => { if (!c.on && p.z < c.z) { c.on = true; game.persist.cp = Math.max(game.persist.cp, i); AudioSys.play('check'); if (c.flame) { c.flame.visible = true; c.glow.visible = true; FX.burst(c.mesh.position.x - 0.9, 1.3, c.z, PAL.gold, 10, 2); } FLOATS.add('LAMPKA ZAPALONA', V3(zoneHW(game.lvl, c.z), 3.2, c.z), { big: true, t: 1.6 }); if (!save.tips.lamp) { save.tips.lamp = 1; writeSave(); showToast('<b>Lampka oliwna</b> to punkt kontrolny. Po utracie życia wracasz tutaj. Lampa oliwna jest symbolem pielęgniarstwa, bo z taką lampą Florence Nightingale obchodziła nocą sale chorych.', 6000); } } });
+  game.lvl.checkpoints.forEach((c, i) => { if (!c.on && p.z < c.z) { c.on = true; game.persist.cp = Math.max(game.persist.cp, i); AudioSys.play('check'); if (c.flame) { c.flame.visible = true; c.glow.visible = true; FX.burst(c.mesh.position.x - 0.9, 1.3, c.z, PAL.gold, 10, 2); } FLOATS.add('LAMPKA ZAPALONA', V3(zoneHW(game.lvl, c.z), 3.2, c.z), { big: true, t: 1.6 }); if (!save.tips.lamp) { save.tips.lamp = 1; writeSave(); showToast('<b>Lampka oliwna</b> to punkt kontrolny. Po utracie życia wracasz tutaj. Lampka jest symbolem pielęgniarstwa i przypomina Florence Nightingale, która nocą obchodziła z lampą sale rannych żołnierzy.', 6000); } } });
 }
 function moveH(p, ax, d, near, wasG) {
   if (!d) return;
@@ -4244,7 +4271,11 @@ function moveV(p, d, near) {
   const vy0 = p.vy;
   for (const s of near) {
     if (!overlapBox(p, s, d <= 0 ? -1e-6 : 0)) continue;
-    if (d <= 0) { if (s.y1 - p.y < 0.9 || s.kind !== 'wall') { p.y = s.y1; p.vy = 0; p.onGround = true; p.standOn = s; if (s.crt && vy0 < -4) crush = s.crt; } }
+    if (d <= 0) {
+      /* winda zjeżdżająca na postać odpycha ją w bok, zamiast wciągać na górę */
+      if (s.kind === 'plat' && s.y1 - p.y > 0.7) { p.x = p.x < (s.x0 + s.x1) / 2 ? s.x0 - PH.hw - 0.02 : s.x1 + PH.hw + 0.02; continue; }
+      if (s.y1 - p.y < 0.9 || s.kind !== 'wall') { p.y = s.y1; p.vy = 0; p.onGround = true; p.standOn = s; if (s.crt && vy0 < -4) crush = s.crt; }
+    }
     else {
       p.y = s.y0 - PH.h - 1e-4; p.vy = Math.min(p.vy, -0.5); p.jumping = false;
       if (s.blk) { const ov = (Math.min(p.x + PH.hw, s.x1) - Math.max(p.x - PH.hw, s.x0)) * (Math.min(p.z + PH.hw, s.z1) - Math.max(p.z - PH.hw, s.z0)); if (ov > best) { best = ov; hit = s.blk; } }
@@ -4369,7 +4400,7 @@ function updateDoc() {
   const D = game.doc, p = game.player, L = game.lvl; if (!D || D.taken) return;
   D.m.rotation.y = game.t * 2; D.m.position.y = D.y + Math.sin(game.t * 2.5) * 0.12;
   if (!p.dead && Math.abs(D.x - p.x) < 0.9 && Math.abs(D.z - p.z) < 0.9 && Math.abs(D.y - (p.y + 0.8)) < 1.3) {
-    D.taken = true; game.persist.doc = true; S3.level.remove(D.m);
+    D.taken = true; game.persist.doc = true; S3.level.remove(D.m); disposeTree(D.m);
     AudioSys.play('gold'); FX.confetti(D.x, D.y, D.z, 14);
     showToast('<b>Masz ' + esc(L.quest.item) + '.</b> Zanieś dokument do Izby na końcu etapu.', 3800);
   }
@@ -4562,7 +4593,7 @@ function afterDeath() {
 /* ---------- rura poczty pneumatycznej i ukryty pokój ---------- */
 function startPipe(pipe) {
   const p = game.player;
-  game.state = 'pipe'; Input.clearAll();
+  game.state = 'pipe'; Input.clearAll(); gestReset();
   game.trans = { pipe, phase: 'down', t: 0, y0: p.y };
   p.vx = p.vz = p.vy = 0; p.x = pipe.x; p.z = pipe.z;
   AudioSys.play('pipe');
@@ -4587,7 +4618,7 @@ function enterRoom(pipe) {
   const keep = game.player;
   game.player = makePlayer(L.start, keep); game.player.vy = -2;
   buildScene(L, archiveTheme(game.w));
-  game.trans = null; game.state = 'play';
+  game.trans = null; game.state = 'play'; Input.clearAll(); gestReset();
   S3.cam.p.set(0, 5.2, 2.6); S3.cam.l.set(0, 0.8, -5);
   iris(true, 0.45);
   AudioSys.music('bonus');
@@ -4638,7 +4669,8 @@ function updateBoss(dt) {
     const shots = 1 + Math.min(2, b.rage);
     for (let k = 0; k < shots; k++) {
       const tt = 1.1, ox = (k - (shots - 1) / 2) * 1.6;
-      const qm = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTex('?', '#ffffff', PAL.red, { border: PAL.redD }), depthWrite: true })); qm.scale.set(0.8, 0.8, 1); S3.level.add(qm);
+      if (!BLK.qShot) { const t = glyphTex('?', '#ffffff', PAL.red, { border: PAL.redD }); t.userData.keep = true; BLK.qShot = new THREE.SpriteMaterial({ map: t, depthWrite: true }); BLK.qShot.userData.keep = true; }
+      const qm = new THREE.Sprite(BLK.qShot); qm.scale.set(0.8, 0.8, 1); S3.level.add(qm);
       game.qshots.push({ x: b.x, y: b.y + 3.6, z: b.z, vx: (p.x + ox - b.x) / tt, vy: 6, vz: (p.z - b.z) / tt, t: 3, arm: 0.3, m: qm });
     }
     AudioSys.play('throw');
@@ -4812,16 +4844,16 @@ function iris(open, dur, cb) {
 
 /* ---------- zakątek pamiątek i kronika zawodu ---------- */
 const MEMENTO_DEFAULT = [
-  { w: 1, id: 'lamp', name: 'Lampka oliwna', model: 'lamp', desc: 'Lampa oliwna jest symbolem pielęgniarstwa. Florence Nightingale obchodziła z nią nocą sale chorych, a dziś lampkę zapala się podczas uroczystości czepkowania.' },
+  { w: 1, id: 'lamp', name: 'Lampka oliwna', model: 'lamp', desc: 'Lampka oliwna jest symbolem pielęgniarstwa. Przypomina Florence Nightingale, która nocą obchodziła z lampą sale rannych żołnierzy, a dziś lampkę zapala się podczas uroczystości czepkowania.' },
   { w: 2, id: 'pwz', name: 'Prawo wykonywania zawodu', model: 'pwz', desc: 'Dokument, który potwierdza prawo wykonywania zawodu pielęgniarki albo położnej. Bez niego nie można pracować w zawodzie.' },
-  { w: 3, id: 'cap', name: 'Czepek z paskiem', model: 'cap', desc: 'Czepek pielęgniarski z czarnym paskiem i czepek położnej z czerwonym paskiem. Dziś noszony głównie podczas uroczystości, zwłaszcza czepkowania.' },
+  { w: 3, id: 'cap', name: 'Czepek z paskiem', model: 'cap', desc: 'Czepek z czarnym paskiem noszą pielęgniarki, a z czerwonym położne. Dziś zakłada się go głównie na uroczystości, zwłaszcza na czepkowanie.' },
   { w: 4, id: 'banner', name: 'Sztandar samorządu', model: 'banner', desc: 'Sztandar towarzyszy uroczystościom samorządu zawodowego, od czepkowania po jubileusze izb.' },
-  { w: 5, id: 'badge', name: 'Odznaczenie samorządu', model: 'badge', desc: 'Odznaczenie samorządu zawodowego dla osób zasłużonych dla pielęgniarek, pielęgniarzy, położnych i położnych.' },
+  { w: 5, id: 'badge', name: 'Odznaczenie samorządu', model: 'badge', desc: 'Odznaczenie, którym samorząd zawodowy wyróżnia osoby zasłużone dla pielęgniarek, pielęgniarzy oraz dla położnych.' },
   { w: 6, id: 'book', name: 'Kodeks etyki zawodowej', model: 'book', desc: 'Kodeks Etyki Zawodowej Pielęgniarki i Położnej Rzeczypospolitej Polskiej. Zasady etyki zawodowej uchwala Krajowy Zjazd Pielęgniarek i Położnych.' },
   { w: 7, id: 'scroll', name: 'Przyrzeczenie zawodowe', model: 'scroll', desc: 'Słowa przyrzeczenia, które pielęgniarki, pielęgniarze, położne i położni składają na początku drogi zawodowej.' },
   { w: 8, id: 'hymn', name: 'Hymn pielęgniarski', model: 'hymn', desc: 'Pieśń śpiewana podczas uroczystości zawodowych, między innymi czepkowania.' }
 ];
-const GENERIC_LINES = ['Dzień dobry! Dziś spokojny dyżur.', 'Powodzenia na trasie!', 'Pamiętaj o składce członkowskiej.', 'Czepkowanie już w maju.', 'Izba czeka na Ciebie na końcu drogi.', 'Dwunastego maja świętujemy razem.'];
+const GENERIC_LINES = ['Dzień dobry! Dziś spokojny dyżur.', 'Powodzenia na trasie!', 'Pamiętaj o składce członkowskiej.', 'Czepkowanie już w maju.', 'Izba czeka na Ciebie na końcu drogi.', 'W maju świętujemy razem, położne i pielęgniarki.'];
 function mementoOf(w) { return (WPU_CULTURE.mementos || []).find((m) => m.w === w) || MEMENTO_DEFAULT[w - 1]; }
 function chronicleList() { return (WPU_CULTURE.chronicle || []).slice().sort((a, b) => String(a.year).localeCompare(String(b.year))); }
 function chronicleOf(w, s) { const C = chronicleList(); if (!C.length) return null; const i = ((w - 1) * 2 + Math.max(0, s - 2)) % C.length; return Object.assign({ i }, C[i]); }
@@ -4852,11 +4884,10 @@ function updateGarden(dt) {
     Gd.m.rotation.y += dt * 1.2; Gd.m.position.y = 0.04 + Math.sin(game.t * 2.2) * 0.06;
     if (Math.abs(p.x - Gd.x) < 1.35 && Math.abs(p.z - Gd.z) < 1.35 && game.state === 'play') {
       const M = Gd.M; save.mementos[game.w] = M.id; game.coins += 50; writeSave();
-      Gd.g.remove(Gd.m); Gd.g.remove(Gd.gl); Gd.kind = 'seen';
+      Gd.g.remove(Gd.m); Gd.g.remove(Gd.gl); disposeTree(Gd.m); Gd.kind = 'seen';
       AudioSys.play('gold'); FX.confetti(Gd.x, 1.6, Gd.z, 28); flashIt(0.1);
       FLOATS.add('PAMIĄTKA ZAWODU +50 §', V3(Gd.x, 2.4, Gd.z), { big: true, cls: 'ok', t: 2 });
       showToast('<b>' + esc(M.name) + '.</b> ' + esc(nb(M.desc)) + ' Pamiątkę znajdziesz w Kronice zawodu na mapie.', 9000);
-      checkBadges();
     }
   } else if (Gd.kind === 'board' && !Gd.read && Math.abs(p.x - Gd.x) < 2.2 && Math.abs(p.z - Gd.z) < 2.2 && game.state === 'play') {
     Gd.read = true; save.chronRead = save.chronRead || {};
@@ -4886,7 +4917,7 @@ function updateTalk(dt) {
    PRÓBY WIEDZY NA TRASIE: bramki prawdy, luka w przepisie, właściwe drzwi
    Odpowiada się ruchem postaci, bez okna. Wynik trafia do raportu wiedzy.
    ===================================================================== */
-const TEST_INFO = { gate: 'Prawda czy fałsz?', luka: 'Uzupełnij przepis', doors: 'Wejdź we właściwe drzwi' };
+const TEST_INFO = { gate: 'Prawda czy fałsz?', luka: 'Luka w przepisie', doors: 'Wejdź we właściwe drzwi' };
 const qKind = (q) => q.kind || (q.tf ? 'tf' : 'mc');
 const shortOpts = (q, n) => q.o && q.o.length >= 3 && q.o.slice(0, 4).every((o) => o.length <= n);
 /* pytanie określonego rodzaju: najpierw nieodkryte z tego świata, potem błędne, potem pozostałe */
@@ -4973,8 +5004,9 @@ function stripShow(T) {
   const key = T.t.i + ':' + T.r.done;
   if (el.dataset.key !== key) { el.dataset.key = key; EL.qstripK.textContent = TEST_INFO[T.t.kind]; EL.qstripT.innerHTML = txt; el.classList.toggle('done', !!T.r.done); }
   el.hidden = false; game.stripOn = true; EL.root.classList.add('strip');
+  EL.root.style.setProperty('--strip-b', (el.offsetTop + el.offsetHeight) + 'px');
 }
-function stripHide() { if (EL.qstrip && !EL.qstrip.hidden) { EL.qstrip.hidden = true; EL.qstrip.dataset.key = ''; } game.stripOn = false; if (EL.root) EL.root.classList.remove('strip'); }
+function stripHide() { if (EL.qstrip) { EL.qstrip.hidden = true; EL.qstrip.dataset.key = ''; } game.stripOn = false; if (EL.root) EL.root.classList.remove('strip'); }
 function updateTests(dt) {
   const p = game.player, L = game.lvl; let near = null;
   for (const T of game.tests || []) {
@@ -5017,9 +5049,9 @@ function answerTest(T, ok, chosen) {
     showStamp('BŁĄD', '−300 pkt · −' + n + ' §', true, 1.6);
     showToast('<b>Niestety.</b> Poprawna odpowiedź to „' + esc(nb(right)) + '”. ' + esc(nb(q.e)), 6500);
   }
-  if (t.kind === 'luka') { T.tokens.forEach((tk) => { if (r.perm[tk.k] === 0 && !ok) { tk.g.children.forEach((c) => { if (c.isSprite) c.material = MATS.glowGold; }); setTimeout(() => { if (tk.g.parent) tk.g.parent.remove(tk.g); }, 1600); } else if (tk.g.parent) tk.g.parent.remove(tk.g); }); T.tokens = []; }
+  if (t.kind === 'luka') { T.tokens.forEach((tk) => { if (r.perm[tk.k] === 0 && !ok) { tk.g.children.forEach((c) => { if (c.isSprite) c.material = MATS.glowGold; }); setTimeout(() => { if (tk.g.parent) { tk.g.parent.remove(tk.g); disposeTree(tk.g); } }, 1600); } else if (tk.g.parent) { tk.g.parent.remove(tk.g); disposeTree(tk.g); } }); T.tokens = []; }
   if (t.kind === 'gate') T.meshes.forEach((m) => { if (m.isSprite) m.visible = false; });
-  stripHide();
+  stripHide(); writeSave();
   void chosen;
 }
 
@@ -5351,6 +5383,7 @@ let current = null; const stack = [];
 let cv = null;
 const EL = {};
 function show(id) {
+  if (id) stripHide();
   for (const s of SCREENS) EL['scr-' + s].classList.toggle('on', s === id);
   current = id;
   EL.root.classList.toggle('inmenu', !!id && id !== 'intro');
@@ -5458,7 +5491,7 @@ function showIntro() {
 }
 function beginPlay() {
   if (game.state !== 'intro') return;
-  game.state = 'play'; show(null); Input.clearAll(); gestHint();
+  game.state = 'play'; show(null); Input.clearAll(); gestHint(); Gest.lockT = performance.now() + 350;
   iris(true, 0.6);
   if (!game.lvl.boss) AudioSys.music(game.theme.music);
   if (game.w === 1 && game.s === 1 && !save.tips.start) {
@@ -5478,12 +5511,12 @@ function pauseGame() {
 function resumeGame() {
   if (game.state !== 'pause') return;
   stack.length = 0;
-  game.state = 'play'; show(null); Input.clearAll();
+  game.state = 'play'; show(null); Input.clearAll(); Gest.lockT = performance.now() + 300;
   AudioSys.music(game.room ? 'bonus' : game.boss && game.boss.st !== 'drop' ? 'boss' : game.theme.music);
 }
 function gameOver() {
   game.state = 'over'; AudioSys.stopMusic(); AudioSys.play('over');
-  save.score = game.score; writeSave(); game.streak = 0;
+  save.score = game.score; save.coins = game.coins; writeSave(); game.streak = 0;
   EL.overP.textContent = nb('Twoje odpowiedzi zostały zapisane w raporcie wiedzy. Możesz zacząć ten etap od nowa z pełną liczbą żyć.');
   show('over');
 }
@@ -5573,7 +5606,7 @@ function invText() {
 }
 
 /* ---------- okno pytania ---------- */
-const KIND_LABEL = { mc: 'Pytanie', organ: 'Kto albo co?', tf: 'Prawda czy fałsz?', gap: 'Uzupełnij lukę', multi: 'Wskaż wszystkie poprawne', order: 'Ułóż w kolejności' };
+const KIND_LABEL = { mc: 'Pytanie', organ: 'Kto albo co?', tf: 'Prawda czy fałsz?', gap: 'Luka w przepisie', multi: 'Wskaż wszystkie poprawne', order: 'Ułóż w kolejności' };
 function openQuiz(ctx2) {
   const final = !!(ctx2.boss && game.w === 8);
   const q = ctx2.q || pickQuestion(game.w, final), kind = qKind(q);
@@ -5585,7 +5618,7 @@ function openQuiz(ctx2) {
   else opts = shuffle(q.o.map((t, i) => ({ t, ok: i === 0 })));
   const multi = kind === 'multi' || kind === 'order';
   const qt = game.mode.time ? game.mode.time + 5 * upT('watch') + (multi ? 10 : 0) : 0;
-  game.quiz = { q, kind, ctx: ctx2, opts, sel: [], answered: false, ok: false, t: qt, max: qt, res: null, stake: false, second: false, secondArmed: false, usedL: {} };
+  game.quiz = { q, kind, ctx: ctx2, opts, sel: [], answered: false, ok: false, t: qt, max: qt, res: null, stake: false, second: false, secondArmed: false, usedL: {}, openedAt: performance.now() };
   game.state = 'quiz'; Input.clearAll(); AudioSys.duck(true);
   game.qshots = []; EL.toast.classList.remove('on'); stripHide();
   const W = WPU_WORLDS[q.w - 1];
@@ -5594,9 +5627,10 @@ function openQuiz(ctx2) {
   EL.quizStreak.hidden = false;
   game.quizLabel = (st2) => (game.streak ? 'Seria ' + game.streak + ' · stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) : 'Stawka ' + fmtMult(nextMult * (st2 ? 2 : 1)) + (game.penLvl ? ' · kara ' + WPU_PENALTIES[game.penLvl - 1].name.toLowerCase() : '')) + (st2 ? ' · podwójna' : '');
   EL.quizStreak.firstChild.textContent = game.quizLabel(false);
-  if (kind === 'gap') EL.quizQ.innerHTML = esc(nb(q.q)).replace('___', '<span class="gapm">…</span>'); else EL.quizQ.textContent = nb(q.q);
+  const rawQ = kind === 'tf' ? q.q.replace(/^Prawda czy fałsz\?\s*/i, '') : q.q;
+  if (kind === 'gap') EL.quizQ.innerHTML = esc(nb(rawQ)).replace('___', '<span class="gapm">…</span>'); else EL.quizQ.textContent = nb(rawQ);
   EL.quizHow.hidden = !multi;
-  EL.quizHow.textContent = kind === 'multi' ? nb('Zaznacz wszystkie poprawne odpowiedzi, a potem zatwierdź.') : kind === 'order' ? nb('Dotykaj odpowiedzi po kolei, od pierwszej do ostatniej, a potem zatwierdź.') : '';
+  EL.quizHow.textContent = kind === 'multi' ? nb('Zaznacz wszystkie poprawne odpowiedzi (na klawiaturze cyfry 1–4), a potem zatwierdź (Enter).') : kind === 'order' ? nb('Wybieraj odpowiedzi po kolei, od pierwszej do ostatniej (cyfry 1–4, Backspace cofa), a potem zatwierdź (Enter).') : '';
   EL.quizTimer.hidden = !qt;
   EL.quizBar.style.width = '100%';
   EL.quizOpts.innerHTML = '';
@@ -5608,10 +5642,17 @@ function openQuiz(ctx2) {
     b.addEventListener('click', () => answerQuiz(i));
     EL.quizOpts.appendChild(b);
   });
-  EL.quizConfirm.hidden = !multi; EL.quizUndo.hidden = kind !== 'order';
+  EL.quizConfirm.hidden = !multi; EL.quizUndo.hidden = kind !== 'order'; quizSyncConfirm();
   EL.quizFb.hidden = true; EL.quizNext.hidden = true; EL.quizHint.hidden = true;
   renderLife();
   show('quiz');
+  setTimeout(() => { try { if (!isTouch && game.quiz && !game.quiz.answered) EL.quizOpts.querySelector('.wpu-opt').focus({ preventScroll: true }); } catch (e) {} }, 40);
+}
+/* przycisk Zatwierdź działa dopiero, gdy odpowiedź jest kompletna */
+function quizSyncConfirm() {
+  const Z = game.quiz, b = EL.quizConfirm && EL.quizConfirm.querySelector('[data-act="quiz-confirm"]'); if (!Z || !b) return;
+  b.disabled = Z.kind === 'order' ? Z.sel.length < Z.opts.length : !Z.sel.length;
+  if (EL.quizUndo) EL.quizUndo.disabled = !Z.sel.length;
 }
 /* koła ratunkowe i podwójna stawka w oknie pytania */
 function renderLife() {
@@ -5628,7 +5669,7 @@ function useLife(id) {
   const Z = game.quiz; if (!Z || Z.answered) return;
   const btns = $$('.wpu-opt', EL.quizOpts), wrong = Z.opts.map((o, i) => (!o.ok && !btns[i].disabled && !Z.sel.includes(i) ? i : -1)).filter((i) => i >= 0);
   const L = save.life, single = Z.kind === 'mc' || Z.kind === 'organ' || Z.kind === 'gap';
-  const drop = (i) => { btns[i].disabled = true; btns[i].classList.add('fade'); btns[i].setAttribute('aria-pressed', 'false'); };
+  const drop = (i) => { btns[i].disabled = true; btns[i].classList.add('fade'); if (btns[i].hasAttribute('aria-pressed')) btns[i].setAttribute('aria-pressed', 'false'); };
   if (id === 'stake') { if (Z.second || Z.ctx.bonus || Z.ctx.npc) return; Z.stake = !Z.stake; AudioSys.play('tick'); EL.quizStreak.firstChild.textContent = game.quizLabel(Z.stake); }
   else if (id === 'sciaga') { if (!single || Z.opts.length < 3 || !(L.sciaga > 0) || Z.usedL.sciaga) return; L.sciaga--; Z.usedL.sciaga = 1; shuffle(wrong).slice(0, Z.opts.length >= 4 ? 2 : 1).forEach(drop); AudioSys.play('power'); }
   else if (id === 'konsult') {
@@ -5645,13 +5686,14 @@ function quizSelect(i) {
   const btns = $$('.wpu-opt', EL.quizOpts), b = btns[i]; if (!b || b.disabled) return;
   if (Z.kind === 'multi') { const on = b.getAttribute('aria-pressed') === 'true'; b.setAttribute('aria-pressed', String(!on)); Z.sel = btns.map((x, k) => (x.getAttribute('aria-pressed') === 'true' ? k : -1)).filter((k) => k >= 0); }
   else if (Z.kind === 'order') { if (Z.sel.includes(i)) return; Z.sel.push(i); b.setAttribute('aria-pressed', 'true'); b.querySelector('.n').textContent = String(Z.sel.length); }
-  AudioSys.play('tick');
+  quizSyncConfirm(); AudioSys.play('tick');
 }
 function quizUndo() {
   const Z = game.quiz; if (!Z || Z.answered || Z.kind !== 'order' || !Z.sel.length) return;
   const i = Z.sel.pop(), b = $$('.wpu-opt', EL.quizOpts)[i]; b.setAttribute('aria-pressed', 'false'); b.querySelector('.n').textContent = '';
+  quizSyncConfirm();
 }
-function quizClearSel() { const Z = game.quiz; Z.sel = []; $$('.wpu-opt', EL.quizOpts).forEach((b) => { b.setAttribute('aria-pressed', 'false'); const n = b.querySelector('.n'); if (n) n.textContent = ''; }); }
+function quizClearSel() { const Z = game.quiz; Z.sel = []; $$('.wpu-opt', EL.quizOpts).forEach((b) => { b.setAttribute('aria-pressed', 'false'); const n = b.querySelector('.n'); if (n) n.textContent = ''; }); quizSyncConfirm(); }
 function quizCorrect(Z, i) {
   if (Z.kind === 'multi') { const want = Z.opts.map((o, k) => (o.ok ? k : -1)).filter((k) => k >= 0); return want.length === Z.sel.length && want.every((k) => Z.sel.includes(k)); }
   if (Z.kind === 'order') return Z.sel.length === Z.opts.length && Z.sel.every((k, n) => Z.opts[k].pos === n);
@@ -5666,7 +5708,7 @@ function answerQuiz(i) {
   const Z = game.quiz; if (!Z || Z.answered) return;
   const multi = Z.kind === 'multi' || Z.kind === 'order';
   if (multi && i !== 'confirm' && i !== -1) { quizSelect(i); return; }
-  if (multi && i === 'confirm' && !Z.sel.length) return;
+  if (multi && i === 'confirm' && (!Z.sel.length || (Z.kind === 'order' && Z.sel.length < Z.opts.length))) return;
   const ok = quizCorrect(Z, i);
   /* Druga szansa: pierwszy błąd bez skutków, wybierasz jeszcze raz (do raportu trafia pierwsza odpowiedź) */
   if (!ok && i !== -1 && Z.secondArmed && !Z.second) {
@@ -5684,6 +5726,7 @@ function answerQuiz(i) {
   knowCache = null;
   const res = applyAnswer(ok, Z); Z.res = res;
   const btns = $$('.wpu-opt', EL.quizOpts);
+  btns.forEach((b) => b.removeAttribute('aria-pressed'));
   if (Z.kind === 'multi') btns.forEach((b, k) => { b.disabled = true; const on = Z.sel.includes(k); if (Z.opts[k].ok) b.classList.add('good'); else if (on) b.classList.add('bad'); else b.classList.add('fade'); });
   else if (Z.kind === 'order') btns.forEach((b, k) => { b.disabled = true; const n = Z.sel.indexOf(k); b.querySelector('.n').textContent = String(Z.opts[k].pos + 1); b.classList.add(n === Z.opts[k].pos ? 'good' : 'bad'); });
   else btns.forEach((b, k) => { b.disabled = true; if (Z.opts[k].ok) b.classList.add('good'); else if (k === i) b.classList.add('bad'); else b.classList.add('fade'); });
@@ -5736,7 +5779,7 @@ function answerQuiz(i) {
 }
 function closeQuiz() {
   const Z = game.quiz; if (!Z || !Z.answered) return;
-  game.quiz = null; game.state = 'play'; show(null); Input.clearAll(); AudioSys.duck(false);
+  game.quiz = null; game.state = 'play'; show(null); Input.clearAll(); AudioSys.duck(false); Gest.lockT = performance.now() + 300;
   const res = Z.res;
   if (Z.ok) {
     celebrate(res, Z);
@@ -5828,13 +5871,13 @@ const memIcons = {};
 function memIcon(model) { if (!memIcons[model]) { const o = buildMemento(model); memIcons[model] = modelIcon(o, 80, { zoom: 0.8 }); disposeTree(o); } return memIcons[model]; }
 function renderChron() {
   const got = Object.keys(save.mementos || {}).length;
-  EL.chronP.textContent = nb('Pamiątki zawodu ' + got + ' z 8. Każdy świat kryje w zakątku za pierwszym placem jedną pamiątkę, a w kolejnych etapach tablicę kroniki.');
+  EL.chronP.textContent = nb('Pamiątki zawodu ' + got + ' z 8. Każdy świat kryje w zakątku obok pierwszego placu jedną pamiątkę, a w kolejnych etapach tablicę kroniki.');
   EL.chronMem.innerHTML = '';
   for (let w = 1; w <= 8; w++) {
     const M = mementoOf(w), on = !!save.mementos[w], d = document.createElement('div'); d.className = 'wpu-mem' + (on ? ' on' : '');
     if (on) { const c = document.createElement('canvas'); c.width = c.height = 80; c.getContext('2d').drawImage(memIcon(M.model), 0, 0); d.appendChild(c); }
     else { const i = document.createElement('i'); i.textContent = '?'; d.appendChild(i); }
-    const t = document.createElement('div'); t.innerHTML = '<b>' + esc(on ? M.name : 'Pamiątka ze świata ' + w) + '</b><span>' + esc(nb(on ? M.desc : 'Do odnalezienia w zakątku za pierwszym placem w pierwszym etapie świata ' + w + '.')) + '</span>' + (M.source && on ? '<small>' + esc(M.source.replace(/^https?:\/\//, '')) + '</small>' : '');
+    const t = document.createElement('div'); t.innerHTML = '<b>' + esc(on ? M.name : 'Pamiątka ze świata ' + w) + '</b><span>' + esc(nb(on ? M.desc : 'Do odnalezienia w zakątku obok pierwszego placu, po stronie kartonów, w pierwszym etapie świata ' + w + '.')) + '</span>' + (M.source && on ? '<small>' + esc(M.source.replace(/^https?:\/\//, '')) + '</small>' : '');
     d.appendChild(t); EL.chronMem.appendChild(d);
   }
   const C = chronicleList(), rd = save.chronRead || {};
@@ -5958,7 +6001,7 @@ function renderReport(final) {
 }
 function correctText(q) { const k = qKind(q); return k === 'tf' ? (q.ans ? 'Prawda' : 'Fałsz') : k === 'multi' ? (q.ok || [0]).map((i) => q.o[i]).join(', ') : k === 'order' ? q.o.join(', potem ') : q.o[0]; }
 function qItem(q, cls, note) {
-  return '<li class="' + cls + '"><span class="qq">' + esc(nb(q.q)) + '</span><span class="aa"><b>Poprawna odpowiedź</b> ' + esc(nb(correctText(q))) + '</span>' +
+  return '<li class="' + cls + '"><span class="qq">' + esc(nb(q.q)).replace('___', '<span class="gapm">…</span>') + '</span><span class="aa"><b>Poprawna odpowiedź</b> ' + esc(nb(correctText(q))) + '</span>' +
     '<span class="ee">' + esc(nb(q.e)) + '</span><span class="ar">' + esc(q.art) + (note ? ' · ' + esc(note) : '') + '</span></li>';
 }
 
@@ -6135,7 +6178,8 @@ function onMotion(e) {
    przesuwanie w lewo i w prawo skręca, przeciągnięcie w dół cofa. Szybkie przesunięcie w górę to skok
    (trzymanie palca wydłuża skok i lot z Mandatem), szybkie w dół to wejście do rury. Drugi palec to skok,
    a dwa szybkie dotknięcia to rzut paragrafem. Po chwili marszu postać biegnie sama. */
-const Gest = { ptrs: new Map(), dirId: null, lastTap: 0, hintT: 0, actT: 0 };
+const Gest = { ptrs: new Map(), dirId: null, lastTap: 0, hintT: 0, actT: 0, lockT: 0 };
+const JUMP_DELAY = 70;
 const STICK = 54, FLICK = 30;
 /* strefa ruchu to lewa część ekranu (prawa dla leworęcznych); reszta ekranu to skok i akcje */
 function moveZone(q) { const k = q.x / q.w; return save.settings.lefty ? k > 0.44 : k < 0.56; }
@@ -6148,7 +6192,7 @@ function gestSync() {
     EL.ring.style.transform = 'translate(' + d.ax + 'px,' + d.ay + 'px)';
   } else Input.setAnalog('t', 0, 0, false);
   EL.gest.classList.toggle('held', !!d);
-  let j = false, act = null; for (const p of Gest.ptrs.values()) if (p.act) { j = true; act = p; }
+  let j = false, act = null; const now = performance.now(); for (const p of Gest.ptrs.values()) if (p.act) { act = p; if (!p.noJump && now >= p.jumpAt) j = true; }
   if (act && EL.jpad) { EL.jpad.style.transform = 'translate(' + act.ax + 'px,' + act.ay + 'px)'; }
   EL.gest.classList.toggle('act', !!act);
   Input.setSrc('t', 'jump', j);
@@ -6159,17 +6203,21 @@ function gestDown(ev) {
   ev.preventDefault(); AudioSys.init();
   try { EL.gest.setPointerCapture(ev.pointerId); } catch (e) {}
   const q = localPoint(ev, EL.gest), now = performance.now();
-  const p = { x: q.x, y: q.y, ax: q.x, ay: q.y, t0: now, act: false, moved: false, hist: [[now, q.y]] };
-  /* pierwszy palec w strefie ruchu prowadzi postać; każdy inny dotyk to skok, a dwa szybkie dotknięcia to rzut */
-  if (Gest.dirId === null && moveZone(q)) Gest.dirId = ev.pointerId;
+  if (now < Gest.lockT) return;
+  const p = { x: q.x, y: q.y, ax: q.x, ay: q.y, t0: now, act: false, moved: false, hist: [[now, q.y]], jumpAt: now + JUMP_DELAY, noJump: false };
+  /* pierwszy palec w strefie ruchu prowadzi postać, drugi w tej samej strefie jest pomijany; dotyk w strefie akcji to skok,
+     z krótkim opóźnieniem, żeby szybkie przesunięcie w dół (rura) albo dwa dotknięcia (rzut) nie zaczynały się od skoku */
+  if (moveZone(q)) { if (Gest.dirId === null) Gest.dirId = ev.pointerId; else { Gest.ptrs.set(ev.pointerId, p); return; } }
   else {
     p.act = true; save.tips.gj = (save.tips.gj || 0) + 1;
-    if (now - Gest.actT < 300) { gestPulse('run', 90); Gest.actT = 0; } else Gest.actT = now;
+    if (now - Gest.actT < 300) { p.noJump = true; gestPulse('run', 90); Gest.actT = 0; } else Gest.actT = now;
   }
   Gest.ptrs.set(ev.pointerId, p); gestSync();
 }
 function gestMove(ev) {
-  const p = Gest.ptrs.get(ev.pointerId); if (!p) return;
+  let p = Gest.ptrs.get(ev.pointerId);
+  /* palec, który leżał na ekranie podczas okna pytania albo pauzy, zaczyna od nowa w miejscu, w którym jest */
+  if (!p) { if (game.state !== 'play' || performance.now() < Gest.lockT) return; gestDown(ev); p = Gest.ptrs.get(ev.pointerId); if (!p) return; }
   ev.preventDefault();
   const q = localPoint(ev, EL.gest), now = performance.now();
   p.x = q.x; p.y = q.y;
@@ -6183,7 +6231,7 @@ function gestMove(ev) {
     /* szybkie przesunięcie palca akcji w dół to wejście do rury */
     p.hist.push([now, q.y]); while (p.hist.length > 2 && now - p.hist[0][0] > 260) p.hist.shift();
     let lo = 1e9; for (const h of p.hist) lo = Math.min(lo, h[1]);
-    if (q.y - lo > FLICK * 1.4) { gestPulse('down', 140); p.hist = [[now, q.y]]; }
+    if (q.y - lo > FLICK * 1.4) { if (now < p.jumpAt + 120) p.noJump = true; gestPulse('down', 140); p.hist = [[now, q.y]]; }
   }
   gestSync();
 }
@@ -6196,6 +6244,7 @@ function gestUp(ev) {
 /* co klatkę: znikanie podpowiedzi */
 function gestTick() {
   const now = performance.now();
+  for (const p of Gest.ptrs.values()) if (p.act && !p.synced && now >= p.jumpAt) { p.synced = true; gestSync(); }
   if (Gest.hintT && now > Gest.hintT) { Gest.hintT = 0; EL.gest.classList.remove('hint'); }
 }
 function gestHint() {
@@ -6283,7 +6332,7 @@ const ACTIONS = {
   settings: () => openSub('settings'),
   resume: () => resumeGame(),
   restart: () => { stack.length = 0; startStage(game.w, game.s, true); },
-  retry: () => { game.lives = game.mode.lives; game.persist.cp = -1; game.stageScore = 0; game.st = newStageStats(); game.penLvl = 0; game.streak = 0; loadStage(game.w, game.s, true); showIntro(); },
+  retry: () => { game.lives = game.mode.lives; game.persist = newPersist(); game.stageScore = 0; game.st = newStageStats(); game.penLvl = 0; game.streak = 0; loadStage(game.w, game.s, true); showIntro(); },
   next: () => nextStage(),
   'quiz-next': () => closeQuiz(),
   'quiz-confirm': () => answerQuiz('confirm'),
@@ -6361,6 +6410,8 @@ function init() {
   EL.gest.addEventListener('pointermove', gestMove);
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => EL.gest.addEventListener(t, gestUp));
   EL.gest.addEventListener('contextmenu', (e) => e.preventDefault());
+  EL.toast.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); EL.toast.classList.remove('on'); });
+  if (EL.qstrip) EL.qstrip.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
   $('#hud-rot').addEventListener('click', (e) => { e.stopPropagation(); AudioSys.init(); cycleRot(true); });
   window.addEventListener('devicemotion', onMotion);
   EL['scr-intro'].addEventListener('click', () => beginPlay());
@@ -6397,16 +6448,24 @@ function onKey(e) {
   if (e.code === 'KeyF' && !e.repeat && st !== 'quiz') { toggleFullscreen(); return; }
   if (st === 'quiz') {
     const Z = game.quiz; if (!Z) return;
+    const ae = document.activeElement, onOpt = !!(ae && ae.closest && ae.closest('#quiz-opts, #quiz-life, #quiz-undo'));
+    /* spacja (klawisz skoku) nie uruchamia przypadkiem kół ratunkowych ani stawki */
+    if (e.code === 'Space' && !(ae && ae.closest && ae.closest('#quiz-next, #quiz-opts, #quiz-confirm'))) { e.preventDefault(); return; }
     if (!Z.answered && !e.repeat) {
+      /* chwila ochronna po otwarciu: klawisze ruchu (A, D, W) nie odpowiadają na pytanie */
+      const fresh = performance.now() - (Z.openedAt || 0) < 450;
       const m = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, KeyA: 0, KeyB: 1, KeyC: 2, KeyD: 3 }[e.code];
-      if (m !== undefined && m < Z.opts.length) { e.preventDefault(); answerQuiz(m); return; }
+      if (m !== undefined && m < Z.opts.length) { e.preventDefault(); if (!fresh || e.code.startsWith('Digit') || e.code.startsWith('Numpad')) answerQuiz(m); return; }
       const lf = { KeyQ: 'sciaga', KeyW: 'konsult', KeyE: 'druga', KeyR: 'stake' }[e.code];
-      if (lf) { e.preventDefault(); useLife(lf); return; }
-      if ((e.code === 'Enter' || e.code === 'NumpadEnter') && (Z.kind === 'multi' || Z.kind === 'order') && Z.sel.length) { e.preventDefault(); answerQuiz('confirm'); return; }
+      if (lf) { e.preventDefault(); if (!fresh) useLife(lf); return; }
+      /* Enter na niezaznaczonej opcji zaznacza ją (jak klik), w każdym innym miejscu zatwierdza komplet */
+      const optFree = ae && ae.classList && ae.classList.contains('wpu-opt') && ae.getAttribute('aria-pressed') === 'false' && !ae.disabled;
+      if ((e.code === 'Enter' || e.code === 'NumpadEnter') && (Z.kind === 'multi' || Z.kind === 'order') && !optFree) { e.preventDefault(); answerQuiz('confirm'); return; }
       if (e.code === 'Backspace' && Z.kind === 'order') { e.preventDefault(); quizUndo(); return; }
       if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
         e.preventDefault();
-        const bs = $$('.wpu-opt', EL.quizOpts), i = bs.indexOf(document.activeElement);
+        const bs = $$('.wpu-opt', EL.quizOpts).filter((b) => !b.disabled); if (!bs.length) return;
+        const i = bs.indexOf(document.activeElement);
         const n = e.code === 'ArrowDown' ? (i + 1) % bs.length : (i - 1 + bs.length) % bs.length;
         bs[i < 0 ? 0 : n].focus();
       }
@@ -6420,14 +6479,14 @@ function onKey(e) {
   }
   if (st === 'intro' && (e.code === 'Enter' || e.code === 'Space') && !e.repeat) { e.preventDefault(); beginPlay(); return; }
   if (st === 'pause' && (e.code === 'KeyP' || e.code === 'Escape') && current === 'pause' && !e.repeat) { e.preventDefault(); resumeGame(); return; }
-  if (e.code === 'Escape' && ['report', 'komp', 'help', 'settings', 'list', 'shop', 'badges'].includes(current)) { e.preventDefault(); back(); return; }
+  if (e.code === 'Escape' && ['report', 'komp', 'help', 'settings', 'list', 'shop', 'badges', 'chron'].includes(current)) { e.preventDefault(); back(); return; }
   if (st === 'play' || st === 'dying' || st === 'clearing' || st === 'pipe') {
     if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) { e.preventDefault(); pauseGame(); return; }
     const slot = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 }[e.code];
     if (slot !== undefined && !e.repeat && st === 'play') { e.preventDefault(); game.useReq = slot; return; }
     if (e.code === 'KeyM' && !e.repeat) { save.settings.music = !save.settings.music; writeSave(); AudioSys.refreshMusic(); if (save.settings.music && game.state === 'play') AudioSys.music(game.room ? 'bonus' : game.boss ? 'boss' : game.theme.music); return; }
     const k = Input.KEYMAP[e.code];
-    if (k) { e.preventDefault(); Input.setSrc('k', k, true); }
+    if (k) { e.preventDefault(); if (!e.repeat || k === 'left' || k === 'right' || k === 'up' || k === 'down') Input.setSrc('k', k, true); }
   }
 }
 
