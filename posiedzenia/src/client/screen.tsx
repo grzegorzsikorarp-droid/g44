@@ -6,6 +6,7 @@ import type {ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Countdown, fmtTime} from './ui.tsx';
 import {ResultCard} from './meeting.tsx';
+import {brand} from './brand.ts';
 
 // Ekran sali / projektor: duże, czytelne informacje bez elementów sterowania.
 export function RoomScreen({id}: {id: string}) {
@@ -31,7 +32,7 @@ export function RoomScreen({id}: {id: string}) {
   else if (current) body = <div><p class="screen-kicker">Punkt {itemNumber(m.agenda, current.id)}</p><h1>{current.title}</h1>{current.presenter && <p class="screen-sub">Przedstawia: {current.presenter}</p>}</div>;
   else body = <div><h1>{m.title}</h1></div>;
   return <main class="screen">
-    <header class="screen-head"><span>{m.title}</span><span>{fmtTime(now)}</span></header>
+    <header class="screen-head"><span>{brand.demo && <a class="screen-back" href={`#p-${m.id}`}>← Wróć</a>}{m.title}</span><span>{fmtTime(now)}</span></header>
     <section class="screen-body">{m.status === 'przerwa' ? <h1>Przerwa w obradach</h1> : m.status === 'zakonczone' ? <h1>Posiedzenie zamknięte</h1> : body}</section>
     <footer class="screen-foot">Obecnych {present} z {total} · kworum {quorumFor(total)}{m.chair.current ? ` · prowadzi: ${s.personName(m.chair.current)}` : ''}</footer>
   </main>;

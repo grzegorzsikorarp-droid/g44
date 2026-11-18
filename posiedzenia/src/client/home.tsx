@@ -3,6 +3,8 @@ import type {Meeting} from '../shared/types.ts';
 import {request, useLive} from './api.ts';
 import {useSession} from './session.ts';
 import {Button, Chip, Field, fmtDate, fmtDateTime, Modal, Notice, useAction} from './ui.tsx';
+import {brand} from './brand.ts';
+import {go} from './route.ts';
 
 interface Summary {
   id: string; kind: Meeting['kind']; title: string; date: string; time: string; place: string; mode: Meeting['mode'];
@@ -23,7 +25,7 @@ export function Home() {
   const done = list.filter(m => m.status === 'zakonczone');
   return <div class="home">
     <section class="home-head">
-      <div><h1>Posiedzenia i głosowania</h1><p class="muted">Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku · IX kadencja 2024–2028</p></div>
+      <div><h1>Posiedzenia i głosowania</h1><p class="muted">{brand.organLong} · {brand.term}</p></div>
       {organizer && <div class="actions">
         <Button kind="primary" onClick={() => setCreating('posiedzenie')}>Nowe posiedzenie</Button>
         <Button onClick={() => setCreating('procedura')}>Głosowanie między posiedzeniami</Button>
@@ -45,7 +47,7 @@ function Group(props: {title: string; items: Summary[]}) {
 
 function MeetingCard({m}: {m: Summary}) {
   const [label, tone] = statusLabel[m.status];
-  return <a class={'card meeting-card' + (m.status === 'trwa' ? ' is-live' : '')} href={`#/p/${m.id}`}>
+  return <a class={'card meeting-card' + (m.status === 'trwa' ? ' is-live' : '')} href={`#p-${m.id}`}>
     <div class="meeting-card-top"><Chip tone={tone}>{label}</Chip><span class="muted small">{m.kind === 'posiedzenie' ? (m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne') : 'Głosowanie między posiedzeniami'}</span></div>
     <h3>{m.title}</h3>
     <p class="muted">{m.kind === 'posiedzenie' ? `${fmtDate(m.date)}, godz. ${m.time}` : m.endsAt ? `Głosowanie do ${fmtDateTime(m.endsAt)}` : 'Termin do ustalenia'}{m.place && m.kind === 'posiedzenie' ? ` · ${m.place}` : ''}</p>
@@ -68,16 +70,16 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
           ? {kind: 'procedura', title: f.get('title'), endsAt: new Date(String(f.get('endsAt'))).getTime(), date: String(f.get('endsAt')).slice(0, 10)}
           : {kind: 'posiedzenie', title: f.get('title'), date: f.get('date'), time: f.get('time'), place: f.get('place'), mode: f.get('mode')};
         const {meeting} = await request<{meeting: Meeting}>('/api/meetings', {body});
-        location.hash = `#/p/${meeting.id}`;
+        go(`#p-${meeting.id}`);
       });
     }}>
       {procedure && <Notice>§ 14 ust. 5 Regulaminu: Prezydium może podejmować uchwały między posiedzeniami zdalnie. Członkowie głosują w wyznaczonym czasie, a w tym czasie działa wspólny kanał wiadomości.</Notice>}
-      <Field label="Tytuł"><input name="title" required maxLength={200} defaultValue={procedure ? 'Głosowanie między posiedzeniami Prezydium ORPiP' : 'Posiedzenie Prezydium ORPiP'}/></Field>
+      <Field label="Tytuł"><input name="title" required maxLength={200} defaultValue={procedure ? brand.procedureTitle : brand.meetingTitle}/></Field>
       {procedure
         ? <Field label="Koniec głosowania" hint="Głosowanie zakończy się wcześniej, gdy zagłosują wszyscy uprawnieni. Termin można zmienić przed rozpoczęciem."><input name="endsAt" type="datetime-local" required defaultValue={local(tomorrow)}/></Field>
         : <>
           <div class="row"><Field label="Data"><input name="date" type="date" required defaultValue={tomorrow.toISOString().slice(0, 10)}/></Field><Field label="Godzina"><input name="time" type="time" required defaultValue="10:00"/></Field></div>
-          <Field label="Miejsce"><input name="place" maxLength={200} defaultValue="Siedziba OIPiP, ul. Poniatowskiego 4, Słupsk"/></Field>
+          <Field label="Miejsce"><input name="place" maxLength={200} defaultValue={brand.place}/></Field>
           <Field label="Tryb" hint="Posiedzenie zdalne wymaga dwustronnej komunikacji w czasie rzeczywistym (§ 14 ust. 5) — dodasz odnośnik do połączenia."><select name="mode"><option value="stacjonarne">Stacjonarne</option><option value="zdalne">Zdalne</option></select></Field>
         </>}
       {error && <Notice tone="error">{error}</Notice>}

@@ -32,7 +32,7 @@ function ballotBlock(m: Meeting, roster: Roster, b: Ballot) {
   return `<div class="ballot">${lines.join('')}</div>`;
 }
 
-export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number) {
+export function minutesBody(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number) {
   const organ = organOf(roster, m.organ);
   const members = organMembers(roster, m.organ);
   const procedure = m.kind === 'procedura';
@@ -40,7 +40,7 @@ export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], gen
   const parts: string[] = [];
   parts.push(`<header><p class="muted">PROJEKT — do uzupełnienia przez sekretarza</p>
     <h1>${procedure ? 'Protokół z głosowania między posiedzeniami' : 'Protokół z posiedzenia'}<br>${esc(organ?.name)}</h1>
-    <p>${procedure ? `Głosowanie zdalne w trybie § 14 ust. 5 Regulaminu ORPiP, od ${dateTime(m.openedAt)} do ${dateTime(m.closedAt ?? m.endsAt)}.` :
+    <p>${procedure ? `Głosowanie zdalne w trybie § 14 ust. 5 Regulaminu Okręgowej Rady, od ${dateTime(m.openedAt)} do ${dateTime(m.closedAt ?? m.endsAt)}.` :
       `${longDate(m.date)}, godz. ${esc(m.time)} · ${m.mode === 'zdalne' ? 'posiedzenie zdalne (§ 14 ust. 5)' : 'posiedzenie stacjonarne'}${m.place ? ' · ' + esc(m.place) : ''}`}</p></header>`);
   if (!procedure) {
     parts.push(`<h2>1. Zwołanie i prowadzenie</h2><p>Zawiadomienie wysłano: ${m.noticeDate ? longDate(m.noticeDate) : 'nie wpisano'}${days !== null ? ` (${days} dni przed posiedzeniem${days < 7 ? ' — mniej niż wymagane 7 dni, § 7 ust. 1' : ''})` : ''}.</p>
@@ -81,6 +81,10 @@ export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], gen
   if (procedure && m.messages.length) parts.push('<h2>Wiadomości uczestników w trakcie procedury</h2><ul class="messages">' + m.messages.map(x => `<li>${dateTime(x.at)} — <strong>${esc(x.authorName)}</strong>: ${esc(x.text)}</li>`).join('') + '</ul>');
   parts.push(`<div class="signatures"><div>Przewodniczący obrad</div><div>Sekretarz</div><div>Protokolant</div></div>
     <p class="muted footer">Projekt wygenerowany z zapisu aplikacji ${dateTime(generatedAt)}. Protokół sporządza się w terminie 21 dni od zakończenia obrad; przyjmuje go Prezydium na następnym posiedzeniu (§ 13 ust. 2–3 w zw. z § 14 ust. 4).</p>`);
+  return parts.join('\n');
+}
+
+export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number) {
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Projekt protokołu — ${esc(m.title)}</title>
 <style>
 body{font:15px/1.55 Georgia,'Times New Roman',serif;color:#1d1d1f;background:#fff;max-width:820px;margin:0 auto;padding:32px 20px 64px}
@@ -90,5 +94,5 @@ table{border-collapse:collapse;width:100%;margin:8px 0}th,td{border:1px solid #b
 .signatures{display:flex;gap:24px;margin-top:56px}.signatures div{flex:1;border-top:1px solid #333;padding-top:6px;text-align:center;font-size:13px}
 .footer{margin-top:32px}.toolbar{position:sticky;top:0;background:#fff;padding:8px 0;border-bottom:1px solid #eee;margin-bottom:12px}
 @media print{.toolbar{display:none}body{padding:0}}
-</style></head><body><div class="toolbar"><button type="button" data-print>Drukuj / zapisz jako PDF</button></div>${parts.join('\n')}<script src="/druk.js"></script></body></html>`;
+</style></head><body><div class="toolbar"><button type="button" data-print>Drukuj / zapisz jako PDF</button></div>${minutesBody(m, roster, accounts, generatedAt)}<script src="/druk.js"></script></body></html>`;
 }

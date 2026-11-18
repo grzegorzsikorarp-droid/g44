@@ -65,6 +65,7 @@ Kopia zapasowa: zatrzymaj serwer i skopiuj cały katalog `data` (baza SQLite i p
 src/shared/   logika regulaminowa bez zależności (typy, skład, kworum, przebieg posiedzenia, ślepe podpisy)
 src/server/   serwer HTTP na node:http + node:sqlite, logowanie, materiały, karty tajne, protokół
 src/client/   interfejs Preact: panel prowadzącego, widok telefonu, przygotowanie, procedura, konta, ekran sali
+src/demo/     wersja próbna: ten sam interfejs, serwer symulowany w przeglądarce, dane fikcyjne
 tests/        testy logiki, kryptografii i pełnego przebiegu przez API
 ```
 
@@ -74,3 +75,7 @@ npm run check   # kontrola typów TypeScript
 ```
 
 Cała logika posiedzenia jest w `src/shared/meeting.ts`. Działa jako `apply(stan, polecenie, osoba, kontekst)` i w każdym przypadku sprawdza uprawnienia oraz warunki regulaminowe. Serwer zapisuje wynik w transakcji SQLite. Głosowania po upływie czasu zamyka zegar serwera, również wtedy, gdy nikt nie odświeża strony.
+
+### Wersja próbna
+
+`npm run build:demo` tworzy jeden plik `dist-demo/posiedzenia-proba.html`. Działa w przeglądarce bez serwera: logowanie zastępuje wybór osoby, stan trzyma `localStorage`, a tajne głosowanie używa tych samych ślepych podpisów co serwer (klucze RSA z WebCrypto). Dane są fikcyjne. Plik służy do sprawdzenia przebiegu posiedzenia na telefonie i nie zawiera danych Izby.

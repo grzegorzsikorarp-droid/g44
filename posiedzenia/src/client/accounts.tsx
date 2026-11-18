@@ -3,8 +3,9 @@ import type {Account} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useSession} from './session.ts';
 import {Button, Chip, Field, Modal, Notice, useAction} from './ui.tsx';
+import {brand} from './brand.ts';
 
-const kinds: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro Izby'};
+const kinds: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro'};
 const ascii = (s: string) => s.toLowerCase().replace(/[ąćęłńóśźż]/g, c => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]).replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 function temporaryPassword() {
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -34,13 +35,13 @@ export function Accounts() {
     </li>;
   };
   return <div class="stack">
-    <a class="back" href="#/">← Posiedzenia</a>
+    <a class="back" href="#">← Posiedzenia</a>
     <h1>Konta</h1>
     <p class="muted">Każda osoba ma własne konto — udział w posiedzeniu jest osobisty (§ 19 ust. 2). Przekaż login i hasło tymczasowe; przy pierwszym logowaniu osoba ustawi własne hasło. Zablokowanie konta albo nowe hasło tymczasowe kończy jego sesje.</p>
     {error && <Notice tone="error">{error}</Notice>}
     {!accounts && <p class="muted">Wczytywanie…</p>}
     {accounts && <>
-      <section class="card"><h3>Prezydium ORPiP</h3><ul class="account-list">{presidium.map(m => row(m.personId, m.label))}</ul></section>
+      <section class="card"><h3>{brand.organAccounts}</h3><ul class="account-list">{presidium.map(m => row(m.personId, m.label))}</ul></section>
       <section class="card">
         <div class="card-head"><h3>Biuro, głos doradczy i goście</h3><div class="actions"><Button small onClick={() => setCreating({kind: 'doradczy'})}>Głos doradczy</Button><Button small onClick={() => setCreating({kind: 'gosc'})}>Gość</Button><Button small onClick={() => setCreating({kind: 'biuro'})}>Biuro</Button></div></div>
         <p class="muted small">Głos doradczy mają przewodniczący okręgowej komisji rewizyjnej, przewodniczący okręgowego sądu oraz okręgowy rzecznik (§ 7 ust. 2). Biuro przygotowuje posiedzenia i prowadzi listę obecności, ale nie głosuje.</p>
@@ -51,8 +52,8 @@ export function Accounts() {
     {creating && <CreateAccount kind={creating.kind} personId={creating.personId} onClose={() => setCreating(null)} onCreated={(list, info) => { setAccounts(list); setCreating(null); setIssued(info); }}/>}
     {issued && <Modal title="Dane do przekazania" onClose={() => setIssued(null)}>
       <p>Przekaż osobie <strong>{issued.name}</strong> poniższe dane (najlepiej osobiście lub SMS-em). Przy pierwszym logowaniu ustawi własne hasło.</p>
-      <dl class="credentials"><dt>Adres</dt><dd>{location.origin}</dd><dt>Login</dt><dd><code>{issued.username}</code></dd><dt>Hasło tymczasowe</dt><dd><code>{issued.password}</code></dd></dl>
-      <div class="actions"><Button onClick={() => navigator.clipboard?.writeText(`Posiedzenia OIPiP: ${location.origin}\nLogin: ${issued.username}\nHasło tymczasowe: ${issued.password}`)}>Kopiuj</Button><Button kind="primary" onClick={() => setIssued(null)}>Gotowe</Button></div>
+      <dl class="credentials"><dt>Adres</dt><dd>{brand.demo ? "adres pełnej aplikacji" : location.origin}</dd><dt>Login</dt><dd><code>{issued.username}</code></dd><dt>Hasło tymczasowe</dt><dd><code>{issued.password}</code></dd></dl>
+      <div class="actions"><Button onClick={() => navigator.clipboard?.writeText(`Posiedzenia ${brand.org}: ${location.origin}\nLogin: ${issued.username}\nHasło tymczasowe: ${issued.password}`)}>Kopiuj</Button><Button kind="primary" onClick={() => setIssued(null)}>Gotowe</Button></div>
     </Modal>}
     {reset && <ResetPassword a={reset} onClose={() => setReset(null)} onDone={(list, password) => { setAccounts(list); setIssued({name: reset.displayName, username: reset.username, password}); setReset(null); }}/>}
   </div>;

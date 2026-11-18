@@ -11,7 +11,7 @@ import {AgendaEditor, DeleteMeeting, MaterialsEditor} from './prep.tsx';
 import {MaterialLink} from './reader.tsx';
 import {Messages} from './messages.tsx';
 
-// Głosowanie między posiedzeniami Prezydium (§ 14 ust. 5 Regulaminu ORPiP).
+// Głosowanie między posiedzeniami Prezydium (§ 14 ust. 5 Regulaminu Okręgowej Rady).
 export function ProcedureView() {
   const {m} = useMeeting();
   const s = useSession();

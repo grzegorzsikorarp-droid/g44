@@ -2,7 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import type {Account, Meeting, Roster} from '../shared/types.ts';
-import {seedRoster} from '../shared/roster.ts';
+import {seedRoster} from './seed.ts';
 
 const schema = `
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);

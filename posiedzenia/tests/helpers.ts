@@ -1,5 +1,5 @@
 import {createMeeting, type Context, type SecretHooks} from '../src/shared/meeting.ts';
-import {seedRoster} from '../src/shared/roster.ts';
+import {seedRoster} from '../src/server/seed.ts';
 import type {Account, Actor, Choice} from '../src/shared/types.ts';
 
 export const roster = seedRoster;

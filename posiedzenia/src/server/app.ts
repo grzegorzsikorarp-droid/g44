@@ -13,7 +13,8 @@ import {minutesHtml} from './minutes.ts';
 import {advance, apply, canView, createMeeting, DomainError, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
 import {personName} from '../shared/roster.ts';
-import type {Account, Actor, Ballot, Choice, MaterialRef, MaterialType, Meeting} from '../shared/types.ts';
+import {summary, viewFor} from '../shared/view.ts';
+import type {Account, Actor, MaterialRef, MaterialType, Meeting} from '../shared/types.ts';
 
 export const VERSION = '0.1.0';
 const mime: Record<string, string> = {
@@ -91,23 +92,6 @@ export async function createApplication(options: AppOptions = {}) {
   }
   const accounts = () => store.users().map(accountView);
 
-  function viewFor(m: Meeting, actor: Actor) {
-    const v = structuredClone(m) as Meeting & {ballots: (Ballot & {voted: string[]; myVote?: Choice})[]};
-    for (const b of v.ballots) {
-      b.voted = b.secret ? [...b.secret.issued] : Object.keys(b.votes);
-      if (actor.personId && !b.secret && b.votes[actor.personId]) b.myVote = b.votes[actor.personId];
-      if (b.status === 'otwarte' || b.mode !== 'imienne') b.votes = {};
-    }
-    return v;
-  }
-  function summary(m: Meeting) {
-    const open = m.ballots.filter(b => b.status === 'otwarte');
-    return {
-      id: m.id, organ: m.organ, kind: m.kind, title: m.title, date: m.date, time: m.time, place: m.place, mode: m.mode,
-      status: m.status, endsAt: m.endsAt ?? null, openBallots: open.length, ballots: m.ballots.length,
-      current: m.agenda.find(i => i.id === m.currentItemId)?.title ?? null, revision: m.revision,
-    };
-  }
   function meetingFor(id: string, actor: Actor) {
     const m = store.meeting(id);
     if (!m) fail('Nie znaleziono posiedzenia.', 404);

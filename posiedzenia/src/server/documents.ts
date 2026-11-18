@@ -6,6 +6,7 @@ import {parseDocument} from 'htmlparser2';
 import {render} from 'dom-serializer';
 import {textContent} from 'domutils';
 import type {MaterialType} from '../shared/types.ts';
+export {textToHtml} from '../shared/text.ts';
 
 // Lekki HTML do czytania na telefonie: sama struktura dokumentu, bez czcionek, obrazów i stylów.
 const options: sanitizeHtml.IOptions = {
@@ -18,7 +19,6 @@ const options: sanitizeHtml.IOptions = {
 };
 export const cleanHtml = (html: string) => sanitizeHtml(html, options).replace(/\n{3,}/g, '\n\n').trim();
 export const htmlHash = (html: string) => createHash('sha256').update(html).digest('hex');
-const escape = (s: string) => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]!);
 
 // Akapit zawierający tylko „§ 1” (zwykle wyśrodkowany i pogrubiony w Wordzie) staje się nagłówkiem.
 const paragraphHeadings = (html: string) => html.replace(/<p>(?:<strong>)?\s*(§\s*\d+[a-z]?\.?)\s*(?:<\/strong>)?<\/p>/g, '<h3>$1</h3>');
@@ -28,16 +28,6 @@ export async function docxToHtml(buffer: Buffer) {
   return paragraphHeadings(cleanHtml(result.value));
 }
 export const markdownToHtml = (text: string) => cleanHtml(marked.parse(text, {async: false}) as string);
-// Zwykły tekst: akapity oddzielone pustym wierszem; wiersz „§ 1” albo „Rozdział I” staje się nagłówkiem.
-export function textToHtml(text: string) {
-  const heading = /^(§\s*\d+[a-z]?\.?|Rozdział\s+[IVXLC\d]+\.?)$/i;
-  return text.replace(/\r\n?/g, '\n').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(block => {
-    const lines = block.split('\n');
-    const head = heading.test(lines[0].trim()) ? `<h3>${escape(lines.shift()!.trim())}</h3>\n` : '';
-    return head + (lines.length ? `<p>${lines.map(l => escape(l.trim())).join('<br>')}</p>` : '');
-  }).join('\n');
-}
-
 const actPattern = /^(uchwała|stanowisko|apel|rezolucja|oświadczenie|deklaracja)\s+nr\.?\s*(\S+(?:\s+\S+)?)/iu;
 const typeOf: Record<string, MaterialType> = {uchwała: 'uchwala', stanowisko: 'oswiadczenie', oświadczenie: 'oswiadczenie', apel: 'apel', rezolucja: 'rezolucja', deklaracja: 'deklaracja'};
 

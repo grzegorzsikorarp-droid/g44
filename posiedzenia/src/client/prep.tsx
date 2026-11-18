@@ -9,6 +9,7 @@ import {useMeeting, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Button, Confirm, Field, Modal, Notice, useAction} from './ui.tsx';
 import {MaterialLink} from './reader.tsx';
+import {go} from './route.ts';
 
 export const materialTypes: [MaterialType, string][] = [
   ['uchwala', 'Uchwała'], ['oswiadczenie', 'Stanowisko / oświadczenie'], ['apel', 'Apel'], ['rezolucja', 'Rezolucja'], ['deklaracja', 'Deklaracja'],
@@ -246,7 +247,7 @@ export function DeleteMeeting() {
     <Button kind="ghost" small onClick={() => setConfirm(true)}>Usuń to {m.kind === 'posiedzenie' ? 'posiedzenie' : 'głosowanie'}</Button>
     {error && <Notice tone="error">{error}</Notice>}
     {confirm && <Confirm title="Usunąć?" kind="danger" confirm="Usuń" onClose={() => setConfirm(false)} text={<p>„{m.title}” zostanie trwale usunięte razem z materiałami. Można to zrobić tylko przed otwarciem.</p>}
-      onConfirm={() => run(async () => { await request(`/api/meetings/${m.id}`, {method: 'DELETE'}); location.hash = '#/'; })}/>}
+      onConfirm={() => run(async () => { await request(`/api/meetings/${m.id}`, {method: 'DELETE'}); go(''); })}/>}
     {busy && <span class="muted small">Usuwanie…</span>}
   </section>;
 }

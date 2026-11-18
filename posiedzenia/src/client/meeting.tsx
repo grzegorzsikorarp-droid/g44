@@ -15,6 +15,7 @@ import {PrepEditor} from './prep.tsx';
 import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader} from './reader.tsx';
 import {Messages} from './messages.tsx';
+import {brand} from './brand.ts';
 
 export function MeetingPage({id}: {id: string}) {
   const s = useSession();
@@ -26,7 +27,7 @@ export function MeetingPage({id}: {id: string}) {
     live.replace(r);
     return r.meeting;
   });
-  if (!live.data) return live.error ? <div class="stack"><Notice tone="error">{live.error}</Notice><a href="#/">← Wróć do listy</a></div> : <p class="muted">Wczytywanie posiedzenia…</p>;
+  if (!live.data) return live.error ? <div class="stack"><Notice tone="error">{live.error}</Notice><a href="#">← Wróć do listy</a></div> : <p class="muted">Wczytywanie posiedzenia…</p>;
   const m = live.data.meeting;
   const chairNow = m.chair.current !== null && m.chair.current === s.personId;
   const office = s.account.kind === 'biuro' || (s.account.admin && !s.isMember(m.organ));
@@ -50,7 +51,7 @@ function MeetingHeader(props: {online: boolean; participantView: boolean; toggle
   const [label, tone] = statusLabel[m.status];
   const chair = m.chair.current ? s.personName(m.chair.current) : null;
   return <section class="meeting-head">
-    <a class="back" href="#/">← Posiedzenia</a>
+    <a class="back" href="#">← Posiedzenia</a>
     <div class="meeting-head-main">
       <div>
         <div class="chips"><Chip tone={tone}>{label}</Chip>{m.kind === 'posiedzenie' && <Chip>{m.mode === 'zdalne' ? 'Zdalne' : 'Stacjonarne'}</Chip>}{!props.online && <Chip tone="warn">Brak połączenia — ponawiam…</Chip>}</div>
@@ -60,7 +61,7 @@ function MeetingHeader(props: {online: boolean; participantView: boolean; toggle
       <div class="actions">
         {m.link && m.status !== 'zakonczone' && <a class="btn btn-primary" href={m.link} target="_blank" rel="noopener noreferrer">Dołącz do połączenia</a>}
         {props.toggleView && <Button onClick={props.toggleView}>{props.participantView ? 'Panel prowadzącego' : 'Widok uczestnika'}</Button>}
-        {m.kind === 'posiedzenie' && m.status !== 'przygotowanie' && m.status !== 'zakonczone' && s.isOrganizer(m.organ) && <a class="btn btn-secondary" href={`#/ekran/${m.id}`} target="_blank" rel="noopener">Ekran sali</a>}
+        {m.kind === 'posiedzenie' && m.status !== 'przygotowanie' && m.status !== 'zakonczone' && s.isOrganizer(m.organ) && <a class="btn btn-secondary" href={`#ekran-${m.id}`} target={brand.demo ? undefined : '_blank'} rel="noopener">Ekran sali</a>}
         {m.status !== 'przygotowanie' && (s.isOrganizer(m.organ) || (m.status === 'zakonczone' && s.isMember(m.organ))) && <a class="btn btn-secondary" href={`/api/meetings/${m.id}/protokol`} target="_blank" rel="noopener">Projekt protokołu</a>}
       </div>
     </div>
