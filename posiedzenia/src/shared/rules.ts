@@ -60,7 +60,7 @@ export function computeResult(b: Ballot, counts: {za: number; przeciw: number; w
 export function resultLabel(b: Ballot) {
   const r = b.result;
   if (!r) return 'Głosowanie trwa';
-  if (!r.quorumMet) return 'Brak kworum — rozstrzygnięcie nie zapadło';
+  if (!r.quorumMet) return 'Brak kworum, rozstrzygnięcie nie zapadło';
   const ok = r.adopted;
   switch (b.purpose) {
     case 'uchwala': return ok ? 'Uchwała przyjęta' : 'Uchwała nie została przyjęta';

@@ -1,0 +1,9 @@
+/* Titillium Web (SIL Open Font License 1.1), pełny zestaw znaków z polskimi literami. */
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-300-normal.woff2") format("woff2"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-300-italic.woff2") format("woff2"); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-400-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-600-italic.woff2") format("woff2"); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Titillium Web"; src: url("woff2/titillium-web-700-italic.woff2") format("woff2"); font-weight: 700; font-style: italic; font-display: swap; }

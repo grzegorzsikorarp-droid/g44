@@ -8,7 +8,8 @@ const js = [...html.matchAll(/<script type="module"[^>]*src="\/([^"]+)"[^>]*><\/
 const page = `<title>Posiedzenia Prezydium</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>${css}</style>
-<div id="app"></div>
+<style>/* Strona na claude.ai: górny odstęp od paska systemowego daje już ramka */.topbar{padding-top:var(--odstep-1)}</style>
+<div id="app" class="oi-root"></div>
 <script type="module">${js.replace(/<\/script/gi, '<\\/script')}</script>
 `;
 writeFileSync(join(dir, 'posiedzenia-proba.html'), page);

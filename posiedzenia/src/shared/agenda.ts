@@ -71,7 +71,7 @@ export function parseAgendaText(text: string) {
     const at = items.findIndex(i => i.kind === 'otwarcie') + 1;
     items.splice(at, 0, {title: 'Przyjęcie porządku obrad', kind: 'porzadek', parent: null});
     for (const item of items) if (item.parent !== null && item.parent >= at) item.parent++;
-    warnings.push('Dodano punkt „Przyjęcie porządku obrad” — dalsze sprawy można procedować dopiero po przyjęciu porządku.');
+    warnings.push('Dodano punkt „Przyjęcie porządku obrad”. Dalsze sprawy można procedować dopiero po przyjęciu porządku.');
   }
   return {items, warnings};
 }

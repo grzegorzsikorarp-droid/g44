@@ -3,14 +3,14 @@ import {materialTypeLabel} from '../shared/meeting.ts';
 import type {MaterialRef} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useMeeting} from './context.ts';
-import {Button, Modal, Notice} from './ui.tsx';
+import {Button, LinkButton, Modal, Notice} from './ui.tsx';
 
 type Loaded = MaterialRef & {html: string};
 const cache = new Map<string, Loaded>();
 const sizes = ['small', 'normal', 'large', 'xlarge'];
 const readSize = () => { try { return localStorage.getItem('posiedzenia:czcionka') || 'normal'; } catch { return 'normal'; } };
 
-// Treść materiału pobiera się dopiero po otwarciu — odświeżanie obrad nie przesyła dokumentów.
+// Treść materiału pobiera się dopiero po otwarciu, więc odświeżanie obrad nie przesyła dokumentów.
 export function MaterialReader(props: {id: string; version: number; inline?: boolean}) {
   const {m} = useMeeting();
   const key = `${props.id}:${props.version}`;
@@ -33,21 +33,24 @@ export function MaterialReader(props: {id: string; version: number; inline?: boo
   if (!doc) return <p class="muted">Wczytywanie dokumentu…</p>;
   return <article class={`reader reader-${size}`}>
     <header class="reader-head">
-      <div><p class="kicker">{materialTypeLabel(doc.type)}{doc.number ? ` nr ${doc.number}` : ''} · wersja {doc.version}</p>{!props.inline && <h2>{doc.title}</h2>}{props.inline && <h3>{doc.title}</h3>}</div>
+      <div><span class="oi-label">{materialTypeLabel(doc.type)}{doc.number ? ` nr ${doc.number}` : ''}, wersja {doc.version}</span>{props.inline ? <h3>{doc.title}</h3> : <h2>{doc.title}</h2>}</div>
       <div class="reader-tools">
-        <button class="icon-btn" onClick={() => change(-1)} aria-label="Mniejsze litery">A−</button>
-        <button class="icon-btn" onClick={() => change(1)} aria-label="Większe litery">A+</button>
+        <Button small disabled={size === sizes[0]} onClick={() => change(-1)} label="Mniejsze litery">A−</Button>
+        <Button small disabled={size === sizes[sizes.length - 1]} onClick={() => change(1)} label="Większe litery">A+</Button>
       </div>
     </header>
     {doc.html ? <div class="doc" dangerouslySetInnerHTML={{__html: doc.html}}/> : <p class="muted">Ten materiał jest dostępny tylko jako plik do pobrania.</p>}
-    {doc.fileId && <p><a class="btn btn-secondary btn-small" href={`/api/meetings/${m.id}/files/${doc.fileId}`}>Pobierz oryginał{doc.fileName ? ` (${doc.fileName})` : ''}</a></p>}
+    {doc.fileId && <div><LinkButton small href={`/api/meetings/${m.id}/files/${doc.fileId}`}>Pobierz oryginał{doc.fileName ? ` (${doc.fileName})` : ''}</LinkButton></div>}
   </article>;
 }
 
-export function MaterialLink(props: {id: string; version: number; label: string}) {
+export function MaterialLink(props: {id: string; version: number; label: string; meta?: string}) {
   const [open, setOpen] = useState(false);
   return <>
-    <button class="material-link" onClick={() => setOpen(true)}><span class="doc-icon" aria-hidden="true">▤</span>{props.label}</button>
-    {open && <Modal title="Materiał" wide onClose={() => setOpen(false)}><MaterialReader id={props.id} version={props.version}/><div class="actions"><Button onClick={() => setOpen(false)}>Zamknij</Button></div></Modal>}
+    <button type="button" class="material-link" onClick={() => setOpen(true)}>
+      <span class="stack-tight"><span>{props.label}</span>{props.meta && <span class="muted small">{props.meta}</span>}</span>
+      <span class="material-link__act">Czytaj</span>
+    </button>
+    {open && <Modal title="Materiał" wide onClose={() => setOpen(false)}><MaterialReader id={props.id} version={props.version}/><div class="actions"><Button onClick={() => setOpen(false)}>Zamknij materiał</Button></div></Modal>}
   </>;
 }

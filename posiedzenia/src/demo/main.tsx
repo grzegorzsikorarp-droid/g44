@@ -1,6 +1,7 @@
 import {render} from 'preact';
 import {App} from '../client/app.tsx';
 import {setBrand} from '../client/brand.ts';
+import '../client/typo.ts';
 import '../client/styles.css';
 import {DemoServer} from './server.ts';
 import {DemoPicker} from './picker.tsx';
@@ -16,9 +17,10 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   return path ? server.handle(new URL(path, 'https://proba.local'), init) : realFetch(input, init);
 };
 
+// Wersja próbna nie ma znaku ani nazwy Izby: dane i nazwy są fikcyjne.
 setBrand({
-  demo: true, org: 'Wersja próbna', organShort: 'Wersja próbna · dane fikcyjne', organLong: 'Prezydium (dane fikcyjne)', term: 'wersja próbna',
-  organAccounts: 'Prezydium (dane fikcyjne)', meetingTitle: 'Posiedzenie Prezydium (próbne)', procedureTitle: 'Głosowanie między posiedzeniami (próbne)',
+  demo: true, org: 'Wersja próbna', nameplate: null, logo: null, organ: 'Prezydium (dane fikcyjne)', term: 'wersja próbna',
+  meetingTitle: 'Posiedzenie Prezydium (próbne)', procedureTitle: 'Głosowanie między posiedzeniami (próbne)',
   place: 'Sala posiedzeń (przykład)', office: 'Biuro', switchLabel: 'Zmień osobę',
   loginScreen: props => <DemoPicker server={server} onDone={props.onDone}/>,
 });
@@ -34,9 +36,10 @@ document.addEventListener('click', event => {
   const match = link.getAttribute('href')!.match(/^\/api\/meetings\/([\w-]+)\/protokol$/);
   let body = '<p>Pobieranie plików jest dostępne w pełnej aplikacji.</p>';
   try { if (match) body = server.minutes(match[1]); } catch (e) { body = `<p>${(e as Error).message}</p>`; }
-  render(<div class="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
-    <section class="modal modal-wide" role="dialog" aria-modal="true" aria-label="Projekt protokołu">
-      <header class="modal-head"><h2>Projekt protokołu</h2><button class="icon-btn" onClick={close} aria-label="Zamknij">×</button></header>
+  render(<div class="modal-backdrop">
+    <div class="modal-shade" onClick={close}/>
+    <section class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="protokol-tytul">
+      <header class="modal-head"><span class="oi-mark" aria-hidden="true"/><h2 id="protokol-tytul">Projekt protokołu</h2><button type="button" class="oi-btn oi-btn--obrys oi-btn--maly" onClick={close}><span>Zamknij</span></button></header>
       <div class="modal-body minutes-view" dangerouslySetInnerHTML={{__html: body}}/>
     </section>
   </div>, overlay);

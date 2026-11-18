@@ -15,7 +15,7 @@ export function validPassword(value: unknown): string {
   return value;
 }
 export function validUsername(value: unknown): string {
-  if (typeof value !== 'string' || !/^[a-z0-9._-]{3,64}$/.test(value)) throw Object.assign(new Error('Login: 3–64 znaki — małe litery bez polskich znaków, cyfry, kropka, myślnik lub podkreślenie.'), {status: 400});
+  if (typeof value !== 'string' || !/^[a-z0-9._-]{3,64}$/.test(value)) throw Object.assign(new Error('Login musi mieć od 3 do 64 znaków. Użyj małych liter bez polskich znaków, cyfr, kropki, myślnika lub podkreślenia.'), {status: 400});
   return value;
 }
 

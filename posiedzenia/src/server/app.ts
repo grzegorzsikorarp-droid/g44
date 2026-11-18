@@ -9,7 +9,7 @@ import {accountView, Store, type UserRow} from './store.ts';
 import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
 import {SecretBallots} from './secret.ts';
 import {cleanHtml, docxToHtml, guessType, htmlHash, markdownToHtml, splitActs, textToHtml} from './documents.ts';
-import {minutesHtml} from './minutes.ts';
+import {minutesHtml, type MinutesLook} from './minutes.ts';
 import {advance, apply, canView, createMeeting, DomainError, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
 import {personName} from '../shared/roster.ts';
@@ -20,6 +20,7 @@ export const VERSION = '0.1.0';
 const mime: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2',
+  '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 const materialTypes: MaterialType[] = ['uchwala', 'rezolucja', 'oswiadczenie', 'deklaracja', 'apel', 'sprawozdanie', 'protokol', 'informacja', 'inny'];
 const fail = (message: string, status = 400): never => { throw Object.assign(new Error(message), {status}); };
@@ -46,6 +47,14 @@ export async function createApplication(options: AppOptions = {}) {
   const dataDir = resolve(options.dataDir ?? process.env.DATA_DIR ?? 'data');
   const appUrl = options.appUrl ?? process.env.APP_URL ?? '';
   const clientDir = options.clientDir ?? resolve(fileURLToPath(new URL('./client/', import.meta.url)));
+  // Wygląd projektu protokołu: arkusz stylów zbudowanej aplikacji i znak Izby (brand/logo kopiuje build).
+  let cssHref: string | null | undefined;
+  const minutesLook = (): MinutesLook => {
+    if (cssHref === undefined) {
+      try { cssHref = /<link[^>]+rel="stylesheet"[^>]+href="(\/assets\/[^"]+\.css)"/.exec(readFileSync(join(clientDir, 'index.html'), 'utf8'))?.[1] ?? null; } catch { cssHref = null; }
+    }
+    return {css: cssHref, logo: '/brand/logo/znak-oipip-slupsk.svg', nameplate: ['Okręgowa Izba Pielęgniarek i Położnych', 'w Słupsku'], org: 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku'};
+  };
   const now = options.now ?? Date.now;
   const local = (host: string) => ['localhost', '127.0.0.1', '[::1]'].includes(host);
   if (appUrl && !['http:', 'https:'].includes(new URL(appUrl).protocol)) throw new Error('APP_URL musi być adresem HTTP lub HTTPS.');
@@ -323,7 +332,7 @@ export async function createApplication(options: AppOptions = {}) {
           }
           if (rest === '' && method === 'DELETE') {
             const m = meetingFor(id, a);
-            if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie — robi to organizator.', 403);
+            if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Robi to organizator.', 403);
             write(() => store.deleteMeeting(id));
             return json(res, {ok: true});
           }
@@ -352,7 +361,7 @@ export async function createApplication(options: AppOptions = {}) {
           if (rest === '/protokol' && method === 'GET') {
             const m = meetingFor(id, a);
             res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store'});
-            return res.end(minutesHtml(m, store.roster(), accounts(), now()));
+            return res.end(minutesHtml(m, store.roster(), accounts(), now(), minutesLook()));
           }
           if (rest === '/materials' && method === 'POST') {
             requireEditor(meetingFor(id, a), a);

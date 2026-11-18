@@ -8,7 +8,7 @@ import {request, useLive} from './api.ts';
 import {MeetingCtx, useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {castSecret, secretCastHere, secretPending} from './secret.ts';
-import {Button, Chip, Confirm, Countdown, Field, fmtDate, fmtTime, Modal, Notice, plural, useAction} from './ui.tsx';
+import {Button, CardTitle, Chip, Confirm, Countdown, Fact, Field, fmtDate, fmtTime, Fold, LinkButton, Modal, Notice, plural, SectionHead, useAction} from './ui.tsx';
 import {statusLabel} from './home.tsx';
 import {ChairPanel} from './chair.tsx';
 import {PrepEditor} from './prep.tsx';
@@ -16,6 +16,8 @@ import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader} from './reader.tsx';
 import {Messages} from './messages.tsx';
 import {brand} from './brand.ts';
+
+const modeName = (mode: string) => mode === 'tajne' ? 'tajne' : mode === 'imienne' ? 'imienne' : 'jawne';
 
 export function MeetingPage({id}: {id: string}) {
   const s = useSession();
@@ -27,7 +29,7 @@ export function MeetingPage({id}: {id: string}) {
     live.replace(r);
     return r.meeting;
   });
-  if (!live.data) return live.error ? <div class="stack"><Notice tone="error">{live.error}</Notice><a href="#">← Wróć do listy</a></div> : <p class="muted">Wczytywanie posiedzenia…</p>;
+  if (!live.data) return <div class="page">{live.error ? <div class="stack"><Notice tone="error">{live.error}</Notice><a class="oi-link" href="#">Wróć do listy posiedzeń</a></div> : <p class="muted">Wczytywanie posiedzenia…</p>}</div>;
   const m = live.data.meeting;
   const chairNow = m.chair.current !== null && m.chair.current === s.personId;
   const office = s.account.kind === 'biuro' || (s.account.admin && !s.isMember(m.organ));
@@ -40,8 +42,10 @@ export function MeetingPage({id}: {id: string}) {
   else body = <MemberView/>;
   return <MeetingCtx.Provider value={{m, send, busy, replace: live.replace, reload: live.reload}}>
     <MeetingHeader online={live.online} participantView={participantView} toggleView={liveNow && (chairNow || office) ? () => setParticipantView(v => !v) : undefined}/>
-    {error && <div class="sticky-error"><Notice tone="error">{error} <button class="link" onClick={() => setError('')}>Zamknij</button></Notice></div>}
-    {body}
+    <div class="page">
+      {error && <div class="sticky-error"><Notice tone="error">{error} <Button kind="ghost" small onClick={() => setError('')}>Zamknij komunikat</Button></Notice></div>}
+      {body}
+    </div>
   </MeetingCtx.Provider>;
 }
 
@@ -50,51 +54,63 @@ function MeetingHeader(props: {online: boolean; participantView: boolean; toggle
   const s = useSession();
   const [label, tone] = statusLabel[m.status];
   const chair = m.chair.current ? s.personName(m.chair.current) : null;
-  return <section class="meeting-head">
-    <a class="back" href="#">← Posiedzenia</a>
-    <div class="meeting-head-main">
-      <div>
-        <div class="chips"><Chip tone={tone}>{label}</Chip>{m.kind === 'posiedzenie' && <Chip>{m.mode === 'zdalne' ? 'Zdalne' : 'Stacjonarne'}</Chip>}{!props.online && <Chip tone="warn">Brak połączenia — ponawiam…</Chip>}</div>
-        <h1>{m.title}</h1>
-        <p class="muted">{m.kind === 'posiedzenie' ? `${fmtDate(m.date)}, godz. ${m.time}${m.place ? ' · ' + m.place : ''}` : m.endsAt ? <>Głosowanie do <strong>{new Intl.DateTimeFormat('pl-PL', {dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Warsaw'}).format(m.endsAt)}</strong></> : 'Termin głosowania do ustalenia'}{chair && m.status !== 'przygotowanie' && m.kind === 'posiedzenie' ? ` · Prowadzi: ${chair}` : ''}</p>
+  const when = m.kind === 'posiedzenie' ? `${fmtDate(m.date)}, godz. ${m.time}`
+    : m.endsAt ? `do ${new Intl.DateTimeFormat('pl-PL', {dateStyle: 'long', timeZone: 'Europe/Warsaw'}).format(m.endsAt)} r., godz. ${fmtTime(m.endsAt)}` : '';
+  return <header class="oi-hero page-head meeting-head">
+    <div class="page oi-hero__in">
+      <a class="oi-link back" href="#">Wróć do listy posiedzeń</a>
+      <div class="oi-btns">
+        <Chip tone={tone}>{label}</Chip>
+        {m.kind === 'posiedzenie' && <Chip>{m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne'}</Chip>}
+        {!props.online && <Chip tone="otwarte">Brak połączenia, ponawiam</Chip>}
       </div>
+      <h1>{m.title}{when && <b>{when}</b>}</h1>
+      <dl class="facts">
+        {m.kind === 'posiedzenie' && m.place && <Fact label="Miejsce">{m.place}</Fact>}
+        {chair && m.status !== 'przygotowanie' && m.kind === 'posiedzenie' && <Fact label="Prowadzi">{chair}</Fact>}
+        {m.kind === 'procedura' && <Fact label="Tryb">§ 14 ust. 5 Regulaminu, głosowanie zdalne</Fact>}
+      </dl>
       <div class="actions">
-        {m.link && m.status !== 'zakonczone' && <a class="btn btn-primary" href={m.link} target="_blank" rel="noopener noreferrer">Dołącz do połączenia</a>}
+        {m.link && m.status !== 'zakonczone' && <LinkButton primary href={m.link} target="_blank">Dołącz do połączenia</LinkButton>}
         {props.toggleView && <Button onClick={props.toggleView}>{props.participantView ? 'Panel prowadzącego' : 'Widok uczestnika'}</Button>}
-        {m.kind === 'posiedzenie' && m.status !== 'przygotowanie' && m.status !== 'zakonczone' && s.isOrganizer(m.organ) && <a class="btn btn-secondary" href={`#ekran-${m.id}`} target={brand.demo ? undefined : '_blank'} rel="noopener">Ekran sali</a>}
-        {m.status !== 'przygotowanie' && (s.isOrganizer(m.organ) || (m.status === 'zakonczone' && s.isMember(m.organ))) && <a class="btn btn-secondary" href={`/api/meetings/${m.id}/protokol`} target="_blank" rel="noopener">Projekt protokołu</a>}
+        {m.kind === 'posiedzenie' && m.status !== 'przygotowanie' && m.status !== 'zakonczone' && s.isOrganizer(m.organ) && <LinkButton href={`#ekran-${m.id}`} target={brand.demo ? undefined : '_blank'}>Ekran sali</LinkButton>}
+        {m.status !== 'przygotowanie' && (s.isOrganizer(m.organ) || (m.status === 'zakonczone' && s.isMember(m.organ))) && <LinkButton href={`/api/meetings/${m.id}/protokol`} target="_blank">Projekt protokołu</LinkButton>}
       </div>
     </div>
-  </section>;
+  </header>;
 }
 
-export const itemStatus: Record<AgendaItem['status'], [string, string]> = {
-  oczekuje: ['Oczekuje', 'plain'], w_toku: ['W toku', 'live'], zakonczony: ['Zakończony', 'done'], odroczony: ['Odroczony', 'warn'], wycofany: ['Wycofany', 'muted'],
+export const itemStatus: Record<AgendaItem['status'], [string, 'trwa' | 'otwarte' | 'zamkniete']> = {
+  oczekuje: ['Oczekuje', 'zamkniete'], w_toku: ['W toku', 'trwa'], zakonczony: ['Zakończony', 'zamkniete'], odroczony: ['Odroczony', 'otwarte'], wycofany: ['Wycofany', 'zamkniete'],
 };
 
 export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean}) {
   const {m} = useMeeting();
-  return <ol class="agenda">
-    {orderedAgenda(m.agenda).map(it => {
-      const [label, tone] = itemStatus[it.status];
-      const current = it.id === m.currentItemId;
-      const locked = m.kind === 'posiedzenie' && !m.agendaAdopted && !beforeAdoption(m, it);
-      const ballots = m.ballots.filter(b => b.itemId === it.id);
-      const inner = <>
-        <span class="agenda-no">{itemNumber(m.agenda, it.id)}</span>
-        <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted"> · dodany</em>}</span>
-        <span class="agenda-meta">{current ? <Chip tone="live">Teraz</Chip>
-          : it.status === 'odroczony' || it.status === 'wycofany' ? <Chip tone={tone}>{label}</Chip>
-          : it.status === 'w_toku' ? <span class="live-dot" title="W toku">●</span>
-          : ballots.some(b => b.status === 'zamkniete' && b.result?.adopted && !b.supersededBy) ? <span class="tick" title="Przyjęto">✓</span>
-          : it.status === 'zakonczony' ? <span class="tick muted" title="Zakończony">✓</span> : null}
-          {locked && !props.compact && <span class="lock" title="Po przyjęciu porządku obrad">🔒</span>}</span>
-      </>;
-      return <li class={['agenda-item', it.parentId ? 'is-sub' : '', current ? 'is-current' : '', props.selected === it.id ? 'is-selected' : '', `st-${it.status}`].join(' ')}>
-        {props.onSelect ? <button class="agenda-row" onClick={() => props.onSelect!(it.id)}>{inner}</button> : <div class="agenda-row">{inner}</div>}
-      </li>;
-    })}
-  </ol>;
+  const anyLocked = m.kind === 'posiedzenie' && !m.agendaAdopted && m.agenda.some(it => !beforeAdoption(m, it));
+  return <>
+    {anyLocked && !props.compact && <p class="muted small">Punkty wyszarzone można rozpocząć po przyjęciu porządku obrad.</p>}
+    <ol class="agenda">
+      {orderedAgenda(m.agenda).map(it => {
+        const [label, tone] = itemStatus[it.status];
+        const current = it.id === m.currentItemId;
+        const locked = m.kind === 'posiedzenie' && !m.agendaAdopted && !beforeAdoption(m, it);
+        const ballots = m.ballots.filter(b => b.itemId === it.id);
+        const adopted = ballots.some(b => b.status === 'zamkniete' && b.result?.adopted && !b.supersededBy);
+        const inner = <>
+          <span class="agenda-no">{itemNumber(m.agenda, it.id)}</span>
+          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}</span>
+          <span class="agenda-meta">{current ? <Chip tone="trwa">Teraz</Chip>
+            : it.status === 'odroczony' || it.status === 'wycofany' ? <Chip tone={tone}>{label}</Chip>
+            : it.status === 'w_toku' ? <Chip tone="trwa">W toku</Chip>
+            : adopted ? <span class="agenda-state">przyjęto</span>
+            : it.status === 'zakonczony' ? <span class="agenda-state">zakończony</span> : null}</span>
+        </>;
+        return <li class={['agenda-item', it.parentId ? 'is-sub' : '', current ? 'is-current' : '', props.selected === it.id ? 'is-selected' : '', locked ? 'is-locked' : '', `st-${it.status}`].join(' ')} aria-current={current ? 'step' : undefined}>
+          {props.onSelect ? <button class="agenda-row" onClick={() => props.onSelect!(it.id)}>{inner}</button> : <div class="agenda-row">{inner}</div>}
+        </li>;
+      })}
+    </ol>
+  </>;
 }
 
 export function beforeAdoption(m: Pick<Meeting, 'agenda'>, it: AgendaItem) {
@@ -103,21 +119,27 @@ export function beforeAdoption(m: Pick<Meeting, 'agenda'>, it: AgendaItem) {
   return top.indexOf(root) <= top.findIndex(i => i.kind === 'porzadek');
 }
 
+// Słowo rozstrzygnięcia pogrubione, np. „Uchwała przyjęta”, „Porządek obrad nie został przyjęty”.
+function emphasize(label: string) {
+  const match = label.match(/^(.*?)((?:nie została |nie został )?(?:przyjęt[aey]|odrzucon[aey])|brak kworum.*)$/i);
+  if (!match) return label;
+  return <>{match[1]}<b>{match[2]}</b></>;
+}
+
 export function ResultCard(props: {b: ViewBallot; big?: boolean}) {
   const {b} = props;
   const s = useSession();
   const r = b.result;
   if (!r) return null;
-  const tone = !r.quorumMet ? 'warn' : r.adopted ? 'yes' : 'no';
-  return <div class={`result result-${tone}` + (props.big ? ' result-big' : '')}>
-    <p class="result-kicker">Głosowanie nr {b.number} · {b.mode}{b.reasumptionOf ? ' · reasumpcja' : ''}</p>
+  return <div class={'result' + (props.big ? ' result-big' : '')}>
+    <span class="oi-label">Wynik głosowania nr {b.number}, głosowanie {modeName(b.mode)}{b.reasumptionOf ? ', reasumpcja' : ''}</span>
     <h3 class="result-subject">{b.subject}</h3>
-    <p class="result-label">{resultLabel(b)}</p>
-    <div class="result-counts">
-      {(['za', 'przeciw', 'wstrzymuje'] as Choice[]).map(c => <div class={`count count-${c}`}><span>{choiceCountLabel[c]}</span><strong>{r[c]}</strong></div>)}
+    <p class="result-label">{emphasize(resultLabel(b))}</p>
+    <div class="oi-stats result-counts">
+      {(['za', 'przeciw', 'wstrzymuje'] as Choice[]).map(c => <div class="oi-stat"><b>{r[c]}</b><span>{choiceCountLabel[c]}</span></div>)}
     </div>
-    <p class="muted small">Uprawnionych {r.eligible} · uczestniczyło {r.participants} · kworum {r.quorum}{b.closeReason === 'wszyscy' ? ' · zagłosowali wszyscy uprawnieni' : b.closeReason === 'czas' ? ' · upłynął czas' : ''}</p>
-    {b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <details><summary>Wykaz imienny</summary><ul class="named">{b.eligible.map(id => <li><span>{s.personName(id)}</span><strong>{b.votes[id] ? choiceLabel[b.votes[id]] : '—'}</strong></li>)}</ul></details>}
+    <p class="result-meta">Uprawnionych {r.eligible}, uczestniczyło {r.participants}, kworum {r.quorum}{b.closeReason === 'wszyscy' ? '. Zagłosowali wszyscy uprawnieni.' : b.closeReason === 'czas' ? '. Upłynął czas głosowania.' : '.'}</p>
+    {b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <Fold title="Wykaz imienny"><ul class="named">{b.eligible.map(id => <li><span>{s.personName(id)}</span><strong>{b.votes[id] ? choiceLabel[b.votes[id]] : 'brak głosu'}</strong></li>)}</ul></Fold>}
     {b.supersededBy && <p class="muted small">Wynik zastąpiony przez reasumpcję.</p>}
   </div>;
 }
@@ -136,36 +158,37 @@ export function VoteCard(props: {b: ViewBallot}) {
   useEffect(() => {
     if (b.secret && b.status === 'otwarte' && secretPending(b.id) && !secret.busy) secret.run(async () => { await castSecret(m.id, b, 'za'); setCastHere(true); });
   }, [b.id]);
+  if (b.status !== 'otwarte') return null;
   const cast = b.secret ? b.secret.cast : b.voted.length;
   const total = b.eligible.length - b.absentDuring.filter(id => !b.voted.includes(id)).length;
-  const header = <>
-    <p class="vote-kicker">Głosowanie nr {b.number} · <strong>{b.mode === 'tajne' ? 'tajne' : b.mode === 'imienne' ? 'imienne' : 'jawne'}</strong>{b.reasumptionOf ? ' · reasumpcja' : ''}</p>
-    <h2 class="vote-subject">{b.subject}</h2>
-    {b.material && <MaterialLink id={b.material.id} version={b.material.version} label={`Przeczytaj treść (wersja ${b.material.version})`}/>}
-    <div class="vote-meta"><Countdown endsAt={b.endsAt}/><span>Oddano {cast} z {total}</span></div>
-  </>;
-  if (b.status !== 'otwarte') return null;
   let action;
   if (!me || !s.isMember(m.organ)) action = <p class="muted">Głosują członkowie Prezydium.</p>;
   else if (!present) action = <Notice tone="warn">Potwierdź obecność, aby wziąć udział w głosowaniu.</Notice>;
   else if (!eligible) action = <Notice>To głosowanie rozpoczęło się bez Ciebie. Prowadzący widzi Twoją obecność.</Notice>;
-  else if (b.secret && (castHere || (voted && !secretPending(b.id)))) action = <div class="voted"><span class="voted-mark">✓</span><div><strong>Głos tajny przyjęty</strong><p class="muted small">{castHere ? 'Nikt — także prowadzący — nie widzi, jak głosujesz.' : 'Kartę pobrano na innym urządzeniu.'}</p></div></div>;
-  else if (!b.secret && b.myVote) action = <div class="voted"><span class="voted-mark">✓</span><div><strong>Twój głos: {choiceLabel[b.myVote]}</strong><p class="muted small">Głos zapisany na serwerze. Nie można go zmienić.</p></div></div>;
+  else if (b.secret && (castHere || (voted && !secretPending(b.id)))) action = <div class="oi-note oi-note--wazne voted"><span class="oi-label">Twój głos</span><strong>Głos tajny przyjęty</strong><p class="muted small">{castHere ? 'Nikt, także prowadzący, nie widzi, jak głosujesz.' : 'Kartę pobrano na innym urządzeniu.'}</p></div>;
+  else if (!b.secret && b.myVote) action = <div class="oi-note oi-note--wazne voted"><span class="oi-label">Twój głos</span><strong>{choiceLabel[b.myVote]}</strong><p class="muted small">Głos zapisany na serwerze. Nie można go zmienić.</p></div>;
   else if (secret.busy) action = <p class="muted">Wysyłanie głosu tajnego…</p>;
-  else action = <div class="vote-buttons">
-    {(['za', 'przeciw', 'wstrzymuje'] as Choice[]).map(c => <Button kind={c} disabled={busy} onClick={() => setChoice(c)}>{choiceLabel[c]}</Button>)}
+  else action = <div class="vote-buttons" role="group" aria-label="Twój głos">
+    {(['za', 'przeciw', 'wstrzymuje'] as Choice[]).map(c => <button type="button" class="oi-opt" aria-pressed={choice === c} disabled={busy} onClick={() => setChoice(c)}>{choiceLabel[c]}</button>)}
   </div>;
-  return <section class="card vote-card" aria-live="polite">
-    {header}
+  return <section class="oi-card vote-card" aria-live="polite">
+    <div class="oi-btns"><span class="oi-tag"><span>Głosowanie nr {b.number}</span></span><span class="oi-tag oi-tag--ciemny"><span>{modeName(b.mode)}{b.reasumptionOf ? ', reasumpcja' : ''}</span></span></div>
+    <h2 class="vote-subject">{b.subject}</h2>
+    {b.material && <MaterialLink id={b.material.id} version={b.material.version} label="Treść poddana pod głosowanie" meta={`wersja ${b.material.version}`}/>}
+    <dl class="facts facts--liczby">
+      <Fact label="Pozostało"><Countdown endsAt={b.endsAt} label={false}/></Fact>
+      <Fact label="Oddano głosów">{cast} <small>z {total}</small></Fact>
+    </dl>
     {action}
     {secret.error && <Notice tone="error">{secret.error}</Notice>}
-    {b.secret && <p class="fingerprint small muted">Odcisk klucza głosowania: <code>{b.secret.fingerprint}</code> — powinien być taki sam u wszystkich.</p>}
+    {b.secret && <div class="fingerprint"><span class="kicker">Odcisk klucza głosowania</span><code>{b.secret.fingerprint}</code><span class="muted small">Powinien być taki sam u wszystkich uczestników.</span></div>}
     {choice && <Confirm title="Potwierdź głos" confirm="Oddaję głos" onClose={() => setChoice(null)} onConfirm={() => {
       if (b.secret) secret.run(async () => { await castSecret(m.id, b, choice); setCastHere(true); });
       else send({type: 'vote', ballotId: b.id, choice});
     }} text={<>
-      <p class={'confirm-choice choice-' + choice}>Twój głos: <strong>{choiceLabel[choice]}</strong></p>
-      <p>{b.mode === 'tajne' ? 'Głosowanie tajne: serwer sprawdzi, że masz prawo głosu, ale nie zapisze, jak głosujesz.' : b.mode === 'imienne' ? 'Głosowanie imienne: Twoje nazwisko i głos znajdą się w protokole.' : 'Głosowanie jawne: w protokole znajdzie się liczba głosów.'} Głosu nie można później zmienić.</p>
+      <span class="kicker">Twój głos</span>
+      <p class={'confirm-choice choice-' + choice}><strong>{choiceLabel[choice]}</strong></p>
+      <p>{b.mode === 'tajne' ? 'Głosowanie tajne. Serwer sprawdzi, że masz prawo głosu, ale nie zapisze, jak głosujesz.' : b.mode === 'imienne' ? 'Głosowanie imienne. Twoje nazwisko i głos znajdą się w protokole.' : 'Głosowanie jawne. W protokole znajdzie się liczba głosów.'} Głosu nie można później zmienić.</p>
     </>}/>}
   </section>;
 }
@@ -177,9 +200,14 @@ function PresenceBar() {
   if (!me || !s.isMember(m.organ) || m.status === 'zakonczone') return null;
   const status = m.attendance[me] ?? 'nieobecny';
   const since = [...m.presenceLog].reverse().find(e => e.who === me && !e.guest);
-  if (status === 'obecny') return <div class="presence presence-ok"><span>✓ Obecność potwierdzona {since ? `· ${fmtTime(since.at)}` : ''}</span><button class="link" disabled={busy} onClick={() => send({type: 'presence', who: me, present: false})}>Wychodzę z posiedzenia</button></div>;
-  return <div class="presence"><div><strong>{status === 'wyszedl' ? 'Zapisano Twoje wyjście z posiedzenia.' : 'Nie potwierdzono obecności.'}</strong><p class="muted small">{m.mode === 'zdalne' ? 'Potwierdź, gdy połączysz się z posiedzeniem.' : 'Potwierdź, gdy jesteś na sali.'}</p></div>
-    <Button kind="primary" disabled={busy} onClick={() => send({type: 'presence', who: me, present: true})}>{status === 'wyszedl' ? 'Wracam na posiedzenie' : 'Potwierdzam obecność'}</Button></div>;
+  if (status === 'obecny') return <div class="oi-note oi-note--wazne presence presence-ok">
+    <div><span class="oi-label">Obecność potwierdzona</span><span>{since ? `od godz. ${fmtTime(since.at)}` : 'na tym posiedzeniu'}</span></div>
+    <Button kind="ghost" disabled={busy} onClick={() => send({type: 'presence', who: me, present: false})}>Wychodzę z posiedzenia</Button>
+  </div>;
+  return <div class="oi-note presence">
+    <div><strong>{status === 'wyszedl' ? 'Zapisano Twoje wyjście z posiedzenia.' : 'Nie potwierdzono obecności.'}</strong><span class="muted small">{m.mode === 'zdalne' ? 'Potwierdź, gdy połączysz się z posiedzeniem.' : 'Potwierdź, gdy jesteś na sali.'}</span></div>
+    <Button kind="primary" disabled={busy} onClick={() => send({type: 'presence', who: me, present: true})}>{status === 'wyszedl' ? 'Wracam na posiedzenie' : 'Potwierdzam obecność'}</Button>
+  </div>;
 }
 
 function MemberView() {
@@ -193,25 +221,21 @@ function MemberView() {
   const chairCapable = canChairOrgan(s.roster, m.organ, s.personId) && m.chair.current !== s.personId;
   const chairAway = !m.chair.current || m.attendance[m.chair.current] !== 'obecny';
   const takeAllowed = chairCapable && m.attendance[s.personId!] === 'obecny' && (isChairman(s.roster, m.organ, s.personId) || (chairAway && (m.chair.deputy === s.personId || !m.chair.deputy || m.attendance[m.chair.deputy] !== 'obecny')));
-  const [agendaOpen, setAgendaOpen] = useState(false);
   return <div class="member">
     <PresenceBar/>
     {m.status === 'przerwa' && <Notice tone="warn">Przerwa w obradach.</Notice>}
     {open && <VoteCard b={open}/>}
     {!open && result && <ResultCard b={result} big/>}
-    {current && <section class="card now">
-      <p class="kicker">Teraz procedowany punkt</p>
-      <h2><span class="agenda-no">{itemNumber(m.agenda, current.id)}</span> {current.title}</h2>
-      {current.presenter && <p class="muted">Przedstawia: {current.presenter}</p>}
+    {current && <section class="oi-card now">
+      <span class="oi-label">Teraz procedowany punkt</span>
+      <h2 class="now-title"><span class="agenda-no">{itemNumber(m.agenda, current.id)}</span><span>{current.title}</span></h2>
+      {current.presenter && <dl class="facts"><Fact label="Przedstawia">{current.presenter}</Fact></dl>}
       {current.materialIds.length > 0 && <div class="material-list">{m.materials.filter(x => current.materialIds.includes(x.id)).map(x => <MaterialLink id={x.id} version={x.version} label={x.title}/>)}</div>}
     </section>}
-    {presented && !open && <section class="card"><p class="kicker">Prowadzący pokazuje</p><MaterialReader id={presented.id} version={presented.version} inline/></section>}
+    {presented && !open && <section class="oi-card"><span class="oi-label">Prowadzący pokazuje</span><MaterialReader id={presented.id} version={presented.version} inline/></section>}
     <Motions/>
     {(m.mode === 'zdalne' || m.messages.length > 0) && <Messages/>}
-    <section class="card">
-      <button class="section-toggle" onClick={() => setAgendaOpen(v => !v)} aria-expanded={agendaOpen}>Porządek obrad {m.agendaAdopted ? '(przyjęty)' : '(projekt)'} <span>{agendaOpen ? '▲' : '▼'}</span></button>
-      {agendaOpen && <AgendaList compact/>}
-    </section>
+    <Fold title={`Porządek obrad, ${m.agendaAdopted ? 'przyjęty' : 'projekt'}`}><AgendaList compact/></Fold>
     {takeAllowed && <div class="actions"><Button disabled={busy} onClick={() => send({type: 'chair_take'})}>Przejmij prowadzenie obrad</Button></div>}
   </div>;
 }
@@ -226,29 +250,31 @@ export function Motions() {
   const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && b.mode === 'jawne' && !['reasumpcja', 'tryb'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
   const active = m.motions.filter(x => ['zbiera_podpisy', 'zlozony', 'glosowany', 'przyjety'].includes(x.status));
   if (!active.length && (!canAct || !eligibleBallots.length)) return null;
-  return <section class="card motions">
-    <h3>Wnioski o reasumpcję</h3>
-    <p class="muted small">Reasumpcja jest możliwa przy uzasadnionych wątpliwościach co do wyniku głosowania jawnego, tylko na tym posiedzeniu i tylko raz (§ 12). Potrzebny jest pisemny wniosek co najmniej 1/3 obecnych — teraz {reasumptionSignaturesNeeded(present.length)} z {present.length}.</p>
+  const needed = reasumptionSignaturesNeeded(present.length);
+  return <section class="oi-card motions">
+    <CardTitle>Wnioski o reasumpcję</CardTitle>
+    <p class="muted small">Reasumpcja jest możliwa przy uzasadnionych wątpliwościach co do wyniku głosowania jawnego, tylko na tym posiedzeniu i tylko raz (§ 12). Potrzebny jest pisemny wniosek co najmniej 1/3 obecnych, czyli teraz {needed} {plural(needed, 'podpis', 'podpisy', 'podpisów')} przy {present.length} obecnych.</p>
     {active.map(x => {
       const b = m.ballots.find(y => y.id === x.ballotId);
       const signed = !!me && x.signatures.includes(me);
       return <div class="motion">
-        <p><strong>Głosowanie nr {b?.number}:</strong> {b?.subject}</p>
+        <span class="kicker">Głosowanie nr {b?.number}</span>
+        <p class="strong">{b?.subject}</p>
         <p class="muted">„{x.justification}”</p>
-        <p class="small">Podpisy: {x.signatures.map(id => s.personName(id)).join(', ')} · {x.status === 'zbiera_podpisy' ? 'zbiera podpisy' : x.status === 'zlozony' ? 'złożony — czeka na decyzję Prezydium' : x.status === 'glosowany' ? 'trwa głosowanie nad wnioskiem' : 'przyjęty — ponowne głosowanie'}</p>
-        {canAct && x.status === 'zbiera_podpisy' && <Button small disabled={busy} onClick={() => send({type: 'motion_sign', motionId: x.id, on: !signed})}>{signed ? 'Wycofaj podpis' : 'Podpisuję wniosek'}</Button>}
+        <dl class="facts"><Fact label="Podpisy">{x.signatures.map(id => s.personName(id)).join(', ')}</Fact><Fact label="Stan wniosku">{x.status === 'zbiera_podpisy' ? 'zbiera podpisy' : x.status === 'zlozony' ? 'złożony, czeka na decyzję Prezydium' : x.status === 'glosowany' ? 'trwa głosowanie nad wnioskiem' : 'przyjęty, ponowne głosowanie'}</Fact></dl>
+        {canAct && x.status === 'zbiera_podpisy' && <div class="actions"><Button small disabled={busy} onClick={() => send({type: 'motion_sign', motionId: x.id, on: !signed})}>{signed ? 'Wycofaj podpis' : 'Podpisuję wniosek'}</Button></div>}
       </div>;
     })}
-    {canAct && eligibleBallots.length > 0 && <Button small onClick={() => setCreating(true)}>Złóż wniosek o reasumpcję</Button>}
+    {canAct && eligibleBallots.length > 0 && <div class="actions"><Button small onClick={() => setCreating(true)}>Złóż wniosek o reasumpcję</Button></div>}
     {creating && <Modal title="Wniosek o reasumpcję głosowania" onClose={() => setCreating(false)}>
       <form class="stack" onSubmit={async e => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
         if (await send({type: 'motion_create', ballotId: String(f.get('ballot')), justification: String(f.get('why'))})) setCreating(false);
       }}>
-        <Field label="Którego głosowania dotyczy?"><select name="ballot" required>{eligibleBallots.map(b => <option value={b.id}>Nr {b.number}: {b.subject}</option>)}</select></Field>
+        <Field label="Którego głosowania dotyczy?"><select name="ballot" required>{eligibleBallots.map(b => <option value={b.id}>Nr {b.number}, {b.subject}</option>)}</select></Field>
         <Field label="Uzasadnienie" hint="Dlaczego wynik budzi uzasadnione wątpliwości (§ 12 ust. 1)."><textarea name="why" required minLength={10} maxLength={2000} rows={4}/></Field>
-        <div class="actions"><Button onClick={() => setCreating(false)}>Anuluj</Button><Button kind="primary" type="submit" disabled={busy}>Złóż wniosek</Button></div>
+        <div class="actions"><Button kind="primary" type="submit" disabled={busy}>Złóż wniosek</Button><Button onClick={() => setCreating(false)}>Anuluj</Button></div>
       </form>
     </Modal>}
   </section>;
@@ -256,10 +282,10 @@ export function Motions() {
 
 function PrepPreview() {
   const {m} = useMeeting();
-  return <div class="stack">
-    <Notice>Posiedzenie jest w przygotowaniu. Otworzy je przewodniczący lub wiceprzewodniczący — wtedy na tym ekranie pojawi się potwierdzenie obecności i głosowania.</Notice>
-    <section class="card"><h3>Projekt porządku obrad</h3><AgendaList compact/></section>
-    {m.materials.length > 0 && <section class="card"><h3>Materiały</h3><div class="material-list">{m.materials.map(x => <MaterialLink id={x.id} version={x.version} label={x.title}/>)}</div></section>}
+  return <div class="member">
+    <Notice>Posiedzenie jest w przygotowaniu. Otworzy je przewodniczący lub wiceprzewodniczący. Wtedy na tym ekranie pojawi się potwierdzenie obecności i głosowania.</Notice>
+    <section class="oi-card"><CardTitle>Projekt porządku obrad</CardTitle><AgendaList compact/></section>
+    {m.materials.length > 0 && <section class="oi-card"><CardTitle>Materiały</CardTitle><div class="material-list">{m.materials.map(x => <MaterialLink id={x.id} version={x.version} label={x.title}/>)}</div></section>}
   </div>;
 }
 
@@ -268,11 +294,11 @@ function Summary() {
   const s = useSession();
   const members = organMembers(s.roster, m.organ);
   const final = m.ballots.filter(b => b.result && !b.supersededBy);
+  const days = noticeDays(m as Meeting);
   return <div class="stack">
-    <Notice tone="ok">Posiedzenie zamknięte {fmtTime(m.closedAt)}. Projekt protokołu jest gotowy do uzupełnienia — przycisk „Projekt protokołu” u góry.</Notice>
-    <section class="card"><h3>Porządek obrad</h3><AgendaList compact/></section>
-    <section class="card"><h3>Wyniki głosowań ({final.length})</h3><div class="results">{final.map(b => <ResultCard b={b}/>)}</div></section>
-    <p class="muted small">Skład: {members.length} {plural(members.length, 'osoba', 'osoby', 'osób')}, kworum {quorumFor(members.length)}. Zawiadomienie: {noticeDays(m as Meeting) ?? '—'} dni przed posiedzeniem.</p>
+    <Notice tone="ok">Posiedzenie zamknięte o godz. {fmtTime(m.closedAt)}. Projekt protokołu jest gotowy do uzupełnienia, otwiera go przycisk „Projekt protokołu” u góry.</Notice>
+    <section class="oi-card"><CardTitle>Porządek obrad</CardTitle><AgendaList compact/></section>
+    <section><SectionHead count={`${final.length} ${plural(final.length, 'głosowanie', 'głosowania', 'głosowań')}`}>Wyniki głosowań</SectionHead><div class="results">{final.map(b => <ResultCard b={b}/>)}</div></section>
+    <dl class="facts"><Fact label="Skład">{members.length} {plural(members.length, 'osoba', 'osoby', 'osób')}</Fact><Fact label="Kworum">{quorumFor(members.length)}</Fact><Fact label="Zawiadomienie">{days === null ? 'nie wpisano daty' : `${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem`}</Fact></dl>
   </div>;
 }
-

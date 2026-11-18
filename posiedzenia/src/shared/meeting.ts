@@ -156,7 +156,7 @@ function applyAgendaChange(m: Meeting, ctx: Context, change: AgendaChange, after
   ensure(target, 'Nie znaleziono punktu.', 404);
   if (change.op === 'usun') {
     ensure(target.status === 'oczekuje', 'Można usunąć tylko punkt, którego jeszcze nie rozpoczęto.');
-    ensure(!m.ballots.some(b => b.itemId === target.id || m.agenda.some(c => c.parentId === target.id && c.id === b.itemId)), 'Punkt ma już przeprowadzone głosowania — zamiast usuwać, oznacz go jako wycofany.');
+    ensure(!m.ballots.some(b => b.itemId === target.id || m.agenda.some(c => c.parentId === target.id && c.id === b.itemId)), 'Punkt ma już przeprowadzone głosowania. Zamiast go usuwać, oznacz go jako wycofany.');
     m.agenda = m.agenda.filter(i => i.id !== target.id && i.parentId !== target.id);
     return target;
   }
@@ -204,7 +204,7 @@ function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
     material = {id: ref.id, version: ref.version, hash: ref.hash, title: ref.title};
   }
   const minutes = Math.round(Number(input.minutes));
-  ensure(input.endsAt || (minutes >= 1 && minutes <= 240), 'Czas głosowania: od 1 do 240 minut.');
+  ensure(input.endsAt || (minutes >= 1 && minutes <= 240), 'Czas głosowania musi wynosić od 1 do 240 minut.');
   const id = ctx.newId();
   const b: Ballot = {
     id, number: m.ballots.length + 1, itemId: input.itemId, purpose: input.purpose,
@@ -264,7 +264,7 @@ export function advance(m: Meeting, ctx: Context) {
   if (m.kind === 'procedura' && m.status === 'trwa' && m.ballots.length && !openBallots(m).length) {
     m.status = 'zakonczone';
     m.closedAt = ctx.now;
-    log(m, ctx, null, 'Procedura zakończona — wszystkie głosowania zostały zamknięte.');
+    log(m, ctx, null, 'Procedura zakończona. Wszystkie głosowania zostały zamknięte.');
     changed = true;
   }
   return changed;
@@ -324,7 +324,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(chairman || !cmd.personId || basis.length >= 5, 'Podaj podstawę wyznaczenia, np. uchwałę Prezydium (§ 16 ust. 3).');
       m.chair.deputy = cmd.personId;
       m.chair.deputyBasis = cmd.personId ? basis : '';
-      log(m, ctx, actor, cmd.personId ? `Na czas nieobecności przewodniczącego prowadzi: ${name(ctx, cmd.personId)} — ${basis}.` : 'Usunięto wyznaczenie zastępcy.');
+      log(m, ctx, actor, cmd.personId ? `Na czas nieobecności przewodniczącego prowadzi ${name(ctx, cmd.personId)} (${basis}).` : 'Usunięto wyznaczenie zastępcy.');
       break;
     }
     case 'invite': {
@@ -375,7 +375,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(parsed.items.length, parsed.warnings[0] ?? 'Brak punktów.');
       if (cmd.replace) {
         ensure(m.status === 'przygotowanie', 'Po otwarciu posiedzenia porządek można tylko uzupełniać.');
-        ensure(!m.ballots.length && m.agenda.every(i => i.status === 'oczekuje' || i.kind === 'otwarcie'), 'Po rozpoczęciu obrad nie można zastąpić porządku — dodawaj punkty pojedynczo.');
+        ensure(!m.ballots.length && m.agenda.every(i => i.status === 'oczekuje' || i.kind === 'otwarcie'), 'Po rozpoczęciu obrad nie można zastąpić porządku. Dodawaj punkty pojedynczo.');
         m.agenda = [];
       }
       const ids: string[] = [];
@@ -398,7 +398,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(m.kind === 'procedura' && m.status === 'przygotowanie' && isOrganizer(roster, m, actor), 'Tryb głosowania w procedurze ustala organizator przed jej rozpoczęciem.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       ensure(['jawne', 'imienne', 'tajne'].includes(cmd.mode), 'Nieprawidłowy tryb głosowania.');
-      ensure(cmd.mode === 'jawne' || cmd.basis.trim().length >= 5, 'Podaj podstawę: postanowienie Prezydium o głosowaniu tajnym lub imiennym (§ 11 ust. 2).');
+      ensure(cmd.mode === 'jawne' || cmd.basis.trim().length >= 5, 'Podaj podstawę, czyli postanowienie Prezydium o głosowaniu tajnym lub imiennym (§ 11 ust. 2).');
       it.mode = cmd.mode === 'jawne' ? undefined : cmd.mode;
       it.modeBasis = cmd.mode === 'jawne' ? undefined : cmd.basis.trim().slice(0, 300);
       break;
@@ -416,8 +416,8 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         if (first) { first.status = 'w_toku'; first.startedAt = ctx.now; m.currentItemId = first.id; m.presentation = {kind: 'punkt', id: first.id, at: ctx.now}; }
         const days = noticeDays(m);
         log(m, ctx, actor, `Otwarcie posiedzenia. Prowadzi: ${actor.name}.`);
-        if (days === null) log(m, ctx, null, 'Uwaga: nie wpisano daty wysłania zawiadomienia (§ 7 ust. 1).');
-        else if (days < 7) log(m, ctx, null, `Uwaga: zawiadomienie wysłano ${days} dni przed posiedzeniem — regulamin wymaga co najmniej 7 dni (§ 7 ust. 1).`);
+        if (days === null) log(m, ctx, null, 'Nie wpisano daty wysłania zawiadomienia (§ 7 ust. 1).');
+        else if (days < 7) log(m, ctx, null, `Zawiadomienie wysłano ${days} dni przed posiedzeniem, a regulamin wymaga co najmniej 7 dni (§ 7 ust. 1).`);
       } else {
         const acts = m.agenda.filter(i => !i.parentId);
         ensure(acts.length, 'Dodaj co najmniej jedną sprawę do głosowania.');
@@ -459,8 +459,8 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'item_start': {
       requireLive(m); requireChair(m, actor);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
-      ensure(!openBallots(m).length, 'Trwa głosowanie — poczekaj na jego zakończenie.');
-      ensure(m.agendaAdopted || allowedBeforeAdoption(m, it), 'Najpierw przyjmij porządek obrad — dopiero potem przechodzi się do kolejnych spraw.');
+      ensure(!openBallots(m).length, 'Trwa głosowanie. Poczekaj na jego zakończenie.');
+      ensure(m.agendaAdopted || allowedBeforeAdoption(m, it), 'Najpierw przyjmij porządek obrad. Dopiero potem przechodzi się do kolejnych spraw.');
       ensure(it.status !== 'wycofany', 'Ten punkt został wycofany.');
       const previous = item(m, m.currentItemId);
       if (previous && previous.id !== it.id && previous.status === 'w_toku' && previous.id !== it.parentId) {
@@ -504,7 +504,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       requireLive(m); requireChair(m, actor);
       ensure(['uchwala', 'porzadek', 'protokol', 'wniosek', 'inna'].includes(cmd.purpose), 'Nieprawidłowy rodzaj głosowania.');
       ensure(['jawne', 'imienne', 'tajne'].includes(cmd.mode), 'Nieprawidłowy tryb głosowania.');
-      if (cmd.purpose === 'porzadek') ensure(!m.agendaAdopted, 'Porządek obrad został już przyjęty — jego zmiany głosuje się osobno.');
+      if (cmd.purpose === 'porzadek') ensure(!m.agendaAdopted, 'Porządek obrad został już przyjęty. Jego zmiany głosuje się osobno.');
       openBallot(m, ctx, actor, {itemId: cmd.itemId, purpose: cmd.purpose, subject: cmd.subject, mode: cmd.mode, minutes: cmd.minutes, materialId: cmd.materialId});
       break;
     }
@@ -512,7 +512,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const b = ballot(m, cmd.ballotId);
       ensure(b.status === 'otwarte', 'Głosowanie zostało zakończone.');
       ensure(!b.secret, 'W głosowaniu tajnym głos oddaje się kartą tajną.');
-      ensure(['za', 'przeciw', 'wstrzymuje'].includes(cmd.choice), 'Wybierz: za, przeciw albo wstrzymuję się.');
+      ensure(['za', 'przeciw', 'wstrzymuje'].includes(cmd.choice), 'Wybierz „za”, „przeciw” albo „wstrzymuję się”.');
       ensure(actor.personId && b.eligible.includes(actor.personId), 'To konto nie jest uprawnione do udziału w tym głosowaniu.', 403);
       if (!b.remote) ensure(m.attendance[actor.personId] === 'obecny', 'Najpierw potwierdź obecność na posiedzeniu.');
       ensure(!(actor.personId in b.votes), 'Głos w tym głosowaniu został już oddany i nie można go zmienić.', 409);
@@ -571,9 +571,9 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(b.status === 'zamkniete', 'Reasumpcja dotyczy zakończonego głosowania.');
       ensure(b.mode === 'jawne', 'Reasumpcji nie podlegają wyniki głosowania imiennego i tajnego (§ 12 ust. 4).');
       ensure(!['reasumpcja', 'tryb'].includes(b.purpose), 'Tego głosowania nie można poddać reasumpcji.');
-      ensure(!b.reasumptionOf && !b.supersededBy, 'Reasumpcja w tej sprawie została już przeprowadzona — tylko jeden raz (§ 12 ust. 3).');
+      ensure(!b.reasumptionOf && !b.supersededBy, 'Reasumpcję w tej sprawie już przeprowadzono, a można ją przeprowadzić tylko raz (§ 12 ust. 3).');
       ensure(!m.motions.some(x => x.ballotId === b.id && ['zbiera_podpisy', 'zlozony', 'glosowany', 'przyjety'].includes(x.status)), 'Wniosek o reasumpcję tego głosowania już jest rozpatrywany.');
-      ensure(cmd.justification.trim().length >= 10, 'Uzasadnij wniosek — dlaczego wynik budzi wątpliwości (§ 12 ust. 1).');
+      ensure(cmd.justification.trim().length >= 10, 'Uzasadnij wniosek, czyli napisz, dlaczego wynik budzi wątpliwości (§ 12 ust. 1).');
       const motion = {id: ctx.newId(), type: 'reasumpcja' as const, ballotId: b.id, justification: cmd.justification.trim().slice(0, 2000), createdBy: actor.personId, createdAt: ctx.now, signatures: [actor.personId], status: 'zbiera_podpisy' as const};
       m.motions.push(motion);
       log(m, ctx, actor, `Złożono wniosek o reasumpcję głosowania nr ${b.number}.`);
@@ -653,7 +653,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'close': {
       requireLive(m);
       ensure(posiedzenie ? m.chair.current === actor.personId : canChairOrgan(roster, m.organ, actor.personId), 'Posiedzenie zamyka prowadzący.', 403);
-      if (posiedzenie) ensure(!openBallots(m).length, 'Trwa głosowanie — zamknięcie możliwe po jego zakończeniu.');
+      if (posiedzenie) ensure(!openBallots(m).length, 'Trwa głosowanie. Posiedzenie można zamknąć po jego zakończeniu.');
       else for (const b of openBallots(m)) closeBallot(m, ctx, b, 'prowadzacy');
       for (const it of m.agenda) if (it.status === 'w_toku') { it.status = 'zakonczony'; it.endedAt = ctx.now; }
       m.status = 'zakonczone';
@@ -665,7 +665,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'message': {
       ensure(m.status !== 'zakonczone', 'Posiedzenie zostało zamknięte.');
       const text = cmd.text.trim();
-      ensure(text.length >= 1 && text.length <= 1000, 'Wiadomość: od 1 do 1000 znaków.');
+      ensure(text.length >= 1 && text.length <= 1000, 'Wiadomość może mieć od 1 do 1000 znaków.');
       m.messages.push({id: ctx.newId(), author: actor.account.id, authorName: actor.name, text, at: ctx.now});
       if (m.messages.length > 2000) m.messages.splice(0, m.messages.length - 2000);
       break;
@@ -687,7 +687,7 @@ function fileIfSupported(m: Meeting, ctx: Context, motionId: string) {
     motion.status = 'zlozony';
     motion.filedAt = ctx.now;
     motion.presentAtFiling = present.length;
-    log(m, ctx, null, `Wniosek o reasumpcję poparło ${valid} z ${present.length} obecnych — wymagana 1/3 (§ 12 ust. 5).`);
+    log(m, ctx, null, `Wniosek o reasumpcję poparło ${valid} z ${present.length} obecnych, a wymagana jest 1/3 (§ 12 ust. 5).`);
   }
 }
 

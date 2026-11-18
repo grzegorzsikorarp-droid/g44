@@ -145,8 +145,8 @@ test('reasumpcja: 1/3 podpisów obecnych, tylko głosowanie jawne, tylko raz (§
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: repeat.id, choice: 'za'}, actor(p), ctx.tick());
   assert.equal(m.ballots.find(b => b.id === original)!.supersededBy, repeat.id);
   assert.equal(m.ballots.find(b => b.id === repeat.id)!.result!.adopted, true);
-  assert.throws(() => apply(m, {type: 'motion_create', ballotId: repeat.id, justification: 'Ponowna wątpliwość co do wyniku.'}, actor('kn'), ctx), /tylko jeden raz/);
-  assert.throws(() => apply(m, {type: 'motion_create', ballotId: original, justification: 'Ponowna wątpliwość co do wyniku.'}, actor('kn'), ctx), /tylko jeden raz/);
+  assert.throws(() => apply(m, {type: 'motion_create', ballotId: repeat.id, justification: 'Ponowna wątpliwość co do wyniku.'}, actor('kn'), ctx), /tylko raz/);
+  assert.throws(() => apply(m, {type: 'motion_create', ballotId: original, justification: 'Ponowna wątpliwość co do wyniku.'}, actor('kn'), ctx), /tylko raz/);
 });
 
 test('prowadzenie: przekazanie wiceprzewodniczącej i przejęcie przez przewodniczącego (§ 9 ust. 1, § 16)', () => {
@@ -194,7 +194,7 @@ test('procedura między posiedzeniami: okno czasowe, wcześniejsze zakończenie 
   advance(m, ctx.tick(3 * 3600000));
   assert.equal(m.ballots[1].closeReason, 'czas');
   assert.equal(m.ballots[1].result!.quorumMet, false);
-  assert.equal(resultLabel(m.ballots[1]), 'Brak kworum — rozstrzygnięcie nie zapadło');
+  assert.equal(resultLabel(m.ballots[1]), 'Brak kworum, rozstrzygnięcie nie zapadło');
   assert.equal(m.status, 'zakonczone');
 });
 

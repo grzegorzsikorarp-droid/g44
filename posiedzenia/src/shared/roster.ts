@@ -6,5 +6,5 @@ export const organMembers = (roster: Roster, organ: string) =>
 export const membership = (roster: Roster, organ: string, personId: string | null) =>
   personId ? roster.memberships.find(m => m.organ === organ && m.personId === personId) : undefined;
 export const personName = (roster: Roster, personId: string | null | undefined) =>
-  roster.persons.find(p => p.id === personId)?.name ?? (personId || '—');
+  roster.persons.find(p => p.id === personId)?.name ?? (personId || '–');
 export const organOf = (roster: Roster, code: string) => roster.organs.find(o => o.code === code);

@@ -1,0 +1,97 @@
+/* OIPiP w Słupsku. Plik wygenerowany z tokens.json przez generuj.mjs, nie zmieniaj go ręcznie. */
+/* Wersja 1.0.0. Motyw jasny w :root, ciemny po ustawieniu data-theme="ciemny" na <html> albo na fragmencie strony. */
+
+:root, [data-theme="jasny"] {
+  --czerwien: #e30513;
+  --czerwien-ciemna: #ce000c;
+  --grafit-900: #231f20;
+  --grafit-800: #2d2d2d;
+  --grafit-700: #414141;
+  --szary: #6c6e70;
+  --bialy: #ffffff;
+  --tlo: #e7e7e7;
+  --powierzchnia: #ffffff;
+  --powierzchnia-miekka: #f2f2f2;
+  --tekst: #111111;
+  --tekst-mocny: #000000;
+  --tekst-drugorzedny: #5a5a5a;
+  --tekst-wylaczony: #8c8a8b;
+  --akcent-tekst: var(--czerwien-ciemna);
+  --akcent-duzy: var(--czerwien);
+  --na-akcencie: #ffffff;
+  --linia: #dcdcdc;
+  --linia-jasna: #e7e7e7;
+  --linia-aktywna: #c9c9c9;
+  --obrys-pola: #000000;
+  --fokus: #000000;
+  --klin: var(--grafit-900);
+  --stan-tak: #8dc63f;
+  --stan-czesciowo: #f7c61d;
+  --stan-nie: #f76a1d;
+  --stan-brak: #4e4e4e;
+  --na-stanie: #111111;
+  --cien-karty: 0 14px 34px rgba(0,0,0,0.07);
+  color-scheme: light;
+}
+
+[data-theme="ciemny"] {
+  --tlo: #1a1718;
+  --powierzchnia: #231f20;
+  --powierzchnia-miekka: #2d2d2d;
+  --tekst: #f2f2f2;
+  --tekst-mocny: #ffffff;
+  --tekst-drugorzedny: #b5b5b5;
+  --tekst-wylaczony: #6c6e70;
+  --akcent-tekst: #ff5c52;
+  --akcent-duzy: #ff5c52;
+  --linia: #414141;
+  --linia-jasna: #2d2d2d;
+  --linia-aktywna: #6c6e70;
+  --obrys-pola: #b5b5b5;
+  --fokus: #ffffff;
+  --klin: #414141;
+  --cien-karty: 0 14px 34px rgba(0,0,0,0.45);
+  color-scheme: dark;
+}
+
+:root {
+  --odstep-1: 4px;
+  --odstep-2: 8px;
+  --odstep-3: 12px;
+  --odstep-4: 16px;
+  --odstep-5: 20px;
+  --odstep-6: 24px;
+  --odstep-8: 32px;
+  --odstep-11: 44px;
+  --odstep-14: 58px;
+  --zaokraglenie: 0px;
+  --kat-skosu: -13deg;
+  --kat-odwrotny: 13deg;
+  --kreska: 1px;
+  --kreska-mocna: 2px;
+  --pasek-karty: 5px;
+  --pasek-akcentu: 6px;
+  --pierscien-fokusu: 3px;
+  --kolumna: 75rem;
+  --wiersz-tekstu: 70ch;
+  --font-sans: "Titillium Web", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+.oi-t-tytul-strony { font-family: var(--font-sans); font-size: 56px; line-height: 1.12; font-weight: 300; font-style: italic; letter-spacing: -0.005em; }
+.oi-t-naglowek-sekcji { font-family: var(--font-sans); font-size: 32px; line-height: 1.15; font-weight: 300; font-style: italic; letter-spacing: 0; }
+.oi-t-naglowek-karty { font-family: var(--font-sans); font-size: 18px; line-height: 1.32; font-weight: 600; font-style: normal; letter-spacing: 0; }
+.oi-t-naglowek-grafiki { font-family: var(--font-sans); font-size: 96px; line-height: 0.98; font-weight: 300; font-style: normal; letter-spacing: -0.012em; }
+.oi-t-lead { font-family: var(--font-sans); font-size: 18px; line-height: 1.6; font-weight: 300; font-style: normal; letter-spacing: 0; }
+.oi-t-tekst { font-family: var(--font-sans); font-size: 17px; line-height: 1.66; font-weight: 400; font-style: normal; letter-spacing: 0; }
+.oi-t-tekst-maly { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; font-weight: 400; font-style: normal; letter-spacing: 0; }
+.oi-t-zrodlo { font-family: var(--font-sans); font-size: 13px; line-height: 1.5; font-weight: 400; font-style: normal; letter-spacing: 0; }
+.oi-t-etykieta { font-family: var(--font-sans); font-size: 12px; line-height: 1.2; font-weight: 700; font-style: italic; letter-spacing: 0.1em; text-transform: uppercase; }
+.oi-t-etykieta-paska { font-family: var(--font-sans); font-size: 11.5px; line-height: 1.3; font-weight: 700; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; }
+.oi-t-przycisk { font-family: var(--font-sans); font-size: 13px; line-height: 1.3; font-weight: 700; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; }
+.oi-t-liczba { font-family: var(--font-sans); font-size: 37px; line-height: 1; font-weight: 600; font-style: italic; letter-spacing: 0; }
+.oi-t-data { font-family: var(--font-sans); font-size: 16px; line-height: 1.3; font-weight: 700; font-style: normal; letter-spacing: 0; }
+
+@media (max-width: 1120px) {
+  .oi-t-tytul-strony { font-size: max(34px, 5vw); }
+  .oi-t-naglowek-sekcji { font-size: max(22px, 2.86vw); }
+}

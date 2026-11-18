@@ -189,7 +189,7 @@ export class DemoServer {
       if (path === '/api/accounts') {
         if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
         if (method === 'POST') {
-          if (!/^[a-z0-9._-]{3,64}$/.test(input.username ?? '')) fail('Login: 3–64 znaki — małe litery bez polskich znaków, cyfry, kropka, myślnik lub podkreślenie.');
+          if (!/^[a-z0-9._-]{3,64}$/.test(input.username ?? '')) fail('Login musi mieć od 3 do 64 znaków. Użyj małych liter bez polskich znaków, cyfr, kropki, myślnika lub podkreślenia.');
           if (this.state.accounts.some(x => x.username === input.username)) fail('Ten login jest już zajęty.', 409);
           if (input.kind === 'czlonek') fail('Członkowie mają już konta w wersji próbnej.');
           this.state.accounts.push({id: 'a-' + newId(), username: input.username, kind: input.kind, personId: null, displayName: String(input.displayName || input.username), label: String(input.label ?? ''), admin: !!input.admin, mustChange: false, disabled: false});
@@ -224,7 +224,7 @@ export class DemoServer {
       }
       if (rest === '' && method === 'DELETE') {
         const m = this.meetingFor(id, a);
-        if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie — robi to organizator.', 403);
+        if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Robi to organizator.', 403);
         delete this.state.meetings[id]; this.save();
         return json({ok: true});
       }
