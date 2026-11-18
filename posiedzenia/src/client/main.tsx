@@ -14,5 +14,9 @@ setBrand({
   procedureTitle: 'Głosowanie między posiedzeniami Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku',
   place: 'Siedziba Izby, ul. Poniatowskiego 4, Słupsk',
   office: 'Biuro Izby',
+  officeLower: 'biuro Izby',
+  officeOf: 'biura Izby',
+  officeTo: 'biuru Izby',
+  regulation: 'Regulaminu Okręgowej Rady Pielęgniarek i Położnych w Słupsku',
 });
 render(<App/>, document.getElementById('app')!);

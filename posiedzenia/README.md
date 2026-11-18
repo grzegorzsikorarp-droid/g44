@@ -63,10 +63,10 @@ Kopia zapasowa: zatrzymaj serwer i skopiuj cały katalog `data` (baza SQLite i p
 
 Aplikacja korzysta z identyfikacji wizualnej Okręgowej Izby Pielęgniarek i Położnych w Słupsku z folderu `brand/` (paczka w wersji 1.0.0). Są tam zasady wizualne i językowe, tokeny kolorów, krój Titillium Web, znak Izby, ikony aplikacji i komponenty `oi-*`. Plik `CLAUDE.md` w tym katalogu wczytuje zasady paczki w każdej sesji Claude Code.
 
-- Style aplikacji (`src/client/styles.css`) podłączają fonty, tokeny i komponenty paczki. Kolory biorą wyłącznie z tokenów, a kształty są kanciaste, ze skosem 13°.
+- Style aplikacji: `src/client/styles.css` podłącza fonty, tokeny i komponenty paczki, a potem pliki `src/client/style/` (podstawa ze skalą pisma i odstępami w `baza.css`, dalej ekrany). Kolory biorą wyłącznie z tokenów, a kształty są kanciaste, ze skosem 13°.
 - Aplikacja jest jasna. Motyw ciemny z paczki można włączyć dopiero na życzenie Izby.
 - Znak Izby stoi zawsze na białym tle. Przy budowaniu trafia do `dist/client/brand/logo/` razem z ikonami i manifestem aplikacji, prosto z `brand/`, bez kopii w repozytorium.
-- `src/client/typo.ts` wstawia twarde spacje po jednoliterowych spójnikach i przyimkach oraz po „nr”, „§”, „ust.”, a przedziały liczb („2024–2028”) nie łamią się między wierszami.
+- `src/shared/typo.ts` wstawia twarde spacje po jednoliterowych spójnikach i przyimkach, po „nr”, „§”, „ust.” i liczbie rzymskiej oraz między liczbą a policzonym słowem, a przedziały liczb („2024–2028”) nie łamią się między wierszami. `src/client/typo.ts` stosuje ją w całym interfejsie.
 - Wersja próbna (`npm run build:demo`) ma ten sam wygląd i osadzone fonty, ale nie ma znaku ani nazwy Izby.
 - Przykładowe grafiki na Facebooka z paczki zostały poza repozytorium. Paczka zastrzega, że zdjęcie i logotypy współorganizatorów nie służą do ponownego użycia.
 

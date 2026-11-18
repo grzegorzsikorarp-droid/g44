@@ -42,7 +42,7 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       {m.status === 'przerwa' && <Notice tone="warn">Trwa przerwa w obradach. Głosowania są wstrzymane.</Notice>}
       {open && <LiveBallot b={open} readOnly={readOnly}/>}
       {open && eligibleMe && <VoteCard b={open}/>}
-      {!open && lastClosed && !lastClosed.announcedAt && <section class="oi-card is-accent">
+      {!open && lastClosed && !lastClosed.announcedAt && <section class="oi-card is-teraz">
         <ResultCard b={lastClosed}/>
         {!readOnly && <div class="actions"><AnnounceButton b={lastClosed}/><span class="muted small">Ogłoszenie pokaże wynik na telefonach i ekranie sali.</span></div>}
       </section>}
@@ -131,7 +131,7 @@ function ItemWorkspace({itemId, readOnly, skipBallot}: {itemId: string; readOnly
     </div>}
     {it.kind === 'otwarcie' && !readOnly && <Quorum/>}
     {materials.length > 0 && <div class="material-row">
-      <h4>Materiały</h4>
+      <h4 class="card-sub">Materiały</h4>
       {materials.map(x => <div class="stack-tight"><MaterialLink id={x.id} version={x.version} label={x.title} meta={`wersja ${x.version}`}/>
         {!readOnly && <div><Button small kind="ghost" disabled={busy} onClick={() => send({type: 'present', kind: 'material', id: x.id})}>Pokaż ten materiał uczestnikom</Button></div>}</div>)}
     </div>}
@@ -141,7 +141,7 @@ function ItemWorkspace({itemId, readOnly, skipBallot}: {itemId: string; readOnly
       </select>
     </Field>}
     {!readOnly && <BallotForm it={it}/>}
-    {ballots.some(b => b.status === 'zamkniete' && b.id !== skipBallot) && <div class="results"><h4>Głosowania w tym punkcie</h4>{ballots.filter(b => b.status === 'zamkniete' && b.id !== skipBallot).map(b => <div class="stack-tight"><ResultCard b={b}/>{!readOnly && !b.announcedAt && <div><AnnounceButton b={b}/></div>}</div>)}</div>}
+    {ballots.some(b => b.status === 'zamkniete' && b.id !== skipBallot) && <div class="results"><h4 class="card-sub">Głosowania w tym punkcie</h4>{ballots.filter(b => b.status === 'zamkniete' && b.id !== skipBallot).map(b => <div class="stack-tight"><ResultCard b={b}/>{!readOnly && !b.announcedAt && <div><AnnounceButton b={b}/></div>}</div>)}</div>}
     <Field label="Notatka do protokołu" hint="Przebieg dyskusji, wnioski i ustalenia. Notatka trafi do projektu protokołu.">
       <textarea rows={4} value={note} onInput={e => setNote((e.target as HTMLTextAreaElement).value)} onBlur={() => note !== it.note && send({type: 'item_edit', itemId: it.id, note})}/>
     </Field>
@@ -198,7 +198,7 @@ function BallotForm({it}: {it: AgendaItem}) {
   const done = materials.length ? materials.every(x => votedOn.has(x.id)) : decided.length > 0;
   if (done && !extra) return <div class="ballot-form"><p class="small muted">{materials.length > 1 ? 'Głosowano już nad wszystkimi dokumentami w tym punkcie.' : 'W tym punkcie przeprowadzono już głosowanie.'}</p><div><Button small kind="ghost" onClick={() => setExtra(true)}>Dodatkowe głosowanie w tym punkcie</Button></div></div>;
   return <form class="ballot-form" onSubmit={e => { e.preventDefault(); send({type: 'ballot_open', itemId: it.id, purpose, subject, mode, minutes, materialId: materialId || null}); }}>
-    <h4>{it.kind === 'porzadek' ? 'Głosowanie nad porządkiem obrad' : 'Głosowanie w tym punkcie'}</h4>
+    <h4 class="card-sub">{it.kind === 'porzadek' ? 'Głosowanie nad porządkiem obrad' : 'Głosowanie w tym punkcie'}</h4>
     {materials.length > 1 && <Field label="Nad którym dokumentem?"><select value={materialId} onChange={e => { const v = (e.target as HTMLSelectElement).value; setMaterialId(v); setSubject(defaults(v)); }}>{materials.map(x => <option value={x.id}>{x.title}{votedOn.has(x.id) ? ' (już głosowano)' : ''}</option>)}</select></Field>}
     <Field label="Przedmiot głosowania"><input value={subject} onInput={e => setSubject((e.target as HTMLInputElement).value)} required maxLength={400}/></Field>
     <div class="row">
@@ -305,7 +305,7 @@ function Attendance() {
       })}
     </ul>
     {m.invited.length > 0 && <>
-      <h4>Głos doradczy i goście</h4>
+      <h4 class="card-sub">Głos doradczy i goście</h4>
       <ul class="attendance">{m.invited.map(id => {
         const g = guests.find(x => x.id === id), status = m.guests[id] ?? 'nieobecny';
         return <li class={'att-' + status}><span class="att-name"><strong>{g?.displayName ?? 'Zaproszona osoba'}</strong><small>{g?.label}</small></span>
@@ -338,7 +338,7 @@ function ChairMotions() {
   const ready = m.motions.filter(x => x.status === 'zlozony' || (x.status === 'przyjety' && !x.repeatBallotId));
   if (!ready.length) return null;
   const open = m.ballots.some(b => b.status === 'otwarte');
-  return <section class="oi-card is-accent">
+  return <section class="oi-card is-teraz">
     <CardTitle>Reasumpcja, decyzja prowadzącego</CardTitle>
     {ready.map(x => {
       const b = m.ballots.find(y => y.id === x.ballotId);

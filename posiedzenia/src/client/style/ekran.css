@@ -1,0 +1,25 @@
+/* Ekran sali: duże, czytelne informacje bez elementów sterowania. Ma własną skalę pisma (clamp), czytelną z sali. */
+.screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--powierzchnia); }
+.screen-head, .screen-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--odstep-4) var(--odstep-8); flex-wrap: wrap; padding: 1.4vh max(3vw, 20px); }
+.screen-head { border-bottom: var(--kreska) solid var(--linia); }
+.screen-foot { border-top: var(--kreska) solid var(--linia); }
+.screen-head .plate img { height: clamp(40px, 6.5vh, 76px); }
+.screen-head-title { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 12em; }
+.screen-head-title strong { font-weight: 300; font-style: italic; font-size: clamp(1rem, .8rem + .8vw, 1.7rem); line-height: 1.2; color: var(--tekst-mocny); }
+.screen-clock { font-weight: 700; font-style: italic; font-size: clamp(1.3rem, 1rem + 1.2vw, 2.4rem); color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+.screen-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2.4vh; text-align: center; padding: 4vh max(5vw, 20px); }
+.screen-body h1 { font-weight: 300; font-style: italic; color: var(--tekst-mocny); font-size: clamp(2rem, 1.2rem + 3.4vw, 4.8rem); line-height: 1.12; max-width: 26ch; text-wrap: balance; }
+.screen-body > .oi-tag { align-self: center; }
+.screen-body .oi-tag > span { font-size: clamp(.8rem, .6rem + .7vw, 1.3rem); }
+.screen-big .countdown strong { display: block; color: var(--akcent-duzy); font-size: clamp(4rem, 2rem + 9vw, 11rem); line-height: 1; }
+.screen-sub { font-size: clamp(1.1rem, .9rem + 1vw, 2rem); color: var(--tekst-drugorzedny); }
+.screen-back { font-size: var(--t-lista); }
+.screen-foot .fact dt { font-size: clamp(.7rem, .6rem + .3vw, .95rem); }
+.screen-foot .fact dd { font-size: clamp(1rem, .8rem + .6vw, 1.5rem); }
+.screen .result { width: min(1300px, 100%); align-items: center; text-align: center; padding: 4vh 4vw; gap: 2.4vh; }
+.screen .result .oi-stats { width: 100%; }
+.screen .result-subject { font-size: clamp(1.3rem, 1rem + 1.4vw, 2.6rem); }
+.screen .result-label { font-size: clamp(2.4rem, 1.4rem + 4vw, 6rem); }
+.screen .result .oi-stat b { font-size: clamp(3rem, 2rem + 5vw, 7.5rem); }
+.screen .result .oi-stat span { font-size: clamp(.8rem, .6rem + .6vw, 1.4rem); }
+.screen .result-meta { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); }

@@ -1,6 +1,7 @@
 import {render} from 'preact';
 import {App} from '../client/app.tsx';
 import {setBrand} from '../client/brand.ts';
+import {Modal} from '../client/ui.tsx';
 import '../client/typo.ts';
 import '../client/styles.css';
 import {DemoServer} from './server.ts';
@@ -21,11 +22,12 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 setBrand({
   demo: true, org: 'Wersja próbna', nameplate: null, logo: null, organ: 'Prezydium (dane fikcyjne)', term: 'wersja próbna',
   meetingTitle: 'Posiedzenie Prezydium (próbne)', procedureTitle: 'Głosowanie między posiedzeniami (próbne)',
-  place: 'Sala posiedzeń (przykład)', office: 'Biuro', switchLabel: 'Zmień osobę',
+  place: 'Sala posiedzeń (przykład)', office: 'Biuro', officeLower: 'biuro', officeOf: 'biura', officeTo: 'biuru', regulation: 'Regulaminu',
+  switchLabel: 'Zmień osobę',
   loginScreen: props => <DemoPicker server={server} onDone={props.onDone}/>,
 });
 
-// Projekt protokołu otwiera się na tej samej stronie (strona próbna nie otwiera nowych kart ani wydruku).
+// Projekt protokołu otwiera się w oknie na tej samej stronie (strona próbna nie otwiera nowych kart ani wydruku).
 const overlay = document.createElement('div');
 document.body.appendChild(overlay);
 const close = () => render(null, overlay);
@@ -36,13 +38,7 @@ document.addEventListener('click', event => {
   const match = link.getAttribute('href')!.match(/^\/api\/meetings\/([\w-]+)\/protokol$/);
   let body = '<p>Pobieranie plików jest dostępne w pełnej aplikacji.</p>';
   try { if (match) body = server.minutes(match[1]); } catch (e) { body = `<p>${(e as Error).message}</p>`; }
-  render(<div class="modal-backdrop">
-    <div class="modal-shade" onClick={close}/>
-    <section class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="protokol-tytul">
-      <header class="modal-head"><span class="oi-mark" aria-hidden="true"/><h2 id="protokol-tytul">Projekt protokołu</h2><button type="button" class="oi-btn oi-btn--obrys oi-btn--maly" onClick={close}><span>Zamknij</span></button></header>
-      <div class="modal-body minutes-view" dangerouslySetInnerHTML={{__html: body}}/>
-    </section>
-  </div>, overlay);
+  render(<Modal title="Projekt protokołu" wide onClose={close}><div class="minutes-view" dangerouslySetInnerHTML={{__html: body}}/></Modal>, overlay);
 }, true);
 
 render(<App/>, document.getElementById('app')!);

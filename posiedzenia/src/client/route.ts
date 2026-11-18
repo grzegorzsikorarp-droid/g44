@@ -28,7 +28,8 @@ window.addEventListener('hashchange', () => {
 window.addEventListener('click', event => {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   const link = (event.target as Element | null)?.closest?.('a[href^="#"]');
-  if (!link || link.hasAttribute('target')) return;
+  // Odnośnik z data-kotwica prowadzi w obrębie strony (np. „Przejdź do treści”), a nie do innej trasy.
+  if (!link || link.hasAttribute('target') || link.hasAttribute('data-kotwica')) return;
   event.preventDefault();
   go(link.getAttribute('href')!);
 }, true);

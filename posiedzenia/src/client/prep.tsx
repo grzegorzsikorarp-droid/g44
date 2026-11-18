@@ -176,7 +176,7 @@ function OpenMeeting() {
     m.mode === 'zdalne' && !m.link ? 'Posiedzenie zdalne nie ma odnośnika do połączenia. Uczestnicy muszą mieć dwustronną komunikację na żywo (§ 14 ust. 5).' : '',
   ].filter(Boolean);
   if (!canChairOrgan(s.roster, m.organ, s.personId)) return <section class="oi-card"><CardTitle>Otwarcie posiedzenia</CardTitle><p class="muted small">Posiedzenie otworzy przewodniczący lub wiceprzewodniczący (§ 9 ust. 1). Wtedy uczestnicy potwierdzają obecność na swoich telefonach.</p></section>;
-  return <section class="oi-card is-accent">
+  return <section class="oi-card is-teraz">
     <CardTitle>Otwarcie posiedzenia</CardTitle>
     <p class="small">Po otwarciu prowadzisz obrady. Członkowie potwierdzają obecność na telefonach.</p>
     {warnings.map(w => <Notice tone="warn">{w}</Notice>)}

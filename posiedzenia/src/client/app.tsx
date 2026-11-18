@@ -1,8 +1,8 @@
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {Account, Roster} from '../shared/types.ts';
-import {request} from './api.ts';
+import {ApiError, request} from './api.ts';
 import {SessionContext, useSession} from './session.ts';
-import {Button, Fact, Field, Modal, Notice, Tag, useAction} from './ui.tsx';
+import {Button, Check, Chip, Confirm, ErrorNotice, errorKindOf, Fact, Field, LiveRegion, Modal, Notice, Tag, useAction, type ErrorKind} from './ui.tsx';
 import {Home} from './home.tsx';
 import {MeetingPage} from './meeting.tsx';
 import {RoomScreen} from './screen.tsx';
@@ -13,75 +13,156 @@ import {Plate} from './plate.tsx';
 
 interface SessionInfo { account: Account | null; setupRequired: boolean; roster: Roster | null }
 
+const APP = 'Posiedzenia Prezydium';
+// Pamięć karty przeglądarki. W ramce bez własnego adresu (wersja próbna) jest niedostępna, a aplikacja działa bez niej.
+const BACK = 'posiedzenia:powrot', FRESH = 'posiedzenia:po-logowaniu';
+const tabStore = {
+  get: (key: string) => { try { return sessionStorage.getItem(key); } catch { return null; } },
+  set: (key: string, value: string) => { try { sessionStorage.setItem(key, value); } catch { /* bez pamięci karty */ } },
+  del: (key: string) => { try { sessionStorage.removeItem(key); } catch { /* bez pamięci karty */ } },
+};
+
+/** Po zalogowaniu (także po wyborze osoby w wersji próbnej): znacznik dla listy posiedzeń i powrót na trasę sprzed wygaśnięcia sesji. */
+export function afterLogin() {
+  tabStore.set(FRESH, '1');
+  const back = tabStore.get(BACK);
+  if (back !== null) { tabStore.del(BACK); go(back); }
+}
+
 export function App() {
   const [info, setInfo] = useState<SessionInfo | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{text: string; kind: ErrorKind} | null>(null);
   const [hash, setHash] = useState(currentRoute);
-  const load = () => request<SessionInfo>('/api/session').then(setInfo).catch(e => setError(e.message));
+  const latest = useRef<SessionInfo | null>(null);
+  latest.current = info;
+  const leaving = useRef(false);
+  const load = () => request<SessionInfo>('/api/session').then(value => { setError(null); setInfo(value); }).catch(e => setError({text: e.message, kind: errorKindOf(e)}));
   useEffect(() => {
     load();
     const offRoute = onRoute(setHash);
-    const onLogout = () => load();
-    window.addEventListener('posiedzenia:wyloguj', onLogout);
-    return () => { offRoute(); window.removeEventListener('posiedzenia:wyloguj', onLogout); };
+    // Odpowiedź 401 przy zalogowanej osobie oznacza wygaśnięcie sesji: trasa czeka na powrót po ponownym zalogowaniu.
+    const onExpired = () => {
+      if (!leaving.current && latest.current?.account) tabStore.set(BACK, currentRoute());
+      load();
+    };
+    window.addEventListener('posiedzenia:wyloguj', onExpired);
+    return () => { offRoute(); window.removeEventListener('posiedzenia:wyloguj', onExpired); };
   }, []);
-
-  if (!info) return <main class="center-page">{error ? <Notice tone="error">{error} <Button small onClick={load}>Spróbuj ponownie</Button></Notice> : <p class="muted">Wczytywanie…</p>}</main>;
-  if (!info.account) {
-    const Picker = brand.loginScreen;
-    return Picker ? <Picker onDone={load}/> : <Login setup={info.setupRequired} roster={info.roster} onDone={load}/>;
-  }
-  const session = {account: info.account, roster: info.roster!};
-  if (info.account.mustChange) return <SessionContext.Provider value={session}><main class="center-page"><PasswordCard forced onDone={load}/></main></SessionContext.Provider>;
+  const logout = async () => {
+    leaving.current = true;
+    tabStore.del(BACK);
+    await request('/api/logout', {method: 'POST'}).catch(() => {});
+    if (!brand.demo) go('');
+    await load();
+    leaving.current = false;
+  };
 
   const screen = hash.match(/^#ekran-([\w-]+)$/);
-  if (screen) return <SessionContext.Provider value={session}><RoomScreen id={screen[1]}/></SessionContext.Provider>;
   const meeting = hash.match(/^#p-([\w-]+)$/);
-  return <SessionContext.Provider value={session}>
-    <TopBar onLogout={load}/>
-    <main>
-      {meeting ? <MeetingPage id={meeting[1]}/> : hash === '#konta' && info.account.admin ? <Accounts/> : <Home/>}
-    </main>
-  </SessionContext.Provider>;
+  const accounts = hash === '#konta' && !!info?.account?.admin;
+  const signedIn = !!info?.account && !info.account.mustChange;
+  const title = !info ? null : !info.account ? 'Logowanie' : info.account.mustChange ? 'Ustaw własne hasło' : screen || meeting ? null : accounts ? 'Konta użytkowników' : 'Lista posiedzeń';
+  // Tytuł karty ustawia się przed efektami ekranów, więc tytuł posiedzenia ustawiony niżej przez usePageTitle ma pierwszeństwo.
+  useLayoutEffect(() => { document.title = title ? `${title} – ${APP}` : APP; }, [title]);
+
+  // Po zmianie trasy fokus przechodzi na pierwszy nagłówek h1 w treści (czeka do 3 s, aż ekran się wczyta).
+  const firstRoute = useRef(true);
+  useEffect(() => {
+    if (firstRoute.current) { firstRoute.current = false; return; }
+    let stopped = false, timer = 0;
+    const started = Date.now();
+    const typing = () => !!document.activeElement?.matches('input, textarea, select');
+    const tick = () => {
+      if (stopped || typing()) return;
+      const heading = document.querySelector<HTMLElement>('main h1');
+      if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus(); return; }
+      if (Date.now() - started < 3000) timer = window.setTimeout(tick, 100);
+    };
+    timer = window.setTimeout(tick, 50);
+    return () => { stopped = true; window.clearTimeout(timer); };
+  }, [hash]);
+
+  let content;
+  if (!info) content = <main class="center-page" id="tresc" tabIndex={-1}>{error ? <ErrorNotice kind={error.kind}>{error.text} <Button small onClick={load}>Spróbuj ponownie</Button></ErrorNotice> : <p class="muted">Wczytywanie…</p>}</main>;
+  else if (!info.account) {
+    const Picker = brand.loginScreen;
+    content = Picker ? <Picker onDone={load}/> : <Login setup={info.setupRequired} roster={info.roster} onDone={load}/>;
+  } else {
+    const session = {account: info.account, roster: info.roster!};
+    content = <SessionContext.Provider value={session}>
+      {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
+        : screen ? <RoomScreen id={screen[1]}/>
+        : <><TopBar current={meeting ? null : accounts ? 'konta' : 'lista'} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : accounts ? <Accounts/> : <Home/>}</main></>}
+    </SessionContext.Provider>;
+  }
+  return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;
 }
 
-function TopBar(props: {onLogout: () => void}) {
+/** Pierwszy element strony: odnośnik do treści dla osób poruszających się klawiaturą. */
+function SkipLink() {
+  return <a class="skip-link" href="#tresc" data-kotwica onClick={e => { e.preventDefault(); document.getElementById('tresc')?.focus(); }}>Przejdź do treści</a>;
+}
+
+function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promise<void>}) {
   const {account, name, membership} = useSession();
   const [open, setOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const raw = membership('prezydium')?.label ?? account.label ?? '';
   const label = raw === name ? '' : raw;
-  const logout = async () => { await request('/api/logout', {method: 'POST'}).catch(() => {}); if (!brand.demo) go(''); props.onLogout(); };
+  const who = <span class="who"><strong>{name}</strong>{label && <small>{label}</small>}</span>;
   return <header class="topbar">
-    <a class="topbar-brand" href="#" aria-label="Lista posiedzeń">
-      <Plate/>
+    <a class="topbar-brand" href="#" aria-label="Posiedzenia Prezydium, lista posiedzeń">
+      <Plate decorative/>
       <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>
     </a>
-    <nav class="topbar-nav" aria-label="Konto">
-      <span class="who"><strong>{name}</strong>{label && <small>{label}</small>}</span>
-      {account.admin && <a class="oi-btn oi-btn--obrys oi-btn--maly" href="#konta"><span>Konta</span></a>}
-      {brand.demo && <Tag dark>Wersja próbna</Tag>}
+    <div class="topbar-side">
+      <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">
+        <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>
+        {account.admin && <a href="#konta" aria-current={props.current === 'konta' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Konta</a>}
+      </nav>
       {brand.demo
-        ? <Button small onClick={logout}>{brand.switchLabel}</Button>
-        : <Button small onClick={() => setOpen(true)}>Twoje konto</Button>}
-    </nav>
+        ? <>{who}<span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>
+        : <button type="button" class="topbar-account" aria-label={`Twoje konto, ${name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{who}<span class="who-short">Konto</span></button>}
+    </div>
     {open && <Modal title="Twoje konto" onClose={() => setOpen(false)}>
       <dl class="facts"><Fact label="Imię i nazwisko">{name}</Fact>{label && <Fact label="Funkcja">{label}</Fact>}<Fact label="Login"><code>{account.username}</code></Fact></dl>
-      <div class="actions"><Button kind="primary" onClick={logout}>Wyloguj się</Button></div>
       <section class="stack"><h3 class="oi-card__title"><span class="oi-mark" aria-hidden="true"/><span>Zmiana hasła</span></h3><PasswordCard onDone={() => {}}/></section>
+      <div class="account-logout"><Button haspopup onClick={() => setLeaving(true)}>Wyloguj się</Button></div>
+      {leaving && <Confirm title="Wylogować się?" confirm="Wyloguj się" focus="cancel" onClose={() => setLeaving(false)} onConfirm={() => { props.onLogout(); }}
+        text={<p>Aby wrócić, zalogujesz się ponownie loginem i hasłem. Jeśli trwa posiedzenie, do tego czasu nie oddasz głosu.</p>}/>}
     </Modal>}
   </header>;
 }
 
+const capsLock = (e: KeyboardEvent) => typeof e.getModifierState === 'function' && e.getModifierState('CapsLock');
+
 function Login(props: {setup: boolean; roster: Roster | null; onDone: () => void}) {
-  const {busy, error, run} = useAction();
+  const {busy, error, errorKind, run} = useAction();
+  const [wrong, setWrong] = useState(false);
+  const [caps, setCaps] = useState(false);
+  const [show, setShow] = useState(false);
+  const password = useRef<HTMLInputElement>(null);
+  const wrongId = useId();
+  const expired = !props.setup && tabStore.get(BACK) !== null;
   const prezydium = props.roster?.memberships.filter(m => m.organ === 'prezydium') ?? [];
-  return <main class="center-page">
-    <form class="oi-card login" onSubmit={e => {
+  const passwordHint = [props.setup ? 'Co najmniej 12 znaków.' : '', caps ? 'Włączony jest Caps Lock.' : ''].filter(Boolean).join(' ') || undefined;
+  return <main class="center-page" id="tresc" tabIndex={-1}>
+    <form class="oi-card login" onKeyDown={e => setCaps(capsLock(e))} onKeyUp={e => setCaps(capsLock(e))} onSubmit={e => {
       e.preventDefault();
       const f = new FormData(e.currentTarget);
+      setWrong(false);
       run(async () => {
-        if (props.setup) await request('/api/setup', {body: {token: f.get('token'), username: f.get('username'), password: f.get('password'), personId: f.get('personId') || null, displayName: brand.office}});
-        else await request('/api/login', {body: {username: f.get('username'), password: f.get('password')}});
+        if (props.setup) {
+          await request('/api/setup', {body: {token: f.get('token'), username: f.get('username'), password: f.get('password'), personId: f.get('personId') || null, displayName: brand.office}});
+          props.onDone();
+          return;
+        }
+        try { await request('/api/login', {body: {username: f.get('username'), password: f.get('password')}}); }
+        catch (err) {
+          if (err instanceof ApiError && err.status === 401) { setWrong(true); password.current?.focus(); return; }
+          throw err;
+        }
+        afterLogin();
         props.onDone();
       });
     }}>
@@ -89,6 +170,7 @@ function Login(props: {setup: boolean; roster: Roster | null; onDone: () => void
       <Tag>{props.setup ? 'Pierwsze uruchomienie' : 'Posiedzenia i głosowania'}</Tag>
       <h1 class="app-title">Posiedzenia <b>Prezydium</b></h1>
       <p class="lead">{brand.organ}{brand.term ? `, ${brand.term}` : ''}</p>
+      {expired && <Notice>Sesja wygasła. Zaloguj się ponownie, a wrócisz do tego samego ekranu.</Notice>}
       {props.setup && <>
         <p>Utwórz konto administratora. Kod pierwszego uruchomienia jest w oknie serwera oraz w pliku <code>data/pierwsze-uruchomienie.txt</code>.</p>
         <Field label="Kod pierwszego uruchomienia"><input name="token" required autocomplete="off" spellcheck={false}/></Field>
@@ -96,31 +178,43 @@ function Login(props: {setup: boolean; roster: Roster | null; onDone: () => void
           <select name="personId"><option value="">{brand.office} (bez prawa głosu)</option>{prezydium.map(m => <option value={m.personId}>{props.roster!.persons.find(p => p.id === m.personId)?.name}, {m.label}</option>)}</select>
         </Field>
       </>}
-      <Field label="Login" hint={props.setup ? 'Małe litery bez polskich znaków, cyfry, kropka lub myślnik (3–64 znaki).' : undefined}><input name="username" required autocomplete="username" autocapitalize="none" spellcheck={false} minLength={3} maxLength={64}/></Field>
-      <Field label="Hasło" hint={props.setup ? 'Co najmniej 12 znaków.' : undefined}><input name="password" type="password" required autocomplete={props.setup ? 'new-password' : 'current-password'} minLength={props.setup ? 12 : 1} maxLength={200}/></Field>
-      {error && <Notice tone="error">{error}</Notice>}
-      <Button kind="primary" type="submit" wide disabled={busy}>{props.setup ? 'Utwórz administratora' : 'Zaloguj się'}</Button>
-      {!props.setup && <p class="muted small">Login i hasło tymczasowe otrzymasz od biura. Przy pierwszym logowaniu ustawisz własne hasło.</p>}
+      <Field label="Login" hint={props.setup ? 'Małe litery bez polskich znaków, cyfry, kropka lub myślnik (3–64 znaki).' : undefined} error={wrong ? true : undefined} describedBy={wrong ? wrongId : undefined}>
+        <input name="username" required autocomplete="username" autocapitalize="none" spellcheck={false} minLength={3} maxLength={64}/>
+      </Field>
+      <Field label="Hasło" hint={passwordHint} error={wrong ? 'Login lub hasło są nieprawidłowe. Sprawdź oba pola. W haśle liczy się wielkość liter.' : undefined} errorId={wrongId}>
+        <input ref={password} name="password" type={show ? 'text' : 'password'} required autocomplete={props.setup ? 'new-password' : 'current-password'} minLength={props.setup ? 12 : 1} maxLength={200}/>
+      </Field>
+      <Check checked={show} onChange={setShow}>Pokaż hasło</Check>
+      {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+      <Button kind="primary" type="submit" wide busy={busy}>{props.setup ? 'Utwórz administratora' : 'Zaloguj się'}</Button>
+      {!props.setup && <p class="muted small">Login i hasło tymczasowe otrzymasz od {brand.officeOf}. Przy pierwszym logowaniu ustawisz własne hasło. Nie pamiętasz hasła? {brand.office} nada Ci nowe hasło tymczasowe.</p>}
     </form>
   </main>;
 }
 
 function PasswordCard(props: {forced?: boolean; onDone: () => void}) {
-  const {busy, error, setError, run} = useAction();
+  const {busy, error, errorKind, run} = useAction();
   const [ok, setOk] = useState(false);
+  const [show, setShow] = useState(false);
+  const [mismatch, setMismatch] = useState(false);
+  const repeat = useRef<HTMLInputElement>(null);
+  const type = show ? 'text' : 'password';
   return <form class={props.forced ? 'oi-card login' : 'stack'} onSubmit={e => {
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
-    if (f.get('password') !== f.get('repeat')) { setError('Wpisz w obu polach to samo nowe hasło.'); return; }
+    setOk(false);
+    if (f.get('password') !== f.get('repeat')) { setMismatch(true); repeat.current?.focus(); return; }
+    setMismatch(false);
     run(async () => { await request('/api/password', {body: {currentPassword: f.get('current'), password: f.get('password')}}); setOk(true); form.reset(); props.onDone(); });
   }}>
     {props.forced && <><Plate big/><h1 class="app-title">Ustaw <b>własne hasło</b></h1><p>Zalogowano hasłem tymczasowym. Przed rozpoczęciem pracy ustaw własne hasło, które znasz tylko Ty.</p></>}
-    <Field label={props.forced ? 'Hasło tymczasowe' : 'Obecne hasło'}><input name="current" type="password" required autocomplete="current-password"/></Field>
-    <Field label="Nowe hasło" hint="Co najmniej 12 znaków."><input name="password" type="password" required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
-    <Field label="Powtórz nowe hasło"><input name="repeat" type="password" required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
-    {error && <Notice tone="error">{error}</Notice>}
+    <Field label={props.forced ? 'Hasło tymczasowe' : 'Obecne hasło'}><input name="current" type={type} required autocomplete="current-password"/></Field>
+    <Field label="Nowe hasło" hint="Co najmniej 12 znaków."><input name="password" type={type} required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
+    <Field label="Powtórz nowe hasło" error={mismatch ? 'Wpisz w obu polach to samo nowe hasło.' : undefined}><input ref={repeat} name="repeat" type={type} required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
+    <Check checked={show} onChange={setShow}>Pokaż hasło</Check>
+    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
     {ok && <Notice tone="ok">Hasło zmienione.</Notice>}
-    <Button kind={props.forced ? 'primary' : 'secondary'} type="submit" wide={props.forced} disabled={busy}>Zapisz hasło</Button>
+    <Button kind={props.forced ? 'primary' : 'secondary'} type="submit" wide={props.forced} busy={busy}>Zapisz hasło</Button>
   </form>;
 }

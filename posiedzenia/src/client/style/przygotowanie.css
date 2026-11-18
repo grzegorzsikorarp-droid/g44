@@ -1,0 +1,26 @@
+.edit-list { list-style: none; padding: 0; }
+.edit-list li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: var(--odstep-2); align-items: center; padding: 6px 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.edit-list li.is-sub { padding-left: 24px; }
+.edit-list .sub-form { grid-column: 1 / -1; padding-left: 2.6em; }
+.edit-title { text-align: left; background: none; border: 0; padding: 6px 4px; font: inherit; font-size: var(--t-lista); line-height: 1.4; color: var(--tekst-mocny); cursor: text; overflow-wrap: anywhere; }
+.edit-title:hover { background: var(--powierzchnia-miekka); }
+.edit-title small { margin-left: .6em; font-style: italic; color: var(--tekst-drugorzedny); }
+.edit-tools { display: flex; gap: var(--odstep-3); flex-wrap: wrap; justify-content: flex-end; }
+.import { display: grid; grid-template-columns: 1fr 1fr; gap: var(--odstep-5); }
+.import-preview { background: var(--powierzchnia-miekka); padding: 14px 16px; max-height: 440px; overflow: auto; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.preview-list { padding-left: 1.4em; display: flex; flex-direction: column; gap: 4px; }
+.preview-list li.is-sub { margin-left: 1.4em; list-style-type: "– "; }
+@media (max-width: 760px) { .import { grid-template-columns: 1fr; } }
+
+/* Przygotowanie */
+.prep, .procedure { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: var(--odstep-6); align-items: start; }
+.prep-main, .prep-side, .procedure-main, .procedure-side { display: flex; flex-direction: column; gap: var(--odstep-6); min-width: 0; }
+@media (max-width: 960px) { .prep, .procedure { grid-template-columns: 1fr; gap: var(--odstep-4); } .prep-side { order: -1; } .prep-main, .prep-side, .procedure-main, .procedure-side { gap: var(--odstep-4); } }
+.material-table { list-style: none; padding: 0; }
+.material-table li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); padding: 12px 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.material-table li > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+
+/* Głosowanie między posiedzeniami */
+.window .countdown strong { font-size: var(--t-liczba); color: var(--akcent-duzy); }
+.act-settings { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-3); display: flex; flex-direction: column; gap: var(--odstep-3); }
+.acts { display: flex; flex-direction: column; gap: var(--odstep-4); }

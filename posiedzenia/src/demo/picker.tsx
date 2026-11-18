@@ -2,6 +2,7 @@ import {useState} from 'preact/hooks';
 import {organMembers} from '../shared/roster.ts';
 import type {Choice} from '../shared/types.ts';
 import {request} from '../client/api.ts';
+import {afterLogin} from '../client/app.tsx';
 import {Button, Fold, Notice, Tag} from '../client/ui.tsx';
 import type {DemoServer} from './server.ts';
 
@@ -15,11 +16,11 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
   const state = server.state;
   const live = Object.values(state.meetings).find(m => m.status === 'trwa' || m.status === 'przerwa');
   const open = live?.ballots.find(b => b.status === 'otwarte');
-  const choose = async (username: string) => { await request('/api/login', {body: {username}}); props.onDone(); };
+  const choose = async (username: string) => { await request('/api/login', {body: {username}}); afterLogin(); props.onDone(); };
   const members = organMembers(state.roster, 'prezydium');
   const others = state.accounts.filter(a => !a.personId && !a.disabled);
   const shortcut = (message: string) => setNote(message || 'Zrobione.');
-  return <main class="center-page">
+  return <main class="center-page" id="tresc" tabIndex={-1}>
     <section class="oi-card login demo-picker">
       <Tag dark>Wersja próbna</Tag>
       <h1 class="app-title">Kim jesteś <b>w tej próbie?</b></h1>
@@ -43,11 +44,11 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
       </div>}
       <Fold title="Jak przeprowadzić próbne posiedzenie?">
         <ol class="demo-help">
-          <li>Wybierz <strong>Barbarę Wiśniewską</strong> (Przewodnicząca), otwórz „Posiedzenie Prezydium (próbne)” i kliknij <strong>Otwórz posiedzenie</strong>.</li>
+          <li>Wybierz Przewodniczącą <strong>Barbarę Wiśniewską</strong>, otwórz „Posiedzenie Prezydium (próbne)” i kliknij <strong>Otwórz posiedzenie</strong>.</li>
           <li>Zmień osobę na członka, otwórz posiedzenie i kliknij <strong>Potwierdzam obecność</strong> albo użyj skrótu „Wszyscy członkowie obecni”.</li>
           <li>Wróć do Przewodniczącej. W punkcie 2 kliknij <strong>Rozpocznij ten punkt</strong>, a potem <strong>Otwórz głosowanie</strong>.</li>
-          <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Potem jako Przewodnicząca kliknij <strong>Ogłoś wynik</strong>.</li>
-          <li>W uchwałach 5.1–5.4 spróbuj wniosku o głosowanie tajne i reasumpcji.</li>
+          <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Potem jako Przewodnicząca kliknij <strong>Ogłoś wynik głosowania</strong>.</li>
+          <li>W punktach 5.1–5.4 złóż wniosek o głosowanie tajne i wniosek o reasumpcję.</li>
         </ol>
       </Fold>
       {confirmReset

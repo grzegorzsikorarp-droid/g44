@@ -1,0 +1,31 @@
+/* Protokół: ten sam wygląd w oknie i w wersji do druku. Tytuł dokumentu zostaje w skali clamp(), jak tytuł strony. */
+.minutes-view { font-size: var(--t-lista); line-height: 1.6; color: var(--tekst); display: flex; flex-direction: column; }
+.minutes-view header { display: flex; flex-direction: column; gap: 8px; padding-bottom: var(--odstep-4); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }
+.minutes-view h1 { font-weight: 300; font-style: italic; font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.2; color: var(--akcent-duzy); }
+.minutes-view h1 b { font-weight: 700; }
+.minutes-view h2 { display: flex; align-items: center; gap: 12px; font-weight: 300; font-style: italic; font-size: var(--t-sprawa); line-height: 1.2; color: var(--tekst-mocny); margin: 1.6em 0 .6em; padding-bottom: .45em; border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); break-after: avoid; }
+.minutes-view h2::before { content: ""; width: 14px; height: 14px; flex: none; background: var(--czerwien); transform: skewX(var(--kat-skosu)); }
+.minutes-view h3 { font-weight: 600; font-size: var(--t-karta); color: var(--tekst-mocny); margin: 1.1em 0 .4em; break-after: avoid; }
+.minutes-view p, .minutes-view ul, .minutes-view ol { margin: 0 0 .6em; }
+.minutes-view ul, .minutes-view ol { padding-left: 1.4em; }
+.minutes-view table { width: 100%; border-collapse: collapse; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); font-size: var(--t-maly); margin: .4em 0 .9em; }
+.minutes-view th, .minutes-view td { text-align: left; padding: 8px 12px; border-top: var(--kreska) solid var(--linia-jasna); vertical-align: top; line-height: 1.45; }
+.minutes-view thead th { border-top: 0; background: var(--tekst-mocny); color: var(--powierzchnia); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; font-size: var(--t-etykieta); }
+.minutes-view .muted { color: var(--tekst-drugorzedny); font-size: var(--t-maly); }
+.minutes-view .draft { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; color: var(--akcent-tekst); }
+.minutes-view .ballot { border-left: var(--pasek-akcentu) solid var(--linia-aktywna); padding: 2px 0 2px 14px; margin: .8em 0; break-inside: avoid; }
+.minutes-view .note { background: var(--powierzchnia-miekka); padding: 10px 14px; margin: .5em 0; }
+.minutes-view .signatures { display: flex; flex-wrap: wrap; gap: var(--odstep-6); margin-top: 3.5em; break-inside: avoid; }
+.minutes-view .signatures div { flex: 1 1 140px; border-top: var(--kreska) solid var(--tekst-mocny); padding-top: 6px; text-align: center; font-size: var(--t-meta); }
+.minutes-view .footer { margin-top: var(--odstep-6); }
+.minutes-page { background: var(--powierzchnia); }
+.minutes-page .toolbar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--odstep-4); flex-wrap: wrap; padding: 10px max(var(--odstep-5), env(safe-area-inset-left, 0px)); background: var(--powierzchnia); border-bottom: var(--kreska) solid var(--linia); }
+.minutes-page main { width: 54rem; max-width: 100%; margin: 0 auto; padding: var(--odstep-8) var(--odstep-5) var(--odstep-14); }
+.minutes-page .oi-nameplate { padding: 0 0 var(--odstep-5); }
+.minutes-page .oi-nameplate img { height: 64px; }
+
+@media print {
+  .minutes-page main { width: auto; padding: 0; }
+  .minutes-view thead th { background: none; color: var(--tekst-mocny); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }
+  .minutes-view table { border-color: var(--linia-aktywna); }
+}

@@ -30,7 +30,7 @@ export function ProcedureView() {
   const conductor = canChairOrgan(s.roster, m.organ, s.personId);
   return <div class="procedure">
     <div class="procedure-main">
-      {m.status === 'trwa' && m.endsAt && <section class="oi-card is-accent window">
+      {m.status === 'trwa' && m.endsAt && <section class="oi-card is-teraz window">
         <span class="oi-label">Głosowanie trwa</span>
         <p><Countdown endsAt={m.endsAt}/></p>
         <p class="muted small">Głosuje {total} członków Prezydium. Rozstrzygnięcie zapada przy udziale co najmniej {quorumFor(total)} głosujących (§ 8 ust. 2) zwykłą większością głosów. Głosowanie kończy się wcześniej, gdy zagłosują wszyscy.</p>
@@ -98,7 +98,7 @@ function Start() {
   const acts = m.agenda.filter(i => !i.parentId);
   const withoutDoc = acts.filter(i => !i.materialIds.length);
   if (!canChairOrgan(s.roster, m.organ, s.personId)) return <section class="oi-card"><CardTitle>Rozpoczęcie</CardTitle><p class="muted small">Głosowanie rozpocznie przewodniczący lub wiceprzewodniczący. Wtedy członkowie dostaną dostęp do kart.</p></section>;
-  return <section class="oi-card is-accent">
+  return <section class="oi-card is-teraz">
     <CardTitle>Rozpoczęcie głosowania</CardTitle>
     <p class="small">Wszystkie sprawy ({acts.length}) zostaną otwarte jednocześnie do {m.endsAt ? fmtDateTime(m.endsAt) : 'ustalonego terminu'}.</p>
     {withoutDoc.length > 0 && <Notice tone="warn">Bez dokumentu są sprawy {withoutDoc.map(i => itemNumber(m.agenda, i.id)).join(', ')}.</Notice>}
