@@ -7,7 +7,8 @@ import {
   computeResult, everyoneVoted, hasVoted, itemNumber, memberIds, openTally, presentMembers,
   quorumFor, reasumptionSignaturesNeeded,
 } from './rules.ts';
-import {newItem, parseAgendaText, presidiumTemplate} from './agenda.ts';
+import {cleanTitle, newItem, parseAgendaText, presidiumTemplate} from './agenda.ts';
+import {plural} from './text.ts';
 
 export class DomainError extends Error {
   status: number;
@@ -61,7 +62,7 @@ export type Command =
   | {type: 'message'; text: string};
 
 const actLabels: Partial<Record<MaterialType, string>> = {
-  uchwala: 'Uchwała', rezolucja: 'Rezolucja', oswiadczenie: 'Oświadczenie (stanowisko)', deklaracja: 'Deklaracja',
+  uchwala: 'Uchwała', rezolucja: 'Rezolucja', oswiadczenie: 'Stanowisko lub oświadczenie', deklaracja: 'Deklaracja',
   apel: 'Apel', sprawozdanie: 'Sprawozdanie', protokol: 'Protokół',
 };
 export const materialTypeLabel = (t: MaterialType) => actLabels[t] ?? (t === 'informacja' ? 'Informacja' : 'Materiał');
@@ -80,7 +81,7 @@ export function createMeeting(input: {
     invited: [], agenda, agendaAdopted: false, currentItemId: null, presentation: null, materials: [],
     attendance: {}, guests: {}, presenceLog: [], chair: {current: null, deputy: null, deputyBasis: '', changes: []},
     quorumChecks: [], ballots: [], motions: [], messages: [],
-    log: [{at: input.now, text: input.kind === 'posiedzenie' ? 'Utworzono posiedzenie.' : 'Utworzono procedurę głosowania między posiedzeniami (§ 14 ust. 5).', by: input.createdBy}],
+    log: [{at: input.now, text: input.kind === 'posiedzenie' ? 'Utworzono posiedzenie.' : 'Utworzono głosowanie między posiedzeniami (§ 14 ust. 5).', by: input.createdBy}],
     revision: 1, createdAt: input.now, createdBy: input.createdBy,
   };
 }
@@ -168,11 +169,55 @@ function applyAgendaChange(m: Meeting, ctx: Context, change: AgendaChange, after
   return target;
 }
 
+// Tekst w cudzysłowie „…”, a cudzysłów wewnątrz zamienia się na »…« (brand/JEZYK.md).
+const quoted = (text: string) => `„${text.replace(/„/g, '»').replace(/”/g, '«')}”`;
+
+// „19 listopada 2026 r., godz. 18:00” w strefie Europe/Warsaw.
+function dateTimeText(ts: number) {
+  const date = new Intl.DateTimeFormat('pl-PL', {timeZone: 'Europe/Warsaw', day: 'numeric', month: 'long', year: 'numeric'}).format(ts);
+  const time = new Intl.DateTimeFormat('pl-PL', {timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit'}).format(ts);
+  return `${date} r., godz. ${time}`;
+}
+
+// Miejsce, w które applyAgendaChange wstawi dodawany punkt (bez sprawdzania danych), albo null, gdy punkt odniesienia nie istnieje.
+function insertionIndex(agenda: AgendaItem[], change: {parentId: string | null; afterId: string | null}) {
+  if (change.afterId) {
+    let at = agenda.findIndex(i => i.id === change.afterId);
+    if (at < 0) return null;
+    at++;
+    while (!change.parentId && at < agenda.length && agenda[at].parentId) at++;
+    return at;
+  }
+  if (change.parentId) {
+    let at = agenda.findIndex(i => i.id === change.parentId);
+    if (at < 0) return null;
+    at++;
+    while (at < agenda.length && agenda[at].parentId === change.parentId) at++;
+    return at;
+  }
+  const closing = agenda.findIndex(i => i.kind === 'zamkniecie');
+  return closing >= 0 ? closing : agenda.length;
+}
+
+// Przedmiot głosowania nad zmianą porządku obrad: numer i tytuł punktu, a przy dodaniu także miejsce w porządku.
 function describeChange(m: Meeting, change: AgendaChange) {
-  if (change.op === 'dodaj') return `dodanie punktu „${change.title.trim()}”`;
+  const label = (it: AgendaItem) => `${itemNumber(m.agenda, it.id)} ${quoted(it.title)}`;
+  if (change.op === 'dodaj') {
+    const subject = `Wniosek o dodanie punktu ${quoted(cleanTitle(change.title))} do porządku obrad`;
+    const at = insertionIndex(m.agenda, {parentId: change.parentId ?? null, afterId: change.afterId ?? null});
+    if (at === null) return subject;
+    const probe = {id: '\u0000nowy', parentId: change.parentId ?? null} as AgendaItem;
+    const agenda = [...m.agenda.slice(0, at), probe, ...m.agenda.slice(at)];
+    const no = itemNumber(agenda, probe.id);
+    const parent = probe.parentId ? item(m, probe.parentId) : undefined;
+    if (parent) return `${subject}, jako podpunktu ${no} w punkcie ${label(parent)}`;
+    const top = agenda.filter(i => !i.parentId);
+    const previous = top[top.indexOf(probe) - 1];
+    return previous ? `${subject}, jako punktu ${no}, po punkcie ${label(previous)}` : `${subject}, jako punktu ${no}`;
+  }
   const t = item(m, change.itemId);
-  const label = t ? `${itemNumber(m.agenda, t.id)}. ${t.title}` : '';
-  return change.op === 'usun' ? `usunięcie punktu ${label}` : `przeniesienie punktu ${label}`;
+  if (change.op === 'usun') return t ? `Wniosek o usunięcie punktu ${label(t)} z porządku obrad` : 'Wniosek o usunięcie punktu z porządku obrad';
+  return t ? `Wniosek o przeniesienie punktu ${label(t)}` : 'Wniosek o przeniesienie punktu';
 }
 
 function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
@@ -192,11 +237,12 @@ function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
   ensure(input.subject.trim(), 'Podaj, czego dotyczy głosowanie.');
   if (input.mode !== 'jawne') {
     ensure(it && it.mode === input.mode && it.modeBasis,
-      `Głosowanie ${input.mode === 'tajne' ? 'tajne' : 'imienne'} wymaga wcześniejszego postanowienia Prezydium (§ 11 ust. 2).`);
+      input.mode === 'tajne' ? 'Głosowanie tajne jest możliwe dopiero po uchwaleniu przez Prezydium tajności głosowania.'
+        : 'Głosowanie imienne jest możliwe dopiero po jego uchwaleniu przez Prezydium.');
   }
   if (input.mode === 'tajne') ensure(ctx.secret, 'Głosowanie tajne nie jest dostępne.');
   const eligible = remote ? members : presentMembers(m, ctx.roster);
-  ensure(remote || eligible.length >= quorum, `Brak kworum: obecnych ${eligible.length} z ${members.length}, wymagane ${quorum} (§ 8 ust. 2).`);
+  ensure(remote || eligible.length >= quorum, `Brak kworum. Obecnych ${eligible.length} z ${members.length}, wymagane ${quorum} (§ 8 ust. 2).`);
   let material: Ballot['material'] = null;
   if (input.materialId) {
     const ref = m.materials.find(x => x.id === input.materialId);
@@ -217,7 +263,7 @@ function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
   if (input.mode === 'tajne') b.secret = {...ctx.secret!.openKey(id), issued: [], cast: 0};
   m.ballots.push(b);
   if (!remote) m.presentation = {kind: 'glosowanie', id, at: ctx.now};
-  log(m, ctx, actor, `Otwarto głosowanie nr ${b.number} (${b.mode}): ${b.subject}.`);
+  log(m, ctx, actor, `Otwarto głosowanie ${b.mode} nr ${b.number} ${quoted(b.subject)}.`);
   return b;
 }
 
@@ -244,17 +290,17 @@ function closeBallot(m: Meeting, ctx: Context, b: Ballot, reason: NonNullable<Ba
   if (ok && b.target?.kind === 'zmiana_porzadku') applyAgendaChange(m, ctx, b.target.change, true);
   if (b.target?.kind === 'tryb' && ok) {
     const it = item(m, b.target.itemId);
-    if (it) { it.mode = b.target.mode; it.modeBasis = `postanowienie Prezydium w głosowaniu nr ${b.number}`; }
+    if (it) { it.mode = b.target.mode; it.modeBasis = `uchwalone przez Prezydium w głosowaniu nr ${b.number}`; }
   }
   if (b.target?.kind === 'reasumpcja') {
     const motion = m.motions.find(x => x.id === (b.target as {motionId: string}).motionId);
     if (motion) motion.status = ok ? 'przyjety' : 'odrzucony';
   }
-  const why = reason === 'wszyscy' ? 'zagłosowali wszyscy uprawnieni' : reason === 'czas' ? 'upłynął czas' : 'zamknięte przez prowadzącego';
+  const why = reason === 'wszyscy' ? 'zagłosowali wszyscy uprawnieni' : reason === 'czas' ? 'upłynął czas' : 'zakończone przez osobę prowadzącą obrady';
   log(m, ctx, null, `Zakończono głosowanie nr ${b.number} (${why}). Za ${b.result.za}, przeciw ${b.result.przeciw}, wstrzymało się ${b.result.wstrzymuje}.`);
 }
 
-// Zamyka głosowania po upływie czasu albo gdy zagłosowali wszyscy uprawnieni; kończy procedurę.
+// Zamyka głosowania po upływie czasu albo gdy zagłosowali wszyscy uprawnieni; kończy głosowanie między posiedzeniami.
 export function advance(m: Meeting, ctx: Context) {
   let changed = false;
   for (const b of openBallots(m)) {
@@ -264,7 +310,7 @@ export function advance(m: Meeting, ctx: Context) {
   if (m.kind === 'procedura' && m.status === 'trwa' && m.ballots.length && !openBallots(m).length) {
     m.status = 'zakonczone';
     m.closedAt = ctx.now;
-    log(m, ctx, null, 'Procedura zakończona. Wszystkie głosowania zostały zamknięte.');
+    log(m, ctx, null, 'Głosowanie między posiedzeniami zakończone. Wszystkie głosowania zostały zamknięte.');
     changed = true;
   }
   return changed;
@@ -297,7 +343,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
 
   switch (cmd.type) {
     case 'details': {
-      ensure(isOrganizer(roster, m, actor), 'Szczegóły posiedzenia zmienia organizator.', 403);
+      ensure(isOrganizer(roster, m, actor), 'Dane posiedzenia zmienia biuro, przewodniczący albo wiceprzewodniczący.', 403);
       ensure(m.status === 'przygotowanie' || cmd.link !== undefined && Object.keys(cmd).length === 2, 'Po otwarciu można zmienić tylko odnośnik do połączenia.');
       if (cmd.title !== undefined) { ensure(cmd.title.trim(), 'Podaj tytuł.'); m.title = cmd.title.trim().slice(0, 200); }
       if (cmd.date !== undefined) { ensure(/^\d{4}-\d{2}-\d{2}$/.test(cmd.date), 'Nieprawidłowa data.'); m.date = cmd.date; }
@@ -305,11 +351,11 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       if (cmd.place !== undefined) m.place = cmd.place.trim().slice(0, 200);
       if (cmd.mode !== undefined) { ensure(['stacjonarne', 'zdalne'].includes(cmd.mode), 'Nieprawidłowy tryb.'); m.mode = cmd.mode; }
       if (cmd.link !== undefined) {
-        ensure(!cmd.link || /^https:\/\/\S+$/.test(cmd.link), 'Odnośnik do połączenia musi zaczynać się od https://');
+        ensure(!cmd.link || /^https:\/\/\S+$/.test(cmd.link), 'Wpisz pełny odnośnik do połączenia, zaczynający się od https://.');
         m.link = cmd.link.slice(0, 500);
       }
       if (cmd.noticeDate !== undefined) { ensure(!cmd.noticeDate || /^\d{4}-\d{2}-\d{2}$/.test(cmd.noticeDate), 'Nieprawidłowa data zawiadomienia.'); m.noticeDate = cmd.noticeDate; }
-      if (cmd.endsAt !== undefined) { ensure(m.kind === 'procedura' && cmd.endsAt > ctx.now, 'Termin zakończenia musi być w przyszłości.'); m.endsAt = cmd.endsAt; }
+      if (cmd.endsAt !== undefined) { ensure(m.kind === 'procedura' && cmd.endsAt > ctx.now, 'Ustaw koniec głosowania później niż teraz.'); m.endsAt = cmd.endsAt; }
       break;
     }
     case 'deputy': {
@@ -328,13 +374,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'invite': {
-      ensure(isOrganizer(roster, m, actor), 'Zaproszenia wysyła organizator.', 403);
+      ensure(isOrganizer(roster, m, actor), 'Zaproszenia zaznacza biuro, przewodniczący albo wiceprzewodniczący.', 403);
       ensure(m.status !== 'zakonczone', 'Posiedzenie jest zamknięte.');
       m.invited = cmd.on ? [...new Set([...m.invited, cmd.accountId])] : m.invited.filter(id => id !== cmd.accountId);
       break;
     }
     case 'item_add': {
-      ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad edytuje organizator, a po otwarciu prowadzący.', 403);
+      ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.', 403);
       const added = applyAgendaChange(m, ctx, {op: 'dodaj', title: cmd.title, parentId: cmd.parentId ?? null, afterId: cmd.afterId ?? null}, false);
       if (m.status !== 'przygotowanie') log(m, ctx, actor, `Dodano punkt porządku: ${added.title}.`);
       break;
@@ -347,7 +393,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         it.title = cmd.title.replace(/\s+/g, ' ').trim().slice(0, 400);
       }
       if (cmd.note !== undefined || cmd.presenter !== undefined) {
-        ensure(isOrganizer(roster, m, actor) || m.chair.current === actor.personId, 'Notatki prowadzi prowadzący lub biuro.', 403);
+        ensure(isOrganizer(roster, m, actor) || m.chair.current === actor.personId, 'Notatki do protokołu prowadzi osoba prowadząca obrady albo biuro.', 403);
         if (cmd.note !== undefined) it.note = cmd.note.slice(0, 20000);
         if (cmd.presenter !== undefined) it.presenter = cmd.presenter.slice(0, 200);
       }
@@ -370,8 +416,8 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'agenda_import': {
-      ensure(canEditAgenda(roster, m, actor), 'Porządek wczytuje organizator przed jego przyjęciem.', 403);
-      const parsed = parseAgendaText(cmd.text.slice(0, 100000));
+      ensure(canEditAgenda(roster, m, actor), 'Porządek wczytuje biuro, przewodniczący albo wiceprzewodniczący przed jego przyjęciem.', 403);
+      const parsed = parseAgendaText(cmd.text.slice(0, 100000), {flat: m.kind === 'procedura'});
       ensure(parsed.items.length, parsed.warnings[0] ?? 'Brak punktów.');
       if (cmd.replace) {
         ensure(m.status === 'przygotowanie', 'Po otwarciu posiedzenia porządek można tylko uzupełniać.');
@@ -384,28 +430,28 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         ids.push(it.id);
         m.agenda.push(it);
       }
-      log(m, ctx, actor, `Wczytano porządek obrad (${parsed.items.length} pozycji).`);
+      log(m, ctx, actor, `Wczytano porządek obrad (${parsed.items.length} ${plural(parsed.items.length, 'pozycja', 'pozycje', 'pozycji')}).`);
       break;
     }
     case 'item_material': {
-      ensure(isOrganizer(roster, m, actor) || m.chair.current === actor.personId, 'Materiały przypisuje organizator lub prowadzący.', 403);
+      ensure(isOrganizer(roster, m, actor) || m.chair.current === actor.personId, 'Materiały przypisuje biuro albo osoba prowadząca obrady.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       ensure(m.materials.some(x => x.id === cmd.materialId), 'Nie znaleziono materiału.', 404);
       it.materialIds = cmd.on ? [...new Set([...it.materialIds, cmd.materialId])] : it.materialIds.filter(id => id !== cmd.materialId);
       break;
     }
     case 'item_mode': {
-      ensure(m.kind === 'procedura' && m.status === 'przygotowanie' && isOrganizer(roster, m, actor), 'Tryb głosowania w procedurze ustala organizator przed jej rozpoczęciem.', 403);
+      ensure(m.kind === 'procedura' && m.status === 'przygotowanie' && isOrganizer(roster, m, actor), 'Tryb głosowania ustala się przed rozpoczęciem głosowania między posiedzeniami.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       ensure(['jawne', 'imienne', 'tajne'].includes(cmd.mode), 'Nieprawidłowy tryb głosowania.');
-      ensure(cmd.mode === 'jawne' || cmd.basis.trim().length >= 5, 'Podaj podstawę, czyli postanowienie Prezydium o głosowaniu tajnym lub imiennym (§ 11 ust. 2).');
+      ensure(cmd.mode === 'jawne' || cmd.basis.trim().length >= 5, 'Wpisz podstawę, czyli kiedy Prezydium uchwaliło tajność głosowania albo głosowanie imienne.');
       it.mode = cmd.mode === 'jawne' ? undefined : cmd.mode;
       it.modeBasis = cmd.mode === 'jawne' ? undefined : cmd.basis.trim().slice(0, 300);
       break;
     }
     case 'open': {
       ensure(m.status === 'przygotowanie', 'To posiedzenie zostało już otwarte.');
-      ensure(canChairOrgan(roster, m.organ, actor.personId), posiedzenie ? 'Posiedzenie otwiera przewodniczący lub wiceprzewodniczący (§ 9 ust. 1).' : 'Procedurę rozpoczyna przewodniczący lub wiceprzewodniczący.', 403);
+      ensure(canChairOrgan(roster, m.organ, actor.personId), posiedzenie ? 'Posiedzenie otwiera przewodniczący albo wiceprzewodniczący (§ 9 ust. 1).' : 'Głosowanie między posiedzeniami rozpoczyna przewodniczący albo wiceprzewodniczący.', 403);
       if (posiedzenie) {
         m.status = 'trwa';
         m.openedAt = ctx.now;
@@ -415,13 +461,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         const first = m.agenda.find(i => !i.parentId);
         if (first) { first.status = 'w_toku'; first.startedAt = ctx.now; m.currentItemId = first.id; m.presentation = {kind: 'punkt', id: first.id, at: ctx.now}; }
         const days = noticeDays(m);
-        log(m, ctx, actor, `Otwarcie posiedzenia. Prowadzi: ${actor.name}.`);
+        log(m, ctx, actor, `Otwarcie posiedzenia. Prowadzi ${actor.name}.`);
         if (days === null) log(m, ctx, null, 'Nie wpisano daty wysłania zawiadomienia (§ 7 ust. 1).');
-        else if (days < 7) log(m, ctx, null, `Zawiadomienie wysłano ${days} dni przed posiedzeniem, a regulamin wymaga co najmniej 7 dni (§ 7 ust. 1).`);
+        else if (days < 7) log(m, ctx, null, `Zawiadomienie wysłano ${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem, a regulamin wymaga co najmniej 7 dni (§ 7 ust. 1).`);
       } else {
         const acts = m.agenda.filter(i => !i.parentId);
         ensure(acts.length, 'Dodaj co najmniej jedną sprawę do głosowania.');
-        ensure(m.endsAt && m.endsAt > ctx.now + 5 * 60000, 'Termin zakończenia głosowania musi przypadać co najmniej 5 minut od teraz.');
+        ensure(m.endsAt && m.endsAt > ctx.now + 5 * 60000, 'Ustaw koniec głosowania co najmniej 5 minut od teraz.');
         m.status = 'trwa';
         m.openedAt = ctx.now;
         m.chair.current = actor.personId;
@@ -434,16 +480,16 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
             mode: act.mode ?? 'jawne', minutes: 0, materialId: ref?.id ?? null, endsAt: m.endsAt,
           });
         }
-        log(m, ctx, actor, `Rozpoczęto głosowanie między posiedzeniami. Koniec: termin wyznaczony przez prowadzącego.`);
+        log(m, ctx, actor, `Rozpoczęto głosowanie między posiedzeniami. Potrwa do ${dateTimeText(m.endsAt)}.`);
       }
       break;
     }
     case 'presence': {
-      ensure(posiedzenie, 'W procedurze między posiedzeniami nie prowadzi się listy obecności.');
+      ensure(posiedzenie, 'W głosowaniu między posiedzeniami nie prowadzi się listy obecności.');
       ensure(m.status !== 'zakonczone', 'Posiedzenie zostało zamknięte.');
       const guest = !!cmd.guest;
       const self = guest ? actor.account.id === cmd.who : actor.personId === cmd.who;
-      ensure(self || m.chair.current === actor.personId || isOrganizer(roster, m, actor), 'Obecność innej osoby zaznacza prowadzący lub biuro.', 403);
+      ensure(self || m.chair.current === actor.personId || isOrganizer(roster, m, actor), 'Obecność innej osoby zapisuje osoba prowadząca obrady albo biuro.', 403);
       if (guest) ensure(m.invited.includes(cmd.who), 'Ta osoba nie jest zaproszona.');
       else ensure(isMember(roster, m, cmd.who), 'Ta osoba nie jest członkiem organu.');
       setPresence(m, ctx, actor, cmd.who, guest, cmd.present);
@@ -453,7 +499,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       requireLive(m); requireChair(m, actor);
       const total = memberIds(roster, m.organ).length, present = presentMembers(m, roster).length, required = quorumFor(total);
       m.quorumChecks.push({at: ctx.now, present, required, by: actor.name});
-      log(m, ctx, actor, present >= required ? `Stwierdzono kworum: obecnych ${present} z ${total} (wymagane ${required}).` : `Brak kworum: obecnych ${present} z ${total} (wymagane ${required}).`);
+      log(m, ctx, actor, present >= required ? `Stwierdzono kworum. Obecnych ${present} z ${total}, wymagane ${required}.` : `Stwierdzono brak kworum. Obecnych ${present} z ${total}, wymagane ${required}.`);
       break;
     }
     case 'item_start': {
@@ -475,7 +521,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       it.status = 'w_toku'; it.startedAt ??= ctx.now;
       m.currentItemId = it.id;
       m.presentation = {kind: 'punkt', id: it.id, at: ctx.now};
-      log(m, ctx, actor, `Punkt ${itemNumber(m.agenda, it.id)}: ${it.title}.`);
+      log(m, ctx, actor, `Rozpoczęto punkt ${itemNumber(m.agenda, it.id)} ${quoted(it.title)}.`);
       break;
     }
     case 'item_end': {
@@ -500,7 +546,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'ballot_open': {
-      ensure(posiedzenie, 'W procedurze głosowania otwierają się razem z jej rozpoczęciem.');
+      ensure(posiedzenie, 'W głosowaniu między posiedzeniami wszystkie głosowania otwierają się razem z jego rozpoczęciem.');
       requireLive(m); requireChair(m, actor);
       ensure(['uchwala', 'porzadek', 'protokol', 'wniosek', 'inna'].includes(cmd.purpose), 'Nieprawidłowy rodzaj głosowania.');
       ensure(['jawne', 'imienne', 'tajne'].includes(cmd.mode), 'Nieprawidłowy tryb głosowania.');
@@ -526,13 +572,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(b.eligible.includes(cmd.personId) && !hasVoted(b, cmd.personId), 'Ta osoba już zagłosowała albo nie jest uprawniona.');
       setPresence(m, ctx, actor, cmd.personId, false, false);
       if (!b.absentDuring.includes(cmd.personId)) b.absentDuring.push(cmd.personId);
-      log(m, ctx, actor, `Podczas głosowania nr ${b.number} oznaczono nieobecność: ${name(ctx, cmd.personId)}.`);
+      log(m, ctx, actor, `Nieobecność podczas głosowania nr ${b.number} (${name(ctx, cmd.personId)}).`);
       break;
     }
     case 'ballot_close': {
       const b = ballot(m, cmd.ballotId);
       ensure(b.status === 'otwarte', 'Głosowanie zostało już zakończone.');
-      ensure(b.remote ? canChairOrgan(roster, m.organ, actor.personId) : m.chair.current === actor.personId, 'Głosowanie zamyka prowadzący.', 403);
+      ensure(b.remote ? canChairOrgan(roster, m.organ, actor.personId) : m.chair.current === actor.personId, 'Głosowanie kończy osoba prowadząca obrady.', 403);
       closeBallot(m, ctx, b, 'prowadzacy');
       break;
     }
@@ -540,7 +586,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const b = ballot(m, cmd.ballotId);
       ensure(b.status === 'zamkniete', 'Wynik można ogłosić po zakończeniu głosowania.');
       if (posiedzenie) { requireLive(m); requireChair(m, actor); }
-      else ensure(canChairOrgan(roster, m.organ, actor.personId) || isOrganizer(roster, m, actor), 'Wynik ogłasza prowadzący.', 403);
+      else ensure(canChairOrgan(roster, m.organ, actor.personId) || isOrganizer(roster, m, actor), 'Wynik ogłasza osoba prowadząca obrady.', 403);
       b.announcedAt ??= ctx.now;
       if (posiedzenie) m.presentation = {kind: 'wynik', id: b.id, at: ctx.now};
       log(m, ctx, actor, `Ogłoszono wynik głosowania nr ${b.number}.`);
@@ -549,17 +595,17 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'agenda_change': {
       ensure(posiedzenie && m.agendaAdopted, 'Przed przyjęciem porządek obrad poprawia się bezpośrednio.');
       requireLive(m); requireChair(m, actor);
-      const subject = `Zmiana porządku obrad: ${describeChange(m, cmd.change)}`;
+      const subject = describeChange(m, cmd.change);
       if (cmd.change.op !== 'dodaj') ensure(item(m, cmd.change.itemId), 'Nie znaleziono punktu.', 404);
       openBallot(m, ctx, actor, {itemId: null, purpose: 'zmiana_porzadku', subject, mode: 'jawne', minutes: cmd.minutes, target: {kind: 'zmiana_porzadku', change: cmd.change}});
       break;
     }
     case 'mode_motion': {
-      ensure(posiedzenie, 'W procedurze tryb ustala się przed jej rozpoczęciem.');
+      ensure(posiedzenie, 'W głosowaniu między posiedzeniami tryb ustala się przed jego rozpoczęciem.');
       requireLive(m); requireChair(m, actor);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       ensure(cmd.mode === 'tajne' || cmd.mode === 'imienne', 'Nieprawidłowy tryb.');
-      const subject = `Wniosek o przeprowadzenie głosowania ${cmd.mode === 'tajne' ? 'tajnego' : 'imiennego'} w sprawie: ${it.title}`;
+      const subject = `Wniosek o przeprowadzenie głosowania ${cmd.mode === 'tajne' ? 'tajnego' : 'imiennego'} w punkcie ${itemNumber(m.agenda, it.id)} ${quoted(it.title)}`;
       openBallot(m, ctx, actor, {itemId: null, purpose: 'tryb', subject, mode: 'jawne', minutes: cmd.minutes, target: {kind: 'tryb', itemId: it.id, mode: cmd.mode}});
       break;
     }
@@ -603,7 +649,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const motion = m.motions.find(x => x.id === cmd.motionId) ?? fail('Nie znaleziono wniosku.', 404);
       ensure(motion.status === 'zlozony', 'Wniosek nie ma jeszcze wymaganej liczby podpisów (§ 12 ust. 5).');
       const original = ballot(m, motion.ballotId);
-      const b = openBallot(m, ctx, actor, {itemId: original.itemId, purpose: 'reasumpcja', subject: `Wniosek o reasumpcję głosowania nr ${original.number}: ${original.subject}`, mode: 'jawne', minutes: cmd.minutes, target: {kind: 'reasumpcja', ballotId: original.id, motionId: motion.id}});
+      const b = openBallot(m, ctx, actor, {itemId: original.itemId, purpose: 'reasumpcja', subject: `Wniosek o reasumpcję głosowania nr ${original.number} ${quoted(original.subject)}`, mode: 'jawne', minutes: cmd.minutes, target: {kind: 'reasumpcja', ballotId: original.id, motionId: motion.id}});
       motion.status = 'glosowany';
       motion.voteBallotId = b.id;
       break;
@@ -625,7 +671,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(cmd.personId !== actor.personId, 'Prowadzisz już posiedzenie.');
       m.chair.changes.push({at: ctx.now, from: m.chair.current, to: cmd.personId, by: actor.name, reason: 'przekazanie prowadzenia'});
       m.chair.current = cmd.personId;
-      log(m, ctx, actor, `Prowadzenie obrad przejmuje: ${name(ctx, cmd.personId)}.`);
+      log(m, ctx, actor, `Prowadzenie obrad przejmuje ${name(ctx, cmd.personId)}.`);
       break;
     }
     case 'chair_take': {
@@ -638,9 +684,9 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const deputyAway = !m.chair.deputy || m.attendance[m.chair.deputy] !== 'obecny';
       ensure(chairman || currentAway && (m.chair.deputy === actor.personId || deputyAway),
         currentAway ? 'Prowadzenie przejmuje wyznaczony zastępca (§ 16 ust. 2).' : 'Prowadzenie może przekazać osoba prowadząca; przewodniczący może je przejąć.', 403);
-      m.chair.changes.push({at: ctx.now, from: m.chair.current, to: actor.personId, by: actor.name, reason: chairman ? 'przejęcie przez przewodniczącego' : 'zastępstwo podczas nieobecności prowadzącego'});
+      m.chair.changes.push({at: ctx.now, from: m.chair.current, to: actor.personId, by: actor.name, reason: chairman ? 'przejęcie przez przewodniczącego' : 'zastępstwo podczas nieobecności osoby prowadzącej obrady'});
       m.chair.current = actor.personId;
-      log(m, ctx, actor, `Prowadzenie obrad przejmuje: ${actor.name}.`);
+      log(m, ctx, actor, `Prowadzenie obrad przejmuje ${actor.name}.`);
       break;
     }
     case 'break': {
@@ -652,14 +698,14 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     }
     case 'close': {
       requireLive(m);
-      ensure(posiedzenie ? m.chair.current === actor.personId : canChairOrgan(roster, m.organ, actor.personId), 'Posiedzenie zamyka prowadzący.', 403);
+      ensure(posiedzenie ? m.chair.current === actor.personId : canChairOrgan(roster, m.organ, actor.personId), 'Posiedzenie zamyka osoba prowadząca obrady.', 403);
       if (posiedzenie) ensure(!openBallots(m).length, 'Trwa głosowanie. Posiedzenie można zamknąć po jego zakończeniu.');
       else for (const b of openBallots(m)) closeBallot(m, ctx, b, 'prowadzacy');
       for (const it of m.agenda) if (it.status === 'w_toku') { it.status = 'zakonczony'; it.endedAt = ctx.now; }
       m.status = 'zakonczone';
       m.closedAt = ctx.now;
       m.presentation = null;
-      log(m, ctx, actor, posiedzenie ? 'Zamknięcie posiedzenia.' : 'Procedura zakończona przez prowadzącego.');
+      log(m, ctx, actor, posiedzenie ? 'Zamknięcie posiedzenia.' : 'Głosowanie między posiedzeniami zakończono przed czasem.');
       break;
     }
     case 'message': {

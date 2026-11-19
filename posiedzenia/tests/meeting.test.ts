@@ -26,7 +26,7 @@ const resolutionItem = (m: Meeting) => m.agenda.find(i => i.kind === 'uchwaly')!
 test('kworum Prezydium to 4 z 7 — przy 3 obecnych nie można głosować (§ 8 ust. 2)', () => {
   const {ctx, m} = opened(['si', 'ag', 'jw']);
   const point = m.agenda.find(i => i.kind === 'porzadek')!;
-  assert.throws(() => apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Porządek', mode: 'jawne', minutes: 2}, actor('si'), ctx), /Brak kworum: obecnych 3 z 7, wymagane 4/);
+  assert.throws(() => apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Porządek', mode: 'jawne', minutes: 2}, actor('si'), ctx), /Brak kworum\. Obecnych 3 z 7, wymagane 4/);
 });
 
 test('przed przyjęciem porządku nie można przejść do dalszych spraw; po przyjęciu można', () => {
@@ -97,14 +97,14 @@ test('głosowanie tajne wymaga postanowienia Prezydium, a potem nie ujawnia, kto
   const {ctx, m: start} = opened();
   let m = adoptAgenda(start, ctx);
   const it = resolutionItem(m);
-  assert.throws(() => apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx), /wcześniejszego postanowienia Prezydium/);
+  assert.throws(() => apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx), /możliwe dopiero po uchwaleniu przez Prezydium tajności głosowania/);
   m = apply(m, {type: 'mode_motion', itemId: it.id, mode: 'tajne', minutes: 2}, actor('si'), ctx.tick());
   const motion = m.ballots.at(-1)!;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: motion.id, choice: p === 'eo' ? 'przeciw' : 'za'}, actor(p), ctx.tick());
   assert.equal(m.agenda.find(i => i.id === it.id)!.mode, 'tajne');
   m = apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx.tick());
   const secret = m.ballots.at(-1)!;
-  assert.equal(secret.modeBasis, 'postanowienie Prezydium w głosowaniu nr 2');
+  assert.equal(secret.modeBasis, 'uchwalone przez Prezydium w głosowaniu nr 2');
   assert.throws(() => apply(m, {type: 'vote', ballotId: secret.id, choice: 'za'}, actor('ag'), ctx), /kartą tajną/);
   for (const p of presidium) {
     m = secretIssue(m, secret.id, actor(p), ctx.tick());
@@ -180,9 +180,9 @@ test('procedura między posiedzeniami: okno czasowe, wcześniejsze zakończenie 
   let m = newMeeting(ctx, 'procedura');
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu', parentId: null}, actor(null, 'biuro'), ctx.tick());
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 121/IX/2026 w sprawie delegacji', parentId: null}, actor(null, 'biuro'), ctx.tick());
-  assert.throws(() => apply(m, {type: 'open'}, actor('si'), ctx), /Termin zakończenia/);
+  assert.throws(() => apply(m, {type: 'open'}, actor('si'), ctx), /Ustaw koniec głosowania co najmniej 5 minut od teraz/);
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, actor(null, 'biuro'), ctx.tick());
-  assert.throws(() => apply(m, {type: 'open'}, actor('kn'), ctx), /Procedurę rozpoczyna/);
+  assert.throws(() => apply(m, {type: 'open'}, actor('kn'), ctx), /Głosowanie między posiedzeniami rozpoczyna/);
   m = apply(m, {type: 'open'}, actor('si'), ctx.tick());
   const [first, second] = m.ballots;
   assert.equal(first.eligible.length, 7);

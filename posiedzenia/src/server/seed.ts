@@ -29,6 +29,9 @@ export const seedOrgans: Organ[] = [
 
 export const seedPersons: Person[] = people.map(([id, name, sortName]) => ({id, name, sortName}));
 
+/** Funkcja członka Okręgowej Rady spoza Prezydium (pełna nazwa organu zamiast skrótu). */
+export const councilMemberLabel = 'Członek Okręgowej Rady Pielęgniarek i Położnych w Słupsku';
+
 const presidium: [string, Membership['func'], string, boolean][] = [
   ['si', 'przewodniczacy', 'Przewodniczący', true],
   ['ag', 'wiceprzewodniczacy', 'I Wiceprzewodnicząca', true],
@@ -46,7 +49,7 @@ export const seedMemberships: Membership[] = [
     return {
       organ: 'rada' as const, personId, order,
       func: inPresidium ? inPresidium[1] : 'czlonek' as const,
-      label: inPresidium && inPresidium[1] !== 'czlonek' ? inPresidium[2].replace(/^I+ /, '') : 'Członek ORPiP',
+      label: inPresidium && inPresidium[1] !== 'czlonek' ? inPresidium[2].replace(/^I+ /, '') : councilMemberLabel,
       canChair: inPresidium ? inPresidium[3] : false,
     };
   }),

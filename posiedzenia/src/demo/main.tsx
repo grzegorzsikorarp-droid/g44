@@ -27,6 +27,25 @@ setBrand({
   loginScreen: props => <DemoPicker server={server} onDone={props.onDone}/>,
 });
 
+// W ramce sandbox bez „allow-forms” (opublikowana strona) przeglądarka nie wysyła formularzy i nie wywołuje zdarzenia
+// submit. Wersja próbna sama sprawdza pola i wywołuje submit, który obsługują formularze aplikacji (każdy z preventDefault).
+const submitForm = (form: HTMLFormElement, submitter: HTMLElement | null) => {
+  if (form.reportValidity()) form.dispatchEvent(new SubmitEvent('submit', {bubbles: true, cancelable: true, submitter}));
+};
+document.addEventListener('click', event => {
+  const button = (event.target as Element).closest?.('button') as HTMLButtonElement | null;
+  if (!button || button.type !== 'submit' || !button.form) return;
+  event.preventDefault();
+  if (button.getAttribute('aria-disabled') !== 'true') submitForm(button.form, button);
+});
+document.addEventListener('keydown', event => {
+  const field = event.target;
+  if (event.key !== 'Enter' || event.defaultPrevented || !(field instanceof HTMLInputElement) || !field.form || ['button', 'submit', 'checkbox', 'radio', 'file'].includes(field.type)) return;
+  event.preventDefault();
+  const submitter = field.form.querySelector<HTMLButtonElement>('button[type="submit"]');
+  if (submitter?.getAttribute('aria-disabled') !== 'true') submitForm(field.form, submitter);
+});
+
 // Projekt protokołu otwiera się w oknie na tej samej stronie (strona próbna nie otwiera nowych kart ani wydruku).
 const overlay = document.createElement('div');
 document.body.appendChild(overlay);

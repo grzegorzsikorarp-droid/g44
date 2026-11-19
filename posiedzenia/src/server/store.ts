@@ -2,7 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import type {Account, Meeting, Roster} from '../shared/types.ts';
-import {seedRoster} from './seed.ts';
+import {councilMemberLabel, seedRoster} from './seed.ts';
 
 const schema = `
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -53,6 +53,11 @@ export class Store {
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;');
     this.db.exec(schema);
     if (!this.db.prepare('SELECT 1 FROM persons LIMIT 1').get()) this.seed(seedRoster);
+    // Jednorazowa zamiana etykiety składu w bazie utworzonej przed zmianą: skrót „Członek ORPiP” na pełną nazwę organu.
+    if (!this.db.prepare("SELECT 1 FROM meta WHERE key = 'etykieta-skladu'").get()) {
+      this.db.prepare("UPDATE memberships SET label = ? WHERE label = 'Członek ORPiP'").run(councilMemberLabel);
+      this.db.prepare("INSERT INTO meta(key, value) VALUES ('etykieta-skladu', '1')").run();
+    }
   }
 
   private seed(roster: Roster) {

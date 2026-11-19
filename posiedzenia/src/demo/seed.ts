@@ -27,10 +27,10 @@ export const demoRoster: Roster = {
 export const demoAccounts: Account[] = [
   ...people.map(([personId, name]) => ({id: 'a-' + personId, username: login(name), kind: 'czlonek' as const, personId, displayName: name, label: '', admin: false, mustChange: false, disabled: false})),
   {id: 'a-biuro', username: 'biuro', kind: 'biuro', personId: null, displayName: 'Biuro', label: 'Obsługa posiedzeń', admin: true, mustChange: false, disabled: false},
-  {id: 'a-kr', username: 'komisja.rewizyjna', kind: 'doradczy', personId: null, displayName: 'Halina Kowalczyk', label: 'Przewodnicząca Komisji Rewizyjnej (głos doradczy)', admin: false, mustChange: false, disabled: false},
+  {id: 'a-kr', username: 'komisja.rewizyjna', kind: 'doradczy', personId: null, displayName: 'Halina Kowalczyk', label: 'Przewodnicząca Okręgowej Komisji Rewizyjnej', admin: false, mustChange: false, disabled: false},
 ];
 
-const pwz = (no: string, who: string, number: string) => `Uchwała nr ${no}/IX/2026 PWZ
+const licence = (no: string, who: string, number: string) => `Uchwała nr ${no}/IX/2026
 Prezydium Okręgowej Rady
 z dnia 22 października 2026 r.
 w sprawie stwierdzenia prawa wykonywania zawodu pielęgniarki
@@ -63,8 +63,8 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   ];
   let at = meeting.agenda.indexOf(resolutions) + 1;
   for (const [no, who, number] of acts) {
-    const title = `Uchwała nr ${no}/IX/2026 PWZ w sprawie stwierdzenia prawa wykonywania zawodu pielęgniarki`;
-    const ref = material(meeting.id, title, `${no}/IX/2026 PWZ`, pwz(no, who, number));
+    const title = `Uchwała nr ${no}/IX/2026 w sprawie stwierdzenia prawa wykonywania zawodu pielęgniarki`;
+    const ref = material(meeting.id, title, `${no}/IX/2026`, licence(no, who, number));
     meeting.materials.push(ref);
     const sub = newItem(newId(), title, 'sprawa', resolutions.id);
     sub.materialIds = [ref.id];

@@ -1,26 +1,74 @@
-.edit-list { list-style: none; padding: 0; }
-.edit-list li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: var(--odstep-2); align-items: center; padding: 6px 0; border-top: var(--kreska) solid var(--linia-jasna); }
-.edit-list li.is-sub { padding-left: 24px; }
-.edit-list .sub-form { grid-column: 1 / -1; padding-left: 2.6em; }
-.edit-title { text-align: left; background: none; border: 0; padding: 6px 4px; font: inherit; font-size: var(--t-lista); line-height: 1.4; color: var(--tekst-mocny); cursor: text; overflow-wrap: anywhere; }
-.edit-title:hover { background: var(--powierzchnia-miekka); }
-.edit-title small { margin-left: .6em; font-style: italic; color: var(--tekst-drugorzedny); }
-.edit-tools { display: flex; gap: var(--odstep-3); flex-wrap: wrap; justify-content: flex-end; }
+/* Edytor porządku obrad i spraw do głosowania. Narzędzia wiersza to szare odnośniki: na urządzeniach z kursorem
+   pojawiają się przy najechaniu i przy fokusie (ukryte przycięciem, więc zajmują swoje miejsce i dalej można do nich
+   przejść klawiszem Tab), a do 760 px stoją w drugim wierszu pod tytułem. */
+.edit-list { list-style: none; padding: 0; margin: 0; }
+.edit-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; grid-template-areas: 'no main tools'; column-gap: var(--odstep-2); align-items: center; padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.edit-row.is-sub { padding-left: var(--odstep-6); }
+.edit-row > .agenda-no { grid-area: no; align-self: start; padding-top: var(--odstep-1); }
+.edit-main { grid-area: main; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-block: var(--odstep-1); }
+.edit-title { font-size: var(--t-lista); line-height: 1.4; color: var(--tekst-mocny); overflow-wrap: break-word; hyphens: auto; }
+.edit-meta { font-size: var(--t-meta); line-height: 1.4; color: var(--tekst-drugorzedny); }
+.edit-tools { grid-area: tools; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--odstep-3); }
+.edit-form, .sub-form, .edit-extra { grid-column: 2 / -1; min-width: 0; }
+.edit-form { display: flex; flex-direction: column; gap: var(--odstep-3); padding-block: var(--odstep-2); }
+.sub-form { margin-top: var(--odstep-2); }
+.edit-extra { margin-top: var(--odstep-2); }
+@media (hover: hover) and (pointer: fine) {
+  .edit-tools { clip-path: inset(50%); }
+  .edit-row:hover > .edit-tools, .edit-row:focus-within > .edit-tools { clip-path: none; }
+}
+@media (max-width: 760px) {
+  .edit-row { grid-template-columns: 2.6em minmax(0, 1fr); grid-template-areas: 'no main' '. tools'; }
+  .edit-tools { justify-content: flex-start; }
+}
+/* Na telefonie pole nowego punktu zajmuje całą szerokość, a przycisk stoi pod nim */
+@media (max-width: 480px) {
+  .agenda-editor .inline-form { flex-direction: column; align-items: stretch; }
+  .agenda-editor .inline-form > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+}
+/* Przyciski wyboru w polu formularza mieszczą się obok siebie także w kolumnie bocznej */
+.oi-seg.seg-field .oi-opt { flex: 1 1 auto; }
+
+/* Okno wczytywania porządku albo spraw z tekstu */
 .import { display: grid; grid-template-columns: 1fr 1fr; gap: var(--odstep-5); }
-.import-preview { background: var(--powierzchnia-miekka); padding: 14px 16px; max-height: 440px; overflow: auto; display: flex; flex-direction: column; gap: var(--odstep-3); }
-.preview-list { padding-left: 1.4em; display: flex; flex-direction: column; gap: 4px; }
+.import-actions { align-items: flex-start; }
+.import-preview { background: var(--powierzchnia-miekka); padding: var(--odstep-3) var(--odstep-4); max-height: 440px; overflow: auto; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.preview-list { padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--odstep-1); }
 .preview-list li.is-sub { margin-left: 1.4em; list-style-type: "– "; }
 @media (max-width: 760px) { .import { grid-template-columns: 1fr; } }
 
-/* Przygotowanie */
+/* Przygotowanie: treść i kolumna boczna 370 px, do 960 px jedna kolumna z boczną pod treścią.
+   „Usuń to posiedzenie” stoi zawsze na końcu strony. */
 .prep, .procedure { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: var(--odstep-6); align-items: start; }
 .prep-main, .prep-side, .procedure-main, .procedure-side { display: flex; flex-direction: column; gap: var(--odstep-6); min-width: 0; }
-@media (max-width: 960px) { .prep, .procedure { grid-template-columns: 1fr; gap: var(--odstep-4); } .prep-side { order: -1; } .prep-main, .prep-side, .procedure-main, .procedure-side { gap: var(--odstep-4); } }
+.prep-end { grid-column: 1 / -1; }
+@media (max-width: 960px) { .prep, .procedure { grid-template-columns: 1fr; gap: var(--odstep-4); } .prep-main, .prep-side, .procedure-main, .procedure-side { gap: var(--odstep-4); } }
 .material-table { list-style: none; padding: 0; }
-.material-table li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); padding: 12px 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.material-table li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
 .material-table li > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
 
+/* Gotowość posiedzenia: zdanie i znacznik słowny w jednym wierszu */
+.readiness-list { list-style: none; padding: 0; margin: 0; }
+.readiness-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--odstep-2) var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-maly); line-height: 1.4; color: var(--tekst-mocny); }
+.readiness-list li:first-child { border-top: 0; padding-top: 0; }
+.readiness-list .oi-status { flex: none; }
+
+/* Zapis formularza: przycisk i informacja o zapisie obok siebie, na wąskiej kolumnie jedno pod drugim */
+.form-save { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-2) var(--odstep-4); }
+.form-save .save-status { flex: 1 1 12em; padding-top: var(--odstep-2); }
+
+/* Głos doradczy i goście: nazwisko z funkcją i znacznik rodzaju konta */
+.invite { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-1) var(--odstep-2); }
+
 /* Głosowanie między posiedzeniami */
-.window .countdown strong { font-size: var(--t-liczba); color: var(--akcent-duzy); }
-.act-settings { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-3); display: flex; flex-direction: column; gap: var(--odstep-3); }
+.act-settings { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.act-settings .actions { align-items: flex-start; }
 .acts { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.window-due { font-size: var(--t-lista); font-weight: 600; color: var(--tekst-mocny); }
+.window-left { font-size: var(--t-lista); color: var(--tekst-mocny); }
+.window-left .countdown strong { font-size: var(--t-liczba); line-height: 1.1; color: var(--akcent-duzy); }
+.window-end { display: flex; flex-direction: column; align-items: flex-start; gap: var(--odstep-2); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.act-pending { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.act-pending ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--odstep-1) var(--odstep-5); font-size: var(--t-lista); color: var(--tekst-mocny); }
+.act-foot { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.start-warnings { display: flex; flex-direction: column; gap: var(--odstep-2); }

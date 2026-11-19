@@ -17,10 +17,10 @@ export function newItem(id: string, title: string, kind: ItemKind, parentId: str
   return {id, parentId, title: cleanTitle(title), kind, status: 'oczekuje', materialIds: [], note: '', presenter: ''};
 }
 
-// Końcowa kropka znika, chyba że kończy skrót (np. „2026 r.”, „ust.”, „pkt.”).
+// Końcowa kropka, średnik albo dwukropek znika, chyba że kropka kończy skrót (np. „2026 r.”, „ust.”, „pkt.”).
 export function cleanTitle(title: string) {
   const t = title.replace(/\s+/g, ' ').trim();
-  return (/(?:^|\s)(?:r|ust|pkt|nr|ul|tzw|itp|itd|godz|poz|m\.in)\.$/i.test(t) ? t : t.replace(/[.;]$/, '')).slice(0, 400);
+  return (/(?:^|\s)(?:r|ust|pkt|nr|ul|tzw|itp|itd|godz|poz|m\.in)\.$/i.test(t) ? t : t.replace(/[.;:]$/, '')).slice(0, 400);
 }
 
 export function guessKind(title: string, topLevel: boolean): ItemKind {
@@ -39,7 +39,9 @@ export function guessKind(title: string, topLevel: boolean): ItemKind {
 // Wczytanie porządku z tekstu wklejonego z Worda albo z pliku TXT/Markdown.
 // Punkty główne: numer przy lewym marginesie („1.”, „2)”). Podpunkty: wcięcie
 // albo myślnik/punktor/„a)”/„4.1.”. Inne wiersze dopisują się do poprzedniego tytułu.
-export function parseAgendaText(text: string) {
+// Z `flat` (sprawy w głosowaniu między posiedzeniami) każdy wiersz z treścią, także z myślnikiem albo wcięciem,
+// staje się pozycją główną, a punkt „Przyjęcie porządku obrad” nie jest dodawany.
+export function parseAgendaText(text: string, options: {flat?: boolean} = {}) {
   const warnings: string[] = [];
   let body = text.replace(/\r\n?/g, '\n').replace(/^﻿/, '');
   body = body.replace(/^---\n[\s\S]*?\n---\n/, '');
@@ -49,6 +51,11 @@ export function parseAgendaText(text: string) {
     if (!raw.trim() || /^\s*#/.test(raw)) continue;
     const indented = /^(\t| {2,})/.test(raw);
     const line = raw.trim();
+    if (options.flat) {
+      const marker = line.match(/^(?:\d+(?:\.\d+)+\.?|\d+[.)]|[-–•*]|[a-zż]\))\s+(.+)$/i);
+      items.push({title: marker ? marker[1] : line, kind: 'sprawa', parent: null});
+      continue;
+    }
     const sub = line.match(/^(?:[-–•*]|[a-zż]\)|\d+\.\d+\.?)\s+(.+)$/i);
     const top = line.match(/^(\d+)[.)]\s+(.+)$/);
     if (top && !indented) {
@@ -64,14 +71,14 @@ export function parseAgendaText(text: string) {
   }
   for (const item of items) {
     item.title = cleanTitle(item.title.replace(/\*\*/g, ''));
-    item.kind = guessKind(item.title, item.parent === null);
+    item.kind = options.flat ? 'sprawa' : guessKind(item.title, item.parent === null);
   }
   if (!items.length) warnings.push('Nie znaleziono punktów. Każdy punkt główny zacznij od numeru, np. „1. Otwarcie posiedzenia”.');
-  else if (!items.some(i => i.kind === 'porzadek')) {
+  else if (!options.flat && !items.some(i => i.kind === 'porzadek')) {
     const at = items.findIndex(i => i.kind === 'otwarcie') + 1;
     items.splice(at, 0, {title: 'Przyjęcie porządku obrad', kind: 'porzadek', parent: null});
     for (const item of items) if (item.parent !== null && item.parent >= at) item.parent++;
-    warnings.push('Dodano punkt „Przyjęcie porządku obrad”. Dalsze sprawy można procedować dopiero po przyjęciu porządku.');
+    warnings.push('Dodano punkt „Przyjęcie porządku obrad”. Dalsze sprawy można rozpatrywać dopiero po przyjęciu porządku.');
   }
   return {items, warnings};
 }

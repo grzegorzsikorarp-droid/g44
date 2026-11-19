@@ -24,9 +24,10 @@ const tabStore = {
 
 /** Po zalogowaniu (także po wyborze osoby w wersji próbnej): znacznik dla listy posiedzeń i powrót na trasę sprzed wygaśnięcia sesji. */
 export function afterLogin() {
-  tabStore.set(FRESH, '1');
   const back = tabStore.get(BACK);
   if (back !== null) { tabStore.del(BACK); go(back); }
+  // Znacznik tylko wtedy, gdy po zalogowaniu widać listę (bez niego późniejsze wejście na listę przenosiłoby do posiedzenia).
+  if (!currentRoute()) tabStore.set(FRESH, '1');
 }
 
 export function App() {

@@ -78,7 +78,7 @@ test('pełny przebieg posiedzenia Prezydium przez API: konta, porządek, głosow
     await cmd(si, {type: 'open'});
     for (const p of presidium.slice(1)) await cmd(members.get(p)!, {type: 'presence', who: p, present: true});
     state = (await cmd(si, {type: 'quorum'})).meeting;
-    assert.match(state.log.at(-1).text, /Stwierdzono kworum: obecnych 7 z 7/);
+    assert.match(state.log.at(-1).text, /Stwierdzono kworum\. Obecnych 7 z 7/);
 
     const agendaPoint = state.agenda.find((i: {kind: string}) => i.kind === 'porzadek');
     await cmd(si, {type: 'item_start', itemId: agendaPoint.id});
