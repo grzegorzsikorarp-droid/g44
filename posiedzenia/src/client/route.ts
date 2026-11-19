@@ -1,4 +1,4 @@
-// Trasa w aplikacji: #p-<id>, #ekran-<id>, #konta albo pusta (lista posiedzeń).
+// Trasa w aplikacji: #p-<id>, #ekran-<id>, #konta, #rodzaje albo pusta (lista posiedzeń).
 // Kliknięcia w odnośniki „#…” obsługuje kod, nie przeglądarka: w osadzonej ramce (np. strona próbna)
 // taki odnośnik rozwiązuje się względem adresu strony nadrzędnej i przeładowałby całą ramkę.
 let current = readHash();

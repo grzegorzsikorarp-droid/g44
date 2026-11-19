@@ -79,3 +79,16 @@
 .act-pending ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--odstep-1) var(--odstep-5); font-size: var(--t-lista); color: var(--tekst-mocny); }
 .act-foot { display: flex; flex-direction: column; gap: var(--odstep-3); }
 .start-warnings { display: flex; flex-direction: column; gap: var(--odstep-2); }
+
+/* Osoby przy punkcie (F12): wiersz z imieniem i nazwiskiem, funkcją, rolą i „Usuń osobę”, oddzielony kreską */
+.people-editor { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.person-row { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.person-row .row > * { flex: 1 1 12em; }
+.person-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--odstep-2) var(--odstep-4); }
+.person-tools .oi-seg { flex: 1 1 16em; }
+.people-add > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+
+/* Uwaga po powieleniu posiedzenia (F6) nad obiema kolumnami, a na końcu strony „Powiel” obok „Usuń” */
+.prep-note { grid-column: 1 / -1; }
+.prep-end { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-4) var(--odstep-8); }
+.duplicate > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }

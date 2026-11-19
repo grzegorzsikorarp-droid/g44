@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import type {Meeting} from '../shared/types.ts';
 import {request, useLive} from './api.ts';
 import {useSession} from './session.ts';
-import {Button, ErrorNotice, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, StateChip, useAction} from './ui.tsx';
+import {Button, Chip, ErrorNotice, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, StateChip, useAction} from './ui.tsx';
 import {meetingState} from './stany.ts';
 import {Segments} from './prep.tsx';
 import {brand} from './brand.ts';
@@ -11,6 +11,8 @@ import {go} from './route.ts';
 interface Summary {
   id: string; kind: Meeting['kind']; title: string; date: string; time: string; place: string; mode: Meeting['mode'];
   status: Meeting['status']; endsAt: number | null; openBallots: number; ballots: number; current: string | null; currentNumber: string | null;
+  /** Spotkanie robocze bez kworum (F5). */
+  working?: boolean;
 }
 
 // Znacznik zapisany po zalogowaniu (app.tsx). Przy pierwszym wczytaniu listy członek Prezydium przechodzi
@@ -89,7 +91,7 @@ function LiveBand({m, primary}: {m: Summary; primary: boolean}) {
     ? `${m.title}. Głosowanie do ${m.endsAt ? fmtDateTime(m.endsAt) : '–'}.`
     : `${m.title}, ${fmtShort(m.date)}.${m.current ? ` Bieżący punkt ${m.currentNumber} ${quote(m.current)}.` : ''}`;
   return <div class="oi-note live-band">
-    <div class="live-band__text"><span class="oi-label">{procedure ? 'Trwa głosowanie między posiedzeniami' : 'Trwa posiedzenie'}</span><p>{text}</p></div>
+    <div class="live-band__text"><span class="oi-label">{procedure ? 'Trwa głosowanie między posiedzeniami' : m.working ? 'Trwa spotkanie robocze' : 'Trwa posiedzenie'}</span><p>{text}</p></div>
     <LinkButton primary={primary} href={`#p-${m.id}`}>{procedure ? 'Przejdź do głosowania' : 'Przejdź do obrad'}</LinkButton>
   </div>;
 }
@@ -114,7 +116,7 @@ function MeetingRow({m, organizer}: {m: Summary; organizer: boolean}) {
   return <a class="oi-card oi-card--aktywna meeting-row" href={`#p-${m.id}`}>
     <time class="row-date" dateTime={iso}><span class="row-date__day">{day.day}</span><span class="row-date__month">{day.month}</span><span class="row-date__weekday">{day.weekday}</span></time>
     <div class="row-main"><span class="kicker">{kind}</span><h3 class="oi-card__title row-title">{m.title}</h3><span class="row-meta">{meta}</span></div>
-    <div class="row-side"><StateChip state={meetingState(m.status, !organizer)}/><span class="row-act">{action}</span></div>
+    <div class="row-side"><span class="row-chips"><StateChip state={meetingState(m.status, !organizer)}/>{m.working && <Chip>Spotkanie robocze</Chip>}</span><span class="row-act">{action}</span></div>
   </a>;
 }
 

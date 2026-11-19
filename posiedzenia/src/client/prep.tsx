@@ -3,22 +3,20 @@ import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks'
 import {parseAgendaText} from '../shared/agenda.ts';
 import type {Command} from '../shared/meeting.ts';
 import {canChairOrgan, isChairman, materialTypeLabel, noticeDays} from '../shared/meeting.ts';
-import {itemNumber, orderedAgenda, presentersText} from '../shared/rules.ts';
+import {sortedDocTypes} from '../shared/doctypes.ts';
+import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {organMembers} from '../shared/roster.ts';
-import type {AgendaItem, MaterialType, Meeting, MeetingMode} from '../shared/types.ts';
+import type {AgendaItem, Meeting, MeetingMode} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useMeeting, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {announce, Button, CardTitle, Check, Chip, Confirm, ErrorNotice, Field, fmtShort, fmtTime, Modal, Notice, plural, StateChip, useAction, useSaveStatus, type SaveState} from './ui.tsx';
+import {announce, Button, CardTitle, Check, Chip, Confirm, ErrorNotice, Field, fmtShort, fmtTime, Fold, Modal, Notice, plural, SaveStatus, StateChip, useAction, useSaveStatus, type SaveState} from './ui.tsx';
 import {readinessChip, type Readiness} from './stany.ts';
 import {MaterialLink} from './reader.tsx';
 import {brand} from './brand.ts';
 import {go} from './route.ts';
-
-export const materialTypes: [MaterialType, string][] = [
-  ['uchwala', 'Uchwała'], ['oswiadczenie', 'Stanowisko lub oświadczenie'], ['apel', 'Apel'], ['rezolucja', 'Rezolucja'], ['deklaracja', 'Deklaracja'],
-  ['sprawozdanie', 'Sprawozdanie'], ['protokol', 'Protokół'], ['informacja', 'Informacja'], ['inny', 'Inny materiał'],
-];
+import {useDocTypes} from './doctypes.ts';
+import {cleanPresenters, DocTypeSelect, PeopleFacts, PresentersEditor, samePresenters} from './people.tsx';
 
 // Pozycja porządku to w posiedzeniu punkt, a w głosowaniu między posiedzeniami sprawa.
 const nounOf = (m: Pick<Meeting, 'kind'>) => m.kind === 'procedura'
@@ -50,6 +48,7 @@ export function useLeaveWarning(dirty: boolean) {
 export function PrepEditor() {
   const {m} = useMeeting();
   return <div class="prep">
+    <DuplicatedNotice/>
     <div class="prep-main">
       <section class="oi-card"><div class="panel-head"><CardTitle level={2}>Porządek obrad</CardTitle><span class="muted small">Projekt, który Prezydium przyjmuje w głosowaniu.</span></div><AgendaEditor/></section>
       <section class="oi-card"><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
@@ -61,8 +60,37 @@ export function PrepEditor() {
       <Deputy/>
       <Invites/>
     </aside>
-    <div class="prep-end"><DeleteMeeting/></div>
+    <div class="prep-end"><DuplicateButton/><DeleteMeeting/></div>
   </div>;
+}
+
+// Posiedzenie utworzone przez powielenie (F6): przygotowanie nowego posiedzenia pokazuje raz uwagę o dacie i zawiadomieniu.
+let duplicated: string | null = null;
+
+/** „Powiel posiedzenie” albo „Powiel głosowanie” (F6): nowe posiedzenie w przygotowaniu i przejście do niego. */
+export function DuplicateButton(props: {primary?: boolean}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  const {busy, error, errorKind, run} = useAction();
+  if (!s.isOrganizer(m.organ)) return null;
+  const label = m.kind === 'procedura' ? 'Powiel głosowanie' : 'Powiel posiedzenie';
+  return <div class="stack-tight duplicate">
+    <div><Button kind={props.primary ? 'primary' : 'secondary'} small={!props.primary} busy={busy} onClick={() => run(async () => {
+      const r = await request<{meeting: ViewMeeting}>(`/api/meetings/${m.id}/duplicate`, {body: {}});
+      duplicated = r.meeting.id;
+      go(`#p-${r.meeting.id}`);
+    })}>{label}</Button></div>
+    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+  </div>;
+}
+
+export function DuplicatedNotice() {
+  const {m} = useMeeting();
+  const [shown] = useState(() => { const hit = duplicated === m.id; if (hit) duplicated = null; return hit; });
+  if (!shown) return null;
+  return <div class="prep-note"><Notice tone="ok">{m.kind === 'procedura'
+    ? 'Powielono głosowanie między posiedzeniami. Ustaw koniec głosowania i powiadom członków.'
+    : 'Powielono posiedzenie. Ustaw datę i wyślij zawiadomienie.'}</Notice></div>;
 }
 
 /**
@@ -111,15 +139,15 @@ export function AgendaEditor(props: {rowExtra?: (it: AgendaItem) => ComponentChi
         const siblings = m.agenda.filter(i => i.parentId === it.parentId), index = siblings.indexOf(it);
         const no = itemNumber(m.agenda, it.id);
         const count = it.materialIds.length;
-        const meta = [presentersText(it), count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : ''].filter(Boolean).join(', ');
+        const meta = count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : '';
         return <li key={it.id} class={'edit-row' + (it.parentId ? ' is-sub' : '')} data-pozycja={it.id}>
           <span class="agenda-no">{no}</span>
           {editing === it.id
-            ? <ItemEditForm it={it} onDone={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }}/>
+            ? <ItemEditForm it={it} onDone={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }} onCancel={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }}/>
             : <>
-              <div class="edit-main"><span class="edit-title">{it.title}</span>{meta && <span class="edit-meta">{meta}</span>}</div>
+              <div class="edit-main"><span class="edit-title">{it.title}</span><PeopleFacts it={it} compact/>{meta && <span class="edit-meta">{meta}</span>}</div>
               <span class="edit-tools">
-                <Button small quiet kind="ghost" class="tool-zmien" onClick={() => { setSubFor(null); setEditing(it.id); }} label={`Zmień nazwę ${noun.gen} ${no}`}>Zmień</Button>
+                <Button small quiet kind="ghost" class="tool-zmien" onClick={() => { setSubFor(null); setEditing(it.id); }} label={`Zmień ${noun.acc} ${no}`}>Zmień</Button>
                 <Button small quiet kind="ghost" class="tool-wyzej" busy={busy} disabled={index === 0} onClick={() => move(it, -1)} label={`Przesuń ${noun.acc} ${no} wyżej`}>Wyżej</Button>
                 <Button small quiet kind="ghost" class="tool-nizej" busy={busy} disabled={index === siblings.length - 1} onClick={() => move(it, 1)} label={`Przesuń ${noun.acc} ${no} niżej`}>Niżej</Button>
                 {!procedure && !it.parentId && <Button small quiet kind="ghost" class="tool-podpunkt" onClick={() => setSubFor(subFor === it.id ? null : it.id)} label={`Dodaj podpunkt w punkcie ${no}`}>Dodaj podpunkt</Button>}
@@ -156,30 +184,40 @@ function SubItemForm(props: {no: string; busy: boolean; onSubmit: (e: Event) => 
   </form>;
 }
 
-// Edycja w miejscu: nazwa i osoba, która przedstawia punkt. Po przyjęciu porządku zmienia się tylko „Przedstawia”.
-function ItemEditForm(props: {it: AgendaItem; onDone: () => void}) {
+// Rodzaje punktów, w których nie wybiera się „Co jest głosowane” (otwarcie, przyjęcie porządku, zamknięcie).
+const noDocType = new Set(['otwarcie', 'porzadek', 'zamkniecie']);
+
+/**
+ * Edycja w miejscu: nazwa (przed przyjęciem porządku), „Co jest głosowane w tym punkcie” (F11) i lista „Prowadzą
+ * i referują” (F12). Zapis wysyła tylko zmienione pola. `autofocus` przenosi fokus na pierwsze pole po otwarciu.
+ */
+export function ItemEditForm(props: {it: AgendaItem; onDone?: () => void; titleEditable?: boolean; autofocus?: boolean; onCancel?: () => void; status?: boolean}) {
   const {m, send, busy} = useMeeting();
+  const saved = useSaveStatus();
+  const types = useDocTypes();
   const {it} = props;
-  const adopted = m.agendaAdopted;
+  const editTitle = props.titleEditable ?? (!m.agendaAdopted && m.status !== 'zakonczone');
   const [title, setTitle] = useState(it.title);
-  // Pole „Przedstawia” zmienia pierwszą osobę z listy `presenters` (F12); pozostałe osoby zostają bez zmian.
-  const [presenter, setPresenter] = useState(it.presenters[0]?.name ?? '');
-  const first = useRef<HTMLInputElement>(null);
-  useLayoutEffect(() => { first.current?.focus(); }, []);
-  return <form class="edit-form" onSubmit={async e => {
+  const [docType, setDocType] = useState(it.docType ?? '');
+  const [presenters, setPresenters] = useState(it.presenters);
+  const box = useRef<HTMLFormElement>(null);
+  useLayoutEffect(() => { if (props.autofocus !== false) box.current?.querySelector<HTMLElement>('input, select')?.focus(); }, []);
+  const no = itemNumber(m.agenda, it.id);
+  return <form class="edit-form" ref={box} onSubmit={async e => {
     e.preventDefault();
     const cmd: Extract<Command, {type: 'item_edit'}> = {type: 'item_edit', itemId: it.id};
-    if (!adopted && title.replace(/\s+/g, ' ').trim() !== it.title) cmd.title = title;
-    if (presenter.trim() !== (it.presenters[0]?.name ?? '')) {
-      const rest = it.presenters.slice(1);
-      cmd.presenters = presenter.trim() ? [{...(it.presenters[0] ?? {role: '', kind: 'referuje' as const}), name: presenter.trim()}, ...rest] : rest;
-    }
-    if (cmd.title === undefined && cmd.presenters === undefined) { props.onDone(); return; }
-    if (await send(cmd)) props.onDone();
+    if (editTitle && title.replace(/\s+/g, ' ').trim() !== it.title) cmd.title = title;
+    if (docType !== (it.docType ?? '')) cmd.docType = docType || null;
+    if (!samePresenters(presenters, it.presenters)) cmd.presenters = cleanPresenters(presenters);
+    if (cmd.title === undefined && cmd.docType === undefined && cmd.presenters === undefined) { props.onDone?.(); return; }
+    if (await (props.status ? saved.track(() => send(cmd)) : send(cmd))) props.onDone?.();
   }}>
-    {!adopted && <Field label={nounOf(m).name}><input ref={first} value={title} onInput={e => setTitle((e.target as HTMLInputElement).value)} maxLength={400} required/></Field>}
-    <Field label="Przedstawia"><input ref={adopted ? first : undefined} value={presenter} onInput={e => setPresenter((e.target as HTMLInputElement).value)} maxLength={200}/></Field>
-    <div class="actions"><Button small type="submit" busy={busy}>Zapisz</Button><Button small kind="ghost" quiet onClick={props.onDone}>Anuluj</Button></div>
+    {editTitle && <Field label={nounOf(m).name}><input value={title} onInput={e => setTitle((e.target as HTMLInputElement).value)} maxLength={400} required/></Field>}
+    {!noDocType.has(it.kind) && <DocTypeSelect types={types} value={docType} onChange={setDocType} empty="Wynika z materiału"
+      hint="Rodzaj decyduje o formule wyniku, np. „Uchwała podjęta”, i o tym, czy w punkcie trzeba głosować."/>}
+    <PresentersEditor value={presenters} onChange={setPresenters} organ={m.organ} no={no}/>
+    <div class="actions"><Button small type="submit" busy={busy}>{props.status ? 'Zapisz dane punktu' : 'Zapisz'}</Button>{props.onCancel && <Button small kind="ghost" quiet onClick={props.onCancel}>Anuluj</Button>}</div>
+    {props.status && <SaveStatus status={saved} saved={t => `Zapisano dane punktu o godz. ${t}.`}/>}
   </form>;
 }
 
@@ -216,6 +254,8 @@ function AgendaImport(props: {onClose: () => void}) {
 export function MaterialsEditor() {
   const {m, replace} = useMeeting();
   const s = useSession();
+  const types = useDocTypes();
+  const typeOptions = sortedDocTypes(types, true).map(t => <option key={t.id} value={t.id}>{t.name}</option>);
   const {busy, error, errorKind, run} = useAction();
   const procedure = m.kind === 'procedura';
   const noun = nounOf(m);
@@ -245,7 +285,7 @@ export function MaterialsEditor() {
     {m.materials.length > 0 && <ul class="material-table">{m.materials.map(x => {
       const used = usage(x.id);
       return <li key={x.id}>
-        <div><MaterialLink id={x.id} version={x.version} label={x.title}/><p class="muted small">{materialTypeLabel(x.type)}{x.number ? ` nr ${x.number}` : ''}, wersja {x.version}, {Math.max(1, Math.round(x.size / 1024))} KB{x.fileName ? `, oryginał ${x.fileName}` : ''}{used.length ? `, ${noun.item} ${used.join(', ')}` : ', nieprzypisany'}</p></div>
+        <div><MaterialLink id={x.id} version={x.version} label={x.title}/><p class="muted small">{materialTypeLabel(x.type, types)}{x.number ? ` nr ${x.number}` : ''}, wersja {x.version}, {Math.max(1, Math.round(x.size / 1024))} KB{x.fileName ? `, oryginał ${x.fileName}` : ''}{used.length ? `, ${noun.item} ${used.join(', ')}` : ', nieprzypisany'}</p></div>
         {m.status === 'przygotowanie' && s.isOrganizer(m.organ) && <Button small quiet kind="ghost" haspopup onClick={() => setRemoving(x.id)} label={`Usuń materiał ${x.title}`}>Usuń</Button>}
       </li>;
     })}</ul>}
@@ -262,7 +302,7 @@ export function MaterialsEditor() {
           </>}
         </> : <>
           <Field label="Tytuł" hint="Bez tytułu materiał dostanie nazwę pliku."><input name="title" maxLength={300}/></Field>
-          <div class="row"><Field label="Rodzaj"><select name="type">{materialTypes.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field><Field label="Numer"><input name="number" maxLength={60} placeholder="np. 108/IX/2026"/></Field></div>
+          <div class="row"><Field label="Rodzaj"><select name="type">{typeOptions}</select></Field><Field label="Numer"><input name="number" maxLength={60} placeholder="np. 108/IX/2026"/></Field></div>
           <Field label={assignLabel}>{itemSelect('itemId')}</Field>
         </>}
         {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
@@ -272,7 +312,7 @@ export function MaterialsEditor() {
     {mode === 'tekst' && <Modal title="Wklej treść materiału" wide onClose={() => setMode(null)}>
       <form class="stack" onSubmit={paste}>
         <Field label="Tytuł"><input name="title" required maxLength={300} placeholder="np. Uchwała nr 108/IX/2026 w sprawie …"/></Field>
-        <div class="row"><Field label="Rodzaj"><select name="type">{materialTypes.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field><Field label="Numer"><input name="number" maxLength={60}/></Field><Field label="Format"><select name="format"><option value="text">Zwykły tekst</option><option value="markdown">Markdown</option></select></Field></div>
+        <div class="row"><Field label="Rodzaj"><select name="type">{typeOptions}</select></Field><Field label="Numer"><input name="number" maxLength={60}/></Field><Field label="Format"><select name="format"><option value="text">Zwykły tekst</option><option value="markdown">Markdown</option></select></Field></div>
         <Field label="Treść" hint="Akapity oddziel pustym wierszem. Wiersz „§ 1” stanie się nagłówkiem."><textarea name="text" rows={12} required/></Field>
         <Field label={assignLabel}>{itemSelect('itemId')}</Field>
         {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
@@ -336,8 +376,34 @@ function OpenMeeting() {
   </section>;
 }
 
-type DetailsDraft = {title: string; date: string; time: string; place: string; mode: MeetingMode; link: string; noticeDate: string};
-const detailsKey = (d: DetailsDraft) => JSON.stringify([d.title.trim(), d.date, d.time, d.place.trim(), d.mode, d.mode === 'zdalne' ? d.link.trim() : '', d.noticeDate]);
+type ProtocolDraft = {protocolNumber: string; recorder: string; convener: string};
+type DetailsDraft = {title: string; date: string; time: string; place: string; mode: MeetingMode; link: string; noticeDate: string} & ProtocolDraft;
+const protocolKey = (d: ProtocolDraft) => [d.protocolNumber.replace(/\s+/g, ' ').trim(), d.recorder.replace(/\s+/g, ' ').trim(), d.convener];
+const detailsKey = (d: DetailsDraft) => JSON.stringify([d.title.trim(), d.date, d.time, d.place.trim(), d.mode, d.mode === 'zdalne' ? d.link.trim() : '', d.noticeDate, ...protocolKey(d)]);
+/** Dane do protokołu zapisane w posiedzeniu (F10), puste pola jako pusty napis. */
+export const protocolOf = (m: Pick<Meeting, 'protocolNumber' | 'recorder' | 'convener'>): ProtocolDraft => ({protocolNumber: m.protocolNumber ?? '', recorder: m.recorder ?? '', convener: m.convener ?? ''});
+
+/**
+ * Sekcja „Dane do protokołu (nieobowiązkowe)” (F10): numer protokołu, protokolant i zwołujący ze składu organu.
+ * Puste pola protokół zastępuje kropkami do uzupełnienia.
+ */
+export function ProtocolFields(props: {draft: ProtocolDraft; set: <K extends keyof ProtocolDraft>(field: K, value: ProtocolDraft[K]) => void}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  // Sekcja jest rozwinięta od początku, gdy coś w niej wpisano. Potem rozwija ją i zwija tylko użytkownik.
+  const [open] = useState(() => [props.draft.protocolNumber, props.draft.recorder, props.draft.convener].some(v => v.trim()));
+  return <Fold title="Dane do protokołu (nieobowiązkowe)" open={open}>
+    <div class="stack">
+      <p class="muted small">Wypełnione dane trafią do projektu protokołu. Puste pola protokół zostawi do uzupełnienia.</p>
+      <Field label="Numer protokołu" hint="Np. 12/IX/2026."><input value={props.draft.protocolNumber} maxLength={60} onInput={e => props.set('protocolNumber', (e.target as HTMLInputElement).value)}/></Field>
+      <Field label="Protokolant" hint="Imię i nazwisko osoby, która sporządza protokół."><input value={props.draft.recorder} maxLength={120} onInput={e => props.set('recorder', (e.target as HTMLInputElement).value)}/></Field>
+      <Field label="Zwołuje"><select value={props.draft.convener} onChange={e => props.set('convener', (e.target as HTMLSelectElement).value)}>
+        <option value="">Bez wskazania</option>
+        {organMembers(s.roster, m.organ).map(ms => <option key={ms.personId} value={ms.personId}>{s.personName(ms.personId)}, {ms.label}</option>)}
+      </select></Field>
+    </div>
+  </Fold>;
+}
 
 /** Przyciski wyboru `oi-seg` z etykietą grupy (np. tryb posiedzenia). */
 export function Segments<T extends string>(props: {label: string; value: T; options: [T, string][]; onChange: (value: T) => void; hint?: ComponentChildren}) {
@@ -353,7 +419,7 @@ export function Segments<T extends string>(props: {label: string; value: T; opti
 
 function Details() {
   const {m, send, busy} = useMeeting();
-  const saved: DetailsDraft = {title: m.title, date: m.date, time: m.time, place: m.place, mode: m.mode, link: m.link, noticeDate: m.noticeDate};
+  const saved: DetailsDraft = {title: m.title, date: m.date, time: m.time, place: m.place, mode: m.mode, link: m.link, noticeDate: m.noticeDate, ...protocolOf(m)};
   const [draft, setDraft] = useState(saved);
   const [touched, setTouched] = useState(false);
   const save = useSaveStatus();
@@ -370,7 +436,8 @@ function Details() {
     <form class="stack" onSubmit={async e => {
       e.preventDefault();
       if (!dirty) return;
-      const r = await save.track(() => send({type: 'details', title: draft.title, date: draft.date, time: draft.time, place: draft.place, mode: draft.mode, link: draft.mode === 'zdalne' ? draft.link : '', noticeDate: draft.noticeDate}));
+      const r = await save.track(() => send({type: 'details', title: draft.title, date: draft.date, time: draft.time, place: draft.place, mode: draft.mode, link: draft.mode === 'zdalne' ? draft.link : '', noticeDate: draft.noticeDate,
+        protocolNumber: draft.protocolNumber, recorder: draft.recorder, convener: draft.convener}));
       if (r) setTouched(false);
     }}>
       <Field label="Tytuł"><input name="title" value={draft.title} onInput={value('title')} maxLength={200} required/></Field>
@@ -381,6 +448,7 @@ function Details() {
       <Field label="Data wysłania zawiadomienia" hint={days === null ? 'Zawiadomienie wysyła się co najmniej 7 dni przed posiedzeniem (§ 7 ust. 1).' : days >= 7 ? `${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem, termin zachowany.` : `${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem, mniej niż wymagane 7 dni (§ 7 ust. 1).`}>
         <input type="date" name="noticeDate" value={draft.noticeDate} onInput={value('noticeDate')}/>
       </Field>
+      <ProtocolFields draft={draft} set={set}/>
       <div class="form-save">
         <Button type="submit" busy={busy} disabled={!dirty} reason="Brak zmian do zapisania.">Zapisz dane</Button>
         <SaveLine status={save} dirty={dirty} saved={t => `Zapisano dane posiedzenia o godz. ${t}.`}/>

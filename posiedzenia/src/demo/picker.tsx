@@ -28,8 +28,9 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
       <div class="demo-people">
         {members.map(ms => {
           const account = state.accounts.find(a => a.personId === ms.personId)!;
-          const present = live?.attendance[ms.personId] === 'obecny';
-          return <button type="button" class="oi-opt demo-person" onClick={() => choose(account.username)}><strong>{account.displayName}</strong><small>{ms.label}{live ? (present ? ', obecność potwierdzona' : ', bez potwierdzonej obecności') : ''}</small></button>;
+          const attended = live?.attendance[ms.personId];
+          const presence = attended === 'obecny' ? ', obecność potwierdzona' : attended === 'zgloszony' ? ', obecność zgłoszona, czeka na potwierdzenie' : ', bez potwierdzonej obecności';
+          return <button type="button" class="oi-opt demo-person" onClick={() => choose(account.username)}><strong>{account.displayName}</strong><small>{ms.label}{live ? presence : ''}</small></button>;
         })}
         {others.map(a => <button type="button" class="oi-opt demo-person is-other" onClick={() => choose(a.username)}><strong>{a.displayName}</strong><small>{a.kind === 'biuro' ? 'Przygotowuje posiedzenia i nie ma prawa głosu' : a.label}</small></button>)}
       </div>
@@ -45,8 +46,8 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
       <Fold title="Jak przeprowadzić próbne posiedzenie?">
         <ol class="demo-help">
           <li>Wybierz Przewodniczącą <strong>Barbarę Wiśniewską</strong>, otwórz „Posiedzenie Prezydium (próbne)” i kliknij <strong>Otwórz posiedzenie</strong>.</li>
-          <li>Zmień osobę na członka, otwórz posiedzenie i kliknij <strong>Potwierdzam obecność</strong> albo użyj skrótu „Wszyscy członkowie obecni”.</li>
-          <li>Wróć do Przewodniczącej. W punkcie 2 kliknij <strong>Rozpocznij ten punkt</strong>, a potem <strong>Otwórz głosowanie</strong>.</li>
+          <li>Zmień osobę na członka, otwórz posiedzenie i kliknij <strong>Potwierdzam obecność</strong> albo użyj skrótu „Wszyscy członkowie obecni”. Zgłoszoną obecność potwierdza Przewodnicząca przyciskiem <strong>Potwierdź wszystkie zgłoszenia</strong>.</li>
+          <li>Wróć do Przewodniczącej. W punkcie 1 kliknij <strong>Stwierdzam kworum</strong>, w punkcie 2 <strong>Rozpocznij ten punkt</strong>, a potem <strong>Otwórz głosowanie</strong>. <strong>Głosowanie próbne</strong> w karcie „Obrady” sprawdzi, czy głosowanie działa.</li>
           <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Potem jako Przewodnicząca kliknij <strong>Ogłoś wynik głosowania</strong>.</li>
           <li>W punktach 5.1–5.4 złóż wniosek o głosowanie tajne i wniosek o reasumpcję.</li>
         </ol>

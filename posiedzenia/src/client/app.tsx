@@ -7,6 +7,7 @@ import {Home} from './home.tsx';
 import {MeetingPage} from './meeting.tsx';
 import {RoomScreen} from './screen.tsx';
 import {Accounts} from './accounts.tsx';
+import {DocTypesPage} from './rodzaje.tsx';
 import {brand} from './brand.ts';
 import {currentRoute, go, onRoute} from './route.ts';
 import {Plate} from './plate.tsx';
@@ -62,8 +63,9 @@ export function App() {
   const screen = hash.match(/^#ekran-([\w-]+)$/);
   const meeting = hash.match(/^#p-([\w-]+)$/);
   const accounts = hash === '#konta' && !!info?.account?.admin;
+  const kinds = hash === '#rodzaje' && !!info?.account?.admin;
   const signedIn = !!info?.account && !info.account.mustChange;
-  const title = !info ? null : !info.account ? 'Logowanie' : info.account.mustChange ? 'Ustaw własne hasło' : screen || meeting ? null : accounts ? 'Konta użytkowników' : 'Lista posiedzeń';
+  const title = !info ? null : !info.account ? 'Logowanie' : info.account.mustChange ? 'Ustaw własne hasło' : screen || meeting ? null : accounts ? 'Konta użytkowników' : kinds ? 'Rodzaje dokumentów' : 'Lista posiedzeń';
   // Tytuł karty ustawia się przed efektami ekranów, więc tytuł posiedzenia ustawiony niżej przez usePageTitle ma pierwszeństwo.
   useLayoutEffect(() => { document.title = title ? `${title} – ${APP}` : APP; }, [title]);
 
@@ -94,7 +96,7 @@ export function App() {
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : accounts ? 'konta' : 'lista'} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : accounts ? <Accounts/> : <Home/>}</main></>}
+        : <><TopBar current={meeting ? null : accounts ? 'konta' : kinds ? 'rodzaje' : 'lista'} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : accounts ? <Accounts/> : kinds ? <DocTypesPage/> : <Home/>}</main></>}
     </SessionContext.Provider>;
   }
   return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;
@@ -106,7 +108,7 @@ function SkipLink() {
 }
 
 // Na liście posiedzeń tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza.
-function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promise<void>}) {
+function TopBar(props: {current: 'lista' | 'konta' | 'rodzaje' | null; onLogout: () => Promise<void>}) {
   const {account, name, membership} = useSession();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -122,6 +124,7 @@ function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promi
       <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">
         <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>
         {account.admin && <a href="#konta" aria-current={props.current === 'konta' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Konta</a>}
+        {account.admin && <a href="#rodzaje" aria-current={props.current === 'rodzaje' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Rodzaje dokumentów</a>}
       </nav>
       {brand.demo
         ? <>{who}<span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>

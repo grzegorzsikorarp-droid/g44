@@ -37,6 +37,8 @@ export interface ButtonProps {
   busy?: boolean;
   /** Przycisk nieaktywny (aria-disabled), z powodem w `reason`. */
   disabled?: boolean; reason?: ComponentChildren;
+  /** Identyfikator wspólnego powodu kilku nieaktywnych przycisków, który stoi poza przyciskiem (zamiast `reason`). */
+  describedBy?: string;
   /** Przycisk otwiera okno dialogowe. */
   haspopup?: boolean;
   small?: boolean; wide?: boolean; quiet?: boolean; title?: string; label?: string; class?: string;
@@ -57,7 +59,7 @@ export function Button(props: ButtonProps) {
   ).concat(props.class).filter(Boolean).join(' ');
   const button = <button type={props.type ?? 'button'} class={cls} title={props.title} aria-label={props.label}
     aria-disabled={inactive ? 'true' : undefined} aria-busy={props.busy ? 'true' : undefined}
-    aria-haspopup={props.haspopup ? 'dialog' : undefined} aria-describedby={showReason ? reasonId : undefined}
+    aria-haspopup={props.haspopup ? 'dialog' : undefined} aria-describedby={showReason ? reasonId : props.disabled ? props.describedBy : undefined}
     onClick={e => { if (inactive) { e.preventDefault(); return; } props.onClick?.(e); }}>
     {kind === 'ghost' ? props.children : <span>{props.children}</span>}
   </button>;
@@ -305,21 +307,37 @@ export function usePageTitle(title: string | null | undefined) {
 }
 
 /**
+ * Pole tekstowe w oknie potwierdzenia, np. „Powód” do protokołu. `required` wyłącza przycisk potwierdzenia, dopóki
+ * pole jest puste, a jego powód mówi, co wpisać. Wartość pola dostaje `onConfirm`.
+ */
+export interface ConfirmField { label: string; hint?: string; required?: boolean; initial?: string; maxLength?: number }
+
+/**
  * Potwierdzenie ze skutkiem: tytuł w formie pytania, opis skutku i przycisk, który mówi, co się stanie.
  * Przy czynności nieodwracalnej (kind="danger") przycisk jest ciemny, a fokus startuje na „Anuluj”.
- * `ack` dodaje pole wyboru, bez którego przycisk potwierdzenia jest nieaktywny.
+ * `ack` dodaje pole wyboru, bez którego przycisk potwierdzenia jest nieaktywny, a `field` pole tekstowe
+ * (np. powód), na którym startuje fokus. Enter w polu potwierdza, gdy przycisk jest aktywny.
  */
-export function Confirm(props: {title: string; text: ComponentChildren; confirm: string; kind?: 'primary' | 'danger'; cancel?: string; focus?: 'cancel' | 'confirm' | 'title'; ack?: ComponentChildren; details?: ComponentChildren; onConfirm: () => void; onClose: () => void}) {
+export function Confirm(props: {title: string; text: ComponentChildren; confirm: string; kind?: 'primary' | 'danger'; cancel?: string; focus?: 'cancel' | 'confirm' | 'title' | 'field'; ack?: ComponentChildren; field?: ConfirmField; details?: ComponentChildren; onConfirm: (value: string) => void; onClose: () => void}) {
   const [acked, setAcked] = useState(false);
+  const [value, setValue] = useState(props.field?.initial ?? '');
   const kind = props.kind ?? 'primary';
-  const focus = props.focus ?? (kind === 'danger' ? 'cancel' : 'title');
+  const focus = props.focus ?? (props.field ? 'field' : kind === 'danger' ? 'cancel' : 'title');
   const needsAck = props.ack !== undefined && props.ack !== null;
-  return <Modal title={props.title} onClose={props.onClose} closeButton={false} confirm initialFocus={focus === 'cancel' ? '.confirm-cancel' : focus === 'confirm' ? '.confirm-ok' : undefined}>
+  const missing = !!props.field?.required && !value.trim();
+  const reason = missing ? `Wpisz ${props.field!.label.toLocaleLowerCase('pl')}.` : needsAck && !acked ? 'Zaznacz potwierdzenie powyżej.' : undefined;
+  const confirm = () => { if (reason) return; props.onConfirm(value.replace(/\s+/g, ' ').trim()); props.onClose(); };
+  const initial = focus === 'cancel' ? '.confirm-cancel' : focus === 'confirm' ? '.confirm-ok' : focus === 'field' ? '.confirm-field input' : undefined;
+  return <Modal title={props.title} onClose={props.onClose} closeButton={false} confirm initialFocus={initial}>
     <div class="confirm-text">{props.text}</div>
     {props.details !== undefined && props.details !== null && <div class="confirm-details">{props.details}</div>}
+    {props.field && <div class="confirm-field"><Field label={props.field.label} hint={props.field.hint}>
+      <input value={value} maxLength={props.field.maxLength ?? 500} required={props.field.required} aria-required={props.field.required ? 'true' : undefined}
+        onInput={e => setValue((e.target as HTMLInputElement).value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); confirm(); } }}/>
+    </Field></div>}
     {needsAck && <Check checked={acked} onChange={setAcked}>{props.ack}</Check>}
     <div class="actions confirm-actions">
-      <Button kind={kind} class="confirm-ok" disabled={needsAck && !acked} reason={needsAck ? 'Zaznacz potwierdzenie powyżej.' : undefined} onClick={() => { props.onConfirm(); props.onClose(); }}>{props.confirm}</Button>
+      <Button kind={kind} class="confirm-ok" disabled={!!reason} reason={props.field?.required || needsAck ? reason ?? '' : undefined} onClick={confirm}>{props.confirm}</Button>
       <Button class="confirm-cancel" onClick={props.onClose}>{props.cancel ?? 'Anuluj'}</Button>
     </div>
   </Modal>;

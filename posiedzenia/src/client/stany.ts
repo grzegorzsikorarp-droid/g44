@@ -38,11 +38,15 @@ export const agendaChip = (adopted: boolean): ChipState => adopted ? chip('Przyj
 /** Trwające głosowanie, np. na liście posiedzeń. */
 export const votingChip = (): ChipState => chip('Trwa głosowanie', 'trwa');
 
-/** Obecność. Osoba obecna nie dostaje znacznika. */
+/** Obecność. Osoba obecna nie dostaje znacznika, a obecność zgłoszoną w aplikacji (F9) trzeba potwierdzić. */
 export function presenceChip(status: Presence | undefined): ChipState | null {
   if (status === 'obecny') return null;
+  if (status === 'zgloszony') return chip('Do potwierdzenia', 'otwarte');
   return status === 'wyszedl' ? chip('Wyjście') : chip('Brak potwierdzenia');
 }
+
+/** Rodzaj dokumentu w słowniku (F11). Rodzaj włączony nie dostaje znacznika. */
+export const docTypeChip = (active: boolean): ChipState | null => active ? null : chip('Wyłączony');
 
 /** Konto. Konto aktywne nie dostaje znacznika. */
 export function accountChip(a: Pick<Account, 'disabled' | 'mustChange'>): ChipState | null {

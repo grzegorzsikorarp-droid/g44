@@ -261,3 +261,16 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
   .result .oi-stat { display: flex; align-items: baseline; gap: var(--odstep-3); padding: var(--odstep-2) var(--odstep-3); }
   .result .oi-stat span { margin-top: 0; }
 }
+
+/* Osoby przy punkcie (F12): etykieta nad wartością, każda osoba w osobnym wierszu. W wierszu porządku obrad mniejsze pismo. */
+.people-facts .person-line { display: block; }
+.people-facts.is-compact { display: flex; flex-wrap: wrap; gap: 2px var(--odstep-5); margin-top: 2px; }
+.people-fact { display: flex; flex-direction: column; min-width: 0; }
+.people-fact__label { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.people-facts.is-compact .person-line { font-size: var(--t-meta); font-weight: 400; line-height: 1.4; color: var(--tekst-drugorzedny); }
+.agenda-title > .people-facts { font-weight: 400; }
+/* Spotkanie robocze w pasku posiedzenia (F5): znacznik zostaje także na telefonie */
+.bar-working { display: contents; }
+/* Wynik nieogłoszony (F2) i zdanie o głosowaniu próbnym (F1) */
+.result-pending { font-size: var(--t-tekst); font-weight: 600; color: var(--tekst-mocny); }
+.vote-trial { font-size: var(--t-lista); line-height: 1.45; color: var(--tekst-mocny); }

@@ -113,3 +113,40 @@
 
 /* Przyciski w kolumnach kart panelu nie rozciągają się */
 :is(.decision, .pending, .live-foot, .mode-fixed, .assign-material, .controls-end, .note-editor, .read-aloud) > :is(.oi-btn, .link, .btn-wrap) { align-self: flex-start; }
+
+/* Zgłoszenia obecności w karcie „Czeka na Twoją decyzję” (F9): zdanie i dwa przyciski w jednym wierszu */
+.decision--obecnosc { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--odstep-2) var(--odstep-4); }
+.decision--obecnosc > p { flex: 1 1 16em; }
+.decision--obecnosc .decision-act { flex: none; }
+
+/* Głosowanie próbne w karcie „Obrady” (F1) za kreską, jak zakończenie obrad */
+.controls-trial { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.controls-trial > :is(.oi-btn, .link, .btn-wrap) { align-self: flex-start; }
+
+/* Projekt porządku obrad jako kafelki (F8): biała karta z obrysem, numer, tytuł i osoby, narzędzia jako szare odnośniki.
+   Kafelek przeciąga się za napis „Przeciągnij” (zdarzenia wskaźnika, także dotyk), a kreska pokazuje miejsce upuszczenia. */
+.draft-box { position: relative; }
+.draft-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); }
+.tile { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia); border: var(--kreska) solid var(--linia); }
+.tile.is-sub { margin-left: var(--odstep-6); }
+.tile.is-done { background: var(--powierzchnia-miekka); }
+.tile.is-dragging { position: relative; z-index: 2; border-color: var(--linia-aktywna); outline: var(--kreska) solid var(--linia-aktywna); }
+.tile-head { display: grid; grid-template-columns: 6rem 2.4em minmax(0, 1fr); align-items: start; gap: var(--odstep-2) var(--odstep-3); }
+.tile-head > .agenda-no { grid-column: 2; padding-top: 2px; }
+.tile-head > .tile-grip { grid-column: 1; justify-self: start; }
+.tile-main { display: flex; flex-direction: column; gap: var(--odstep-1); min-width: 0; }
+.tile-title { font-size: var(--t-lista); line-height: 1.4; color: var(--tekst-mocny); overflow-wrap: break-word; hyphens: auto; }
+.tile-grip { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 var(--odstep-2); margin-block: calc(-1 * var(--odstep-2)); border: var(--kreska) solid var(--linia); background: var(--powierzchnia-miekka); font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; color: var(--tekst-drugorzedny); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tile.is-dragging .tile-grip { cursor: grabbing; color: var(--tekst-mocny); border-color: var(--linia-aktywna); }
+.tile-tools { display: flex; flex-wrap: wrap; gap: 0 var(--odstep-4); padding-left: calc(6rem + var(--odstep-3)); }
+.tile .edit-form { padding-block: 0; padding-left: calc(6rem + var(--odstep-3)); }
+.drop-line { position: absolute; z-index: 3; left: 0; right: 0; height: 0; border-top: var(--kreska-mocna) solid var(--tekst-mocny); transform: translateY(calc(-1 * var(--odstep-1))); pointer-events: none; }
+.draft-add { margin-top: var(--odstep-2); }
+@media (max-width: 480px) {
+  .tile.is-sub { margin-left: var(--odstep-4); }
+  .tile-head { grid-template-columns: 2.4em minmax(0, 1fr); }
+  .tile-head > .tile-grip { grid-column: 1 / -1; margin-block: 0; }
+  .tile-head > .agenda-no { grid-column: 1; }
+  .tile-tools, .tile .edit-form { padding-left: 0; }
+}
+@media (prefers-reduced-motion: no-preference) { .tile:not(.is-dragging) { transition: background-color .2s, border-color .2s; } }

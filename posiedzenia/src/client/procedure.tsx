@@ -1,15 +1,15 @@
 import {useEffect, useId, useState} from 'preact/hooks';
 import {canChairOrgan} from '../shared/meeting.ts';
-import {awaitingVote, itemNumber, materialTypeOf, quorumFor} from '../shared/rules.ts';
+import {awaitingVote, itemNumber, materialTypeOf, quorumFor, unannounced} from '../shared/rules.ts';
 import {organMembers} from '../shared/roster.ts';
 import type {AgendaItem, VoteMode} from '../shared/types.ts';
 import {useNow} from './api.ts';
 import {useMeeting, type ViewBallot} from './context.ts';
 import {useSession} from './session.ts';
-import {Button, CardTitle, Confirm, Countdown, Fact, Field, fmtDateTime, Fold, Notice, plural, TitleLead, useSaveStatus} from './ui.tsx';
+import {Button, CardTitle, Confirm, Countdown, Fact, Field, fmtDateTime, fmtTime, Fold, Modal, Notice, plural, TitleLead, useSaveStatus} from './ui.tsx';
 import {modeName} from './stany.ts';
 import {RejectedVote, ResultCard, VoteCard} from './meeting.tsx';
-import {AgendaEditor, DeleteMeeting, MaterialsEditor, SaveLine, Segments, useLeaveWarning} from './prep.tsx';
+import {AgendaEditor, DeleteMeeting, DuplicateButton, DuplicatedNotice, MaterialsEditor, ProtocolFields, protocolOf, SaveLine, Segments, useLeaveWarning} from './prep.tsx';
 import {MaterialLink} from './reader.tsx';
 import {Messages} from './messages.tsx';
 
@@ -29,18 +29,22 @@ export function ProcedureView() {
   if (m.status === 'przygotowanie') {
     if (!s.isOrganizer(m.organ)) return <div class="member"><Notice>Głosowanie jeszcze się nie rozpoczęło. Przygotowuje je biuro, przewodniczący albo wiceprzewodniczący.</Notice><Acts/></div>;
     return <div class="prep">
+      <DuplicatedNotice/>
       <div class="prep-main">
         <section class="oi-card"><CardTitle level={2}>Sprawy do głosowania</CardTitle><p class="muted small">Każda sprawa (np. uchwała) to osobne głosowanie. Dołącz do niej materiał, aby członkowie mogli go przeczytać przed oddaniem głosu.</p><AgendaEditor rowExtra={it => <ActSettings it={it}/>}/></section>
         <section class="oi-card"><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
       </div>
       <aside class="prep-side"><Start/><VotingData/><Messages/></aside>
-      <div class="prep-end"><DeleteMeeting/></div>
+      <div class="prep-end"><DuplicateButton/><DeleteMeeting/></div>
     </div>;
   }
   return <div class="procedure">
     <div class="procedure-main">
       {m.status === 'trwa' && m.endsAt && <VotingWindow endsAt={m.endsAt}/>}
-      {m.status === 'zakonczone' && <Notice tone="ok">Głosowanie zakończone. Wyniki są poniżej, a zestawienie do protokołu otwiera przycisk „Projekt protokołu”.</Notice>}
+      {m.status === 'zakonczone' && (m.ended?.how === 'przerwij'
+        ? <Notice tone="ok" label="Głosowanie przerwane">{`Głosowanie przerwano ${fmtDateTime(m.ended.at)}. Powód „${m.ended.reason ?? ''}”. Rozstrzygnięcie nie zapadło.`}</Notice>
+        : <Notice tone="ok">Głosowanie zakończone. Wyniki są poniżej, a zestawienie do protokołu otwiera przycisk „Projekt protokołu”.</Notice>)}
+      {m.status === 'zakonczone' && <DuplicateButton/>}
       <RejectedVote ballots={m.ballots}/>
       <Acts/>
     </div>
@@ -48,27 +52,84 @@ export function ProcedureView() {
   </div>;
 }
 
-// Karta „Głosowanie trwa”: termin, pozostały czas, zasady rozstrzygnięcia i za kreską zakończenie przed czasem.
+// Karta „Głosowanie trwa”: termin, pozostały czas, zasady rozstrzygnięcia, uwaga o zmianie terminu, a za kreską
+// zmiana terminu i zakończenie przed terminem (F7).
 function VotingWindow({endsAt}: {endsAt: number}) {
-  const {m, send, busy} = useMeeting();
+  const {m} = useMeeting();
   const s = useSession();
   const id = useId();
-  const [ending, setEnding] = useState(false);
+  const [ask, setAsk] = useState<'termin' | 'koniec' | null>(null);
   const total = organMembers(s.roster, m.organ).length;
   const conductor = canChairOrgan(s.roster, m.organ, s.personId);
-  const open = m.ballots.filter(b => b.status === 'otwarte');
-  const eligible = [...new Set(open.flatMap(b => b.eligible))];
-  const missing = eligible.filter(p => open.some(b => awaitingVote(b).includes(p))).length;
-  const endText = missing === 0 ? 'Zagłosowali wszyscy uprawnieni. Wszystkie trwające głosowania zostaną zamknięte.'
-    : `Bez głosu ${plural(missing, 'jest', 'są', 'jest')} jeszcze ${missing} ${plural(missing, 'osoba', 'osoby', 'osób')} z ${eligible.length} uprawnionych. Wszystkie trwające głosowania zostaną zamknięte, a ${missing === 1 ? 'ta osoba nie będzie już mogła' : 'te osoby nie będą już mogły'} oddać głosu.`;
+  const changed = m.deadlineChanges?.at(-1);
   return <section class="oi-card is-teraz window" aria-labelledby={id}>
     <span class="oi-label" id={id}>Głosowanie trwa</span>
     <p class="window-due">{`do ${fmtDateTime(endsAt)}`}</p>
     <p class="window-left">zostało <Countdown endsAt={endsAt} label={false} long/></p>
+    {changed && <Notice>{`Termin zmieniono o godz. ${fmtTime(changed.at)}. Głosowanie potrwa do ${fmtDateTime(changed.to)}.`}</Notice>}
     <p class="muted small">{`Uprawnionych do głosowania ${total}. Rozstrzygnięcie zapada przy udziale co najmniej ${quorumFor(total)} głosujących `}<span class="oi-nowrap">(§ 8 ust. 2)</span>{' zwykłą większością głosów. Głosowanie kończy się wcześniej, gdy zagłosują wszyscy.'}</p>
-    {conductor && <div class="window-end"><Button small haspopup busy={busy} onClick={() => setEnding(true)}>Zakończ głosowanie przed czasem</Button></div>}
-    {ending && <Confirm title="Zakończyć głosowanie przed czasem?" kind="danger" confirm="Zakończ głosowanie" onClose={() => setEnding(false)} onConfirm={() => send({type: 'close'})} text={<p>{endText}</p>}/>}
+    {conductor && <div class="window-end actions">
+      <Button small haspopup onClick={() => setAsk('termin')}>Zmień termin</Button>
+      <Button small haspopup onClick={() => setAsk('koniec')}>Zakończ przed terminem</Button>
+    </div>}
+    {ask === 'termin' && <DeadlineDialog endsAt={endsAt} onClose={() => setAsk(null)}/>}
+    {ask === 'koniec' && <EndDialog onClose={() => setAsk(null)}/>}
   </section>;
+}
+
+// Data i godzina do pola datetime-local w strefie przeglądarki.
+const localInput = (ts?: number) => ts ? new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+
+// Przedłużenie albo skrócenie terminu: nowy termin co najmniej 5 minut od teraz (procedure_deadline).
+function DeadlineDialog(props: {endsAt: number; onClose: () => void}) {
+  const {send, busy} = useMeeting();
+  const now = useNow(15000);
+  const [value, setValue] = useState(localInput(props.endsAt));
+  const [error, setError] = useState('');
+  const chosen = value ? new Date(value).getTime() : NaN;
+  return <Modal title="Zmienić termin głosowania?" onClose={props.onClose} closeButton={false} confirm initialFocus=".deadline-field input">
+    <form class="stack" onSubmit={async e => {
+      e.preventDefault();
+      if (!Number.isFinite(chosen) || chosen < now + 5 * 60000) { setError('Ustaw nowy termin co najmniej 5 minut od teraz.'); return; }
+      if (chosen === props.endsAt) { setError('To jest obecny termin głosowania.'); return; }
+      if (await send({type: 'procedure_deadline', endsAt: chosen})) props.onClose();
+    }}>
+      <p>{`Głosowanie potrwa teraz do ${fmtDateTime(props.endsAt)}. Nowy termin obejmie wszystkie trwające głosowania, a członkowie zobaczą uwagę o zmianie i wiadomość w kanale.`}</p>
+      <div class="deadline-field"><Field label="Nowy termin" hint="Co najmniej 5 minut od teraz. Termin można przedłużyć albo skrócić." error={error || undefined}>
+        <input type="datetime-local" required value={value} onInput={e => { setError(''); setValue((e.target as HTMLInputElement).value); }}/>
+      </Field></div>
+      <div class="actions confirm-actions"><Button kind="primary" type="submit" busy={busy}>Ustaw nowy termin</Button><Button onClick={props.onClose}>Anuluj</Button></div>
+    </form>
+  </Modal>;
+}
+
+// Zakończenie przed terminem: policzenie głosów albo przerwanie bez rozstrzygnięcia z powodem (procedure_end).
+function EndDialog(props: {onClose: () => void}) {
+  const {m, send, busy} = useMeeting();
+  const [how, setHow] = useState<'policz' | 'przerwij'>('policz');
+  const [reason, setReason] = useState('');
+  const open = m.ballots.filter(b => b.status === 'otwarte');
+  const eligible = [...new Set(open.flatMap(b => b.eligible))];
+  const missing = eligible.filter(p => open.some(b => awaitingVote(b).includes(p))).length;
+  const countText = missing === 0 ? 'Zagłosowali wszyscy uprawnieni. Wszystkie trwające głosowania zostaną zamknięte i policzone.'
+    : `Bez głosu ${plural(missing, 'jest', 'są', 'jest')} jeszcze ${missing} ${plural(missing, 'osoba', 'osoby', 'osób')} z ${eligible.length} uprawnionych. Wszystkie trwające głosowania zostaną zamknięte i policzone, a ${missing === 1 ? 'ta osoba nie będzie już mogła' : 'te osoby nie będą już mogły'} oddać głosu.`;
+  const missingReason = how === 'przerwij' && !reason.trim();
+  return <Modal title="Zakończyć głosowanie przed terminem?" onClose={props.onClose} closeButton={false} confirm initialFocus=".confirm-cancel">
+    <form class="stack" onSubmit={async e => {
+      e.preventDefault();
+      if (missingReason) return;
+      if (await send({type: 'procedure_end', how, reason: how === 'przerwij' ? reason.replace(/\s+/g, ' ').trim() : undefined})) props.onClose();
+    }}>
+      <Segments label="Sposób zakończenia" value={how} options={[['policz', 'Zakończ i policz głosy'], ['przerwij', 'Przerwij bez rozstrzygnięcia']]} onChange={setHow}/>
+      <p>{how === 'policz' ? countText : `Wszystkie trwające głosowania zostaną przerwane bez wyniku. Rozstrzygnięcie nie zapadnie, a oddane głosy nie zostaną policzone. Powód trafi do protokołu.`}</p>
+      {how === 'przerwij' && <Field label="Powód" hint="Np. błąd w treści uchwały."><input value={reason} maxLength={500} required onInput={e => setReason((e.target as HTMLInputElement).value)}/></Field>}
+      <div class="oi-note oi-note--wazne"><span class="oi-label">Ważne</span><p>Zakończenia głosowania nie można cofnąć.</p></div>
+      <div class="actions confirm-actions">
+        <Button kind="danger" type="submit" class="confirm-ok" busy={busy} disabled={missingReason} reason={how === 'przerwij' ? (missingReason ? 'Wpisz powód.' : '') : undefined}>{how === 'policz' ? 'Zakończ i policz głosy' : 'Przerwij głosowanie'}</Button>
+        <Button class="confirm-cancel" onClick={props.onClose}>Anuluj</Button>
+      </div>
+    </form>
+  </Modal>;
 }
 
 // Karta sprawy: etykieta z trybem, jeden tytuł, jeden odnośnik do materiału, głos, lista osób bez głosu i wynik.
@@ -78,7 +139,7 @@ function Acts() {
   const staff = canChairOrgan(s.roster, m.organ, s.personId) || s.isOrganizer(m.organ);
   const member = s.isMember(m.organ);
   const acts = m.agenda.filter(i => !i.parentId);
-  const unannounced = m.ballots.find(b => b.status === 'zamkniete' && !b.announcedAt && acts.some(it => it.id === b.itemId));
+  const first = unannounced(m)[0];
   return <div class="acts">{acts.map(it => {
     const b = m.ballots.find(x => x.itemId === it.id);
     const mode = b?.mode ?? it.mode ?? 'jawne';
@@ -101,7 +162,7 @@ function Acts() {
       </div>}
       {b?.status === 'zamkniete' && <>
         <ResultCard b={b} kind={materialTypeOf(m, b)}/>
-        {staff && !b.announcedAt && <div><Button kind={unannounced?.id === b.id ? 'primary' : 'secondary'} busy={busy} onClick={() => send({type: 'announce', ballotId: b.id})}>Ogłoś wynik głosowania</Button></div>}
+        {staff && !b.announcedAt && !b.aborted && <div><Button kind={first?.id === b.id ? 'primary' : 'secondary'} busy={busy} onClick={() => send({type: 'announce', ballotId: b.id})}>Ogłoś wynik głosowania</Button></div>}
       </>}
     </section>;
   })}</div>;
@@ -149,29 +210,33 @@ function ActSettings({it}: {it: AgendaItem}) {
   </Fold>;
 }
 
-// Dane głosowania: tytuł i koniec głosowania, z informacją o zapisie i niezapisanych zmianach.
+// Dane głosowania: tytuł, koniec głosowania, data powiadomienia członków i dane do protokołu (F10), z informacją o zapisie.
 function VotingData() {
   const {m, send, busy} = useMeeting();
-  const local = (ts?: number) => ts ? new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-  const saved = {title: m.title, endsAt: local(m.endsAt)};
+  const saved = {title: m.title, endsAt: localInput(m.endsAt), noticeDate: m.noticeDate, ...protocolOf(m)};
   const [draft, setDraft] = useState(saved);
   const [touched, setTouched] = useState(false);
   const save = useSaveStatus();
-  const key = (d: typeof saved) => JSON.stringify([d.title.trim(), d.endsAt]);
+  const key = (d: typeof saved) => JSON.stringify([d.title.trim(), d.endsAt, d.noticeDate, d.protocolNumber.trim(), d.recorder.trim(), d.convener]);
   useEffect(() => { if (!touched) setDraft(saved); }, [key(saved)]);
   const dirty = key(draft) !== key(saved);
   useLeaveWarning(dirty);
-  const set = (field: keyof typeof saved) => (e: Event) => { setTouched(true); save.reset(); const v = (e.target as HTMLInputElement).value; setDraft(d => ({...d, [field]: v})); };
+  const set = <K extends keyof typeof saved>(field: K, value: (typeof saved)[K]) => { setTouched(true); save.reset(); setDraft(d => ({...d, [field]: value})); };
+  const input = (field: 'title' | 'endsAt' | 'noticeDate') => (e: Event) => set(field, (e.target as HTMLInputElement).value);
   return <section class="oi-card">
     <CardTitle level={2}>Dane głosowania</CardTitle>
     <form class="stack" onSubmit={async e => {
       e.preventDefault();
       if (!dirty) return;
-      const r = await save.track(() => send({type: 'details', title: draft.title, endsAt: new Date(draft.endsAt).getTime()}));
+      // Termin idzie tylko po zmianie, żeby zapis innych pól nie wymagał terminu późniejszego niż teraz.
+      const r = await save.track(() => send({type: 'details', title: draft.title, noticeDate: draft.noticeDate, protocolNumber: draft.protocolNumber, recorder: draft.recorder, convener: draft.convener,
+        ...(draft.endsAt !== saved.endsAt ? {endsAt: new Date(draft.endsAt).getTime()} : {})}));
       if (r) setTouched(false);
     }}>
-      <Field label="Tytuł"><input name="title" value={draft.title} onInput={set('title')} required maxLength={200}/></Field>
-      <Field label="Koniec głosowania" hint="Zwykle kilka godzin. Członkowie widzą licznik pozostałego czasu."><input name="endsAt" type="datetime-local" value={draft.endsAt} onInput={set('endsAt')} required/></Field>
+      <Field label="Tytuł"><input name="title" value={draft.title} onInput={input('title')} required maxLength={200}/></Field>
+      <Field label="Koniec głosowania" hint="Zwykle kilka godzin. Członkowie widzą licznik pozostałego czasu."><input name="endsAt" type="datetime-local" value={draft.endsAt} onInput={input('endsAt')} required/></Field>
+      <Field label="Data powiadomienia członków" hint="Kiedy członkowie dostali powiadomienie o głosowaniu. Data trafi do protokołu."><input name="noticeDate" type="date" value={draft.noticeDate} onInput={input('noticeDate')}/></Field>
+      <ProtocolFields draft={draft} set={set}/>
       <div class="form-save">
         <Button type="submit" busy={busy} disabled={!dirty} reason="Brak zmian do zapisania.">Zapisz dane głosowania</Button>
         <SaveLine status={save} dirty={dirty} saved={t => `Zapisano dane głosowania o godz. ${t}.`}/>

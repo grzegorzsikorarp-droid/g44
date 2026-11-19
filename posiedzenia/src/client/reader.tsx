@@ -1,11 +1,12 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {materialTypeLabel} from '../shared/meeting.ts';
-import {awaitingVote} from '../shared/rules.ts';
+import {awaitingVote, ballotTitle} from '../shared/rules.ts';
 import type {MaterialRef} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Button, Countdown, ErrorNotice, errorKindOf, LinkButton, Modal, type ErrorKind} from './ui.tsx';
+import {useDocTypes} from './doctypes.ts';
 
 type Loaded = MaterialRef & {html: string};
 const cache = new Map<string, Loaded>();
@@ -84,7 +85,7 @@ function VoteReminder(props: {materialId: string; onGo: (ballotId: string) => vo
   }, [!!b]);
   if (!b) return null;
   return <div class="oi-note reader-vote" ref={note}>
-    <span class="oi-label">Trwa głosowanie nr {b.number}</span>
+    <span class="oi-label">Trwa {ballotTitle(b).toLocaleLowerCase('pl')}</span>
     <p>Pozostało <Countdown endsAt={b.endsAt} label={false} long={b.remote}/>. Zamknij materiał, aby oddać głos.</p>
     <Button kind="primary" small onClick={() => props.onGo(b.id)}>Przejdź do głosowania</Button>
   </div>;
@@ -94,9 +95,10 @@ export function MaterialLink(props: {id: string; version: number; label: string;
   const {m} = useMeeting();
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState(readSize);
+  const types = useDocTypes();
   const ref = m.materials.find(x => x.id === props.id);
   // Tytuł okna to rodzaj i numer materiału („Uchwała nr 117/IX/2026”), a bez numeru „Materiał”.
-  const title = ref?.number ? `${materialTypeLabel(ref.type)} nr ${ref.number}` : 'Materiał';
+  const title = ref?.number ? `${materialTypeLabel(ref.type, types)} nr ${ref.number}` : 'Materiał';
   const resize = (next: string) => { setSize(next); saveSize(next); };
   // Okno zamyka się, a po zamknięciu (i powrocie fokusu na odnośnik) fokus przechodzi na nagłówek karty głosowania.
   const goToVote = (ballotId: string) => { setOpen(false); window.setTimeout(() => showBallot(ballotId), 0); };

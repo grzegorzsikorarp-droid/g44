@@ -1,22 +1,24 @@
 import {useContext, useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {Command} from '../shared/meeting.ts';
 import {canChairOrgan, isChairman, noticeDays} from '../shared/meeting.ts';
-import {awaitingVote, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
-import {membership, organMembers} from '../shared/roster.ts';
-import type {AgendaItem, Choice, MaterialType, Meeting} from '../shared/types.ts';
+import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel, resultPendingText} from '../shared/rules.ts';
+import {membership, organMembers, personName} from '../shared/roster.ts';
+import type {AgendaItem, Choice, DocType, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {request, serverNow, useLive} from './api.ts';
 import {MeetingCtx, useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
-import {useSession} from './session.ts';
+import {SessionContext, useSession} from './session.ts';
 import {castSecret, forgetRejected, onSecretChange, resendSecret, secretCastHere, secretPending, secretRejected} from './secret.ts';
 import {announce, Button, CardTitle, Chip, Confirm, Countdown, ErrorNotice, Fact, Field, fmtDateTime, fmtShort, fmtTime, Fold, LinkButton, Modal, Notice, plural, SectionHead, StateChip, Tag, TitleLead, useAction, usePageTitle} from './ui.tsx';
 import {breakSince, meetingState, modeGenitive, modeName, votingChip} from './stany.ts';
 import {ChairPanel} from './chair.tsx';
-import {PrepEditor} from './prep.tsx';
+import {DuplicateButton, PrepEditor} from './prep.tsx';
 import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader, showBallot} from './reader.tsx';
 import {Messages} from './messages.tsx';
 import {brand} from './brand.ts';
 import {typo} from '../shared/typo.ts';
+import {useDocTypes} from './doctypes.ts';
+import {PeopleFacts} from './people.tsx';
 
 const APP = 'Posiedzenia Prezydium';
 const day = (ts: number) => new Intl.DateTimeFormat('pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Warsaw'}).format(ts);
@@ -25,6 +27,20 @@ const shortDate = (m: Pick<Meeting, 'kind' | 'date' | 'endsAt'>) => m.kind === '
 const pageTitle = (m: ViewMeeting) => m.kind === 'procedura' ? `Głosowanie między posiedzeniami do ${shortDate(m)} – ${APP}` : `Posiedzenie ${shortDate(m)} – ${APP}`;
 /** Oddane głosy i uprawnieni bez osób, które wyszły przed oddaniem głosu. */
 const castOf = (b: ViewBallot) => ({cast: b.secret ? b.secret.cast : b.voted.length, total: b.eligible.length - b.absentDuring.filter(id => !b.voted.includes(id)).length});
+/** Zdanie z głosowaniem próbnym (F1): głos bez skutków. */
+export const trialSentence = 'Ten głos nie ma żadnych skutków. Sprawdzamy, czy głosowanie działa na Twoim telefonie.';
+/** Spotkanie robocze (F5): uwaga u członka i w panelu. */
+export const workingSentence = 'To spotkanie robocze. Bez kworum Prezydium nie podejmuje uchwał.';
+/** „Wniosek zgłasza Anna Nowak, Sekretarz.” przy wniosku o tryb głosowania (F14). */
+export function proposerSentence(roster: Roster, organ: string, b: Pick<ViewBallot, 'target'>) {
+  const who = b.target?.kind === 'tryb' ? b.target.proposedBy : undefined;
+  if (!who) return null;
+  const label = membership(roster, organ, who)?.label;
+  return `Wniosek zgłasza ${personName(roster, who)}${label ? `, ${label}` : ''}.`;
+}
+/** Projekt porządku zmienia się na żywo (F8): bieżący punkt to „Przyjęcie porządku obrad”, porządek nie jest przyjęty i nic się nie głosuje. */
+export const draftLive = (m: ViewMeeting) => m.kind === 'posiedzenie' && m.status !== 'zakonczone' && !m.agendaAdopted
+  && m.agenda.find(i => i.id === m.currentItemId)?.kind === 'porzadek' && !m.ballots.some(b => b.status === 'otwarte');
 
 export function MeetingPage({id}: {id: string}) {
   const s = useSession();
@@ -165,6 +181,7 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
           <StateChip state={meetingState(m.status, !organizer)}/>
           {open && <span class="bar-desk bar-voting"><StateChip state={votingChip()}/></span>}
           <span class="bar-desk bar-kind"><Chip>{kind}</Chip></span>
+          {m.working && <span class="bar-working"><Chip>Spotkanie robocze</Chip></span>}
         </div>
         <h1 class="meeting-bar__title" title={m.title}><span class="bar-full">{m.title}</span><span class="bar-short" aria-hidden="true">{short}</span></h1>
         <div class="meeting-bar__actions">
@@ -172,14 +189,14 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
           {m.link && m.status !== 'zakonczone' && !brand.demo && <LinkButton small href={m.link} newTab>Dołącz do<br class="bar-br"/> połączenia</LinkButton>}
           {props.toggleView && <Button small class="bar-toggle" onClick={props.toggleView}>{props.participantView ? <>Panel prowadzenia<br class="bar-br"/> obrad</> : <>Widok<br class="bar-br"/> uczestnika</>}</Button>}
           {!procedure && liveNow && organizer && <span class="bar-desk"><LinkButton small href={`#ekran-${m.id}`} newTab={!brand.demo}>Otwórz ekran sali</LinkButton></span>}
-          {protocol && <span class="bar-desk"><LinkButton small href={`/api/meetings/${m.id}/protokol`} newTab={!brand.demo}>Projekt protokołu</LinkButton></span>}
+          {protocol && <span class="bar-desk"><LinkButton small href={`/api/meetings/${m.id}/protokol`} newTab={!brand.demo}>{m.working ? 'Projekt notatki' : 'Projekt protokołu'}</LinkButton></span>}
         </div>
       </div>
       <dl class="facts meeting-bar__facts">
         {facts}
         {!procedure && liveNow && <><Fact label="Obecnych">{present} z {total}</Fact><Fact label="Wymagane kworum">{quorumFor(total)}</Fact></>}
         {/* Jeden fakt o głosowaniu: numer, pozostały czas i oddane głosy („trwa” mówi znacznik obok tytułu). */}
-        {open && votes && <Fact label={`Głosowanie nr ${open.number}`}>zostało <Countdown endsAt={open.endsAt} label={false}/>, oddano {votes.cast} z {votes.total}</Fact>}
+        {open && votes && <Fact label={ballotTitle(open)}>zostało <Countdown endsAt={open.endsAt} label={false}/>, oddano {votes.cast} z {votes.total}</Fact>}
       </dl>
     </div>
   </header>;
@@ -198,8 +215,8 @@ function MeetingDetails(props: {participantView: boolean; toggleView?: () => voi
       {props.toggleView && <div class="details-toggle"><Button small onClick={props.toggleView}>{props.participantView ? 'Panel prowadzenia obrad' : 'Widok uczestnika'}</Button></div>}
       <div class="actions meeting-details__links">
         {protocol && (brand.demo
-          ? <a class="oi-link" href={`/api/meetings/${m.id}/protokol`}>Projekt protokołu</a>
-          : <a class="oi-link" href={`/api/meetings/${m.id}/protokol`} target="_blank" rel="noopener noreferrer">Projekt protokołu<span class="sr-only"> (otwiera się w nowej karcie)</span></a>)}
+          ? <a class="oi-link" href={`/api/meetings/${m.id}/protokol`}>{m.working ? 'Projekt notatki' : 'Projekt protokołu'}</a>
+          : <a class="oi-link" href={`/api/meetings/${m.id}/protokol`} target="_blank" rel="noopener noreferrer">{m.working ? 'Projekt notatki' : 'Projekt protokołu'}<span class="sr-only"> (otwiera się w nowej karcie)</span></a>)}
         <a class="oi-link" href="#">Lista posiedzeń</a>
       </div>
     </Fold>
@@ -207,19 +224,21 @@ function MeetingDetails(props: {participantView: boolean; toggleView?: () => voi
 }
 
 // Stan punktu słowem w prawej kolumnie porządku. Bieżący punkt ma zamiast niego znacznik „Teraz”.
-function agendaState(m: ViewMeeting, it: AgendaItem, locked: boolean) {
+function agendaState(m: ViewMeeting, it: AgendaItem, locked: boolean, types: DocType[]) {
   if (it.status === 'odroczony') return 'odroczony';
   if (it.status === 'wycofany') return 'wycofany';
-  if (m.ballots.some(b => b.itemId === it.id && b.status === 'zamkniete' && b.result?.adopted && !b.supersededBy && b.purpose !== 'tryb' && b.purpose !== 'reasumpcja')) return 'przyjęto';
-  if (it.status === 'zakonczony' || (it.kind === 'zamkniecie' && m.status === 'zakonczone')) return needsVote(m, it) && !itemVoted(m, it) ? 'bez głosowania' : 'zakończony';
+  if (m.ballots.some(b => b.itemId === it.id && b.status === 'zamkniete' && b.result?.adopted && !b.supersededBy && b.purpose !== 'tryb' && b.purpose !== 'reasumpcja' && b.purpose !== 'proba')) return 'przyjęto';
+  if (it.status === 'zakonczony' || (it.kind === 'zamkniecie' && m.status === 'zakonczone')) return needsVote(m, it, types) && !itemVoted(m, it) ? 'bez głosowania' : 'zakończony';
   if (it.status === 'oczekuje') return m.status === 'zakonczone' ? 'nierozpatrzony' : locked ? 'po przyjęciu porządku' : null;
   return null;
 }
 
 export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean}) {
   const {m} = useMeeting();
+  const types = useDocTypes();
   const closed = m.status === 'zakonczone';
-  const locked = (it: AgendaItem) => m.kind === 'posiedzenie' && !m.agendaAdopted && !beforeAdoption(m, it);
+  // Na spotkaniu roboczym (F5) punkty rozpoczyna się bez przyjętego porządku.
+  const locked = (it: AgendaItem) => m.kind === 'posiedzenie' && !m.agendaAdopted && !m.working && !beforeAdoption(m, it);
   const lockedTop = m.agenda.filter(it => !it.parentId && locked(it)).map(it => itemNumber(m.agenda, it.id));
   const lockedText = lockedTop.length === 1 ? `Punkt ${lockedTop[0]} można rozpocząć po przyjęciu porządku obrad.` : `Punkty ${lockedTop[0]}–${lockedTop[lockedTop.length - 1]} można rozpocząć po przyjęciu porządku obrad.`;
   return <>
@@ -228,10 +247,10 @@ export function AgendaList(props: {selected?: string | null; onSelect?: (id: str
       {orderedAgenda(m.agenda).map(it => {
         const current = !closed && it.id === m.currentItemId;
         const selected = props.selected === it.id;
-        const state = current ? null : agendaState(m, it, locked(it));
+        const state = current ? null : agendaState(m, it, locked(it), types);
         const inner = <>
           <span class="agenda-no">{itemNumber(m.agenda, it.id)}</span>
-          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}</span>
+          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}<PeopleFacts it={it} compact/></span>
           <span class="agenda-meta">{current ? <Chip tone="trwa">Teraz</Chip> : state && <span class="agenda-state">{state}</span>}</span>
         </>;
         const cls = ['agenda-item', it.parentId ? 'is-sub' : '', current ? 'is-current' : '', selected && !current ? 'is-selected' : '', locked(it) ? 'is-locked' : '', `st-${it.status}`].filter(Boolean).join(' ');
@@ -255,35 +274,50 @@ export function beforeAdoption(m: Pick<Meeting, 'agenda'>, it: AgendaItem) {
 // Twarde spacje wstawia typo() przed podziałem, bo tekst we fragmencie nie przechodzi przez podpięcie z typo.ts.
 export function emphasize(text: string) {
   const label = typo(text);
-  const match = label.match(/^(.*?)((?:nie (?:została|został|zostało) )?(?:przyjęt[aeoy]|podjęt[aey]|odrzucon[aey])|nie przyjęto|brak kworum.*)$/i);
+  // Głosowanie próbne: „zakończone”, przerwane (F7): samo „przerwane”, a reszta zdania bez pogrubienia.
+  const match = label.match(/^(.*?)((?:nie (?:została|został|zostało) )?(?:przyjęt[aeoy]|podjęt[aey]|odrzucon[aey]|zakończone)|nie przyjęto|przyjęto|brak kworum.*|przerwane(?=,))(.*)$/i);
   if (!match) return label;
-  return <>{match[1]}<b>{match[2]}</b></>;
+  return <>{match[1]}<b>{match[2]}</b>{match[3]}</>;
 }
 
 /**
  * Wynik głosowania. `kind` to rodzaj sprawy do formuły wyniku (resultLabel). Bez niego karta bierze
- * rodzaj materiału z posiedzenia, jeśli stoi w jego kontekście (ekran sali go nie ma).
+ * rodzaj materiału z posiedzenia, jeśli stoi w jego kontekście (ekran sali go nie ma). Głosowanie przerwane (F7)
+ * ma formułę i powód bez liczb, a wynik jeszcze nieogłoszony (F2) zdanie, że ogłosi go osoba prowadząca obrady.
  */
 export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: MaterialType | null}) {
   const {b} = props;
   const ctx = useContext(MeetingCtx);
+  const session = useContext(SessionContext);
   const r = b.result;
-  if (!r) return null;
+  const trial = b.purpose === 'proba';
+  const label = trial ? `Wynik próbnego głosowania ${modeGenitive(b.mode)}` : `Wynik głosowania ${modeGenitive(b.mode)} nr ${b.number}${b.reasumptionOf ? ' po reasumpcji' : ''}`;
+  const head = props.big ? <Tag>{label}</Tag> : <span class="oi-label">{label}</span>;
+  const subject = <p class="result-subject">{props.big ? <TitleLead text={b.subject}/> : b.subject}</p>;
+  if (b.aborted) return <div class={'result' + (props.big ? ' result-big' : '')}>
+    {head}{subject}
+    <p class="result-label">{emphasize(resultLabel(b))}</p>
+    <p class="result-meta">{`Powód „${b.aborted.reason}”. Głosów nie policzono.`}</p>
+  </div>;
+  if (!r) return b.status === 'zamkniete' && b.resultHidden ? <div class={'result' + (props.big ? ' result-big' : '')}>
+    {props.big ? <Tag>{ballotTitle(b)}</Tag> : <span class="oi-label">{ballotTitle(b)}</span>}{subject}
+    <p class="result-pending">{resultPendingText}</p>
+  </div> : null;
   const kind = props.kind !== undefined ? props.kind : ctx ? materialTypeOf(ctx.m, b) : null;
-  const label = `Wynik głosowania ${modeGenitive(b.mode)} nr ${b.number}${b.reasumptionOf ? ' po reasumpcji' : ''}`;
   const reason = b.closeReason === 'czas' ? ' Upłynął czas głosowania.' : b.closeReason === 'prowadzacy' ? ' Głosowanie zakończyła osoba prowadząca obrady.' : '';
   const meta = b.closeReason === 'wszyscy' && r.cast === r.eligible
-    ? `Zagłosowali wszyscy uprawnieni (${r.eligible}). Wymagane kworum ${r.quorum}.`
-    : `Głosowało ${r.cast} z ${r.eligible} uprawnionych. Wymagane kworum ${r.quorum}.${reason}`;
+    ? `Zagłosowali wszyscy uprawnieni (${r.eligible}).${trial ? '' : ` Wymagane kworum ${r.quorum}.`}`
+    : `Głosowało ${r.cast} z ${r.eligible} uprawnionych.${trial ? '' : ` Wymagane kworum ${r.quorum}.`}${reason}`;
   const replaced = b.supersededBy && ctx ? ctx.m.ballots.find(x => x.id === b.supersededBy) : undefined;
+  const proposer = session && ctx ? proposerSentence(session.roster, ctx.m.organ, b) : null;
   return <div class={'result' + (props.big ? ' result-big' : '')}>
-    {props.big ? <Tag>{label}</Tag> : <span class="oi-label">{label}</span>}
-    <p class="result-subject">{props.big ? <TitleLead text={b.subject}/> : b.subject}</p>
+    {head}{subject}
     <p class="result-label">{emphasize(resultLabel(b, kind))}</p>
     <div class="oi-stats result-counts">
       {choices.map(c => <div class="oi-stat" key={c}><b>{r[c]}</b><span>{choiceCountLabel[c]}</span></div>)}
     </div>
-    <p class="result-meta">{meta}</p>
+    <p class="result-meta">{meta}{trial ? ' Głosowanie próbne nie ma żadnych skutków.' : ''}</p>
+    {proposer && <p class="result-meta">{proposer}</p>}
     {/* Ekran sali (big) nie ma elementów sterowania, więc bez rozwijanego wykazu imiennego. */}
     {!props.big && b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <Fold title="Wykaz imienny"><NamedList b={b}/></Fold>}
     {replaced && <p class="muted small">Wynik zastąpiony wynikiem reasumpcji w głosowaniu nr {replaced.number}.</p>}
@@ -341,7 +375,7 @@ export function VoteCard(props: {b: ViewBallot; embedded?: boolean}) {
   const resend = () => secret.run(async () => { if (await resendSecret(m.id, b.id)) setCastHere(true); });
   let place;
   if (!me || !s.isMember(m.organ)) place = <p class="muted">Głosują członkowie Prezydium.</p>;
-  else if (!present) place = <Notice tone="warn">Potwierdź obecność, aby wziąć udział w głosowaniu.</Notice>;
+  else if (!present) place = <Notice tone="warn">{me && m.attendance[me] === 'zgloszony' ? 'Twoja obecność czeka na potwierdzenie. Zagłosujesz, gdy osoba prowadząca obrady albo biuro ją potwierdzi.' : 'Potwierdź obecność, aby wziąć udział w głosowaniu.'}</Notice>;
   else if (!eligible) place = <Notice>To głosowanie rozpoczęło się bez Ciebie. Osoba prowadząca obrady widzi Twoją obecność.</Notice>;
   else if (rejected) place = null;
   else if (secret.busy) place = <p class="muted">Wysyłanie głosu tajnego…</p>;
@@ -373,17 +407,22 @@ export function VoteCard(props: {b: ViewBallot; embedded?: boolean}) {
     <p class="confirm-choice"><strong>{choiceLabel[choice]}</strong></p>
     <p>{modeSentence(b.mode)}</p>
   </div>}/>;
+  const trial = b.purpose === 'proba';
   if (props.embedded) return <div class="vote-embedded" data-glosowanie={b.id}>
     <h3 class="card-sub" tabIndex={-1} data-naglowek-glosowania>Twój głos</h3>
+    {trial && <p class="small">{trialSentence}</p>}
     {failure}{place}{dialog}
   </div>;
+  const proposer = proposerSentence(s.roster, m.organ, b);
   const origin = b.reasumptionOf ? m.ballots.find(x => x.id === b.reasumptionOf)
     : b.target?.kind === 'reasumpcja' ? m.ballots.find(x => x.id === (b.target as {ballotId: string}).ballotId) : undefined;
   const motion = origin ? m.motions.find(x => x.ballotId === origin.id && (x.voteBallotId === b.id || x.repeatBallotId === b.id)) : undefined;
   const bareResolution = !b.material && b.purpose === 'uchwala' && resolutionSubject.test(b.subject.trim());
   return <section class="oi-card vote-card is-teraz" id={`glosowanie-${b.id}`} aria-labelledby={`${ids}-t`}>
-    <div class="oi-btns"><Tag>Głosowanie nr {b.number}</Tag><Tag dark>{modeName(b.mode)}{b.reasumptionOf ? ', reasumpcja' : ''}</Tag></div>
+    <div class="oi-btns"><Tag>{ballotTitle(b)}</Tag><Tag dark>{modeName(b.mode)}{b.reasumptionOf ? ', reasumpcja' : ''}</Tag></div>
     <h2 class="vote-subject" id={`${ids}-t`} tabIndex={-1} data-naglowek-glosowania><TitleLead text={b.subject}/></h2>
+    {trial && <p class="vote-trial">{trialSentence}</p>}
+    {proposer && <p class="small">{proposer}</p>}
     {b.material && <MaterialLink id={b.material.id} version={b.material.version} label="Treść poddana pod głosowanie" meta={`wersja ${b.material.version}`}/>}
     <dl class="facts facts--liczby vote-facts">
       <Fact label="Pozostało"><Countdown endsAt={b.endsAt} label={false} long={b.remote}/></Fact>
@@ -414,7 +453,7 @@ export function RejectedVote(props: {ballots: ViewBallot[]}) {
   const b = props.ballots.filter(x => x.secret && secretRejected(x.id)).sort((x, y) => y.number - x.number)[0];
   if (!b) return null;
   return <Notice tone="error" label="Głos nie został policzony">
-    <p>Głosowanie nr {b.number} zakończyło się, zanim Twój głos dotarł. Twój głos nie został policzony. Zgłoś to osobie prowadzącej obrady.</p>
+    <p>{ballotTitle(b)} zakończyło się, zanim Twój głos dotarł. Twój głos nie został policzony. Zgłoś to osobie prowadzącej obrady.</p>
     <div><Button kind="ghost" onClick={() => forgetRejected(b.id)}>Rozumiem</Button></div>
   </Notice>;
 }
@@ -424,6 +463,13 @@ function PresenceCard() {
   const s = useSession();
   const me = s.personId!;
   const status = m.attendance[me] ?? 'nieobecny';
+  // F9: na posiedzeniu stacjonarnym zgłoszoną obecność potwierdza osoba prowadząca obrady albo biuro.
+  if (status === 'zgloszony') {
+    const reported = [...m.presenceLog].reverse().find(e => e.who === me && !e.guest && e.type === 'zgloszenie');
+    return <div class="oi-note oi-note--wazne presence" role="status">
+      <div><strong>Obecność zgłoszona{reported ? ` o godz. ${fmtTime(reported.at)}` : ''}.</strong><span class="muted small">Czeka na potwierdzenie przez osobę prowadzącą obrady albo biuro.</span></div>
+    </div>;
+  }
   return <div class="oi-note presence">
     <div><strong>{status === 'wyszedl' ? 'Zapisano Twoje wyjście z posiedzenia.' : 'Nie potwierdzono obecności.'}</strong><span class="muted small">{m.mode === 'zdalne' ? 'Potwierdź, gdy połączysz się z posiedzeniem.' : 'Potwierdź, gdy jesteś na sali.'}</span></div>
     <Button kind="primary" busy={busy} onClick={() => send({type: 'presence', who: me, present: true})}>{status === 'wyszedl' ? 'Wracam na posiedzenie' : 'Potwierdzam obecność'}</Button>
@@ -458,7 +504,7 @@ function CurrentItem(props: {it: AgendaItem; accent: boolean}) {
   return <section class={'oi-card now' + (props.accent ? ' is-teraz' : '')} aria-labelledby={id}>
     <span class="oi-label">Bieżący punkt obrad</span>
     <h2 class="now-title" id={id}><span class="agenda-no">{itemNumber(m.agenda, it.id)}</span><span><TitleLead text={it.title}/></span></h2>
-    {it.presenters.length > 0 && <dl class="facts">{presenterGroups(it).map(g => <Fact key={g.kind} label={g.label}>{g.people.join('; ')}</Fact>)}</dl>}
+    <PeopleFacts it={it}/>
     {materials.length > 0 && <div class="material-list">{materials.map(x => <MaterialLink key={x.id} id={x.id} version={x.version}
       label={same(x.title, it.title) ? (x.type === 'uchwala' ? 'Treść uchwały' : 'Treść materiału') : x.title} meta={`wersja ${x.version}`}/>)}</div>}
   </section>;
@@ -467,18 +513,24 @@ function CurrentItem(props: {it: AgendaItem; accent: boolean}) {
 // Komunikaty dla czytnika ekranu o zdarzeniach obrad: porównanie poprzedniego i bieżącego stanu.
 function useMeetingAnnouncements(m: ViewMeeting, online: boolean) {
   const s = useSession();
-  const previous = useRef<{open?: string; result?: string; status: string; chair: string | null; online: boolean} | null>(null);
+  const previous = useRef<{open?: string; result?: string; trial?: string; status: string; chair: string | null; online: boolean} | null>(null);
   const open = m.ballots.find(b => b.status === 'otwarte');
   const shown = m.presentation?.kind === 'wynik' ? m.ballots.find(b => b.id === m.presentation!.id && b.result) : undefined;
+  const trialResult = lastTrial(m);
   useEffect(() => {
-    const now = {open: open?.id, result: shown?.id, status: m.status, chair: m.chair.current, online};
+    const now = {open: open?.id, result: shown?.id, trial: trialResult?.id, status: m.status, chair: m.chair.current, online};
     const before = previous.current;
     previous.current = now;
     if (!before) return;
     const lines: string[] = [];
     if (open && now.open !== before.open) {
       const minutes = Math.max(1, Math.round((open.endsAt - serverNow()) / 60000));
-      lines.push(`Rozpoczęło się głosowanie ${modeName(open.mode)} nr ${open.number}. ${open.subject.replace(/[.\s]+$/, '')}. Na oddanie głosu masz ${minutes} ${plural(minutes, 'minutę', 'minuty', 'minut')}.`);
+      const what = open.purpose === 'proba' ? `Rozpoczęło się głosowanie próbne ${modeName(open.mode)}. ${trialSentence}` : `Rozpoczęło się głosowanie ${modeName(open.mode)} nr ${open.number}. ${open.subject.replace(/[.\s]+$/, '')}.`;
+      lines.push(`${what} Na oddanie głosu masz ${minutes} ${plural(minutes, 'minutę', 'minuty', 'minut')}.`);
+    }
+    if (trialResult && trialResult.id !== before.trial) {
+      const r = trialResult.result!;
+      lines.push(`Głosowanie próbne zakończone. Za ${r.za}, przeciw ${r.przeciw}, wstrzymało się ${r.wstrzymuje}.`);
     }
     if (shown?.result && now.result !== before.result) {
       const r = shown.result;
@@ -506,6 +558,17 @@ function useMeetingAnnouncements(m: ViewMeeting, online: boolean) {
   }, [open?.id, open?.endsAt, waiting]);
 }
 
+/**
+ * Wynik głosowania próbnego (F1), który widzą wszyscy od razu po zamknięciu: ostatnie zamknięte głosowanie jest próbne,
+ * a ekran sali nie pokazuje od tego czasu niczego innego.
+ */
+function lastTrial(m: ViewMeeting) {
+  if (m.ballots.some(b => b.status === 'otwarte')) return undefined;
+  const last = m.ballots.filter(b => b.status === 'zamkniete').sort((x, y) => (y.closedAt ?? 0) - (x.closedAt ?? 0))[0];
+  if (!last || last.purpose !== 'proba' || !last.result) return undefined;
+  return !m.presentation || m.presentation.at <= (last.closedAt ?? 0) || m.presentation.kind === 'glosowanie' ? last : undefined;
+}
+
 function MemberView(props: {online: boolean}) {
   const {m, send} = useMeeting();
   const s = useSession();
@@ -528,8 +591,10 @@ function MemberView(props: {online: boolean}) {
   }, [open?.id]);
   const shown = m.presentation;
   const result = shown?.kind === 'wynik' ? m.ballots.find(b => b.id === shown.id && b.result) : undefined;
-  const lastClosed = m.ballots.filter(b => b.status === 'zamkniete').sort((x, y) => (y.closedAt ?? 0) - (x.closedAt ?? 0))[0];
+  // Wynik nieogłoszony (F2) ma tylko głosowanie w sprawie: próbne widać od razu, a przerwanego się nie ogłasza.
+  const lastClosed = m.ballots.filter(b => b.status === 'zamkniete' && b.purpose !== 'proba' && !b.aborted).sort((x, y) => (y.closedAt ?? 0) - (x.closedAt ?? 0))[0];
   const awaitingResult = !open && lastClosed && !lastClosed.announcedAt ? lastClosed : undefined;
+  const trialResult = lastTrial(m);
   const current = m.agenda.find(i => i.id === m.currentItemId);
   const presented = shown?.kind === 'material' ? m.materials.find(x => x.id === shown.id) : null;
   const member = !!me && s.isMember(m.organ);
@@ -545,6 +610,7 @@ function MemberView(props: {online: boolean}) {
   const handedOver = me && change && change.from === me && m.chair.current !== me ? change : undefined;
   return <div class="member">
     {member && status !== 'obecny' && <PresenceCard/>}
+    {m.working && <Notice tone="warn" label="Spotkanie robocze">{workingSentence}</Notice>}
     {m.status === 'przerwa' && <Notice tone="warn" label="Przerwa w obradach">{since ? `od godz. ${fmtTime(since)}. ` : ''}Głosowania są wstrzymane.</Notice>}
     {takeAllowed && chairAway && <Notice>
       <p>{left ? `Osoba prowadząca obrady wyszła z posiedzenia o godz. ${fmtTime(left.at)}. ` : ''}Możesz przejąć prowadzenie{role ? ` jako ${role}` : ''}.</p>
@@ -556,13 +622,18 @@ function MemberView(props: {online: boolean}) {
         <span class="oi-label" id={`zakonczone-${awaitingResult.id}`}>Głosowanie nr {awaitingResult.number}</span>
         <p><strong>Głosowanie zakończone.</strong> Wynik ogłosi osoba prowadząca obrady.</p>
       </section>
+      : trialResult ? <ResultCard b={trialResult} big/>
       : result ? <ResultCard b={result} big/> : null}
     <RejectedVote ballots={m.ballots}/>
     {current && <CurrentItem it={current} accent={!open}/>}
     {presented && !open && <section class="oi-card"><span class="oi-label">Materiał pokazywany na sali</span><MaterialReader id={presented.id} version={presented.version} inline/></section>}
     <Motions/>
     {(m.mode === 'zdalne' || m.messages.length > 0) && <Messages/>}
-    <Fold title={m.agendaAdopted ? 'Przyjęty porządek obrad' : 'Projekt porządku obrad'}><AgendaList compact/></Fold>
+    {/* F8: gdy prowadzący układa projekt porządku, projekt jest rozwinięty, a zmiany widać przy zwykłym odświeżaniu. */}
+    <Fold key={draftLive(m) ? 'projekt-na-zywo' : 'porzadek'} title={m.agendaAdopted ? 'Przyjęty porządek obrad' : 'Projekt porządku obrad'} open={draftLive(m)}>
+      {draftLive(m) && <Notice>Osoba prowadząca obrady może jeszcze zmieniać projekt. Zmiany widzisz od razu.</Notice>}
+      <AgendaList compact/>
+    </Fold>
     {member && status === 'obecny' && <PresenceRow/>}
     {takeAllowed && !chairAway && <div class="actions"><Button haspopup onClick={() => setTaking(true)}>Przejmij prowadzenie obrad</Button></div>}
     {taking && <Confirm title="Przejąć prowadzenie obrad?" confirm="Przejmij prowadzenie" focus="cancel" onClose={() => setTaking(false)} onConfirm={() => send({type: 'chair_take'})}
@@ -589,8 +660,9 @@ export function Motions() {
   const [creating, setCreating] = useState(false);
   const me = s.personId;
   const present = presentMembers(m as Meeting, s.roster);
-  const canAct = !!me && s.isMember(m.organ) && m.attendance[me] === 'obecny' && m.status !== 'zakonczone';
-  const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && b.mode === 'jawne' && !['reasumpcja', 'tryb'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
+  // Na spotkaniu roboczym (F5) nie składa się wniosków. Głosowania próbnego i przerwanego nie poddaje się reasumpcji.
+  const canAct = !!me && s.isMember(m.organ) && m.attendance[me] === 'obecny' && m.status !== 'zakonczone' && !m.working;
+  const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && b.mode === 'jawne' && !b.aborted && !['reasumpcja', 'tryb', 'proba'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
   const shown = m.motions.filter(x => x.status !== 'wycofany');
   if (!shown.length && (!canAct || !eligibleBallots.length)) return null;
   const needed = reasumptionSignaturesNeeded(present.length);
@@ -640,15 +712,20 @@ function Summary() {
   const {m} = useMeeting();
   const s = useSession();
   const members = organMembers(s.roster, m.organ);
-  const final = m.ballots.filter(b => b.result && !b.supersededBy);
+  const final = m.ballots.filter(b => b.result && !b.supersededBy && b.purpose !== 'proba');
   const named = final.filter(b => b.mode === 'imienne' && Object.keys(b.votes).length > 0);
   const days = noticeDays(m as Meeting);
   const protocol = s.isOrganizer(m.organ) || s.isMember(m.organ);
   return <div class="stack summary">
     <div class="oi-note oi-note--wazne summary-note">
-      <span class="oi-label">Posiedzenie zamknięte</span>
-      <p>Zamknięte o godz. {fmtTime(m.closedAt)}. Projekt protokołu jest gotowy do uzupełnienia.</p>
-      {protocol && <div><LinkButton primary href={`/api/meetings/${m.id}/protokol`} newTab={!brand.demo}>Projekt protokołu</LinkButton></div>}
+      <span class="oi-label">{m.working ? 'Spotkanie robocze zamknięte' : 'Posiedzenie zamknięte'}</span>
+      {m.working
+        ? <p>Zamknięte o godz. {fmtTime(m.closedAt)}. Bez kworum Prezydium nie podejmowało uchwał. Projekt notatki ze spotkania jest gotowy do uzupełnienia.</p>
+        : <p>Zamknięte o godz. {fmtTime(m.closedAt)}. Projekt protokołu jest gotowy do uzupełnienia.</p>}
+      {/* F6: po spotkaniu roboczym działaniem głównym jest przygotowanie nowego posiedzenia przez powielenie. */}
+      {m.working && s.isOrganizer(m.organ) && <><p class="strong">Uchwały podejmie nowe posiedzenie. Przygotuj je, powielając to spotkanie.</p><DuplicateButton primary/></>}
+      {protocol && <div><LinkButton primary={!(m.working && s.isOrganizer(m.organ))} href={`/api/meetings/${m.id}/protokol`} newTab={!brand.demo}>{m.working ? 'Projekt notatki' : 'Projekt protokołu'}</LinkButton></div>}
+      {!m.working && <DuplicateButton/>}
       <dl class="facts">
         <Fact label="Skład">{members.length} {plural(members.length, 'osoba', 'osoby', 'osób')}</Fact>
         <Fact label="Wymagane kworum">{quorumFor(members.length)}</Fact>
