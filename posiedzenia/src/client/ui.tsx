@@ -213,9 +213,9 @@ export function SectionHead(props: {children: ComponentChildren; count?: string}
   return <div class="oi-section-head"><span class="oi-mark" aria-hidden="true"/><h2>{props.children}</h2>{props.count && <span class="oi-count">{props.count}</span>}</div>;
 }
 
-/** Etykieta nad wartością (bez dwukropka). */
-export function Fact(props: {label: string; children: ComponentChildren}) {
-  return <div class="fact"><dt>{props.label}</dt><dd>{props.children}</dd></div>;
+/** Etykieta nad wartością (bez dwukropka). `class` pozwala ukryć fakt w ciasnym układzie (pasek posiedzenia). */
+export function Fact(props: {label: string; class?: string; children: ComponentChildren}) {
+  return <div class={props.class ? `fact ${props.class}` : 'fact'}><dt>{props.label}</dt><dd>{props.children}</dd></div>;
 }
 
 /** Rozwijana sekcja ze skośnym znacznikiem plus i minus (wzór pytań Izby). `count` dopisuje liczbę w nawiasie. */

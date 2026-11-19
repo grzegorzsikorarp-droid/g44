@@ -36,11 +36,14 @@
 .read-aloud p { font-size: var(--t-lista); line-height: 1.55; max-width: var(--wiersz-tekstu); }
 
 /* Trwające głosowanie */
-.live-ballot .oi-progress__txt { text-transform: none; letter-spacing: .02em; }
+/* Napis „4 z 7” bez wersalików to zwykły tekst, więc ma co najmniej 13 px */
+.live-ballot .oi-progress__txt { text-transform: none; letter-spacing: .02em; font-size: var(--t-meta); }
 .pending { display: flex; flex-direction: column; gap: var(--odstep-2); }
 .pending ul { list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--odstep-6); }
 @media (min-width: 900px) { .pending ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .pending li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0 var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-lista); line-height: 1.35; color: var(--tekst-mocny); }
+/* Na telefonie stały układ: nazwisko, a pod nim „Oznacz nieobecność” (bez wierszy na przemian jedno- i dwupoziomowych) */
+@media (max-width: 480px) { .pending li { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; } }
 .pending > p { font-size: var(--t-lista); }
 .live-foot { display: flex; flex-direction: column; gap: var(--odstep-4); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
 .live-foot .fingerprint { padding-top: 0; border-top: 0; }
@@ -103,11 +106,6 @@
 .motion { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-3); display: flex; flex-direction: column; gap: var(--odstep-2); }
 .fold summary { font-size: var(--t-lista); }
 .chair .oi-card .fold .oi-faq__a, .chair-right .fold .oi-faq__a { display: flex; flex-direction: column; gap: var(--odstep-3); }
-
-/* „Czytaj” przy materiale jest szary (zasada 3.5), czerwienieje po najechaniu i przy fokusie */
-.chair .material-link__act { color: var(--tekst-drugorzedny); }
-.chair .material-link:focus-visible .material-link__act { color: var(--akcent-tekst); }
-@media (hover: hover) and (pointer: fine) { .chair .material-link:hover .material-link__act { color: var(--akcent-tekst); } }
 
 /* Fakty w kartach panelu mają pismo wierszy list, tak jak fakty w pasku posiedzenia (najwyżej 10 rozmiarów pisma
    także w trakcie głosowania). Duże liczby i fakty w oknach zostają bez zmian. */

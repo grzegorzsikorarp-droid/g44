@@ -1,6 +1,6 @@
 import type {Account, AgendaItem, Ballot, Meeting, Motion, Roster} from '../shared/types.ts';
 import {membership, organMembers, organOf, personName} from '../shared/roster.ts';
-import {choiceLabel, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, quorumFor, resolutionSubject, resultLabel} from '../shared/rules.ts';
+import {choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
 import {noticeDays} from '../shared/meeting.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
@@ -28,7 +28,7 @@ const addDays = (iso: string, days: number) => {
 };
 // Tekst w cudzysłowie „…”, a cudzysłów wewnątrz zamienia się na »…« (brand/JEZYK.md).
 const quoted = (text: string) => `„${text.replace(/„/g, '»').replace(/”/g, '«')}”`;
-// Dane w nawiasie: nawias wewnątrz nawiasu staje się kwadratowy, np. „(wyznaczenie przez przewodniczącego [§ 16 ust. 2])”.
+// Dane w nawiasie: nawias wewnątrz nawiasu staje się kwadratowy, np. „(wyznaczenie przez przewodniczącego [§ 16])”.
 const inParens = (text: string) => `(${text.replace(/\(/g, '[').replace(/\)/g, ']')})`;
 const listing = (items: string[]) => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} i ${items[items.length - 1]}`;
 const modeWord = (mode: Ballot['mode']) => mode === 'tajne' ? 'tajne' : mode === 'imienne' ? 'imienne' : 'jawne';
@@ -118,10 +118,19 @@ function persons(n: number, forms: [string, string, string]) {
 }
 
 function ballotEnd(b: Ballot) {
-  if (b.closeReason === 'wszyscy') return 'zakończone, gdy zagłosowali wszyscy uprawnieni';
+  // Głosowanie kończy się samo także wtedy, gdy ostatnią osobę bez głosu oznaczono jako nieobecną: wtedy głosowali
+  // wszyscy obecni, a nie wszyscy uprawnieni (osoby, które wyszły, wymienia zdanie absentText).
+  if (b.closeReason === 'wszyscy') return b.result && b.result.cast < b.result.eligible ? 'zakończone, gdy zagłosowali wszyscy obecni' : 'zakończone, gdy zagłosowali wszyscy uprawnieni';
   if (b.closeReason === 'czas') return 'zakończone po upływie wyznaczonego czasu';
   if (b.closeReason === 'prowadzacy') return b.remote ? 'zakończone przed terminem' : 'zakończone przez osobę prowadzącą obrady';
   return 'zakończone';
+}
+/** Osoby, które wyszły z posiedzenia w trakcie głosowania i nie oddały głosu (czasownik zgodny z „osoba”, bez rodzaju osób). */
+function absentText(d: Doc, b: Ballot) {
+  if (b.closeReason !== 'wszyscy' || !b.result || b.result.cast >= b.result.eligible) return '';
+  const gone = b.absentDuring.filter(id => !hasVoted(b, id));
+  if (!gone.length) return '';
+  return ` Podczas głosowania z posiedzenia ${persons(gone.length, ['wyszła', 'wyszły', 'wyszło'])} (${listing(gone.map(id => personName(d.roster, id)))}).`;
 }
 function ballotSpan(b: Ballot) {
   const end = b.closedAt ?? b.endsAt;
@@ -143,7 +152,7 @@ function ballotBlock(d: Doc, b: Ballot) {
     return `<div class="ballot">${lines.join('')}</div>`;
   }
   lines.push(table(`Wynik głosowania nr ${b.number}`, ['Za', 'Przeciw', 'Wstrzymało się', 'Wynik'], [[String(r.za), String(r.przeciw), String(r.wstrzymuje), t(resultLabel(b, materialTypeOf(m, b)))]], [0, 1, 2], false, 'result-table'));
-  lines.push(p(`Głosowało ${r.cast} z ${r.eligible} ${r.eligible === 1 ? 'uprawnionego' : 'uprawnionych'}, wymagane kworum ${r.quorum}. Głosowanie ${ballotSpan(b)}, ${ballotEnd(b)}.`));
+  lines.push(p(`Głosowało ${r.cast} z ${r.eligible} ${r.eligible === 1 ? 'uprawnionego' : 'uprawnionych'}, wymagane kworum ${r.quorum}. Głosowanie ${ballotSpan(b)}, ${ballotEnd(b)}.${absentText(d, b)}`));
   if (b.secret) {
     lines.push(`<p class="muted">${t(`Głosowanie tajne przeprowadzono w systemie elektronicznym. Pobrano kart ${b.secret.issued.length}, oddano głosów ${b.secret.cast}. Odcisk klucza głosowania`)} <code>${esc(b.secret.fingerprint)}</code>. ${t('System nie zapisuje powiązania między osobą a głosem.')}</p>`);
   }
@@ -167,25 +176,38 @@ function ballotBlock(d: Doc, b: Ballot) {
   return `<div class="ballot">${lines.join('')}</div>`;
 }
 
-/** Wniosek o reasumpcję: złożenie, uzasadnienie, poparcie i rozstrzygnięcie. */
+/**
+ * Wniosek o reasumpcję: zgłoszenie, uzasadnienie, poparcie i rozstrzygnięcie. W trwającym posiedzeniu stan wniosku
+ * jest opisany jako bieżący (zbiera podpisy, czeka na decyzję), a zdania o skutku dopiero po zamknięciu posiedzenia.
+ */
 function motionText(d: Doc, x: Motion) {
-  const number = (id?: string) => d.m.ballots.find(b => b.id === id)?.number ?? DOTS;
+  const {m} = d;
+  const number = (id?: string) => m.ballots.find(b => b.id === id)?.number ?? DOTS;
   const reason = x.justification.trim().replace(/\.$/, '');
-  let text = `Wniosek o reasumpcję głosowania nr ${number(x.ballotId)} złożono o godz. ${time(x.createdAt)}. Uzasadnienie ${quoted(reason)}.`;
+  const closed = m.status === 'zakonczone';
+  let text = `Wniosek o reasumpcję głosowania nr ${number(x.ballotId)} zgłoszono o godz. ${time(x.createdAt)}. Uzasadnienie ${quoted(reason)}.`;
   if (x.filedAt !== undefined) text += ` Poparło go ${x.signatures.length} z ${x.presentAtFiling ?? DOTS} obecnych członków Prezydium, wymagana co najmniej 1/3.`;
   switch (x.status) {
-    case 'zbiera_podpisy': return text + ' Wniosek nie zebrał wymaganej liczby podpisów.';
-    case 'zlozony': return text + ' Wniosku nie poddano pod głosowanie.';
+    case 'zbiera_podpisy': {
+      if (closed) return text + ' Wniosek nie zebrał wymaganej liczby podpisów.';
+      const present = presentMembers(m, d.roster);
+      return text + ` Wniosek zbiera podpisy (${x.signatures.filter(id => present.includes(id)).length} z ${reasumptionSignaturesNeeded(present.length)}).`;
+    }
+    case 'zlozony': return text + (closed ? ' Wniosku nie poddano pod głosowanie.' : ' Wniosek czeka na decyzję Prezydium.');
     case 'glosowany': return text + ` Głosowanie nad wnioskiem (nr ${number(x.voteBallotId)}) nie zostało zakończone.`;
     case 'przyjety': return text + (x.repeatBallotId
       ? ` Prezydium przyjęło wniosek w głosowaniu nr ${number(x.voteBallotId)}, ponowne głosowanie nr ${number(x.repeatBallotId)}.`
-      : ` Prezydium przyjęło wniosek w głosowaniu nr ${number(x.voteBallotId)}. Ponownego głosowania nie przeprowadzono.`);
+      : ` Prezydium przyjęło wniosek w głosowaniu nr ${number(x.voteBallotId)}. ${closed ? 'Ponownego głosowania nie przeprowadzono.' : 'Ponowne głosowanie jeszcze się nie odbyło.'}`);
     case 'odrzucony': return text + ` Prezydium odrzuciło wniosek w głosowaniu nr ${number(x.voteBallotId)}.`;
     default: return text + ' Wniosek wycofano.';
   }
 }
+/** Każde głosowanie z wnioskami o jego reasumpcję jako osobny blok. */
+function ballotBlocks(d: Doc, ballots: Ballot[]) {
+  return ballots.map(b => ballotBlock(d, b) + d.m.motions.filter(x => x.ballotId === b.id).map(x => p(motionText(d, x), 'minutes-motion')).join(''));
+}
 function ballotsWithMotions(d: Doc, ballots: Ballot[]) {
-  return ballots.map(b => ballotBlock(d, b) + d.m.motions.filter(x => x.ballotId === b.id).map(x => p(motionText(d, x), 'minutes-motion')).join('')).join('');
+  return ballotBlocks(d, ballots).join('');
 }
 
 /** Ad 1.: otwarcie, prowadzenie i pierwsze stwierdzenie kworum. */
@@ -219,17 +241,19 @@ function itemNotes(d: Doc, it: AgendaItem, first: boolean) {
   return recorded ? [] : ['Przebieg do uzupełnienia.'];
 }
 
+// Nagłówek punktu stoi w jednym bloku z pierwszą częścią przebiegu, więc w druku nie zostaje sam na końcu strony.
 function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   const {m} = d;
-  const parts = [`<h3>${t(`${d.procedure ? '' : 'Ad '}${itemNumber(m.agenda, it.id)}. ${it.title}`)}</h3>`];
+  const head = `<h3>${t(`${d.procedure ? '' : 'Ad '}${itemNumber(m.agenda, it.id)}. ${it.title}`)}</h3>`;
+  const parts: string[] = [];
   if (first && m.openedAt) parts.push(p(openingText(d)));
   if (it.presenter.trim()) parts.push(p(`Przedstawia ${it.presenter.trim().replace(/\.$/, '')}.`));
   const mats = m.materials.filter(x => it.materialIds.includes(x.id));
   if (mats.length) parts.push(p(`${mats.length === 1 ? 'Materiał' : 'Materiały'} do ${d.procedure ? 'sprawy' : 'punktu'} ${listing(mats.map(x => quoted(x.title)))}.`, 'muted'));
   if (it.note.trim()) parts.push(`<div class="note">${t(it.note.trim()).replace(/\n/g, '<br>')}</div>`);
-  parts.push(ballotsWithMotions(d, d.placed.get(it.id) ?? []));
+  parts.push(...ballotBlocks(d, d.placed.get(it.id) ?? []));
   parts.push(...itemNotes(d, it, first).map(text => p(text, 'item-note')));
-  return `<section class="item">${parts.join('')}</section>`;
+  return `<section class="item"><div class="item-start">${head}${parts[0] ?? ''}</div>${parts.slice(1).join('')}</section>`;
 }
 
 /** Obecność z wpisów: „obecność od 10:02, wyjście 11:30, powrót 11:45” albo „nieobecność”. */
@@ -265,8 +289,9 @@ function invitedRows(d: Doc) {
 
 function chapterOne(d: Doc) {
   const {m} = d;
-  const out = ['<h2>I. Zwołanie i prowadzenie obrad</h2>'];
-  const days = noticeDays(m);
+  const out = [`<h2>${t('I. Zwołanie i prowadzenie obrad')}</h2>`];
+  // Dni liczone do dnia z nagłówka protokołu (dzień otwarcia, a przed otwarciem planowany termin).
+  const days = noticeDays({...m, date: minutesDay(m)});
   const sent = `Zawiadomienie o terminie, miejscu i porządku obrad wysłano ${longDate(m.noticeDate)}`;
   if (days === null) out.push(p('Nie wpisano daty wysłania zawiadomienia (§ 7 ust. 1).'));
   else if (days <= 0) out.push(p(`${sent}, czyli mniej niż wymagane 7 dni przed posiedzeniem (§ 7 ust. 1).`));
@@ -298,7 +323,7 @@ function chapterOne(d: Doc) {
 function chapterTwo(d: Doc) {
   const {m, roster} = d;
   const members = organMembers(roster, m.organ);
-  const out = ['<h2>II. Lista obecności</h2>'];
+  const out = [`<h2>${t('II. Lista obecności')}</h2>`];
   const head = ['Imię i nazwisko', 'Funkcja', 'Obecność', 'Sposób potwierdzenia'];
   out.push(table('Lista obecności', head, members.map(ms => {
     const name = personName(roster, ms.personId);
@@ -306,11 +331,12 @@ function chapterTwo(d: Doc) {
   })));
   const invited = invitedRows(d);
   if (invited.length) {
-    out.push('<h3>Osoby z głosem doradczym i goście</h3>');
+    out.push(`<h3>${t('Osoby z głosem doradczym i goście')}</h3>`);
     out.push(table('Osoby z głosem doradczym i goście', head, invited.map(a => [t(a.name), t(a.label), t(presenceText(m, a.id, true)), t(confirmedBy(d, a.id, true, a.name))])));
   }
-  out.push(p(`Skład Prezydium ${members.length} ${plural(members.length, 'osoba', 'osoby', 'osób')}, wymagane kworum ${quorumFor(members.length)} (§ 8 ust. 2).`));
-  if (m.quorumChecks.length) out.push('<ul class="quorum-checks">' + m.quorumChecks.map(q => `<li>${t(`O godz. ${time(q.at)} stwierdzono ${q.present >= q.required ? 'kworum' : 'brak kworum'}, obecnych ${q.present}, wymagane ${q.required}.`)}</li>`).join('') + '</ul>');
+  // Zdanie o składzie i lista stwierdzeń kworum w jednym bloku: w druku lista nie zaczyna sama następnej strony.
+  const checks = m.quorumChecks.length ? '<ul class="quorum-checks">' + m.quorumChecks.map(q => `<li>${t(`O godz. ${time(q.at)} stwierdzono ${q.present >= q.required ? 'kworum' : 'brak kworum'}, obecnych ${q.present}, wymagane ${q.required}.`)}</li>`).join('') + '</ul>' : '';
+  out.push(`<div class="quorum-summary">${p(`Skład Prezydium ${members.length} ${plural(members.length, 'osoba', 'osoby', 'osób')}, wymagane kworum ${quorumFor(members.length)} (§ 8 ust. 2).`)}${checks}</div>`);
   return out.join('');
 }
 
@@ -325,22 +351,22 @@ function chapterThree(d: Doc) {
   }).join('') + '</ol>';
   const adoption = [...m.ballots].reverse().find(b => b.purpose === 'porzadek' && b.result?.adopted);
   const sentence = m.agendaAdopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.') : 'Porządek obrad nie został przyjęty.';
-  return '<h2>III. Porządek obrad</h2>' + list + p(sentence);
+  return `<h2>${t('III. Porządek obrad')}</h2>` + list + p(sentence);
 }
 
 function chapterFour(d: Doc) {
   const {m} = d;
   const top = m.agenda.find(i => !i.parentId);
-  const out = ['<h2>IV. Przebieg obrad</h2>'];
+  const out = [`<h2>${t('IV. Przebieg obrad')}</h2>`];
   for (const it of orderedAgenda(m.agenda)) out.push(itemSection(d, it, it === top));
-  if (d.loose.length) out.push('<h3>Głosowania poza punktami porządku obrad</h3>' + ballotsWithMotions(d, d.loose));
+  if (d.loose.length) out.push(`<h3>${t('Głosowania poza punktami porządku obrad')}</h3>` + ballotsWithMotions(d, d.loose));
   return out.join('');
 }
 
 function chapterFive(d: Doc) {
   const {m} = d;
   const adopted = m.ballots.filter(b => b.result?.adopted && !b.supersededBy && isResolution(m, b)).sort((x, y) => x.number - y.number);
-  const out = ['<h2>V. Podjęte uchwały</h2>'];
+  const out = [`<h2>${t('V. Podjęte uchwały')}</h2>`];
   if (!adopted.length) return out.concat(p('Nie podjęto uchwał.')).join('');
   out.push(table('Podjęte uchwały', ['Numer', 'W sprawie', 'Za', 'Przeciw', 'Wstrzymało się'], adopted.map(b => {
     const ref = b.material ? m.materials.find(x => x.id === b.material!.id) : undefined;
@@ -353,7 +379,7 @@ function chapterFive(d: Doc) {
 }
 
 function chapterSix() {
-  return '<h2>VI. Załączniki</h2>' + p('Wykaz załączników do uzupełnienia przez sekretarza.')
+  return `<h2>${t('VI. Załączniki')}</h2>` + p('Wykaz załączników do uzupełnienia przez sekretarza.')
     + '<ol class="attachments">' + ['Lista obecności.', 'Porządek obrad.', 'Podjęte uchwały.', 'Materiały rozpatrzone na posiedzeniu.'].map(x => `<li>${t(x)}</li>`).join('') + '</ol>';
 }
 
@@ -386,7 +412,7 @@ function attendanceSheet(d: Doc, organName: string) {
     ...organMembers(roster, m.organ).map(ms => [t(personName(roster, ms.personId)), t(ms.label), '']),
     ...invitedRows(d).map(a => [t(a.name), t(a.label), '']),
   ];
-  return '<section class="attachment">' + p('Załącznik nr 1 do protokołu', 'draft') + '<h2>Lista obecności</h2>'
+  return '<section class="attachment">' + p('Załącznik nr 1 do protokołu', 'draft') + `<h2>${t('Lista obecności')}</h2>`
     + p(`Posiedzenie ${organName} z dnia ${longDate(minutesDay(m))}`)
     + table('Lista obecności do podpisu', ['Imię i nazwisko', 'Funkcja', 'Podpis'], rows, [], true, 'sign-sheet') + '</section>';
 }
@@ -433,13 +459,13 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
     : `<dl class="facts minutes-facts">${facts.map(([label, value]) => `<div class="fact"><dt>${t(label)}</dt><dd>${t(value)}</dd></div>`).join('')}</dl>`;
   const parts = [`<header><p class="draft">${t('Projekt do uzupełnienia przez sekretarza')}</p><h1>${title}</h1>${factList}</header>`];
   if (procedure) {
-    parts.push('<h2>Sprawy i wyniki</h2>');
+    parts.push(`<h2>${t('Sprawy i wyniki')}</h2>`);
     for (const it of orderedAgenda(m.agenda)) {
       if (!d.placed.get(it.id)?.length && !it.note.trim() && !it.materialIds.length) continue;
       parts.push(itemSection(d, it, false));
     }
-    if (d.loose.length) parts.push('<h3>Głosowania poza sprawami</h3>' + ballotsWithMotions(d, d.loose));
-    if (m.messages.length) parts.push('<h2>Wiadomości uczestników w trakcie głosowania</h2><ul class="messages">'
+    if (d.loose.length) parts.push(`<h3>${t('Głosowania poza sprawami')}</h3>` + ballotsWithMotions(d, d.loose));
+    if (m.messages.length) parts.push(`<h2>${t('Wiadomości uczestników w trakcie głosowania')}</h2><ul class="messages">`
       + m.messages.map(x => `<li><strong>${t(x.authorName)}</strong>, ${t(`${longAt(x.at)} ${quoted(x.text)}`)}</li>`).join('') + '</ul>');
     parts.push(signatures(d), footer(d, generatedAt));
   } else {
@@ -454,13 +480,13 @@ export interface MinutesLook { css?: string | null; logo?: string | null; namepl
 // Pełna strona do druku: ten sam arkusz stylów co aplikacja (krój, kolory i nagłówki Izby), znak Izby na górze.
 // Blok stylu dodaje nagłówek stron od drugiej (numery stron są w protokol.css).
 export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, look: MinutesLook = {}) {
-  const plate = look.logo && look.nameplate ? `<div class="oi-nameplate"><img src="${esc(look.logo)}" alt="Znak ${esc((look.org ?? '').replace(/^Okręgowa Izba/, 'Okręgowej Izby'))}"><p class="oi-nameplate__name">${esc(look.nameplate[0])} <b>${esc(look.nameplate[1])}</b></p></div>` : '';
+  const plate = look.logo && look.nameplate ? `<div class="oi-nameplate"><img src="${esc(look.logo)}" alt="Znak ${esc((look.org ?? '').replace(/^Okręgowa Izba/, 'Okręgowej Izby'))}"><p class="oi-nameplate__name">${t(look.nameplate[0])} <b>${t(look.nameplate[1])}</b></p></div>` : '';
   const style = look.css ? `<link rel="stylesheet" href="${esc(look.css)}">` : '<style>body{font-family:system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:24px}</style>';
   const header = minutesPageHeader(m).replace(/["\\]/g, '\\$&');
   const pages = `<style>@media print{@page{@top-left{content:"${header}"}}@page:first{@top-left{content:none}}}</style>`;
   const doc = `/api/meetings/${encodeURIComponent(m.id)}/protokol?format=doc`;
   return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Projekt protokołu – ${esc(m.title)}</title>${style}${pages}</head>
-<body class="oi-root minutes-page"><div class="toolbar"><span class="kicker">Projekt protokołu</span><div class="toolbar-actions"><a class="oi-btn oi-btn--obrys" href="${esc(doc)}"><span>Pobierz do edycji w Wordzie</span></a><button type="button" class="oi-btn" data-print><span>Drukuj lub zapisz jako PDF</span></button></div></div>
+<body class="oi-root minutes-page"><div class="toolbar"><span class="kicker">${t('Projekt protokołu')}</span><div class="toolbar-actions"><a class="oi-btn oi-btn--obrys" href="${esc(doc)}"><span>${t('Pobierz do edycji w Wordzie')}</span></a><button type="button" class="oi-btn" data-print><span>${t('Drukuj lub zapisz jako PDF')}</span></button></div></div>
 <main>${plate}<article class="minutes-view">${minutesBody(m, roster, accounts, generatedAt, look.names)}</article></main><script src="/druk.js"></script></body></html>`;
 }
 

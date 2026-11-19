@@ -16,6 +16,7 @@ import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader, showBallot} from './reader.tsx';
 import {Messages} from './messages.tsx';
 import {brand} from './brand.ts';
+import {typo} from '../shared/typo.ts';
 
 const APP = 'Posiedzenia Prezydium';
 const day = (ts: number) => new Intl.DateTimeFormat('pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Warsaw'}).format(ts);
@@ -60,7 +61,7 @@ export function MeetingPage({id}: {id: string}) {
       <div class={'page' + (chairView ? '' : ' page--kolumna')}>
         {error && <div class="sticky-error"><ErrorNotice kind={errorKind}>{error} <Button kind="ghost" small onClick={() => setError('')}>Zamknij komunikat</Button></ErrorNotice></div>}
         {body}
-        <MeetingDetails/>
+        <MeetingDetails participantView={participantView} toggleView={sitting && liveNow && (chairNow || office) ? () => setParticipantView(v => !v) : undefined}/>
       </div>
     </div>
   </MeetingCtx.Provider>;
@@ -101,15 +102,51 @@ function useMeetingFacts() {
   }
   const chair = m.status !== 'przygotowanie' && m.chair.current ? m.chair.current : null;
   return [
-    <Fact key="data" label="Data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
-    m.place ? <Fact key="miejsce" label="Miejsce">{m.place}</Fact> : null,
+    <Fact key="data" label="Data" class="fact--data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
+    m.place ? <Fact key="miejsce" label="Miejsce" class="fact--miejsce">{m.place}</Fact> : null,
     chair ? <Fact key="prowadzi" label="Prowadzi">{s.personName(chair)}{m.status !== 'zakonczone' && m.attendance[chair] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact> : null,
   ];
+}
+
+/**
+ * Dopasowanie paska do szerokości, tak żeby nazwa organu nie była ucinana w środku słowa, a fakty stały w jednym wierszu.
+ * Tytuł: pełny, gdy mieści się w wierszu, a inaczej krótki „Posiedzenie Prezydium, 19.11.2026” (pełny zostaje dla
+ * czytnika ekranu i w podpowiedzi). Gdy i on się nie mieści, znika znacznik rodzaju posiedzenia, potem znacznik
+ * trwającego głosowania (głosowanie widać w faktach), a na końcu tytuł zawija się w dwa wiersze.
+ * Fakty: gdy nie mieszczą się w jednym wierszu, pasek pomija najpierw miejsce, a potem datę.
+ */
+function fitBar(bar: HTMLElement) {
+  const title = bar.querySelector<HTMLElement>('.meeting-bar__title');
+  if (title) {
+    bar.classList.remove('is-krotki', 'bez-rodzaju', 'bez-znacznika', 'is-zawijany');
+    for (const step of ['is-krotki', 'bez-rodzaju', 'bez-znacznika', 'is-zawijany']) {
+      if (title.scrollWidth <= title.clientWidth + 1) break;
+      bar.classList.add(step);
+    }
+  }
+  const facts = bar.querySelector<HTMLElement>('.meeting-bar__facts');
+  if (!facts) return;
+  facts.classList.remove('bez-miejsca', 'bez-daty');
+  const wraps = () => {
+    const shown = [...facts.children].filter(el => (el as HTMLElement).offsetParent !== null) as HTMLElement[];
+    return shown.length > 1 && shown[shown.length - 1].offsetTop > shown[0].offsetTop + 2;
+  };
+  if (wraps()) facts.classList.add('bez-miejsca');
+  if (wraps()) facts.classList.add('bez-daty');
 }
 
 function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?: () => void}) {
   const {m} = useMeeting();
   const s = useSession();
+  const ref = useRef<HTMLElement>(null);
+  // Dopasowanie po każdym odświeżeniu, przy zmianie szerokości okna i po wczytaniu krojów pisma.
+  useLayoutEffect(() => { if (ref.current) fitBar(ref.current); });
+  useEffect(() => {
+    const fit = () => { if (ref.current) fitBar(ref.current); };
+    window.addEventListener('resize', fit);
+    document.fonts?.ready.then(fit).catch(() => {});
+    return () => window.removeEventListener('resize', fit);
+  }, []);
   const facts = useMeetingFacts();
   const procedure = m.kind === 'procedura';
   const liveNow = m.status === 'trwa' || m.status === 'przerwa';
@@ -118,21 +155,22 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
   const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length;
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
   const short = procedure ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : `Posiedzenie Prezydium, ${shortDate(m)}`;
-  const protocol = m.status !== 'przygotowanie' && (organizer || (m.status === 'zakonczone' && s.isMember(m.organ)));
+  // Po zamknięciu posiedzenia „Projekt protokołu” jest przyciskiem głównym w podsumowaniu, więc pasek go nie powtarza.
+  const protocol = m.status !== 'przygotowanie' && !(m.status === 'zakonczone' && !procedure) && (organizer || (m.status === 'zakonczone' && s.isMember(m.organ)));
   const votes = open ? castOf(open) : null;
-  return <header class="meeting-bar">
+  return <header class="meeting-bar" ref={ref}>
     <div class={'meeting-bar__in' + (props.wide ? '' : ' is-kolumna')}>
       <div class="meeting-bar__row">
         <div class="meeting-bar__chips">
           <StateChip state={meetingState(m.status, !organizer)}/>
-          {open && <span class="bar-desk"><StateChip state={votingChip()}/></span>}
-          <span class="bar-desk"><Chip>{kind}</Chip></span>
+          {open && <span class="bar-desk bar-voting"><StateChip state={votingChip()}/></span>}
+          <span class="bar-desk bar-kind"><Chip>{kind}</Chip></span>
         </div>
         <h1 class="meeting-bar__title" title={m.title}><span class="bar-full">{m.title}</span><span class="bar-short" aria-hidden="true">{short}</span></h1>
         <div class="meeting-bar__actions">
           {/* W wersji próbnej (ramka bez nowych okien) nie ma przejścia do zewnętrznego połączenia. */}
           {m.link && m.status !== 'zakonczone' && !brand.demo && <LinkButton small href={m.link} newTab>Dołącz do<br class="bar-br"/> połączenia</LinkButton>}
-          {props.toggleView && <Button small onClick={props.toggleView}>{props.participantView ? <>Panel prowadzenia<br class="bar-br"/> obrad</> : <>Widok<br class="bar-br"/> uczestnika</>}</Button>}
+          {props.toggleView && <Button small class="bar-toggle" onClick={props.toggleView}>{props.participantView ? <>Panel prowadzenia<br class="bar-br"/> obrad</> : <>Widok<br class="bar-br"/> uczestnika</>}</Button>}
           {!procedure && liveNow && organizer && <span class="bar-desk"><LinkButton small href={`#ekran-${m.id}`} newTab={!brand.demo}>Otwórz ekran sali</LinkButton></span>}
           {protocol && <span class="bar-desk"><LinkButton small href={`/api/meetings/${m.id}/protokol`} newTab={!brand.demo}>Projekt protokołu</LinkButton></span>}
         </div>
@@ -140,14 +178,16 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
       <dl class="facts meeting-bar__facts">
         {facts}
         {!procedure && liveNow && <><Fact label="Obecnych">{present} z {total}</Fact><Fact label="Wymagane kworum">{quorumFor(total)}</Fact></>}
-        {open && votes && <><Fact label={`Głosowanie nr ${open.number}`}>trwa</Fact><Fact label="Pozostało"><Countdown endsAt={open.endsAt} label={false}/></Fact><Fact label="Oddano">{votes.cast} z {votes.total}</Fact></>}
+        {/* Jeden fakt o głosowaniu: numer, pozostały czas i oddane głosy („trwa” mówi znacznik obok tytułu). */}
+        {open && votes && <Fact label={`Głosowanie nr ${open.number}`}>zostało <Countdown endsAt={open.endsAt} label={false}/>, oddano {votes.cast} z {votes.total}</Fact>}
       </dl>
     </div>
   </header>;
 }
 
 // Na telefonie fakty z paska są w zwijanej sekcji na końcu widoku (na szerszym ekranie sekcja jest ukryta).
-function MeetingDetails() {
+// Do 360 px jest w niej też przełącznik widoku, żeby pasek posiedzenia miał jeden wiersz.
+function MeetingDetails(props: {participantView: boolean; toggleView?: () => void}) {
   const {m} = useMeeting();
   const s = useSession();
   const facts = useMeetingFacts();
@@ -155,6 +195,7 @@ function MeetingDetails() {
   return <div class="meeting-details">
     <Fold title={m.kind === 'procedura' ? 'Szczegóły głosowania' : 'Szczegóły posiedzenia'}>
       <dl class="facts">{facts}</dl>
+      {props.toggleView && <div class="details-toggle"><Button small onClick={props.toggleView}>{props.participantView ? 'Panel prowadzenia obrad' : 'Widok uczestnika'}</Button></div>}
       <div class="actions meeting-details__links">
         {protocol && (brand.demo
           ? <a class="oi-link" href={`/api/meetings/${m.id}/protokol`}>Projekt protokołu</a>
@@ -164,10 +205,6 @@ function MeetingDetails() {
     </Fold>
   </div>;
 }
-
-export const itemStatus: Record<AgendaItem['status'], [string, 'trwa' | 'otwarte' | 'zamkniete']> = {
-  oczekuje: ['Oczekuje', 'zamkniete'], w_toku: ['W toku', 'trwa'], zakonczony: ['Zakończony', 'zamkniete'], odroczony: ['Odroczony', 'otwarte'], wycofany: ['Wycofany', 'zamkniete'],
-};
 
 // Stan punktu słowem w prawej kolumnie porządku. Bieżący punkt ma zamiast niego znacznik „Teraz”.
 function agendaState(m: ViewMeeting, it: AgendaItem, locked: boolean) {
@@ -215,7 +252,9 @@ export function beforeAdoption(m: Pick<Meeting, 'agenda'>, it: AgendaItem) {
 }
 
 // Słowo rozstrzygnięcia pogrubione, np. „Uchwała podjęta”, „Sprawozdanie nie zostało przyjęte”, „Nie przyjęto”.
-export function emphasize(label: string) {
+// Twarde spacje wstawia typo() przed podziałem, bo tekst we fragmencie nie przechodzi przez podpięcie z typo.ts.
+export function emphasize(text: string) {
+  const label = typo(text);
   const match = label.match(/^(.*?)((?:nie (?:została|został|zostało) )?(?:przyjęt[aeoy]|podjęt[aey]|odrzucon[aey])|nie przyjęto|brak kworum.*)$/i);
   if (!match) return label;
   return <>{match[1]}<b>{match[2]}</b></>;
@@ -239,13 +278,14 @@ export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: Material
   const replaced = b.supersededBy && ctx ? ctx.m.ballots.find(x => x.id === b.supersededBy) : undefined;
   return <div class={'result' + (props.big ? ' result-big' : '')}>
     {props.big ? <Tag>{label}</Tag> : <span class="oi-label">{label}</span>}
-    <p class="result-subject">{b.subject}</p>
+    <p class="result-subject">{props.big ? <TitleLead text={b.subject}/> : b.subject}</p>
     <p class="result-label">{emphasize(resultLabel(b, kind))}</p>
     <div class="oi-stats result-counts">
       {choices.map(c => <div class="oi-stat" key={c}><b>{r[c]}</b><span>{choiceCountLabel[c]}</span></div>)}
     </div>
     <p class="result-meta">{meta}</p>
-    {b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <Fold title="Wykaz imienny"><NamedList b={b}/></Fold>}
+    {/* Ekran sali (big) nie ma elementów sterowania, więc bez rozwijanego wykazu imiennego. */}
+    {!props.big && b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <Fold title="Wykaz imienny"><NamedList b={b}/></Fold>}
     {replaced && <p class="muted small">Wynik zastąpiony wynikiem reasumpcji w głosowaniu nr {replaced.number}.</p>}
   </div>;
 }
@@ -357,10 +397,10 @@ export function VoteCard(props: {b: ViewBallot; embedded?: boolean}) {
       {motion && <Fact label="Uzasadnienie wniosku">„{motion.justification}”</Fact>}
       {origin.result && <Fact label={`Wynik głosowania nr ${origin.number} przed reasumpcją`}>{resultLabel(origin, materialTypeOf(m, origin))}, za {origin.result.za}, przeciw {origin.result.przeciw}, wstrzymało się {origin.result.wstrzymuje}</Fact>}
     </dl>}
-    {bareResolution && <p class="small muted">Projekt uchwały nie został dołączony. Treść przedstawia osoba prowadząca obrady.</p>}
     {failure}
     {place}
-    {/* Podstawa trybu stoi pod miejscem na głos, obok odcisku klucza: nad przyciskami przesuwałaby je poza ekran telefonu. */}
+    {/* Zdanie o braku projektu i podstawa trybu stoją pod miejscem na głos: nad przyciskami przesuwałyby je poza ekran telefonu. */}
+    {bareResolution && <p class="small muted">Projekt uchwały nie został dołączony. Treść przedstawia osoba prowadząca obrady.</p>}
     {b.mode !== 'jawne' && b.modeBasis && <dl class="facts vote-context"><Fact label="Podstawa trybu">{b.modeBasis}</Fact></dl>}
     {b.secret && <div class="fingerprint"><span class="kicker">Odcisk klucza głosowania</span><code>{b.secret.fingerprint}</code><span class="muted small">Ten sam kod widać na ekranie sali. Jeśli Twój kod jest inny, nie głosuj i powiedz o tym osobie prowadzącej obrady.</span></div>}
     {dialog}
@@ -563,7 +603,7 @@ export function Motions() {
       if (await send({type: 'motion_create', ballotId: String(f.get('ballot')), justification: String(f.get('why'))})) setCreating(false);
     }}>
       <Field label="Którego głosowania dotyczy?"><select name="ballot" required>{eligibleBallots.map(b => <option key={b.id} value={b.id}>Nr {b.number}, {b.subject}</option>)}</select></Field>
-      <Field label="Uzasadnienie" hint="Dlaczego wynik budzi uzasadnione wątpliwości (§ 12 ust. 1)."><textarea name="why" required minLength={10} maxLength={2000} rows={4}/></Field>
+      <Field label="Uzasadnienie" hint="Dlaczego wynik budzi uzasadnione wątpliwości (§ 12)."><textarea name="why" required minLength={10} maxLength={2000} rows={4}/></Field>
       <div class="actions"><Button kind="primary" type="submit" busy={busy}>Złóż wniosek</Button><Button onClick={() => setCreating(false)}>Anuluj</Button></div>
     </form>
   </Modal>;
@@ -618,14 +658,15 @@ function Summary() {
     <section class="oi-card"><CardTitle level={2}>Porządek obrad</CardTitle><AgendaList compact/></section>
     <section>
       <SectionHead count={`${final.length} ${plural(final.length, 'głosowanie', 'głosowania', 'głosowań')}`}>Wyniki głosowań</SectionHead>
-      {final.length > 0 && <div class="oi-table-wrap"><table class="oi-table results-table">
-        <thead><tr><th scope="col" class="oi-liczba">Nr</th><th scope="col">Przedmiot</th><th scope="col">Tryb</th><th scope="col" class="oi-liczba">Za</th><th scope="col" class="oi-liczba">Przeciw</th><th scope="col" class="oi-liczba">Wstrzymało się</th><th scope="col">Wynik</th></tr></thead>
-        <tbody>{final.map(b => <tr key={b.id}>
-          <td class="oi-liczba">{b.number}</td>
-          <th scope="row">{b.subject}</th>
-          <td>{modeName(b.mode)}{b.reasumptionOf ? ', po reasumpcji' : ''}</td>
-          <td class="oi-liczba">{b.result!.za}</td><td class="oi-liczba">{b.result!.przeciw}</td><td class="oi-liczba">{b.result!.wstrzymuje}</td>
-          <td>{emphasize(resultLabel(b, materialTypeOf(m, b)))}</td>
+      {/* Role ARIA powtarzają znaczenie tabeli, bo do 560 px wiersze mają układ bloków (uczestnik.css). */}
+      {final.length > 0 && <div class="oi-table-wrap"><table class="oi-table results-table" role="table" aria-label="Wyniki głosowań">
+        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader" class="oi-liczba">Nr</th><th scope="col" role="columnheader">Przedmiot</th><th scope="col" role="columnheader">Tryb</th><th scope="col" role="columnheader" class="oi-liczba">Za</th><th scope="col" role="columnheader" class="oi-liczba">Przeciw</th><th scope="col" role="columnheader" class="oi-liczba">Wstrzymało się</th><th scope="col" role="columnheader">Wynik</th></tr></thead>
+        <tbody role="rowgroup">{final.map(b => <tr key={b.id} role="row">
+          <td role="cell" class="oi-liczba">{b.number}</td>
+          <th scope="row" role="rowheader">{b.subject}</th>
+          <td role="cell" data-label="Tryb">{modeName(b.mode)}{b.reasumptionOf ? ', po reasumpcji' : ''}</td>
+          <td role="cell" class="oi-liczba" data-label="Za">{b.result!.za}</td><td role="cell" class="oi-liczba" data-label="Przeciw">{b.result!.przeciw}</td><td role="cell" class="oi-liczba" data-label="Wstrzymało się">{b.result!.wstrzymuje}</td>
+          <td role="cell">{emphasize(resultLabel(b, materialTypeOf(m, b)))}</td>
         </tr>)}</tbody>
       </table></div>}
     </section>

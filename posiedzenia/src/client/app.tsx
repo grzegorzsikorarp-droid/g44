@@ -26,8 +26,9 @@ const tabStore = {
 export function afterLogin() {
   const back = tabStore.get(BACK);
   if (back !== null) { tabStore.del(BACK); go(back); }
-  // Znacznik tylko wtedy, gdy po zalogowaniu widać listę (bez niego późniejsze wejście na listę przenosiłoby do posiedzenia).
-  if (!currentRoute()) tabStore.set(FRESH, '1');
+  // Znacznik tylko po zwykłym zalogowaniu i tylko wtedy, gdy widać listę. Po wygaśnięciu sesji osoba wraca na swój ekran,
+  // także na listę, i nie jest przenoszona do posiedzenia.
+  if (back === null && !currentRoute()) tabStore.set(FRESH, '1');
 }
 
 export function App() {
@@ -104,6 +105,7 @@ function SkipLink() {
   return <a class="skip-link" href="#tresc" data-kotwica onClick={e => { e.preventDefault(); document.getElementById('tresc')?.focus(); }}>Przejdź do treści</a>;
 }
 
+// Na liście posiedzeń tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza.
 function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promise<void>}) {
   const {account, name, membership} = useSession();
   const [open, setOpen] = useState(false);
@@ -114,7 +116,7 @@ function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promi
   return <header class="topbar">
     <a class="topbar-brand" href="#" aria-label="Posiedzenia Prezydium, lista posiedzeń">
       <Plate decorative/>
-      <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>
+      {props.current !== 'lista' && <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>}
     </a>
     <div class="topbar-side">
       <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">
@@ -123,7 +125,7 @@ function TopBar(props: {current: 'lista' | 'konta' | null; onLogout: () => Promi
       </nav>
       {brand.demo
         ? <>{who}<span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>
-        : <button type="button" class="topbar-account" aria-label={`Twoje konto, ${name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{who}<span class="who-short">Konto</span></button>}
+        : <button type="button" class="topbar-account" aria-label={`Twoje konto, ${name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{who}<span class="who-short">Twoje konto</span></button>}
     </div>
     {open && <Modal title="Twoje konto" onClose={() => setOpen(false)}>
       <dl class="facts"><Fact label="Imię i nazwisko">{name}</Fact>{label && <Fact label="Funkcja">{label}</Fact>}<Fact label="Login"><code>{account.username}</code></Fact></dl>
@@ -173,7 +175,7 @@ function Login(props: {setup: boolean; roster: Roster | null; onDone: () => void
       <p class="lead">{brand.organ}{brand.term ? `, ${brand.term}` : ''}</p>
       {expired && <Notice>Sesja wygasła. Zaloguj się ponownie, a wrócisz do tego samego ekranu.</Notice>}
       {props.setup && <>
-        <p>Utwórz konto administratora. Kod pierwszego uruchomienia jest w oknie serwera oraz w pliku <code>data/pierwsze-uruchomienie.txt</code>.</p>
+        <p>Utwórz konto administratora. Kod pierwszego uruchomienia jest w oknie, w którym uruchomiono aplikację, oraz w pliku <code>data/pierwsze-uruchomienie.txt</code>.</p>
         <Field label="Kod pierwszego uruchomienia"><input name="token" required autocomplete="off" spellcheck={false}/></Field>
         <Field label="Czyje to konto?" hint="Administrator zarządza kontami. Członek Prezydium może być administratorem, ale zwykle robi to biuro.">
           <select name="personId"><option value="">{brand.office} (bez prawa głosu)</option>{prezydium.map(m => <option value={m.personId}>{props.roster!.persons.find(p => p.id === m.personId)?.name}, {m.label}</option>)}</select>

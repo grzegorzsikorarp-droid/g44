@@ -28,7 +28,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 h1, h2, h3, h4 { margin: 0; color: var(--tekst-mocny); line-height: 1.25; }
 p, ul, ol, dl, dd { margin: 0; }
 a { color: var(--akcent-tekst); }
-code { font-family: var(--font-sans); font-weight: 600; font-size: .95em; letter-spacing: .02em; color: var(--tekst-mocny); background: var(--powierzchnia-miekka); padding: .05em .4em; overflow-wrap: anywhere; }
+code { font-family: var(--font-sans); font-weight: 600; font-size: inherit; letter-spacing: .02em; color: var(--tekst-mocny); background: var(--powierzchnia-miekka); padding: .05em .4em; overflow-wrap: anywhere; }
 :where(button, a, input, select, textarea, summary):focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
 /* Nagłówek i treść dostają fokus tylko z kodu (po zmianie trasy i w oknie), więc nie mają obrysu. */
 :is(main, h1, h2)[tabindex="-1"]:focus { outline: none; }
@@ -95,8 +95,6 @@ button { font-family: inherit; }
 select.oi-input { cursor: pointer; }
 input[type="file"].oi-input { font-size: var(--t-lista); font-weight: 400; padding: .45em .6em; }
 input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .06em; font-size: var(--t-etykieta); color: var(--akcent-tekst); background: var(--powierzchnia); border: var(--kreska-mocna) solid var(--akcent-duzy); padding: .45em 1em; margin-right: .9em; cursor: pointer; }
-.inline-form { display: flex; gap: var(--odstep-2); align-items: center; }
-.inline-form .oi-input { flex: 1; min-width: 0; }
 .checks { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
 
 /* Uwaga */
@@ -119,7 +117,7 @@ input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 
 .plate { display: flex; align-items: center; gap: var(--odstep-3); background: var(--bialy); padding: 10px; flex: none; }
 .plate img { display: block; height: 40px; width: auto; }
 .plate-name { margin: 0; font-weight: 300; font-style: italic; font-size: var(--t-meta); line-height: 1.15; color: var(--grafit-900); }
-.plate-name b { display: block; font-style: normal; font-weight: 700; font-size: 1.3em; line-height: 1.05; margin-top: 1px; }
+.plate-name b { display: block; font-style: normal; font-weight: 700; font-size: var(--t-lista); line-height: 1.05; margin-top: 1px; }
 .mark-box { display: grid; place-items: center; width: 44px; height: 44px; flex: none; }
 .mark-box .oi-mark { width: 22px; height: 22px; }
 .topbar-app { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
@@ -159,10 +157,7 @@ input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 
 .page-head h1 { margin: 0; font-size: clamp(1.9rem, 1.3rem + 2.4vw, 3rem); }
 .page-head .oi-hero__lead { margin: 0; }
 .page-head .back { align-self: flex-start; font-size: var(--t-maly); }
-.meeting-head .oi-hero__in { padding-block: var(--odstep-5) var(--odstep-6); gap: 10px; }
-.meeting-head h1 { max-width: min(46ch, 64%); font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2.05rem); line-height: 1.18; text-wrap: balance; }
-.meeting-head h1 b { display: block; }
-@media (max-width: 760px) { .meeting-head h1 { max-width: none; } .page-head .oi-hero__in { padding-block: var(--odstep-5) var(--odstep-5); } }
+@media (max-width: 760px) { .page-head .oi-hero__in { padding-block: var(--odstep-5) var(--odstep-5); } }
 .page { width: 90rem; max-width: 100%; margin-inline: auto; padding-block: var(--odstep-6) var(--odstep-14); padding-inline: max(var(--odstep-5), env(safe-area-inset-left, 0px)) max(var(--odstep-5), env(safe-area-inset-right, 0px)); }
 /* Kolumna dokumentu (75rem): ekrany inne niż panel prowadzenia obrad */
 .page.page--kolumna { width: var(--kolumna); }
@@ -252,9 +247,11 @@ dialog.modal-backdrop::backdrop { background: transparent; }
   .oi-card--aktywna:hover:not(:active)::before { transform: scaleY(0); }
   .oi-card--aktywna:hover:not(:active) .oi-card__title { color: var(--tekst-mocny); }
 }
-/* Cel dotyku co najmniej 44 px */
+/* Cel dotyku co najmniej 44 px. Mały przycisk ma stałą najmniejszą wysokość z napisem pośrodku, niezależną od pisma
+   dziedziczonego z otoczenia (np. komórki tabeli). */
 @media (pointer: coarse) {
-  .oi-btn--maly { padding-block: .55em; }
+  .oi-btn--maly { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+  .oi-check { min-height: 44px; align-items: center; }
   .oi-btn--maly > span { font-size: var(--t-przycisk); }
   .link-cel { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
   .oi-opt { min-height: 44px; }

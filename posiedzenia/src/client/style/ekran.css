@@ -36,7 +36,9 @@
 /* Wynik na ekranie sali: bez obrysu i tła, w skali ekranu */
 .screen .result { width: min(1300px, 100%); align-items: center; text-align: center; padding: 0; gap: 2.4vh; border: 0; background: none; }
 .screen .result .oi-stats { width: 100%; }
-.screen .result-subject { font-size: clamp(1.3rem, 1rem + 1.4vw, 2.6rem); }
+/* Przedmiot wyniku ma krój tytułów ekranu (cienka kursywa, początek do „w sprawie” pogrubiony), mniejszy od werdyktu */
+.screen .result-subject { font-weight: 300; font-style: italic; line-height: 1.2; color: var(--tekst-mocny); font-size: clamp(1.3rem, 1rem + 1.4vw, 2.6rem); max-width: 34ch; text-wrap: balance; }
+.screen .result-subject b { font-weight: 700; }
 .screen .result-label { font-size: clamp(2.4rem, min(1.4rem + 4vw, 10vh), 6rem); }
 .screen .result .oi-stat b { font-size: clamp(3rem, min(2rem + 5vw, 11vh), 7.5rem); }
 .screen .result .oi-stat span { font-size: clamp(.8rem, .6rem + .6vw, 1.4rem); }

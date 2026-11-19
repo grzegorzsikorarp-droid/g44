@@ -62,8 +62,9 @@ export function Home() {
       <div class="page page--kolumna oi-hero__in">
         <h1>Posiedzenia <b>Prezydium</b></h1>
         <p class="oi-hero__lead">{brand.organ}{brand.term ? `, ${brand.term}` : ''}.</p>
+        {/* Gdy trwa posiedzenie albo głosowanie, przyciskiem głównym ekranu jest przejście do niego (pas pod nagłówkiem). */}
         {organizer && <div class="actions">
-          <Button kind="primary" haspopup onClick={() => setCreating('posiedzenie')}>Przygotuj posiedzenie</Button>
+          <Button kind={live.length ? 'secondary' : 'primary'} haspopup onClick={() => setCreating('posiedzenie')}>Przygotuj posiedzenie</Button>
           <Button haspopup onClick={() => setCreating('procedura')}>Przygotuj głosowanie między posiedzeniami</Button>
         </div>}
       </div>
@@ -72,7 +73,7 @@ export function Home() {
       {error && <ErrorNotice>{error}</ErrorNotice>}
       {!data && !error && <p class="muted">Wczytywanie…</p>}
       {data && !list.length && <section class="oi-card"><h2 class="oi-card__title"><span class="oi-mark" aria-hidden="true"/><span>Nie ma jeszcze posiedzeń</span></h2><p class="muted">{organizer ? 'Utwórz pierwsze posiedzenie przyciskiem „Przygotuj posiedzenie”.' : 'Gdy biuro przygotuje posiedzenie, pojawi się tutaj.'}</p></section>}
-      {live.length > 0 && <div class="live-bands">{live.map(m => <LiveBand key={m.id} m={m}/>)}</div>}
+      {live.length > 0 && <div class="live-bands">{live.map((m, i) => <LiveBand key={m.id} m={m} primary={i === 0}/>)}</div>}
       {prep.length > 0 && <Group title={organizer ? 'W przygotowaniu' : 'Zaplanowane'} items={prep} organizer={organizer}/>}
       {done.length > 0 && <Group title="Zakończone" items={done} organizer={organizer}/>}
     </div>
@@ -80,15 +81,16 @@ export function Home() {
   </>;
 }
 
-// Trwające posiedzenie albo głosowanie: pas z etykietą, zdaniem o bieżącym punkcie i przyciskiem głównym.
-function LiveBand({m}: {m: Summary}) {
+// Trwające posiedzenie albo głosowanie: pas z etykietą, zdaniem o bieżącym punkcie i przyciskiem. Przycisk główny
+// ma tylko pierwszy pas, kolejne mają obrys (najwyżej jeden przycisk główny w kolumnie).
+function LiveBand({m, primary}: {m: Summary; primary: boolean}) {
   const procedure = m.kind === 'procedura';
   const text = procedure
     ? `${m.title}. Głosowanie do ${m.endsAt ? fmtDateTime(m.endsAt) : '–'}.`
     : `${m.title}, ${fmtShort(m.date)}.${m.current ? ` Bieżący punkt ${m.currentNumber} ${quote(m.current)}.` : ''}`;
   return <div class="oi-note live-band">
     <div class="live-band__text"><span class="oi-label">{procedure ? 'Trwa głosowanie między posiedzeniami' : 'Trwa posiedzenie'}</span><p>{text}</p></div>
-    <LinkButton primary href={`#p-${m.id}`}>{procedure ? 'Przejdź do głosowania' : 'Przejdź do obrad'}</LinkButton>
+    <LinkButton primary={primary} href={`#p-${m.id}`}>{procedure ? 'Przejdź do głosowania' : 'Przejdź do obrad'}</LinkButton>
   </div>;
 }
 

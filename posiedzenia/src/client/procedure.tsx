@@ -84,7 +84,7 @@ function Acts() {
     const mode = b?.mode ?? it.mode ?? 'jawne';
     const mats = b ? m.materials.filter(x => x.id === b.material?.id) : m.materials.filter(x => it.materialIds.includes(x.id));
     return <section key={it.id} class="oi-card act" aria-labelledby={`sprawa-${it.id}`}>
-      <span class="oi-label">Sprawa {itemNumber(m.agenda, it.id)}, głosowanie {modeName(mode)}</span>
+      <span class="oi-label">Głosowanie {modeName(mode)} w sprawie {itemNumber(m.agenda, it.id)}</span>
       <h2 class="item-title" id={`sprawa-${it.id}`}><TitleLead text={it.title}/></h2>
       {mats.length > 0
         ? <div class="material-list">{mats.map(x => {

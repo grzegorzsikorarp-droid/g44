@@ -37,6 +37,21 @@ const castOf = (b: ViewBallot) => ({cast: b.secret ? b.secret.cast : b.voted.len
 const organName = (m: Pick<Meeting, 'organ'>, roster: Roster) => organOf(roster, m.organ)?.name ?? 'Prezydium';
 /** Odwołanie do regulaminu, które nie łamie się między wierszami: „(§ 8 ust. 2)”. */
 const Ref = (props: {children: string}) => <span class="oi-nowrap">{props.children}</span>;
+/** „10 listopada 2026 r.” z daty RRRR-MM-DD. */
+const longDate = (iso: string) => `${new Intl.DateTimeFormat('pl-PL', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC'}).format(Date.parse(iso + 'T12:00:00Z'))} r.`;
+
+/**
+ * Formuła zamknięcia posiedzenia do odczytania (T3.46). „Wobec wyczerpania porządku obrad” tylko wtedy, gdy nie ma
+ * punktów nierozpatrzonych. Inaczej samo zamknięcie, a punkty nierozpoczęte są wymienione z numerem.
+ */
+function closingSpeech(m: ViewMeeting, organ: string) {
+  const unhandled = unhandledItems(m);
+  if (!unhandled.length) return `Wobec wyczerpania porządku obrad zamykam posiedzenie ${organ}.`;
+  const skipped = unhandled.filter(it => it.status === 'oczekuje').map(it => itemNumber(m.agenda, it.id));
+  const note = skipped.length === 1 ? ` Punkt ${skipped[0]} nie został rozpatrzony.`
+    : skipped.length > 1 ? ` Punkty ${joinNames(skipped)} nie zostały rozpatrzone.` : '';
+  return `Zamykam posiedzenie ${organ}.${note}`;
+}
 
 /** Następny punkt do rozpoczęcia po bieżącym (punkt „Podjęcie uchwał” z podpunktami prowadzi do pierwszego podpunktu). */
 function nextItem(m: ViewMeeting, it: AgendaItem) {
@@ -134,6 +149,16 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
   }, []);
   // Po wyborze punktu w układzie z zakładkami fokus przechodzi na tytuł punktu.
   useEffect(() => { if (focusTitle) document.querySelector<HTMLElement>('.chair-main .item-title')?.focus(); }, [focusTitle]);
+  // Karta porządku przewija się (sama, bez przewijania strony) tak, żeby bieżący punkt stał w górnej jednej trzeciej
+  // jej wysokości: po pierwszym wyświetleniu i przy każdej zmianie bieżącego punktu. Bez przewijanej karty nic się nie dzieje.
+  const agendaCard = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const card = agendaCard.current;
+    const row = card?.querySelector<HTMLElement>('.agenda-row[aria-current="step"]');
+    if (!card || !row || card.scrollHeight <= card.clientHeight + 1) return;
+    const top = row.getBoundingClientRect().top - card.getBoundingClientRect().top + card.scrollTop;
+    card.scrollTop = Math.max(0, top - card.clientHeight / 3);
+  }, [m.currentItemId]);
   const unread = useUnread(m, s.account.id, messagesOpen);
   const decisions = readOnly ? [] : decisionsFor(m, unread);
   const open = m.ballots.find(b => b.status === 'otwarte');
@@ -178,7 +203,7 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
         </button>)}
     </nav>
     <aside class={'chair-col chair-left' + (tab === 'porzadek' ? ' is-shown' : '')} aria-label="Porządek obrad">
-      <section class="oi-card chair-agenda">
+      <section class="oi-card chair-agenda" ref={agendaCard}>
         <div class="panel-head"><CardTitle level={2}>Porządek obrad</CardTitle><StateChip state={agendaChip(m.agendaAdopted)}/></div>
         <AgendaList selected={selected} onSelect={choose}/>
         {!readOnly && !m.agendaAdopted && <AgendaFixes/>}
@@ -377,6 +402,12 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
         {!readOnly && screen.material !== x.id && <div><Button kind="ghost" quiet small busy={busy} label={`Pokaż materiał na sali i telefonach, ${x.title}`} onClick={() => send({type: 'present', kind: 'material', id: x.id})}>Pokaż materiał na sali i telefonach</Button></div>}
       </div>)}
     </div>}
+    {/* Działania poboczne tego punktu stoją przy jego treści, przed głosowaniem i blokiem „Następny punkt”. */}
+    {!readOnly && <div class="item-side">
+      {screen.item !== it.id && <Button small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż na ekranie sali</Button>}
+      {(current || it.status === 'w_toku') && !['otwarcie', 'porzadek', 'zamkniecie'].includes(it.kind) && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('odroczony')}>Odrocz</Button>}
+      {it.status === 'oczekuje' && it.kind === 'sprawa' && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('wycofany')}>Wycofaj</Button>}
+    </div>}
     {!readOnly && current && it.kind === 'otwarcie' && <Quorum main={main}/>}
     {!readOnly && current && <BallotForm it={it} main={voteNeeded ? main : 'secondary'}/>}
     {results.length > 0 && <div class="results">
@@ -386,14 +417,9 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
     {!readOnly && current && it.kind === 'otwarcie' && <ReadAloud><p>{present >= quorumFor(members)
       ? `Otwieram posiedzenie ${organ}. Stwierdzam, że w posiedzeniu uczestniczy ${present} z ${members} członków Prezydium, co stanowi kworum wymagane do podejmowania uchwał.`
       : `Otwieram posiedzenie ${organ}. Stwierdzam, że w posiedzeniu uczestniczy ${present} z ${members} członków Prezydium. Wobec braku kworum Prezydium nie może podejmować uchwał.`}</p></ReadAloud>}
-    {!readOnly && current && closing && <ReadAloud><p>Wobec wyczerpania porządku obrad zamykam posiedzenie {organ}.</p></ReadAloud>}
-    {!readOnly && current && <NextStep it={it} main={main} voteNeeded={voteNeeded}/>}
-    {!readOnly && <div class="item-side">
-      {screen.item !== it.id && <Button small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż na ekranie sali</Button>}
-      {(current || it.status === 'w_toku') && !['otwarcie', 'porzadek', 'zamkniecie'].includes(it.kind) && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('odroczony')}>Odrocz</Button>}
-      {it.status === 'oczekuje' && it.kind === 'sprawa' && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('wycofany')}>Wycofaj</Button>}
-    </div>}
+    {!readOnly && current && closing && <ReadAloud><p>{closingSpeech(m, organ)}</p></ReadAloud>}
     {(organizer || !readOnly) && others.length > 0 && !closing && <AssignMaterial it={it} others={others}/>}
+    {!readOnly && current && <NextStep it={it} main={main} voteNeeded={voteNeeded}/>}
     <NoteEditor it={it} open={readOnly}/>
     {ending && <Confirm title={ending === 'odroczony' ? 'Odroczyć punkt?' : 'Wycofać punkt?'} confirm={ending === 'odroczony' ? 'Odrocz punkt' : 'Wycofaj punkt'}
       kind={ending === 'odroczony' ? 'primary' : 'danger'} focus="cancel" onClose={() => setEnding(null)}
@@ -600,7 +626,7 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
       </div>
       <span class="oi-field__hint" id={`${ids}-tryb-p`}>Głosowanie imienne i tajne wymaga uchwalenia przez Prezydium.</span>
     </div>}
-    {!fixed && it.kind !== 'porzadek' && <p class="small muted">Prezydium może uchwalić tajność głosowania albo głosowanie imienne. Poddaj pod głosowanie <button type="button" class="link" aria-haspopup="dialog" onClick={() => setMotion('tajne')}>wniosek o głosowanie tajne</button> albo <button type="button" class="link" aria-haspopup="dialog" onClick={() => setMotion('imienne')}>wniosek o głosowanie imienne</button>.</p>}
+    {!fixed && it.kind !== 'porzadek' && <p class="small muted">Prezydium może uchwalić tajność głosowania albo głosowanie imienne. Poddaj pod głosowanie <button type="button" class="link quiet" aria-haspopup="dialog" onClick={() => setMotion('tajne')}>wniosek o głosowanie tajne</button> albo <button type="button" class="link quiet" aria-haspopup="dialog" onClick={() => setMotion('imienne')}>wniosek o głosowanie imienne</button>.</p>}
     <div class="oi-field">
       <span class="oi-field__label" id={`${ids}-czas`}>Czas</span>
       <div class="oi-seg seg-czas" role="group" aria-labelledby={`${ids}-czas`}>
@@ -609,12 +635,13 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
     </div>
     {bare && <Notice tone="warn">Do tego punktu nie dołączono projektu uchwały. Członkowie nie zobaczą treści, nad którą głosują.</Notice>}
     <ReadAloud>
-      {it.kind === 'porzadek' && <p>Członkowie Prezydium otrzymali projekt porządku obrad wraz z zawiadomieniem. Czy są uwagi lub wnioski o zmianę porządku? Zarządzam głosowanie nad przyjęciem porządku obrad.</p>}
+      {/* Zdanie o zawiadomieniu tylko przy wpisanej dacie wysłania. Aplikacja nie wie, czy członkowie je otrzymali. */}
+      {it.kind === 'porzadek' && <p>{m.noticeDate ? `Zawiadomienie z projektem porządku obrad wysłano ${longDate(m.noticeDate)} ` : ''}Czy są uwagi lub wnioski o zmianę projektu porządku obrad? Zarządzam głosowanie nad przyjęciem porządku obrad.</p>}
       <p>{speech}</p>
     </ReadAloud>
     <div><Button kind={main} type="submit" busy={busy} haspopup={!!repeat || bare} disabled={m.status !== 'trwa'} reason={m.status !== 'trwa' ? 'Głosowanie otworzysz po wznowieniu obrad.' : undefined}>Otwórz głosowanie</Button></div>
     {step === 'tryb' && <Confirm key="tryb" title="Zmienić uchwalony tryb głosowania?" kind="danger" confirm={`Otwórz głosowanie ${modeName(steps!.mode)}`} onConfirm={confirmStep} onClose={closeStep}
-      text={<p>Prezydium uchwaliło w tej sprawie głosowanie {modeName(fixed ?? '')} ({it.modeBasis}). Regulamin wymaga zachowania tego trybu.</p>}/>}
+      text={<p>W tej sprawie obowiązuje głosowanie {modeName(fixed ?? '')} ({it.modeBasis}). Regulamin wymaga zachowania tego trybu.</p>}/>}
     {step === 'ponownie' && repeat && <Confirm key="ponownie" title="Ponownie głosować w tej samej sprawie?" kind="danger" confirm="Otwórz ponowne głosowanie" onConfirm={confirmStep} onClose={closeStep}
       text={<p>{chosenMaterial && repeat.material?.id === chosenMaterial ? 'Nad tym materiałem już głosowano' : 'W tej sprawie już głosowano'} (głosowanie nr {repeat.number}). Regulamin przewiduje ponowne głosowanie w tej samej sprawie tylko w trybie reasumpcji (§ 12).</p>}/>}
     {step === 'bez-projektu' && <Confirm key="bez-projektu" title="Otworzyć głosowanie bez projektu?" confirm="Otwórz głosowanie" focus="cancel" onConfirm={confirmStep} onClose={closeStep}
@@ -624,15 +651,17 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
   </form>;
 }
 
+// Lista zaczyna się od pustej pozycji: materiał trzeba wybrać, a do tego czasu przycisk jest nieaktywny z powodem.
 function AssignMaterial({it, others}: {it: AgendaItem; others: ViewMeeting['materials']}) {
   const {send, busy} = useMeeting();
-  const [pick, setPick] = useState(others[0]?.id ?? '');
-  useEffect(() => { if (!others.some(x => x.id === pick)) setPick(others[0]?.id ?? ''); }, [others.map(x => x.id).join()]);
+  const [pick, setPick] = useState('');
+  useEffect(() => { if (pick && !others.some(x => x.id === pick)) setPick(''); }, [others.map(x => x.id).join()]);
   return <div class="assign-material">
     <Field label="Przypisz materiał do punktu"><select value={pick} onChange={e => setPick((e.target as HTMLSelectElement).value)}>
+      <option value="">Wybierz materiał…</option>
       {others.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
     </select></Field>
-    <div><Button small busy={busy} onClick={() => { if (pick) send({type: 'item_material', itemId: it.id, materialId: pick, on: true}); }}>Przypisz materiał</Button></div>
+    <div><Button small busy={busy} disabled={!pick} reason={pick ? undefined : 'Wybierz materiał z listy.'} onClick={() => { if (pick) send({type: 'item_material', itemId: it.id, materialId: pick, on: true}).then(r => { if (r) setPick(''); }); }}>Przypisz materiał</Button></div>
   </div>;
 }
 

@@ -131,8 +131,11 @@ export function AgendaEditor(props: {rowExtra?: (it: AgendaItem) => ComponentChi
         </li>;
       })}
     </ol>}
-    <form class="inline-form" onSubmit={e => add(e, null)}>
-      <input class="oi-input" ref={addInput} name="title" placeholder={procedure ? 'Sprawa do głosowania, np. Uchwała nr … w sprawie …' : 'Nowy punkt porządku obrad'} maxLength={400} required aria-label={procedure ? 'Nowa sprawa' : 'Nowy punkt'}/>
+    {/* Pole ma widoczną etykietę nad sobą, a przykład stoi w podpowiedzi pod polem (bez znikającego placeholdera). */}
+    <form class="add-form" onSubmit={e => add(e, null)}>
+      <Field label={procedure ? 'Nowa sprawa' : 'Nowy punkt'} hint={procedure ? 'Sprawa do głosowania, np. Uchwała nr … w sprawie …' : undefined}>
+        <input ref={addInput} name="title" maxLength={400} required/>
+      </Field>
       <Button type="submit" busy={busy}>{procedure ? 'Dodaj sprawę' : 'Dodaj punkt'}</Button>
     </form>
     <div class="actions"><Button small haspopup onClick={() => setImporting(true)}>{procedure ? 'Wczytaj sprawy z tekstu' : 'Wczytaj porządek z tekstu'}</Button></div>
@@ -147,8 +150,8 @@ export function AgendaEditor(props: {rowExtra?: (it: AgendaItem) => ComponentChi
 function SubItemForm(props: {no: string; busy: boolean; onSubmit: (e: Event) => void}) {
   const input = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => { input.current?.focus(); }, []);
-  return <form class="inline-form sub-form" onSubmit={props.onSubmit}>
-    <input class="oi-input" ref={input} name="title" placeholder={`Podpunkt w punkcie ${props.no}, np. Uchwała nr …`} maxLength={400} required aria-label={`Nowy podpunkt w punkcie ${props.no}`}/>
+  return <form class="add-form sub-form" onSubmit={props.onSubmit}>
+    <Field label={`Nowy podpunkt w punkcie ${props.no}`} hint="Np. Uchwała nr … w sprawie …"><input ref={input} name="title" maxLength={400} required/></Field>
     <Button small type="submit" busy={props.busy}>Dodaj podpunkt</Button>
   </form>;
 }
@@ -234,7 +237,7 @@ export function MaterialsEditor() {
   const removed = m.materials.find(x => x.id === removing);
   return <div class="stack materials-editor">
     <p class="muted small">Uczestnicy czytają materiały jako lekki tekst dopasowany do telefonu. Oryginał (DOCX, PDF) można pobrać osobno. Głosowanie zawsze dotyczy wersji utrwalonej w chwili jego otwarcia.</p>
-    <div class="actions"><Button kind="primary" haspopup onClick={() => setMode('plik')}>Dodaj plik</Button><Button haspopup onClick={() => setMode('tekst')}>Wklej tekst</Button></div>
+    <div class="actions"><Button haspopup onClick={() => setMode('plik')}>Dodaj plik</Button><Button haspopup onClick={() => setMode('tekst')}>Wklej tekst</Button></div>
     {m.materials.length > 0 && <ul class="material-table">{m.materials.map(x => {
       const used = usage(x.id);
       return <li key={x.id}>
@@ -399,7 +402,7 @@ function Deputy() {
   const edit = () => { setTouched(true); save.reset(); };
   return <section class="oi-card">
     <CardTitle level={2}>Zastępstwo przewodniczącego</CardTitle>
-    <p class="muted small">Na czas nieobecności przewodniczący wyznacza, który z wiceprzewodniczących go zastępuje (§ 16 ust. 2). Gdy nie jest to możliwe, wyznacza Prezydium (§ 16 ust. 3).</p>
+    <p class="muted small">Na czas nieobecności przewodniczący wyznacza, który z wiceprzewodniczących go zastępuje. Gdy nie jest to możliwe, wyznacza Prezydium (§ 16).</p>
     <Field label="Zastępca"><select value={person} onChange={e => { edit(); setPerson((e.target as HTMLSelectElement).value); }}><option value="">Bez wyznaczenia</option>{vices.map(v => <option key={v.personId} value={v.personId}>{s.personName(v.personId)}, {v.label}</option>)}</select></Field>
     {!chairman && person && <Field label="Podstawa wyznaczenia" hint="Np. uchwała Prezydium nr … z dnia …"><input value={basis} onInput={e => { edit(); setBasis((e.target as HTMLInputElement).value); }} maxLength={200}/></Field>}
     <div class="form-save">

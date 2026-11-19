@@ -21,10 +21,17 @@
   .edit-row { grid-template-columns: 2.6em minmax(0, 1fr); grid-template-areas: 'no main' '. tools'; }
   .edit-tools { justify-content: flex-start; }
 }
-/* Na telefonie pole nowego punktu zajmuje całą szerokość, a przycisk stoi pod nim */
+/* Dodawanie punktu, podpunktu albo sprawy: etykieta nad polem, przycisk w wierszu pola, podpowiedź pod polem.
+   Pole formularza rozkłada się w siatce formularza (display: contents), dlatego przycisk stoi obok samego pola.
+   Na telefonie pole zajmuje całą szerokość, a przycisk stoi pod nim. */
+.add-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--odstep-2); row-gap: 6px; align-items: center; }
+.add-form > .oi-field { display: contents; }
+.add-form .oi-field__label, .add-form .oi-field__hint, .add-form .oi-field__error { grid-column: 1 / -1; }
+.add-form .oi-input { grid-column: 1; }
+.add-form > :is(.oi-btn, .btn-wrap) { grid-column: 2; grid-row: 2; }
 @media (max-width: 480px) {
-  .agenda-editor .inline-form { flex-direction: column; align-items: stretch; }
-  .agenda-editor .inline-form > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+  .add-form { grid-template-columns: minmax(0, 1fr); }
+  .add-form > :is(.oi-btn, .btn-wrap) { grid-column: 1; grid-row: auto; justify-self: start; }
 }
 /* Przyciski wyboru w polu formularza mieszczą się obok siebie także w kolumnie bocznej */
 .oi-seg.seg-field .oi-opt { flex: 1 1 auto; }

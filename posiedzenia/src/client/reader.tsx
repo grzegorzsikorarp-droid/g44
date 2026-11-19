@@ -51,7 +51,10 @@ export function MaterialReader(props: {id: string; version: number; inline?: boo
   if (!doc) return <p class="muted">Wczytywanie materiału…</p>;
   return <article class={`reader reader-${size}`}>
     <header class="reader-head">
-      <div><span class="oi-label">{materialTypeLabel(doc.type)}{doc.number ? ` nr ${doc.number}` : ''}, wersja {doc.version}</span>{props.inline ? <h2>{doc.title}</h2> : <h3>{doc.title}</h3>}</div>
+      {/* W karcie „Materiał pokazywany na sali” etykietę ma karta, więc pod tytułem stoi tylko szary dopisek z wersją. */}
+      {props.inline
+        ? <div><h2>{doc.title}</h2><span class="muted small">wersja {doc.version}</span></div>
+        : <div><span class="oi-label">{materialTypeLabel(doc.type)}{doc.number ? ` nr ${doc.number}` : ''}, wersja {doc.version}</span><h3>{doc.title}</h3></div>}
       {props.size === undefined && <SizeTools size={size} onSize={next => { setOwn(next); saveSize(next); }}/>}
     </header>
     {doc.html ? <div class="doc" dangerouslySetInnerHTML={{__html: doc.html}}/> : <p class="muted">Ten materiał jest dostępny tylko jako plik do pobrania.</p>}

@@ -361,13 +361,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'deputy': {
       ensure(posiedzenie && m.status !== 'zakonczone', 'Zastępcę wyznacza się przed posiedzeniem lub w jego trakcie.');
       const chairman = isChairman(roster, m.organ, actor.personId);
-      ensure(chairman || actor.account.admin || actor.account.kind === 'biuro', 'Zastępcę wyznacza przewodniczący (§ 16 ust. 2).', 403);
+      ensure(chairman || actor.account.admin || actor.account.kind === 'biuro', 'Zastępcę wyznacza przewodniczący (§ 16).', 403);
       if (cmd.personId) {
         const ms = membership(roster, m.organ, cmd.personId);
-        ensure(ms?.func === 'wiceprzewodniczacy', 'Zastępcą przewodniczącego może być wiceprzewodniczący (§ 16 ust. 2).');
+        ensure(ms?.func === 'wiceprzewodniczacy', 'Zastępcą przewodniczącego może być wiceprzewodniczący (§ 16).');
       }
-      const basis = chairman ? 'wyznaczenie przez przewodniczącego (§ 16 ust. 2)' : (cmd.basis ?? '').trim();
-      ensure(chairman || !cmd.personId || basis.length >= 5, 'Podaj podstawę wyznaczenia, np. uchwałę Prezydium (§ 16 ust. 3).');
+      const basis = chairman ? 'wyznaczenie przez przewodniczącego (§ 16)' : (cmd.basis ?? '').trim();
+      ensure(chairman || !cmd.personId || basis.length >= 5, 'Podaj podstawę wyznaczenia, np. uchwałę Prezydium (§ 16).');
       m.chair.deputy = cmd.personId;
       m.chair.deputyBasis = cmd.personId ? basis : '';
       log(m, ctx, actor, cmd.personId ? `Na czas nieobecności przewodniczącego prowadzi ${name(ctx, cmd.personId)} (${basis}).` : 'Usunięto wyznaczenie zastępcy.');
@@ -610,16 +610,16 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'motion_create': {
-      ensure(posiedzenie, 'Reasumpcja dotyczy głosowań na posiedzeniu (§ 12 ust. 2).');
+      ensure(posiedzenie, 'Reasumpcja dotyczy głosowań na posiedzeniu (§ 12).');
       requireLive(m);
       const b = ballot(m, cmd.ballotId);
       ensure(actor.personId && m.attendance[actor.personId] === 'obecny' && isMember(roster, m, actor.personId), 'Wniosek składa członek Prezydium obecny na posiedzeniu.', 403);
       ensure(b.status === 'zamkniete', 'Reasumpcja dotyczy zakończonego głosowania.');
-      ensure(b.mode === 'jawne', 'Reasumpcji nie podlegają wyniki głosowania imiennego i tajnego (§ 12 ust. 4).');
+      ensure(b.mode === 'jawne', 'Reasumpcji nie podlegają wyniki głosowania imiennego i tajnego (§ 12).');
       ensure(!['reasumpcja', 'tryb'].includes(b.purpose), 'Tego głosowania nie można poddać reasumpcji.');
-      ensure(!b.reasumptionOf && !b.supersededBy, 'Reasumpcję w tej sprawie już przeprowadzono, a można ją przeprowadzić tylko raz (§ 12 ust. 3).');
+      ensure(!b.reasumptionOf && !b.supersededBy, 'Reasumpcję w tej sprawie już przeprowadzono, a można ją przeprowadzić tylko raz (§ 12).');
       ensure(!m.motions.some(x => x.ballotId === b.id && ['zbiera_podpisy', 'zlozony', 'glosowany', 'przyjety'].includes(x.status)), 'Wniosek o reasumpcję tego głosowania już jest rozpatrywany.');
-      ensure(cmd.justification.trim().length >= 10, 'Uzasadnij wniosek, czyli napisz, dlaczego wynik budzi wątpliwości (§ 12 ust. 1).');
+      ensure(cmd.justification.trim().length >= 10, 'Uzasadnij wniosek, czyli napisz, dlaczego wynik budzi wątpliwości (§ 12).');
       const motion = {id: ctx.newId(), type: 'reasumpcja' as const, ballotId: b.id, justification: cmd.justification.trim().slice(0, 2000), createdBy: actor.personId, createdAt: ctx.now, signatures: [actor.personId], status: 'zbiera_podpisy' as const};
       m.motions.push(motion);
       log(m, ctx, actor, `Złożono wniosek o reasumpcję głosowania nr ${b.number}.`);
@@ -647,7 +647,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'motion_vote': {
       requireLive(m); requireChair(m, actor);
       const motion = m.motions.find(x => x.id === cmd.motionId) ?? fail('Nie znaleziono wniosku.', 404);
-      ensure(motion.status === 'zlozony', 'Wniosek nie ma jeszcze wymaganej liczby podpisów (§ 12 ust. 5).');
+      ensure(motion.status === 'zlozony', 'Wniosek nie ma jeszcze wymaganej liczby podpisów (§ 12).');
       const original = ballot(m, motion.ballotId);
       const b = openBallot(m, ctx, actor, {itemId: original.itemId, purpose: 'reasumpcja', subject: `Wniosek o reasumpcję głosowania nr ${original.number} ${quoted(original.subject)}`, mode: 'jawne', minutes: cmd.minutes, target: {kind: 'reasumpcja', ballotId: original.id, motionId: motion.id}});
       motion.status = 'glosowany';
@@ -683,7 +683,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const currentAway = !m.chair.current || m.attendance[m.chair.current] !== 'obecny';
       const deputyAway = !m.chair.deputy || m.attendance[m.chair.deputy] !== 'obecny';
       ensure(chairman || currentAway && (m.chair.deputy === actor.personId || deputyAway),
-        currentAway ? 'Prowadzenie przejmuje wyznaczony zastępca (§ 16 ust. 2).' : 'Prowadzenie może przekazać osoba prowadząca; przewodniczący może je przejąć.', 403);
+        currentAway ? 'Prowadzenie przejmuje wyznaczony zastępca (§ 16).' : 'Prowadzenie może przekazać osoba prowadząca; przewodniczący może je przejąć.', 403);
       m.chair.changes.push({at: ctx.now, from: m.chair.current, to: actor.personId, by: actor.name, reason: chairman ? 'przejęcie przez przewodniczącego' : 'zastępstwo podczas nieobecności osoby prowadzącej obrady'});
       m.chair.current = actor.personId;
       log(m, ctx, actor, `Prowadzenie obrad przejmuje ${actor.name}.`);
@@ -733,7 +733,7 @@ function fileIfSupported(m: Meeting, ctx: Context, motionId: string) {
     motion.status = 'zlozony';
     motion.filedAt = ctx.now;
     motion.presentAtFiling = present.length;
-    log(m, ctx, null, `Wniosek o reasumpcję poparło ${valid} z ${present.length} obecnych, a wymagana jest 1/3 (§ 12 ust. 5).`);
+    log(m, ctx, null, `Wniosek o reasumpcję poparło ${valid} z ${present.length} obecnych, a wymagana jest 1/3 (§ 12).`);
   }
 }
 

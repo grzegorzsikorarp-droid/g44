@@ -17,6 +17,13 @@ html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posi
 .bar-br { display: none; }
 .meeting-bar__facts { gap: var(--odstep-1) var(--odstep-6); }
 .meeting-bar__facts .fact dd { font-size: var(--t-lista); line-height: 1.3; white-space: nowrap; }
+/* Dopasowanie do szerokości (fitBar w meeting.tsx): krótki tytuł zamiast uciętego pełnego, potem bez znaczników
+   rodzaju i trwającego głosowania, na końcu tytuł w dwóch wierszach. W faktach najpierw znika miejsce, potem data. */
+.meeting-bar.is-krotki .bar-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.meeting-bar.is-krotki .bar-short { display: inline; }
+.meeting-bar.bez-rodzaju .bar-kind, .meeting-bar.bez-znacznika .bar-voting { display: none; }
+.meeting-bar.is-zawijany .meeting-bar__title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.meeting-bar__facts.bez-miejsca .fact--miejsce, .meeting-bar__facts.bez-daty .fact--data { display: none; }
 .meeting-offline { background: var(--tlo); border-bottom: var(--kreska) solid var(--linia); }
 .meeting-offline .meeting-bar__in { padding-block: var(--odstep-2); }
 .meeting--live .sticky-error { top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--odstep-2)); }
@@ -24,6 +31,12 @@ html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posi
 .meeting-details { display: none; margin-top: var(--odstep-4); }
 .meeting-details .oi-faq__a { display: flex; flex-direction: column; gap: var(--odstep-4); }
 .meeting-details__links { gap: var(--odstep-2) var(--odstep-5); }
+/* Do 360 px przełącznik widoku stoi w szczegółach posiedzenia, a pasek ma jeden wiersz */
+.details-toggle { display: none; }
+@media (max-width: 360px) {
+  .details-toggle { display: block; }
+  .meeting-bar__actions .oi-btn.bar-toggle { display: none; }
+}
 /* Telefon: jeden wiersz ze znacznikiem stanu i krótkim tytułem (pełny tytuł zostaje dla czytnika ekranu),
    z przyciskami „Dołącz do połączenia” i przełącznikiem widoku. Napisy przycisków mają dwa wiersze, a tytuł obok
    nich mniejsze pismo. Gdy dla tytułu zostaje mniej niż 8em (dwa przyciski, wąski ekran), przyciski schodzą niżej. */
@@ -85,8 +98,10 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 .material-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label act' 'meta .'; align-items: baseline; gap: 2px var(--odstep-3); width: 100%; text-align: left; padding: .7em .9em; border: 0; border-left: var(--pasek-akcentu) solid var(--linia-aktywna); background: var(--powierzchnia-miekka); font: inherit; font-size: var(--t-lista); font-weight: 600; line-height: 1.35; color: var(--tekst-mocny); cursor: pointer; transition: border-color .2s; }
 .material-link__label { grid-area: label; overflow-wrap: break-word; }
 .material-link__meta { grid-area: meta; font-size: var(--t-maly); font-weight: 400; color: var(--tekst-drugorzedny); }
-.material-link__act { grid-area: act; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; color: var(--akcent-tekst); }
-@media (hover: hover) and (pointer: fine) { .material-link:hover { border-left-color: var(--czerwien); } }
+/* „Czytaj” jest szare (zasada 3.5), czerwienieje po najechaniu i przy fokusie */
+.material-link__act { grid-area: act; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; color: var(--tekst-drugorzedny); }
+.material-link:focus-visible .material-link__act { color: var(--akcent-tekst); }
+@media (hover: hover) and (pointer: fine) { .material-link:hover { border-left-color: var(--czerwien); } .material-link:hover .material-link__act { color: var(--akcent-tekst); } }
 /* Na telefonie tytuł zajmuje całą szerokość, a „Czytaj” stoi w wierszu dopisku */
 @media (max-width: 560px) { .material-link { padding: .6em .8em; } .material-link.has-meta { grid-template-areas: 'label label' 'meta act'; } }
 .material-row { display: flex; flex-direction: column; gap: 6px; }
@@ -121,6 +136,15 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 .vote-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--odstep-2); margin-top: var(--odstep-1); }
 .vote-buttons .oi-opt { min-height: 64px; padding: .7em 1em; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); font-size: 1.25rem; font-weight: 700; line-height: 1.25; color: var(--tekst-mocny); }
 @media (max-width: 560px) { .vote-buttons { grid-template-columns: minmax(0, 1fr); } }
+/* Najmniejsze telefony: niższe przyciski głosu, mniejsze odstępy w karcie i niższy odnośnik do treści, żeby trzy
+   przyciski mieściły się na pierwszym ekranie także przy uchwale z materiałem (320×640) */
+@media (max-width: 360px) {
+  .vote-card { gap: var(--odstep-3); }
+  .vote-card .material-link { padding-block: .45em; }
+  .vote-buttons { gap: var(--odstep-1); margin-top: 0; }
+  .vote-buttons .oi-opt { min-height: 56px; padding-block: .55em; }
+  .vote-facts.facts--liczby .fact dd { font-size: var(--t-sprawa); }
+}
 .vote-embedded { display: flex; flex-direction: column; gap: var(--odstep-3); }
 .voted, .vote-pending { display: flex; flex-direction: column; gap: 2px; }
 .voted strong, .vote-pending strong { font-weight: 700; font-size: var(--t-karta); color: var(--tekst-mocny); }
@@ -159,7 +183,7 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 .doc { max-width: var(--wiersz-tekstu); line-height: 1.66; overflow-wrap: anywhere; color: var(--tekst); }
 .reader-small .doc { font-size: 15px; } .reader-normal .doc { font-size: var(--t-tekst); } .reader-large .doc { font-size: 19.5px; } .reader-xlarge .doc { font-size: 23px; }
 .doc > * + * { margin-top: .7em; }
-.doc h1, .doc h2, .doc h3, .doc h4 { font-weight: 600; font-size: 1.04em; text-align: center; margin: 1.1em 0 .5em; color: var(--tekst-mocny); }
+.doc h1, .doc h2, .doc h3, .doc h4 { font-weight: 600; font-size: 1em; text-align: center; margin: 1.1em 0 .5em; color: var(--tekst-mocny); }
 .doc table { display: block; overflow-x: auto; border-collapse: collapse; max-width: 100%; }
 .doc td, .doc th { border: var(--kreska) solid var(--linia); padding: 6px 8px; vertical-align: top; font-size: .9em; min-width: 80px; }
 .doc ol, .doc ul { padding-left: 1.5em; }
@@ -206,6 +230,26 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 .results-table th[scope="row"] { min-width: 14em; }
 .results-table td:last-child { min-width: 9em; }
 .results-table td:last-child b { font-weight: 700; color: var(--tekst-mocny); }
+/* Do 560 px wiersz tabeli wyników jest blokiem: numer i przedmiot, pod nimi wynik, liczby z etykietą nad wartością
+   i tryb. Nagłówki zostają dla czytnika ekranu, a role ARIA zachowują znaczenie tabeli mimo innego układu. */
+@media (max-width: 560px) {
+  .results-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .results-table, .results-table tbody { display: block; }
+  .results-table tr { display: grid; grid-template-columns: 2.2em repeat(3, auto) minmax(0, 1fr); grid-template-areas: 'nr subj subj subj subj' '. wynik wynik wynik wynik' '. za przeciw wstrz .' '. tryb tryb tryb tryb'; gap: var(--odstep-1) var(--odstep-4); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+  .results-table tbody tr:first-child { border-top: 0; }
+  .results-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; text-align: left; }
+  .results-table th[scope="row"], .results-table td:last-child { min-width: 0; }
+  .results-table tr > :nth-child(1) { grid-area: nr; font-weight: 700; font-style: italic; color: var(--tekst-mocny); }
+  .results-table tr > :nth-child(2) { grid-area: subj; }
+  .results-table tr > :nth-child(3) { grid-area: tryb; font-size: var(--t-meta); color: var(--tekst-drugorzedny); }
+  .results-table tr > :nth-child(3)::before { content: attr(data-label) " "; content: attr(data-label) " " / ""; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; }
+  .results-table tr > :nth-child(4) { grid-area: za; }
+  .results-table tr > :nth-child(5) { grid-area: przeciw; }
+  .results-table tr > :nth-child(6) { grid-area: wstrz; }
+  .results-table tr > :nth-child(7) { grid-area: wynik; }
+  .results-table td.oi-liczba[data-label] { text-align: left; font-weight: 600; color: var(--tekst-mocny); }
+  .results-table td.oi-liczba[data-label]::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+}
 
 /* Wynik: zawsze trzy kafelki obok siebie */
 .result .oi-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }

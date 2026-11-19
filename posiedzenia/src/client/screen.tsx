@@ -14,10 +14,12 @@ import {breakSince, meetingState, modeName} from './stany.ts';
 /**
  * Jeden wzór wszystkich stanów ekranu sali: skośna etykieta nad tytułem, oba wyśrodkowane, a pod tytułem szczegóły.
  * Wynik głosowania ma ten sam układ w ResultCard (etykieta, przedmiot, rozstrzygnięcie). `lead` pogrubia początek
- * tytułu punktu (TitleLead), a długi tytuł ma mniejsze pismo, żeby stan mieścił się na ekranie bez przewijania.
+ * tytułu (TitleLead), a długi tytuł ma mniejsze pismo, żeby stan mieścił się na ekranie bez przewijania.
+ * Etykieta jest czerwona, gdy pokazuje to, co dzieje się teraz (punkt, głosowanie, materiał). Przerwa, zamknięcie
+ * i ekran bez bieżącego punktu mają etykietę ciemną (`still`), bo czerwień oznacza „teraz” (zasady 3.5 i 3.6).
  */
-function State(props: {label: string; title: string; lead?: boolean; children?: ComponentChildren}) {
-  return <><Tag>{props.label}</Tag><h1 class={props.title.length > 90 ? 'is-long' : undefined}>{props.lead ? <TitleLead text={props.title}/> : props.title}</h1>{props.children}</>;
+function State(props: {label: string; title: string; lead?: boolean; still?: boolean; children?: ComponentChildren}) {
+  return <><Tag dark={props.still}>{props.label}</Tag><h1 class={props.title.length > 90 ? 'is-long' : undefined}>{props.lead ? <TitleLead text={props.title}/> : props.title}</h1>{props.children}</>;
 }
 
 // Ekran sali, czyli projektor: duże, czytelne informacje bez elementów sterowania.
@@ -38,14 +40,14 @@ export function RoomScreen({id}: {id: string}) {
   let body;
   if (m.status === 'przerwa') {
     const since = breakSince(m);
-    body = <State label={meetingState(m.status).label} title="Przerwa w obradach">{since && <p class="screen-sub">od godz. {fmtTime(since)}</p>}</State>;
+    body = <State label={meetingState(m.status).label} title="Przerwa w obradach" still>{since && <p class="screen-sub">od godz. {fmtTime(since)}</p>}</State>;
   } else if (m.status === 'zakonczone') {
-    body = <State label={meetingState(m.status).label} title="Posiedzenie zamknięte">{m.closedAt && <p class="screen-sub">o godz. {fmtTime(m.closedAt)}</p>}</State>;
+    body = <State label={meetingState(m.status).label} title="Posiedzenie zamknięte" still>{m.closedAt && <p class="screen-sub">o godz. {fmtTime(m.closedAt)}</p>}</State>;
   } else if (open) {
     const cast = open.secret ? open.secret.cast : open.voted.length;
     const eligible = open.eligible.length - open.absentDuring.filter(x => !open.voted.includes(x)).length;
     const counted = `Oddano ${cast} z ${eligible} ${eligible === 1 ? 'głosu' : 'głosów'}`;
-    body = <State label={`Głosowanie ${modeName(open.mode)} nr ${open.number}`} title={open.subject}>
+    body = <State label={`Głosowanie ${modeName(open.mode)} nr ${open.number}`} title={open.subject} lead>
       <p class="screen-big"><Countdown endsAt={open.endsAt} label={false}/></p>
       <p class="screen-sub">{counted}</p>
       <div class="oi-progress screen-progress" role="progressbar" aria-label="Oddane głosy" aria-valuemin={0} aria-valuemax={eligible} aria-valuenow={Math.min(cast, eligible)} aria-valuetext={counted}>
@@ -54,9 +56,9 @@ export function RoomScreen({id}: {id: string}) {
       {open.secret && <p class="screen-key"><span class="kicker">Odcisk klucza głosowania</span><code>{open.secret.fingerprint}</code></p>}
     </State>;
   } else if (result) body = <ResultCard b={result} big kind={materialTypeOf(m, result)}/>;
-  else if (material) body = <State label="Materiał" title={material.title}><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
+  else if (material) body = <State label="Materiał" title={material.title} lead><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
   else if (current) body = <State label={`Punkt ${itemNumber(m.agenda, current.id)}`} title={current.title} lead>{current.presenter && <p class="screen-sub">Przedstawia {current.presenter}</p>}</State>;
-  else body = <State label={meetingState(m.status, true).label} title={m.title}/>;
+  else body = <State label={meetingState(m.status, true).label} title={m.title} still/>;
   return <main class="screen">
     <header class="screen-head">
       <Plate/>
