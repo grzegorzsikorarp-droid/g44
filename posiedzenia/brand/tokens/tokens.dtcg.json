@@ -1,0 +1,638 @@
+{
+  "$description": "OIPiP w Słupsku, wersja 1.0.0, format W3C Design Tokens. Plik wygenerowany z tokens.json przez generuj.mjs.",
+  "kolor": {
+    "czerwien": {
+      "$type": "color",
+      "$value": "#e30513",
+      "$description": "Czerwień Izby. Tło przycisków głównych, etykiet na pasku i znaczników, skośne paski i znaczki, duże czerwone nagłówki (24 px i więcej). Tekst `na-akcencie` ma na niej 4,89:1. Jako drobny tekst tylko na białym (4,89:1). Na `tlo` (3,95:1) i `powierzchnia-miekka` (4,37:1) drobny czerwony tekst ustaw w `akcent-tekst`."
+    },
+    "czerwien-ciemna": {
+      "$type": "color",
+      "$value": "#ce000c",
+      "$description": "Najechanie i wciśnięcie przycisków głównych. Drobny czerwony tekst na jasnych tłach (5,79:1 na białym, 4,68:1 na `tlo`)."
+    },
+    "grafit-900": {
+      "$type": "color",
+      "$value": "#231f20",
+      "$description": "Grafit znaku. Ciemne panele i klin w grafikach, zawsze z białym tekstem (16,3:1)."
+    },
+    "grafit-800": {
+      "$type": "color",
+      "$value": "#2d2d2d",
+      "$description": "Grafit strony. Ciemne bloki w grafikach i schematach, z białym tekstem."
+    },
+    "grafit-700": {
+      "$type": "color",
+      "$value": "#414141",
+      "$description": "Jaśniejszy grafit. Drugi kolor w schematach dwóch stron (w materiale o porozumieniu z Gdańskiem to OIPiP w Gdańsku), z białym tekstem (10,2:1)."
+    },
+    "szary": {
+      "$type": "color",
+      "$value": "#6c6e70",
+      "$description": "Szarość znaku i strony. Elementy dekoracyjne i duży tekst. Drobny tekst na białym ma 5,12:1, na `tlo` tylko 4,14:1, dlatego tekst drugorzędny ustawiaj w `tekst-drugorzedny`."
+    },
+    "bialy": {
+      "$type": "color",
+      "$value": "#ffffff",
+      "$description": "Biel. Tło znaku Izby (zawsze), tekst na czerwieni i graficie."
+    },
+    "tlo": {
+      "$type": "color",
+      "$value": "#e7e7e7",
+      "$description": "Tło strony i szarych sekcji."
+    },
+    "powierzchnia": {
+      "$type": "color",
+      "$value": "#ffffff",
+      "$description": "Karty, panele, białe sekcje i nagłówek strony, kładzione na `tlo`."
+    },
+    "powierzchnia-miekka": {
+      "$type": "color",
+      "$value": "#f2f2f2",
+      "$description": "Wypełnienia w białych sekcjach (karty, kroki, pytania, kafelki z liczbami, przyciski wyboru, pola wyniku)."
+    },
+    "tekst": {
+      "$type": "color",
+      "$value": "#111111",
+      "$description": "Tekst podstawowy na `tlo`, `powierzchnia` i `powierzchnia-miekka` (najmniej 12,3:1 w obu motywach)."
+    },
+    "tekst-mocny": {
+      "$type": "color",
+      "$value": "#000000",
+      "$description": "Nagłówki sekcji i kart, linia 2 px pod nagłówkiem sekcji, nagłówek tabeli, znacznik „w trakcie”, wypełnienie paska postępu."
+    },
+    "tekst-drugorzedny": {
+      "$type": "color",
+      "$value": "#5a5a5a",
+      "$description": "Opisy, metadane, podpisy, źródła, etykiety pól i podpowiedź w pustym polu, na wszystkich trzech powierzchniach (jasny najmniej 5,58:1, ciemny najmniej 6,72:1)."
+    },
+    "tekst-wylaczony": {
+      "$type": "color",
+      "$value": "#8c8a8b",
+      "$description": "Elementy wyłączone i obrys zamkniętego znacznika stanu. Nie do treści (3,43:1 na białym)."
+    },
+    "akcent-tekst": {
+      "$type": "color",
+      "$value": "{kolor.czerwien-ciemna}",
+      "$description": "Drobny czerwony tekst (etykiety, linki, komunikat błędu, napis w przycisku z obrysem) na wszystkich powierzchniach. Kontrast w jasnym motywie najmniej 4,68:1, w ciemnym 4,53:1."
+    },
+    "akcent-duzy": {
+      "$type": "color",
+      "$value": "{kolor.czerwien}",
+      "$description": "Duży czerwony tekst od 24 px (tytuł strony, fraza kluczowa w nagłówku, duże liczby) i czerwone granice kontrolek (przycisk z obrysem, otwarty znacznik stanu, zaznaczone pole wyboru, pole z błędem). Kontrast w jasnym motywie najmniej 3,95:1, w ciemnym 4,53:1."
+    },
+    "na-akcencie": {
+      "$type": "color",
+      "$value": "#ffffff",
+      "$description": "Tekst i ikony na `czerwien` i `czerwien-ciemna` (4,89:1 i 5,79:1)."
+    },
+    "linia": {
+      "$type": "color",
+      "$value": "#dcdcdc",
+      "$description": "Obrys kart, tabel i sekcji. Linia dekoracyjna, nie granica pola formularza."
+    },
+    "linia-jasna": {
+      "$type": "color",
+      "$value": "#e7e7e7",
+      "$description": "Podziały wewnątrz kart i wierszy tabeli, tor paska postępu."
+    },
+    "linia-aktywna": {
+      "$type": "color",
+      "$value": "#c9c9c9",
+      "$description": "Obrys karty po najechaniu, nieaktywny pasek 6 px przy przycisku wyboru, znaczek w nawigacji."
+    },
+    "obrys-pola": {
+      "$type": "color",
+      "$value": "#000000",
+      "$description": "Obrys 2 px pól formularza i pól wyboru (jasny 21:1 na białym, ciemny 7,95:1)."
+    },
+    "fokus": {
+      "$type": "color",
+      "$value": "#000000",
+      "$description": "Pierścień fokusu klawiatury, 3 px z odstępem 3 px, na każdej powierzchni."
+    },
+    "klin": {
+      "$type": "color",
+      "$value": "{kolor.grafit-900}",
+      "$description": "Ciemny klin i panele w nagłówkach i na okładce. W ciemnym motywie jaśniejszy, żeby nie zlał się z tłem. Tekst na nim `bialy`."
+    },
+    "stan-tak": {
+      "$type": "color",
+      "$value": "#8dc63f",
+      "$description": "Ocena pozytywna (w raporcie „TAK lub NIE” cztery odpowiedzi TAK). Wypełnienie z tekstem `na-stanie`, zawsze z etykietą słowną."
+    },
+    "stan-czesciowo": {
+      "$type": "color",
+      "$value": "#f7c61d",
+      "$description": "Ocena mieszana. Wypełnienie z tekstem `na-stanie`, zawsze z etykietą słowną."
+    },
+    "stan-nie": {
+      "$type": "color",
+      "$value": "#f76a1d",
+      "$description": "Ocena negatywna. Pomarańczowa, żeby nie mylić jej z czerwienią Izby. Wypełnienie z tekstem `na-stanie`, zawsze z etykietą słowną."
+    },
+    "stan-brak": {
+      "$type": "color",
+      "$value": "#4e4e4e",
+      "$description": "Brak odpowiedzi lub danych. Tekst na niej `bialy` (8,32:1)."
+    },
+    "na-stanie": {
+      "$type": "color",
+      "$value": "#111111",
+      "$description": "Tekst na `stan-tak`, `stan-czesciowo` i `stan-nie` (najmniej 6,33:1)."
+    }
+  },
+  "kolor-ciemny": {
+    "tlo": {
+      "$type": "color",
+      "$value": "#1a1718"
+    },
+    "powierzchnia": {
+      "$type": "color",
+      "$value": "#231f20"
+    },
+    "powierzchnia-miekka": {
+      "$type": "color",
+      "$value": "#2d2d2d"
+    },
+    "tekst": {
+      "$type": "color",
+      "$value": "#f2f2f2"
+    },
+    "tekst-mocny": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "tekst-drugorzedny": {
+      "$type": "color",
+      "$value": "#b5b5b5"
+    },
+    "tekst-wylaczony": {
+      "$type": "color",
+      "$value": "#6c6e70"
+    },
+    "akcent-tekst": {
+      "$type": "color",
+      "$value": "#ff5c52"
+    },
+    "akcent-duzy": {
+      "$type": "color",
+      "$value": "#ff5c52"
+    },
+    "linia": {
+      "$type": "color",
+      "$value": "#414141"
+    },
+    "linia-jasna": {
+      "$type": "color",
+      "$value": "#2d2d2d"
+    },
+    "linia-aktywna": {
+      "$type": "color",
+      "$value": "#6c6e70"
+    },
+    "obrys-pola": {
+      "$type": "color",
+      "$value": "#b5b5b5"
+    },
+    "fokus": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "klin": {
+      "$type": "color",
+      "$value": "#414141"
+    }
+  },
+  "odstep": {
+    "odstep-1": {
+      "$type": "dimension",
+      "$value": "4px",
+      "$description": "Odstęp etykiety od wartości."
+    },
+    "odstep-2": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$description": "Odstęp między przyciskami wyboru i znacznikami."
+    },
+    "odstep-3": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$description": "Odstęp w środku karty."
+    },
+    "odstep-4": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$description": "Odstęp między elementami w stosie (`oi-stack`) i w rzędzie."
+    },
+    "odstep-5": {
+      "$type": "dimension",
+      "$value": "20px",
+      "$description": "Margines boczny treści (`oi-wrap`), wcięcie w polach uwagi i wyniku."
+    },
+    "odstep-6": {
+      "$type": "dimension",
+      "$value": "24px",
+      "$description": "Odstęp między kartami w siatce, wnętrze karty."
+    },
+    "odstep-8": {
+      "$type": "dimension",
+      "$value": "32px",
+      "$description": "Odstęp między blokami w sekcji."
+    },
+    "odstep-11": {
+      "$type": "dimension",
+      "$value": "44px",
+      "$description": "Górne wnętrze nagłówka strony."
+    },
+    "odstep-14": {
+      "$type": "dimension",
+      "$value": "58px",
+      "$description": "Pionowe wnętrze sekcji na komputerze."
+    }
+  },
+  "zaokraglenie": {
+    "zaokraglenie": {
+      "$type": "dimension",
+      "$value": "0px",
+      "$description": "Wszystko jest kanciaste, także przyciski, karty, pola, znaczniki i zdjęcia. Nie zaokrąglaj."
+    }
+  },
+  "cien": {
+    "cien-karty": {
+      "$type": "shadow",
+      "$value": {
+        "color": "#00000012",
+        "offsetX": "0px",
+        "offsetY": "14px",
+        "blur": "34px",
+        "spread": "0px"
+      },
+      "$description": "Tylko karta, na którą najechano. Poza tym bez cieni."
+    }
+  },
+  "cien-ciemny": {
+    "cien-karty": {
+      "$type": "shadow",
+      "$value": {
+        "color": "#00000073",
+        "offsetX": "0px",
+        "offsetY": "14px",
+        "blur": "34px",
+        "spread": "0px"
+      }
+    }
+  },
+  "skos": {
+    "kat-skosu": {
+      "$value": "-13deg",
+      "$description": "Pochylenie etykiet, znaczników, przycisków `oi-btn`, znaczków i paneli, w CSS `skewX(var(--kat-skosu))`."
+    },
+    "kat-odwrotny": {
+      "$value": "13deg",
+      "$description": "Pochylenie odwrotne dla tekstu wewnątrz pochylonego elementu, żeby litery stały prosto."
+    }
+  },
+  "obramowanie": {
+    "kreska": {
+      "$type": "dimension",
+      "$value": "1px",
+      "$description": "Obrys kart, tabel i sekcji."
+    },
+    "kreska-mocna": {
+      "$type": "dimension",
+      "$value": "2px",
+      "$description": "Linia pod nagłówkiem sekcji, obrys pól formularza i przycisków."
+    },
+    "pasek-karty": {
+      "$type": "dimension",
+      "$value": "5px",
+      "$description": "Czerwony pasek z lewej strony karty po najechaniu."
+    },
+    "pasek-akcentu": {
+      "$type": "dimension",
+      "$value": "6px",
+      "$description": "Pasek z lewej strony przycisku wyboru, uwagi i otwartego pytania."
+    },
+    "pierscien-fokusu": {
+      "$type": "dimension",
+      "$value": "3px",
+      "$description": "Grubość pierścienia fokusu."
+    }
+  },
+  "szerokosc": {
+    "kolumna": {
+      "$type": "dimension",
+      "$value": "75rem",
+      "$description": "Największa szerokość treści (1200 px)."
+    },
+    "wiersz-tekstu": {
+      "$value": "70ch",
+      "$description": "Największa długość wiersza tekstu ciągłego."
+    }
+  },
+  "typografia": {
+    "tytul-strony": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "56px",
+        "fontWeight": 300,
+        "lineHeight": 1.12,
+        "letterSpacing": "-0.005em"
+      },
+      "$description": "Tytuł strony (h1), kolor `akcent-duzy`. Fraza kluczowa w <b> o grubości 700. Na węższych ekranach zmniejsza się do 34 px.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic"
+        }
+      }
+    },
+    "naglowek-sekcji": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "32px",
+        "fontWeight": 300,
+        "lineHeight": 1.15,
+        "letterSpacing": "0em"
+      },
+      "$description": "Nagłówek sekcji (h2) obok skośnego znaczka, kolor `tekst-mocny`, pod nim linia 2 px. Na węższych ekranach zmniejsza się do 22 px.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic"
+        }
+      }
+    },
+    "naglowek-karty": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "18px",
+        "fontWeight": 600,
+        "lineHeight": 1.32,
+        "letterSpacing": "0em"
+      },
+      "$description": "Tytuł karty, kroku, pytania (h3), kolor `tekst-mocny`.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "naglowek-grafiki": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "96px",
+        "fontWeight": 300,
+        "lineHeight": 0.98,
+        "letterSpacing": "-0.012em"
+      },
+      "$description": "Hasło na grafice 4:5 (1080 × 1350). Słowo kluczowe w grubości 700 i kolorze `czerwien`.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "lead": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "18px",
+        "fontWeight": 300,
+        "lineHeight": 1.6,
+        "letterSpacing": "0em"
+      },
+      "$description": "Wprowadzenie pod tytułem, najwyżej 60 znaków w wierszu.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "tekst": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "17px",
+        "fontWeight": 400,
+        "lineHeight": 1.66,
+        "letterSpacing": "0em"
+      },
+      "$description": "Tekst ciągły, kolor `tekst`, najwyżej 70 znaków w wierszu.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "tekst-maly": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "14px",
+        "fontWeight": 400,
+        "lineHeight": 1.5,
+        "letterSpacing": "0em"
+      },
+      "$description": "Opisy w kartach i tabelach.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "zrodlo": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "13px",
+        "fontWeight": 400,
+        "lineHeight": 1.5,
+        "letterSpacing": "0em"
+      },
+      "$description": "Źródło pod wykresem lub tabelą, kolor `tekst-drugorzedny`, z etykietą „Źródło” w osobnym wierszu.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    },
+    "etykieta": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "12px",
+        "fontWeight": 700,
+        "lineHeight": 1.2,
+        "letterSpacing": "0.1em"
+      },
+      "$description": "Etykieta nad wartością, wersalikami (text-transform), kolor `akcent-tekst` albo `tekst-drugorzedny`. Bez dwukropka.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic",
+          "textTransform": "uppercase"
+        }
+      }
+    },
+    "etykieta-paska": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "11.5px",
+        "fontWeight": 700,
+        "lineHeight": 1.3,
+        "letterSpacing": "0.08em"
+      },
+      "$description": "Napis na skośnym czerwonym pasku, wersalikami, kolor `na-akcencie`.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic",
+          "textTransform": "uppercase"
+        }
+      }
+    },
+    "przycisk": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "13px",
+        "fontWeight": 700,
+        "lineHeight": 1.3,
+        "letterSpacing": "0.06em"
+      },
+      "$description": "Napis w przycisku, wersalikami, bez strzałek.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic",
+          "textTransform": "uppercase"
+        }
+      }
+    },
+    "liczba": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "37px",
+        "fontWeight": 600,
+        "lineHeight": 1,
+        "letterSpacing": "0em"
+      },
+      "$description": "Duża liczba w kafelku, kolor `akcent-duzy`.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "italic"
+        }
+      }
+    },
+    "data": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": [
+          "Titillium Web",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Arial",
+          "sans-serif"
+        ],
+        "fontSize": "16px",
+        "fontWeight": 700,
+        "lineHeight": 1.3,
+        "letterSpacing": "0em"
+      },
+      "$description": "Daty na osi czasu i w kartach, kolor `tekst-mocny`.",
+      "$extensions": {
+        "pl.oipip-slupsk": {
+          "fontStyle": "normal"
+        }
+      }
+    }
+  }
+}

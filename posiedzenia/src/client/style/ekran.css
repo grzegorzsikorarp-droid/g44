@@ -1,0 +1,63 @@
+/* Ekran sali: duże, czytelne informacje bez elementów sterowania. Ma własną skalę pisma (clamp), czytelną z sali.
+   Każdy stan ma ten sam wzór: skośna etykieta nad tytułem, oba wyśrodkowane, pod tytułem szczegóły. */
+.screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--powierzchnia); }
+.screen-head, .screen-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--odstep-4) var(--odstep-8); flex-wrap: wrap; padding: 1.4vh max(3vw, 20px); }
+.screen-head { border-bottom: var(--kreska) solid var(--linia); }
+.screen-foot { border-top: var(--kreska) solid var(--linia); }
+.screen-head .plate img { height: clamp(40px, 6.5vh, 76px); }
+/* Nazwa przy znaku jest widoczna przy każdej szerokości (w innych miejscach do 1100 px się chowa). */
+.screen-head .plate-name { display: block; font-size: clamp(.85rem, .5rem + .6vw, 1.25rem); }
+.screen-head-title { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 12em; }
+.screen-head-title strong { font-weight: 300; font-style: italic; font-size: clamp(1rem, .8rem + .8vw, 1.7rem); line-height: 1.2; color: var(--tekst-mocny); }
+.screen-clock { font-weight: 700; font-style: italic; font-size: clamp(1.3rem, 1rem + 1.2vw, 2.4rem); color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+/* Skala zależy od szerokości i wysokości okna (min z vw i vh): stan mieści się na ekranie rzutnika bez przewijania. */
+.screen-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2vh; text-align: center; padding: 3vh max(5vw, 20px); }
+.screen-body h1 { font-weight: 300; font-style: italic; color: var(--tekst-mocny); font-size: clamp(2rem, min(1.2rem + 3.4vw, 7.5vh), 4.8rem); line-height: 1.12; max-width: 26ch; text-wrap: balance; }
+.screen-body h1.is-long { font-size: clamp(1.6rem, min(1rem + 2.4vw, 5.5vh), 3.6rem); max-width: 34ch; }
+.screen-body h1 b { font-weight: 700; }
+/* Etykieta nad tytułem (także w wyniku): wyśrodkowana, w jednej skali we wszystkich stanach */
+.screen-body > .oi-tag, .screen .result > .oi-tag { align-self: center; }
+.screen-body .oi-tag > span { font-size: clamp(.9rem, .5rem + .9vw, 1.5rem); }
+.screen-big .countdown strong { display: block; color: var(--akcent-duzy); font-size: clamp(3.5rem, min(2rem + 9vw, 16vh), 11rem); line-height: 1; }
+.screen-sub { font-size: clamp(1.1rem, .9rem + 1vw, 2rem); color: var(--tekst-drugorzedny); }
+/* Postęp głosowania pod liczbą oddanych głosów */
+.screen-progress { width: min(900px, 70vw); }
+.screen-progress .oi-progress__bar { height: 12px; }
+/* Odcisk klucza głosowania tajnego: ten sam kod członkowie widzą na telefonach */
+.screen-key { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: var(--odstep-2) var(--odstep-4); }
+.screen-key .kicker { font-size: clamp(.8rem, .55rem + .5vw, 1.25rem); }
+.screen-key code { font-size: clamp(1.25rem, .9rem + 1.1vw, 2.4rem); letter-spacing: .08em; padding: .1em .5em; }
+/* Powrót do posiedzenia: w aplikacji tylko na wąskim oknie (w wersji próbnej zawsze) */
+.screen-back { font-size: var(--t-lista); }
+.screen-back--waski { display: none; }
+@media (max-width: 759.98px) { .screen-back--waski { display: inline-flex; } }
+.screen-foot .fact dt { font-size: clamp(.7rem, .6rem + .3vw, .95rem); }
+.screen-foot .fact dd { font-size: clamp(1rem, .8rem + .6vw, 1.5rem); }
+/* Wynik na ekranie sali: bez obrysu i tła, w skali ekranu */
+.screen .result { width: min(1300px, 100%); align-items: center; text-align: center; padding: 0; gap: 2.4vh; border: 0; background: none; }
+.screen .result .oi-stats { width: 100%; }
+/* Przedmiot wyniku ma krój tytułów ekranu (cienka kursywa, początek do „w sprawie” pogrubiony), mniejszy od werdyktu */
+.screen .result-subject { font-weight: 300; font-style: italic; line-height: 1.2; color: var(--tekst-mocny); font-size: clamp(1.3rem, 1rem + 1.4vw, 2.6rem); max-width: 34ch; text-wrap: balance; }
+.screen .result-subject b { font-weight: 700; }
+.screen .result-label { font-size: clamp(2.4rem, min(1.4rem + 4vw, 10vh), 6rem); }
+.screen .result .oi-stat b { font-size: clamp(3rem, min(2rem + 5vw, 11vh), 7.5rem); }
+.screen .result .oi-stat span { font-size: clamp(.8rem, .6rem + .6vw, 1.4rem); }
+.screen .result-meta { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); }
+/* Krótszy tytuł nad listą (projekt porządku obrad), żeby lista mieściła się na ekranie */
+.screen-body h1.is-small { font-size: clamp(1.6rem, min(1rem + 2.4vw, 5.5vh), 3.6rem); }
+/* Osoby przy punkcie (F12): etykieta nad listą osób, każda osoba w osobnym wierszu, wyśrodkowane */
+.screen-people { justify-content: center; gap: 1.2vh 5vw; }
+.screen-people .fact { text-align: center; }
+.screen-people .fact dt { font-size: clamp(.8rem, .55rem + .5vw, 1.25rem); }
+.screen-people .fact dd { font-size: clamp(1.1rem, .8rem + 1vw, 2rem); line-height: 1.3; }
+.screen-people .person-line { display: block; }
+/* Projekt porządku obrad przy jego przyjmowaniu (F8): numer w osobnej kolumnie, podpunkty z wcięciem */
+.screen-draft { list-style: none; margin: 0; padding: 0; width: min(1200px, 100%); text-align: left; font-size: clamp(1.05rem, min(.7rem + 1.3vw, 3.4vh), 2.1rem); line-height: 1.25; color: var(--tekst-mocny); }
+.screen-draft.is-long { font-size: clamp(.95rem, min(.6rem + 1vw, 2.6vh), 1.6rem); }
+.screen-draft li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 0 .5em; padding: .3em 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.screen-draft li:first-child { border-top: 0; }
+.screen-draft li.is-sub { margin-left: 3.1em; }
+.screen-draft__no { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Spotkanie robocze (F5): znacznik pod tytułem posiedzenia i zdanie w stopce */
+.screen-working { display: inline-flex; margin-top: var(--odstep-1); }
+.screen-foot-note { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); color: var(--tekst-drugorzedny); }

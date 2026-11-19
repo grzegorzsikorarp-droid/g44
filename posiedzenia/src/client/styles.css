@@ -1,0 +1,13 @@
+/* Posiedzenia. Wygląd według identyfikacji Okręgowej Izby Pielęgniarek i Położnych w Słupsku (brand/).
+   Kolory tylko przez tokeny, krój Titillium Web, zero zaokrągleń, skos 13°, cień tylko na karcie po najechaniu.
+   Ten plik to spis stylów w kolejności kaskady: najpierw paczka identyfikacji, potem podstawa i ekrany. */
+@import "../../brand/fonts/fonts.css";
+@import "../../brand/tokens/tokens.css";
+@import "../../brand/components/oipip.css";
+@import "./style/baza.css";
+@import "./style/uczestnik.css";
+@import "./style/prowadzacy.css";
+@import "./style/przygotowanie.css";
+@import "./style/lista.css";
+@import "./style/ekran.css";
+@import "./style/protokol.css";

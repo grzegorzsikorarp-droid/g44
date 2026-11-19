@@ -1,0 +1,7 @@
+# Licencje i prawa
+
+- **Krój Titillium Web** (`fonts/`). Nota o prawach z pliku licencji brzmi „Copyright (c) 2009-2011 by Accademia di Belle Arti di Urbino and students of MA course of Visual design. Some rights reserved”. Licencja SIL Open Font License 1.1 (`fonts/OFL.txt`). Krój można używać, osadzać na stronach i w aplikacjach oraz rozpowszechniać razem z oprogramowaniem. Nie wolno sprzedawać samego kroju. Plik `OFL.txt` zostaje przy fontach, a jeśli aplikacja ma ekran licencji, wymień na nim krój i licencję.
+- **Znak Okręgowej Izby Pielęgniarek i Położnych w Słupsku** (`logo/`). Należy do Izby. Używaj go tylko w materiałach i aplikacjach Izby albo za jej zgodą, bez zmian kształtu i kolorów.
+- **Tokeny, style, komponenty, skrypt i podgląd** (`tokens/`, `components/`, `podglad.html`). Przygotowane dla Izby. Używaj ich w materiałach i aplikacjach Izby.
+- **Przykładowe grafiki** (`przyklady/`). Opublikowane grafiki Izby, dołączone jako wzór układu, nie do ponownej publikacji. Logotypy Uniwersytetu Pomorskiego w Słupsku i Szkoły Policji w Słupsku na grafice o szkoleniu z 17 listopada 2026 r. należą do tych instytucji i zostały użyte jako logotypy współorganizatorów tego wydarzenia. Te logotypy i zdjęcie na grafice z 1 listopada 2026 r. nie służą do ponownego użycia.
+- **Krój Parisienne** do grafik wspomnieniowych nie jest w paczce. Jest dostępny w Google Fonts na licencji SIL Open Font License.

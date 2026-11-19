@@ -1,0 +1,54 @@
+/* OIPiP w Słupsku. Motyw dla Tailwind CSS 4, wygenerowany z tokens.json przez generuj.mjs.
+   Wczytaj po tokens.css, w kolejności z README.md. Motyw zastępuje domyślną paletę i cienie Tailwinda. */
+@custom-variant dark (&:where([data-theme="ciemny"], [data-theme="ciemny"] *));
+
+@theme inline {
+  --color-*: initial;
+  --color-czerwien: var(--czerwien);
+  --color-czerwien-ciemna: var(--czerwien-ciemna);
+  --color-grafit-900: var(--grafit-900);
+  --color-grafit-800: var(--grafit-800);
+  --color-grafit-700: var(--grafit-700);
+  --color-szary: var(--szary);
+  --color-bialy: var(--bialy);
+  --color-tlo: var(--tlo);
+  --color-powierzchnia: var(--powierzchnia);
+  --color-powierzchnia-miekka: var(--powierzchnia-miekka);
+  --color-tekst: var(--tekst);
+  --color-tekst-mocny: var(--tekst-mocny);
+  --color-tekst-drugorzedny: var(--tekst-drugorzedny);
+  --color-tekst-wylaczony: var(--tekst-wylaczony);
+  --color-akcent-tekst: var(--akcent-tekst);
+  --color-akcent-duzy: var(--akcent-duzy);
+  --color-na-akcencie: var(--na-akcencie);
+  --color-linia: var(--linia);
+  --color-linia-jasna: var(--linia-jasna);
+  --color-linia-aktywna: var(--linia-aktywna);
+  --color-obrys-pola: var(--obrys-pola);
+  --color-fokus: var(--fokus);
+  --color-klin: var(--klin);
+  --color-stan-tak: var(--stan-tak);
+  --color-stan-czesciowo: var(--stan-czesciowo);
+  --color-stan-nie: var(--stan-nie);
+  --color-stan-brak: var(--stan-brak);
+  --color-na-stanie: var(--na-stanie);
+  --font-sans: "Titillium Web", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --spacing-odstep-1: 4px;
+  --spacing-odstep-2: 8px;
+  --spacing-odstep-3: 12px;
+  --spacing-odstep-4: 16px;
+  --spacing-odstep-5: 20px;
+  --spacing-odstep-6: 24px;
+  --spacing-odstep-8: 32px;
+  --spacing-odstep-11: 44px;
+  --spacing-odstep-14: 58px;
+  --shadow-*: initial;
+  --shadow-cien-karty: var(--cien-karty);
+  --radius-*: initial;
+  --radius-none: 0;
+  --container-kolumna: 75rem;
+  --container-wiersz-tekstu: 70ch;
+}
+
+/* Izba nie zaokrągla rogów. rounded-full jest w Tailwindzie stałą klasą, dlatego wyłącza ją osobna reguła poza warstwami. */
+.rounded-full { border-radius: 0; }

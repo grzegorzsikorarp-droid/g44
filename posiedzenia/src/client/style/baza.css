@@ -1,0 +1,275 @@
+/* Podstawa wszystkich ekranów: skala pisma, odstępy, wspólne elementy i powłoka aplikacji
+   (górny pasek, okna dialogowe, logowanie). Kolory tylko z tokenów, kształty kanciaste i płaskie,
+   jedynym cieniem jest var(--cien-karty) z paczki identyfikacji. */
+
+/* Skala pisma. Ekran sali ma własną skalę w ekran.css, a tytuł strony zostaje taki jak w oi-hero.
+   Zwykły tekst ma co najmniej 13 px, a etykiety wersalikami co najmniej 11,5 px. */
+:root {
+  --t-znacznik: .72rem;    /* 11,5 px, znaczniki stanu i oi-tag */
+  --t-etykieta: .75rem;    /* 12 px, etykiety nad wartością, kicker, etykiety pól, nagłówki tabel */
+  --t-przycisk: .8125rem;  /* 13 px, napisy w przyciskach */
+  --t-meta: .8125rem;      /* 13 px, funkcje, godziny, stany punktów */
+  --t-maly: .875rem;       /* 14 px, podpowiedzi, opisy, dziennik */
+  --t-lista: 1rem;         /* 16 px, wiersze list */
+  --t-tekst: 1.0625rem;    /* 17 px, tekst ciągły */
+  --t-karta: 1.125rem;     /* 18 px, tytuły kart */
+  --t-sprawa: 1.375rem;    /* 22 px, przedmiot głosowania, tytuł bieżącego punktu */
+  --t-sekcja: 2rem;        /* 32 px, nagłówki sekcji, werdykt wyniku */
+  --t-liczba: 2.3125rem;   /* 37 px, liczby w kafelkach i licznik */
+}
+
+/* Podstawa */
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--tlo); color: var(--tekst); font-family: var(--font-sans); font-size: var(--t-tekst); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+*, *::before, *::after { box-sizing: border-box; }
+body.no-scroll { overflow: hidden; }
+/* Pas pod paskiem systemowym telefonu, nad przyklejonymi zakładkami */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--tlo); }
+h1, h2, h3, h4 { margin: 0; color: var(--tekst-mocny); line-height: 1.25; }
+p, ul, ol, dl, dd { margin: 0; }
+a { color: var(--akcent-tekst); }
+code { font-family: var(--font-sans); font-weight: 600; font-size: inherit; letter-spacing: .02em; color: var(--tekst-mocny); background: var(--powierzchnia-miekka); padding: .05em .4em; overflow-wrap: anywhere; }
+:where(button, a, input, select, textarea, summary):focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+/* Nagłówek i treść dostają fokus tylko z kodu (po zmianie trasy i w oknie), więc nie mają obrysu. */
+:is(main, h1, h2)[tabindex="-1"]:focus { outline: none; }
+button { font-family: inherit; }
+
+.muted { color: var(--tekst-drugorzedny); }
+.small { font-size: var(--t-maly); line-height: 1.45; }
+.strong { font-weight: 600; color: var(--tekst-mocny); }
+.lead { font-weight: 300; font-size: var(--t-karta); line-height: 1.6; }
+.kicker { display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.stack { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.stack-tight { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.row { display: flex; flex-wrap: wrap; gap: var(--odstep-3); align-items: flex-end; }
+.row > * { flex: 1 1 150px; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--odstep-2); align-items: center; }
+.btn-wide { display: block; width: calc(100% - 10px); margin-inline: 5px; text-align: center; }
+.btn-wide > span { justify-content: center; }
+.oi-btn { white-space: normal; text-align: center; }
+/* Etykieta skośna stoi przy lewej krawędzi w kolumnach. Na ekranie sali jest wyśrodkowana (ekran.css). */
+:is(.stack, .stack-tight, .oi-card, .login, .modal-body, .oi-note, .oi-hero__in) > .oi-tag { align-self: flex-start; }
+/* Tekst tylko dla czytnika ekranu */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Skala pisma w komponentach paczki identyfikacji */
+.oi-btn > span { font-size: var(--t-przycisk); }
+.oi-btn--maly > span { font-size: var(--t-etykieta); }
+.oi-tag > span, .oi-status > span { font-size: var(--t-znacznik); }
+.oi-label, .oi-field__label, .oi-eyebrow, .oi-stat span, .oi-table thead th, .oi-progress__txt { font-size: var(--t-etykieta); }
+.oi-field__hint, .oi-field__error, .oi-card__meta { font-size: var(--t-maly); }
+.oi-opt, .oi-table, .oi-count { font-size: var(--t-lista); }
+.oi-seg .oi-opt, .oi-subnav a { font-size: var(--t-maly); }
+.oi-input { font-size: var(--t-tekst); }
+.oi-card__title { font-size: var(--t-karta); }
+.oi-stat b { font-size: var(--t-liczba); }
+.oi-section-head h2 { font-size: var(--t-sekcja); }
+@media (max-width: 760px) { .oi-section-head h2 { font-size: var(--t-sprawa); } }
+
+/* Przycisk ciemny: wyłącznie potwierdzenie czynności nieodwracalnej */
+.oi-btn--ciemny { background: var(--tekst-mocny); border-color: var(--tekst-mocny); }
+.oi-btn--ciemny > span { color: var(--powierzchnia); }
+.oi-btn--ciemny:not([aria-disabled="true"]):not(:disabled):active { background: var(--grafit-700); border-color: var(--grafit-700); }
+/* Przycisk wyłączony zostaje w kolejności fokusu, a obok niego stoi powód */
+.btn-wrap { display: inline-flex; flex-direction: column; align-items: flex-start; gap: var(--odstep-1); max-width: 100%; }
+.btn-wrap--wide { display: flex; align-items: center; width: 100%; }
+.btn-reason { font-size: var(--t-maly); line-height: 1.4; color: var(--tekst-drugorzedny); }
+
+/* Odnośnik w roli przycisku (działanie poboczne). Szary (quiet) czerwienieje dopiero po najechaniu i przy fokusie. */
+.link { appearance: none; background: none; border: 0; padding: 0; font: inherit; font-weight: 700; font-style: italic; color: var(--akcent-tekst); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.link:disabled, .link[aria-disabled="true"] { color: var(--tekst-wylaczony); text-decoration: none; cursor: not-allowed; }
+.link.small { font-size: var(--t-maly); }
+.link.quiet { color: var(--tekst-drugorzedny); text-decoration-thickness: 1px; }
+.link.quiet:focus-visible { color: var(--akcent-tekst); }
+.link.quiet:disabled, .link.quiet[aria-disabled="true"] { color: var(--tekst-wylaczony); }
+/* Etykieta nad wartością */
+.facts { display: flex; flex-wrap: wrap; gap: var(--odstep-3) var(--odstep-8); }
+.fact { min-width: 0; }
+.fact dt { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.fact dd { font-weight: 600; color: var(--tekst-mocny); line-height: 1.4; overflow-wrap: anywhere; }
+.facts--liczby .fact dd { font-size: var(--t-liczba); font-style: italic; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.facts--liczby .fact dd small { font-size: var(--t-karta); font-style: normal; font-weight: 600; color: var(--tekst-drugorzedny); }
+
+/* Pola formularzy */
+.oi-input { min-height: 46px; }
+select.oi-input { cursor: pointer; }
+input[type="file"].oi-input { font-size: var(--t-lista); font-weight: 400; padding: .45em .6em; }
+input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .06em; font-size: var(--t-etykieta); color: var(--akcent-tekst); background: var(--powierzchnia); border: var(--kreska-mocna) solid var(--akcent-duzy); padding: .45em 1em; margin-right: .9em; cursor: pointer; }
+.checks { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+
+/* Uwaga */
+.notice .notice-text { display: flex; flex-direction: column; gap: .4em; }
+.notice-error .notice-text { font-weight: 600; color: var(--tekst-mocny); }
+.oi-note .oi-label { margin-bottom: 2px; }
+.sticky-error { position: sticky; top: var(--odstep-2); z-index: 25; }
+/* Informacja o zapisie przy przycisku. Pusta nie zajmuje miejsca, ale zostaje dla czytnika ekranu. */
+.save-status { font-size: var(--t-maly); line-height: 1.4; color: var(--tekst-drugorzedny); }
+.save-status.is-error { font-weight: 700; color: var(--akcent-tekst); }
+.save-status:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* Odnośnik do treści: widoczny dopiero przy fokusie z klawiatury */
+.skip-link { position: absolute; left: max(var(--odstep-2), env(safe-area-inset-left, 0px)); top: calc(var(--odstep-2) + env(safe-area-inset-top, 0px)); z-index: 60; padding: var(--odstep-2) var(--odstep-4); background: var(--powierzchnia); border: var(--kreska-mocna) solid var(--tekst-mocny); color: var(--tekst-mocny); font-weight: 700; font-style: italic; transform: translateY(calc(-100% - var(--odstep-8))); }
+.skip-link:focus { transform: none; }
+
+/* Górny pasek: znak Izby na białym tle z wolnym polem ¼ wysokości, nawigacja i konto */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--odstep-4); background: var(--powierzchnia); border-bottom: var(--kreska) solid var(--linia); padding-block: calc(var(--odstep-1) + env(safe-area-inset-top, 0px)) var(--odstep-1); padding-inline: max(var(--odstep-5), env(safe-area-inset-left, 0px)) max(var(--odstep-5), env(safe-area-inset-right, 0px)); }
+.topbar-brand { display: flex; align-items: center; gap: var(--odstep-4); text-decoration: none; color: var(--tekst-mocny); min-width: 0; }
+.plate { display: flex; align-items: center; gap: var(--odstep-3); background: var(--bialy); padding: 10px; flex: none; }
+.plate img { display: block; height: 40px; width: auto; }
+.plate-name { margin: 0; font-weight: 300; font-style: italic; font-size: var(--t-meta); line-height: 1.15; color: var(--grafit-900); }
+.plate-name b { display: block; font-style: normal; font-weight: 700; font-size: var(--t-lista); line-height: 1.05; margin-top: 1px; }
+.mark-box { display: grid; place-items: center; width: 44px; height: 44px; flex: none; }
+.mark-box .oi-mark { width: 22px; height: 22px; }
+.topbar-app { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.plate + .topbar-app { padding-left: var(--odstep-4); border-left: var(--kreska) solid var(--linia); }
+.topbar-app strong { font-weight: 300; font-style: italic; font-size: var(--t-sprawa); color: var(--akcent-duzy); }
+.topbar-app strong b { font-weight: 700; }
+.topbar-app small { font-size: var(--t-meta); color: var(--tekst-drugorzedny); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-side { display: flex; align-items: center; gap: var(--odstep-4); flex: none; }
+.topbar-nav.oi-subnav { flex-wrap: nowrap; gap: var(--odstep-4); padding-block: 0; }
+.topbar-nav.oi-subnav a { min-height: 44px; }
+.topbar-account { appearance: none; display: flex; align-items: center; min-height: 44px; margin: 0; padding: 0 0 0 var(--odstep-4); border: 0; border-left: var(--kreska) solid var(--linia); background: none; font: inherit; color: inherit; text-align: right; cursor: pointer; }
+.who { display: flex; flex-direction: column; text-align: right; line-height: 1.25; font-size: var(--t-maly); }
+.who strong { font-weight: 600; color: var(--tekst-mocny); }
+.who small { color: var(--tekst-drugorzedny); font-size: var(--t-meta); }
+.who-short { display: none; font-weight: 700; font-style: italic; font-size: var(--t-maly); color: var(--tekst-drugorzedny); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.topbar-account:focus-visible .who-short { color: var(--akcent-tekst); }
+/* Okno „Twoje konto”: wylogowanie na końcu, oddzielone kreską */
+.account-logout { padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+@media (max-width: 1100px) { .plate-name { display: none; } }
+@media (max-width: 760px) {
+  .who, .topbar-app small { display: none; }
+  .topbar-account .who-short { display: inline; }
+  .topbar-app strong { font-size: var(--t-karta); }
+}
+@media (max-width: 480px) {
+  .topbar { gap: var(--odstep-3); }
+  .topbar-app, .topbar-demo { display: none; }
+  .plate img { height: 36px; }
+  .plate { padding: 9px; }
+  .topbar-side, .topbar-nav.oi-subnav { gap: var(--odstep-3); }
+  .topbar-nav.oi-subnav .oi-mark { display: none; }
+  .topbar-account { padding-left: var(--odstep-3); }
+}
+
+/* Nagłówek strony: biały, z bladymi skośnymi pasami po prawej (do 760 px bez pasów) */
+.page-head .oi-hero__in { padding-block: var(--odstep-8) var(--odstep-6); display: flex; flex-direction: column; gap: var(--odstep-3); }
+.page-head h1 { margin: 0; font-size: clamp(1.9rem, 1.3rem + 2.4vw, 3rem); }
+.page-head .oi-hero__lead { margin: 0; }
+.page-head .back { align-self: flex-start; font-size: var(--t-maly); }
+@media (max-width: 760px) { .page-head .oi-hero__in { padding-block: var(--odstep-5) var(--odstep-5); } }
+.page { width: 90rem; max-width: 100%; margin-inline: auto; padding-block: var(--odstep-6) var(--odstep-14); padding-inline: max(var(--odstep-5), env(safe-area-inset-left, 0px)) max(var(--odstep-5), env(safe-area-inset-right, 0px)); }
+/* Kolumna dokumentu (75rem): ekrany inne niż panel prowadzenia obrad */
+.page.page--kolumna { width: var(--kolumna); }
+.page-head .page { padding-block: var(--odstep-8) var(--odstep-6); }
+@media (max-width: 760px) { .page { padding-block: var(--odstep-4) var(--odstep-11); } .page-head .page { padding-block: var(--odstep-5); } }
+
+/* Karty i panele. Czerwony pasek 6 px ma tylko karta, która jest punktem skupienia ekranu (is-teraz). */
+.oi-card { gap: var(--odstep-4); }
+.oi-card.is-teraz { border-left: var(--pasek-akcentu) solid var(--czerwien); }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); flex-wrap: wrap; }
+.panel-head .oi-card__title { flex: 1 1 12em; }
+/* Podtytuł w karcie */
+.card-sub { margin: 0; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--odstep-6); }
+@media (max-width: 760px) { .oi-card { padding: 18px 18px 18px; } .cards { gap: var(--odstep-4); } }
+
+/* Okno dialogowe: natywny dialog otwierany przez showModal(). Tło jest nieaktywne, Escape zamyka tylko wierzchnie okno. */
+dialog.modal-backdrop { position: fixed; inset: 0; z-index: 50; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; background: transparent; color: var(--tekst); overflow: hidden; display: grid; place-items: center; padding: max(var(--odstep-3), env(safe-area-inset-top, 0px)) max(var(--odstep-3), env(safe-area-inset-right, 0px)) max(var(--odstep-3), env(safe-area-inset-bottom, 0px)) max(var(--odstep-3), env(safe-area-inset-left, 0px)); }
+dialog.modal-backdrop:not([open]) { display: none; }
+dialog.modal-backdrop::backdrop { background: transparent; }
+.modal-shade { position: absolute; inset: 0; background: var(--grafit-900); opacity: .6; }
+.modal { position: relative; width: min(600px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: auto; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); }
+.modal-wide { width: min(1000px, 100%); }
+.modal-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: var(--odstep-3); padding: 16px 20px 14px; background: var(--powierzchnia); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }
+.modal-head .oi-mark { width: 14px; height: 14px; }
+.modal-head h2 { flex: 1; font-weight: 300; font-style: italic; font-size: var(--t-sprawa); line-height: 1.2; }
+.modal-body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: var(--odstep-4); }
+.confirm-text { display: flex; flex-direction: column; gap: .6em; }
+.confirm-details { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.confirm-choice { font-weight: 300; font-style: italic; font-size: var(--t-sprawa); color: var(--tekst-mocny); }
+.confirm-choice strong { font-weight: 700; color: var(--akcent-duzy); }
+/* Powód pod nieaktywnym przyciskiem (pole „ack”) nie przesuwa w dół przycisku „Anuluj” obok. */
+.confirm-actions { align-items: flex-start; }
+/* Na telefonie potwierdzenie stoi przy dolnej krawędzi, a przyciski są jeden pod drugim, główny na górze. */
+@media (max-width: 560px) {
+  dialog.modal-backdrop.modal-confirm { place-items: end stretch; padding: max(var(--odstep-3), env(safe-area-inset-top, 0px)) 0 0; }
+  .modal-confirm > .modal { width: 100%; max-height: calc(100vh - var(--odstep-3)); max-height: calc(100dvh - var(--odstep-3)); border-inline: 0; border-bottom: 0; }
+  .modal-confirm .modal-body { padding-bottom: calc(var(--odstep-6) + env(safe-area-inset-bottom, 0px)); }
+  .confirm-actions { flex-direction: column; align-items: stretch; }
+  .confirm-actions > .oi-btn, .confirm-actions > .btn-wrap { display: block; width: calc(100% - 10px); margin-inline: 5px; text-align: center; }
+  .confirm-actions .oi-btn > span { justify-content: center; }
+  .confirm-actions > .btn-wrap { display: flex; flex-direction: column; align-items: stretch; }
+  .confirm-actions > .btn-wrap > .oi-btn { width: 100%; }
+}
+
+/* Logowanie i wersja próbna */
+.center-page { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: var(--odstep-6) max(var(--odstep-5), env(safe-area-inset-right, 0px)) var(--odstep-6) max(var(--odstep-5), env(safe-area-inset-left, 0px)); }
+.login { width: min(480px, 100%); gap: var(--odstep-4); }
+.login .oi-nameplate { padding: 0 0 6px; align-self: flex-start; }
+.app-title { font-weight: 300; font-style: italic; color: var(--akcent-duzy); font-size: clamp(2rem, 1.5rem + 2vw, 2.8rem); line-height: 1.1; margin: 0; }
+.app-title b { font-weight: 700; }
+.demo-picker { width: min(680px, 100%); }
+.demo-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: var(--odstep-2); }
+.demo-person { display: flex; flex-direction: column; gap: 2px; }
+.demo-person small { font-weight: 400; font-size: var(--t-meta); color: var(--tekst-drugorzedny); }
+.demo-person.is-other { background: var(--powierzchnia); }
+.demo-person.is-other:not(:focus-visible) { outline: var(--kreska) solid var(--linia); outline-offset: calc(-1 * var(--kreska)); }
+.demo-shortcuts { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-3); }
+.demo-help ol { padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+
+@media print {
+  @page { size: A4; margin: 16mm 15mm; }
+  body { background: var(--bialy); font-size: 11pt; }
+  .topbar, .chair-tabs, .actions, .toolbar, .oi-btn, .skip-link { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* Przyciski w kolumnach nie rozciągają się (skośna krawędź nie wychodzi poza pola) */
+:is(.stack, .stack-tight, .oi-card, .modal-body, .login, .presence, .oi-note, .next-step, .ballot-form, .quorum, .fingerprint, .motion, .demo-shortcuts, .credentials) > :is(.oi-btn, .link, .btn-wrap) { align-self: flex-start; }
+:is(.stack, .stack-tight, .oi-card, .modal-body, .login, .presence, .oi-note) > :is(.btn-wide, .btn-wrap--wide) { align-self: center; }
+
+/* Najechanie tylko na urządzeniach z kursorem */
+@media (hover: hover) and (pointer: fine) {
+  .link:not([aria-disabled="true"]):not(:disabled):hover { text-decoration-thickness: 2.5px; }
+  .link.quiet:not([aria-disabled="true"]):not(:disabled):hover { color: var(--akcent-tekst); }
+  .oi-btn--ciemny:not([aria-disabled="true"]):not(:disabled):hover { background: var(--grafit-700); border-color: var(--grafit-700); }
+  .topbar-account:hover .who strong, .topbar-account:hover .who-short { color: var(--akcent-tekst); }
+}
+/* Ekrany dotykowe: stan najechania z paczki znika po dotknięciu, a reakcja na wciśnięcie (:active) zostaje */
+@media (hover: none) {
+  .oi-btn--obrys:not([aria-disabled="true"]):not(:disabled):hover:not(:active) { background: var(--powierzchnia); border-color: var(--akcent-duzy); }
+  .oi-btn--obrys:not([aria-disabled="true"]):not(:disabled):hover:not(:active) > span { color: var(--akcent-tekst); }
+  .oi-btn--ciemny:not([aria-disabled="true"]):not(:disabled):hover:not(:active) { background: var(--tekst-mocny); border-color: var(--tekst-mocny); }
+  .oi-opt:hover:not(:active):not([aria-pressed="true"]):not([aria-selected="true"]) { border-left-color: var(--linia-aktywna); }
+  /* Karta bez cienia: token cienia ma tu wartość pustą, więc nie powstaje inny cień niż var(--cien-karty). */
+  .oi-card--aktywna:hover:not(:active) { border-color: var(--linia); --cien-karty: none; }
+  .oi-card--aktywna:hover:not(:active)::before { transform: scaleY(0); }
+  .oi-card--aktywna:hover:not(:active) .oi-card__title { color: var(--tekst-mocny); }
+}
+/* Cel dotyku co najmniej 44 px. Mały przycisk ma stałą najmniejszą wysokość z napisem pośrodku, niezależną od pisma
+   dziedziczonego z otoczenia (np. komórki tabeli). */
+@media (pointer: coarse) {
+  .oi-btn--maly { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+  .oi-check { min-height: 44px; align-items: center; }
+  .oi-btn--maly > span { font-size: var(--t-przycisk); }
+  .link-cel { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .oi-opt { min-height: 44px; }
+  .oi-link { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 760px) { .oi-btn--maly > span { font-size: var(--t-przycisk); } }
+/* Tryb wymuszonych kolorów: zaznaczony przycisk wyboru ma obrys zamiast cienia */
+@media (forced-colors: active) {
+  .oi-opt:is([aria-pressed="true"], [aria-selected="true"]):not(:focus-visible) { outline: var(--kreska-mocna) solid Highlight; outline-offset: calc(-1 * var(--kreska-mocna)); }
+}
+
+/* Górny pasek administratora (trzy pozycje nawigacji, F11): do 560 px nawigacja schodzi do drugiego wiersza pod całym
+   paskiem, czyli pod białe pole znaku Izby razem z jego wolnym polem, a nie obok znaku. W pierwszym wierszu zostaje
+   znak i konto. Pozostałe osoby mają jeden wiersz jak dotąd. */
+@media (max-width: 560px) {
+  .topbar:has(.topbar-nav > a:nth-child(3)) { flex-wrap: wrap; row-gap: 0; }
+  .topbar:has(.topbar-nav > a:nth-child(3)) .topbar-brand { margin-right: auto; }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) { display: contents; }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav { order: 3; flex: 1 0 100%; justify-content: flex-start; padding-top: var(--odstep-1); border-top: var(--kreska) solid var(--linia-jasna); }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav a { min-width: 44px; }
+}

@@ -1,0 +1,77 @@
+/* Nagłówek strony w niższej odmianie (lista posiedzeń, konta): tytuł jak w oi-hero, mniej miejsca w pionie */
+.page-head--niski .oi-hero__in { padding-block: var(--odstep-6) var(--odstep-5); gap: var(--odstep-2); }
+.page-head--niski .actions { margin-top: var(--odstep-2); }
+@media (max-width: 760px) { .page-head--niski .oi-hero__in { padding-block: var(--odstep-4) var(--odstep-4); } }
+
+/* Lista posiedzeń jako rejestr wierszy */
+.groups { display: flex; flex-direction: column; gap: var(--odstep-11); }
+.live-bands { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.live-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--odstep-3) var(--odstep-6); }
+.live-band__text { display: flex; flex-direction: column; gap: var(--odstep-1); flex: 1 1 24em; min-width: 0; }
+.live-band__text p { font-size: var(--t-lista); line-height: 1.45; color: var(--tekst-mocny); }
+.register { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.meeting-row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; grid-template-areas: 'date main side'; align-items: center; gap: var(--odstep-5); text-decoration: none; color: inherit; }
+.row-date { grid-area: date; display: flex; flex-direction: column; gap: 2px; padding-right: var(--odstep-4); border-right: var(--kreska) solid var(--linia-jasna); align-self: stretch; justify-content: center; }
+.row-date__day { font-size: var(--t-liczba); font-weight: 600; font-style: italic; line-height: 1; color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+.row-date__month { font-size: var(--t-maly); line-height: 1.3; color: var(--tekst-mocny); }
+.row-date__weekday { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.row-main { grid-area: main; display: flex; flex-direction: column; gap: var(--odstep-1); min-width: 0; }
+.row-title { margin: 0; font-size: var(--t-karta); overflow-wrap: break-word; hyphens: auto; }
+.row-meta { font-size: var(--t-maly); line-height: 1.45; color: var(--tekst-drugorzedny); }
+.row-side { grid-area: side; display: flex; flex-direction: column; align-items: flex-end; gap: var(--odstep-2); text-align: right; }
+.row-act { font-size: var(--t-maly); font-weight: 700; font-style: italic; color: var(--tekst-drugorzedny); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.meeting-row:focus-visible .row-act { color: var(--akcent-tekst); }
+@media (hover: hover) and (pointer: fine) { .meeting-row:hover .row-act { color: var(--akcent-tekst); } }
+/* Do 560 px blok daty jest węższy, a znacznik i napis działania stoją pod tytułem */
+@media (max-width: 560px) {
+  .meeting-row { grid-template-columns: 4.5rem minmax(0, 1fr); grid-template-areas: 'date main' 'date side'; gap: var(--odstep-2) var(--odstep-4); align-items: start; }
+  .row-date { padding-right: var(--odstep-3); justify-content: flex-start; }
+  .row-side { align-items: flex-start; text-align: left; }
+}
+
+/* Konta: tabela z jednym przyciskiem w wierszu i okno zarządzania kontem */
+.account-table th[scope="row"] { font-weight: 400; min-width: 12em; }
+.account-name { display: block; font-weight: 600; color: var(--tekst-mocny); }
+.account-sub { display: block; font-size: var(--t-meta); line-height: 1.4; color: var(--tekst-drugorzedny); }
+.account-table td { vertical-align: middle; }
+.account-table th[scope="row"] { vertical-align: middle; }
+.account-table code { white-space: nowrap; }
+.account-state { display: flex; flex-direction: column; align-items: flex-start; gap: var(--odstep-1); }
+.account-table .account-act { width: 1%; text-align: right; white-space: nowrap; }
+.account-table .account-act .oi-btn { white-space: nowrap; }
+/* Do 560 px wiersz tabeli staje się blokiem: osoba, pod nią login i stan (obok siebie, gdy się mieszczą), na końcu
+   przycisk. Nagłówki zostają dla czytnika ekranu, a role ARIA w tabeli zachowują jej znaczenie mimo innego układu. */
+@media (max-width: 560px) {
+  .account-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .account-table, .account-table tbody { display: block; }
+  .account-table tr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+  .account-table tbody tr:first-child { border-top: 0; }
+  .account-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; }
+  .account-table tr > :is(:nth-child(1), :nth-child(4)) { flex: 1 0 100%; }
+  .account-table th[scope="row"] { min-width: 0; }
+  .account-table .account-act { width: auto; text-align: left; }
+}
+.manage-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.manage-list li { display: flex; flex-direction: column; align-items: flex-start; gap: var(--odstep-1); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.credentials { background: var(--powierzchnia-miekka); padding: var(--odstep-3) var(--odstep-4); flex-direction: column; gap: var(--odstep-3); }
+
+/* Znaczniki w wierszu rejestru: stan i „Spotkanie robocze” (F5) */
+.row-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--odstep-1) var(--odstep-2); }
+@media (max-width: 560px) { .row-chips { justify-content: flex-start; } }
+
+/* Rodzaje dokumentów (F11): tabela z formułami, wymogiem głosowania, stanem i działaniami */
+.doctype-table td, .doctype-table th[scope="row"] { vertical-align: middle; }
+.doctype-table .doctype-act { width: 1%; white-space: nowrap; }
+.doctype-table .doctype-act .actions { flex-wrap: nowrap; gap: var(--odstep-2) var(--odstep-4); }
+.doctype-table tr.is-off th, .doctype-table tr.is-off td:not(.doctype-act) { color: var(--tekst-drugorzedny); }
+/* Do 760 px wiersz tabeli jest blokiem: nazwa, formuły i wymóg głosowania z etykietą, stan i działania */
+@media (max-width: 760px) {
+  .doctype-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .doctype-table, .doctype-table tbody { display: block; }
+  .doctype-table tr { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+  .doctype-table tbody tr:first-child { border-top: 0; }
+  .doctype-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; }
+  .doctype-table tr > :first-child, .doctype-table .doctype-act { flex: 1 0 100%; width: auto; white-space: normal; }
+  .doctype-table .doctype-act .actions { flex-wrap: wrap; }
+  .doctype-table td[data-label]::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+}

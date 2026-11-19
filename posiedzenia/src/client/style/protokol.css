@@ -1,0 +1,100 @@
+/* Protokół: ten sam wygląd w oknie i w wersji do druku. Tytuł dokumentu zostaje w skali clamp(), jak tytuł strony. */
+.minutes-view { font-size: var(--t-lista); line-height: 1.6; color: var(--tekst); display: flex; flex-direction: column; }
+.minutes-view header { display: flex; flex-direction: column; gap: var(--odstep-2); padding-bottom: var(--odstep-4); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }
+.minutes-view h1 { font-weight: 300; font-style: italic; font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.2; color: var(--tekst-mocny); }
+.minutes-view h1 b { font-weight: 700; }
+.minutes-view h2 { display: flex; align-items: flex-start; gap: var(--odstep-3); font-weight: 300; font-style: italic; font-size: var(--t-sprawa); line-height: 1.2; color: var(--tekst-mocny); margin: 1.6em 0 .6em; padding-bottom: .45em; border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); break-after: avoid; }
+/* Znaczek stoi przy pierwszym wierszu także wtedy, gdy nagłówek się zawija */
+.minutes-view h2::before { content: ""; width: 14px; height: 14px; flex: none; margin-top: .28em; background: var(--czerwien); transform: skewX(var(--kat-skosu)); }
+.minutes-view h3 { font-weight: 600; font-size: var(--t-karta); color: var(--tekst-mocny); margin: 1.1em 0 .4em; break-after: avoid; }
+.minutes-view p, .minutes-view ul, .minutes-view ol { margin: 0 0 .6em; }
+.minutes-view ul, .minutes-view ol { padding-left: 1.4em; }
+/* Fakty pod tytułem: etykieta nad wartością */
+.minutes-view .minutes-facts { gap: var(--odstep-3) var(--odstep-6); margin: var(--odstep-2) 0 0; }
+.minutes-view .minutes-facts dd { font-weight: 400; color: var(--tekst); }
+/* Tabele w opakowaniu, które przewija się w poziomie na wąskim ekranie */
+.minutes-view .table-wrap { overflow-x: auto; margin: .4em 0 .9em; }
+.minutes-view .table-wrap:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+.minutes-view table { width: 100%; border-collapse: collapse; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); font-size: var(--t-maly); }
+.minutes-view th, .minutes-view td { text-align: left; padding: var(--odstep-2) var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); vertical-align: top; line-height: 1.45; }
+.minutes-view tbody th { font-weight: 600; color: var(--tekst-mocny); min-width: 9em; }
+.minutes-view thead th { border-top: 0; background: var(--tekst-mocny); color: var(--powierzchnia); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; font-size: var(--t-etykieta); }
+.minutes-view .oi-liczba { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.minutes-view .muted { color: var(--tekst-drugorzedny); font-size: var(--t-maly); }
+.minutes-view .draft { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; color: var(--akcent-tekst); }
+/* Porządek obrad z numerami jak w aplikacji („4.1.”) */
+.minutes-view .minutes-agenda, .minutes-view .minutes-agenda ol { list-style: none; padding-left: 0; }
+/* Numer w osobnej kolumnie: zawinięty tytuł zaczyna się pod tytułem, a podpunkty stoją pod tytułem punktu */
+.minutes-view .minutes-agenda li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); margin-bottom: .2em; }
+.minutes-view .minutes-agenda li > ol { grid-column: 2; margin: .2em 0 0; }
+.minutes-view .minutes-no { font-weight: 600; color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+/* Głosowanie w przebiegu obrad: wiersz z numerem i trybem, przedmiot, tabela wyniku i zdania */
+.minutes-view .ballot { border-left: var(--pasek-akcentu) solid var(--linia-aktywna); padding: var(--odstep-1) 0 var(--odstep-1) var(--odstep-4); margin: .8em 0; break-inside: avoid; }
+.minutes-view .ballot-head { margin-bottom: .2em; }
+.minutes-view .ballot-subject { font-weight: 600; color: var(--tekst-mocny); }
+.minutes-view .ballot .table-wrap { margin: .3em 0 .6em; }
+/* Tabela wyniku: liczby blisko nagłówków, rozstrzygnięcie w ostatniej kolumnie */
+.minutes-view .result-table th:nth-child(-n+2), .minutes-view .resolutions-table th:is(:nth-child(3), :nth-child(4)) { width: 6em; }
+.minutes-view .result-table th:nth-child(3), .minutes-view .resolutions-table th:nth-child(5) { width: 9em; }
+.minutes-view code { padding: 0; background: none; white-space: nowrap; }
+.minutes-view .note { background: var(--powierzchnia-miekka); padding: var(--odstep-2) var(--odstep-4); margin: .5em 0; }
+/* Osoby przy punkcie (F12): etykieta „Prowadzi punkt” albo „Referuje” nad listą osób, każda w osobnym wierszu */
+.minutes-view .item-people { margin: 0 0 .6em; }
+.minutes-view .item-people .person-line { display: block; }
+.minutes-view .item-note { font-style: italic; }
+/* Podpisy: pod linią funkcja i imię i nazwisko */
+.minutes-view .signatures { display: flex; flex-wrap: wrap; gap: var(--odstep-8) var(--odstep-6); margin-top: 4em; break-inside: avoid; }
+.minutes-view .signature { flex: 1 1 180px; display: flex; flex-direction: column; gap: var(--odstep-1); border-top: var(--kreska) solid var(--tekst-mocny); padding-top: var(--odstep-2); text-align: center; }
+.minutes-view .signature-role { font-size: var(--t-meta); line-height: 1.35; color: var(--tekst-drugorzedny); }
+/* Nazwiska w jednej linii także wtedy, gdy funkcja nad nimi zajmuje dwa wiersze (podpisy w rzędzie mają równą wysokość) */
+.minutes-view .signature-name { margin-top: auto; font-weight: 600; color: var(--tekst-mocny); }
+.minutes-view .footer { margin-top: var(--odstep-6); }
+/* Załącznik do podpisu: na osobnej stronie wydruku */
+.minutes-view .attachment { margin-top: var(--odstep-11); }
+.minutes-view .sign-sheet td:last-child { width: 40%; min-width: 10em; }
+.minutes-view .sign-sheet th, .minutes-view .sign-sheet td { height: 2.6em; }
+.minutes-page { background: var(--powierzchnia); }
+.minutes-page .toolbar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--odstep-4); flex-wrap: wrap; padding: var(--odstep-2) max(var(--odstep-5), env(safe-area-inset-left, 0px)); background: var(--powierzchnia); border-bottom: var(--kreska) solid var(--linia); }
+.minutes-page .toolbar-actions { display: flex; flex-wrap: wrap; gap: var(--odstep-2) var(--odstep-4); }
+/* Na telefonie pasek z dwoma przyciskami zajmuje kilka wierszy, więc nie przykleja się nad tekstem */
+@media (max-width: 760px) { .minutes-page .toolbar { position: static; } }
+/* Tabela wyniku na wąskim ekranie: liczby obok siebie z etykietą nad wartością, rozstrzygnięcie pod nimi
+   (bez przewijania w poziomie; nagłówki zostają dla czytnika ekranu) */
+@media (max-width: 560px) {
+  /* Lista obecności przewija się w poziomie, a kolumna „Sposób potwierdzenia” nie zwęża się do kilku słów w wierszu */
+  .minutes-view .attendance-table { min-width: 40rem; }
+  .minutes-view .attendance-table td:last-child { min-width: 16em; }
+  .minutes-view .result-table, .minutes-view .result-table tbody { display: block; width: 100%; }
+  .minutes-view .result-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .minutes-view .result-table tr { display: grid; grid-template-columns: auto auto minmax(0, 1fr); }
+  .minutes-view .result-table td { border-top: 0; }
+  .minutes-view .result-table td.oi-liczba { text-align: left; white-space: normal; font-weight: 600; color: var(--tekst-mocny); }
+  .minutes-view .result-table td::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+  .minutes-view .result-table td:last-child { grid-column: 1 / -1; border-top: var(--kreska) solid var(--linia-jasna); }
+}
+.minutes-page main { width: 54rem; max-width: 100%; margin: 0 auto; padding: var(--odstep-8) var(--odstep-5) var(--odstep-14); }
+.minutes-page .oi-nameplate { padding: 0 0 var(--odstep-5); }
+.minutes-page .oi-nameplate img { height: 64px; }
+/* Do 360 px odstęp przy znaku ma 12 px, więc znak ma 48 px (wolne pole co najmniej ¼ wysokości znaku) */
+@media (max-width: 360px) { .minutes-page .oi-nameplate img { height: 48px; } }
+
+/* Druk A4: znaczki przed rozdziałami, wiersze i podpisy w całości, numery stron w stopce.
+   Nagłówek stron od drugiej dopisuje blok stylu strony protokołu (minutes.ts). */
+@media print {
+  @page {
+    @top-left { font-family: var(--font-sans); font-size: 9pt; color: var(--tekst-drugorzedny); }
+    @bottom-right { content: 'Strona ' counter(page) ' z ' counter(pages); font-family: var(--font-sans); font-size: 9pt; color: var(--tekst-drugorzedny); }
+  }
+  .minutes-page main { width: auto; padding: 0; }
+  .minutes-view h1 { color: var(--tekst-mocny); }
+  .minutes-view h2::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .minutes-view h2, .minutes-view h3 { break-after: avoid; }
+  .minutes-view tr, .minutes-view .ballot, .minutes-view .signatures { break-inside: avoid; }
+  /* Nagłówek „Ad …” razem z pierwszą częścią przebiegu punktu, a lista stwierdzeń kworum razem ze zdaniem o składzie */
+  .minutes-view .item-start, .minutes-view .quorum-summary { break-inside: avoid; }
+  .minutes-view p, .minutes-view li { orphans: 3; widows: 3; }
+  .minutes-view .table-wrap { overflow: visible; }
+  .minutes-view .attachment { break-before: page; margin-top: 0; }
+  .minutes-view thead th { background: none; color: var(--tekst-mocny); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }
+  .minutes-view table { border-color: var(--linia-aktywna); }
+}

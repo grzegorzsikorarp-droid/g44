@@ -1,0 +1,280 @@
+/* Pasek posiedzenia (tryb pracy): biały, z dolną kreską, bez skośnych pasów. W trakcie obrad i przerwy
+   przykleja się u góry, a jego wysokość (zmienna --pasek-posiedzenia) przesuwa przewijanie strony pod pasek. */
+html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px)); }
+.meeting-top { position: relative; z-index: 26; }
+.meeting-top.is-sticky { position: sticky; top: env(safe-area-inset-top, 0px); }
+/* Fokus na elemencie samego paska nie przewija strony: bez tego przeglądarka uznaje pasek za zasłonięty
+   przez scroll-padding-top i przewija stronę na początek. */
+.meeting-top.is-sticky * { scroll-margin-top: calc(-1 * var(--pasek-posiedzenia, 0px)); }
+.meeting-bar { background: var(--powierzchnia); border-bottom: var(--kreska) solid var(--linia); }
+.meeting-bar__in { width: 90rem; max-width: 100%; margin-inline: auto; display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) max(var(--odstep-5), env(safe-area-inset-right, 0px)) var(--odstep-3) max(var(--odstep-5), env(safe-area-inset-left, 0px)); }
+.meeting-bar__in.is-kolumna { width: var(--kolumna); }
+.meeting-bar__row { display: flex; align-items: center; gap: var(--odstep-3); min-width: 0; }
+.meeting-bar__chips, .meeting-bar__actions { display: flex; align-items: center; gap: var(--odstep-2); flex: none; }
+.meeting-bar__title { flex: 1 1 auto; min-width: 0; font-weight: 300; font-style: italic; font-size: 1.25rem; line-height: 1.3; color: var(--tekst-mocny); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-short { display: none; }
+.bar-desk { display: contents; }
+.bar-br { display: none; }
+.meeting-bar__facts { gap: var(--odstep-1) var(--odstep-6); }
+.meeting-bar__facts .fact dd { font-size: var(--t-lista); line-height: 1.3; white-space: nowrap; }
+/* Dopasowanie do szerokości (fitBar w meeting.tsx): krótki tytuł zamiast uciętego pełnego, potem bez znaczników
+   rodzaju i trwającego głosowania, na końcu tytuł w dwóch wierszach. W faktach najpierw znika miejsce, potem data. */
+.meeting-bar.is-krotki .bar-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.meeting-bar.is-krotki .bar-short { display: inline; }
+.meeting-bar.bez-rodzaju .bar-kind, .meeting-bar.bez-znacznika .bar-voting { display: none; }
+.meeting-bar.is-zawijany .meeting-bar__title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.meeting-bar__facts.bez-miejsca .fact--miejsce, .meeting-bar__facts.bez-daty .fact--data { display: none; }
+.meeting-offline { background: var(--tlo); border-bottom: var(--kreska) solid var(--linia); }
+.meeting-offline .meeting-bar__in { padding-block: var(--odstep-2); }
+.meeting--live .sticky-error { top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--odstep-2)); }
+/* Szczegóły posiedzenia na końcu widoku: tylko na telefonie, bo na szerszym ekranie fakty są w pasku */
+.meeting-details { display: none; margin-top: var(--odstep-4); }
+.meeting-details .oi-faq__a { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.meeting-details__links { gap: var(--odstep-2) var(--odstep-5); }
+/* Do 360 px przełącznik widoku stoi w szczegółach posiedzenia, a pasek ma jeden wiersz */
+.details-toggle { display: none; }
+@media (max-width: 360px) {
+  .details-toggle { display: block; }
+  .meeting-bar__actions .oi-btn.bar-toggle { display: none; }
+}
+/* Telefon: jeden wiersz ze znacznikiem stanu i krótkim tytułem (pełny tytuł zostaje dla czytnika ekranu),
+   z przyciskami „Dołącz do połączenia” i przełącznikiem widoku. Napisy przycisków mają dwa wiersze, a tytuł obok
+   nich mniejsze pismo. Gdy dla tytułu zostaje mniej niż 8em (dwa przyciski, wąski ekran), przyciski schodzą niżej. */
+@media (max-width: 760px) {
+  .meeting-bar__in { padding-block: var(--odstep-2); }
+  .meeting-bar__row { flex-wrap: wrap; gap: var(--odstep-2); }
+  .meeting-bar__facts, .bar-desk { display: none; }
+  .meeting-bar__title { flex: 1 1 8em; font-size: var(--t-lista); font-weight: 600; font-style: normal; line-height: 1.2; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .meeting-bar__row:has(.meeting-bar__actions > .oi-btn) .meeting-bar__title { font-size: var(--t-maly); }
+  .bar-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .bar-short { display: inline; }
+  .meeting-bar__actions { margin-left: auto; }
+  .meeting-bar__actions .oi-btn { padding: .25em .75em; }
+  .meeting-bar__actions .oi-btn > span { display: inline-block; text-align: center; }
+  .bar-br { display: inline; }
+  .meeting-details { display: block; }
+}
+@media (max-width: 760px) and (pointer: coarse) {
+  .meeting-bar__actions .oi-btn { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* Porządek obrad: numer, tytuł i stan słowem w prawej kolumnie */
+.agenda { list-style: none; padding: 0; display: flex; flex-direction: column; }
+.agenda-item + .agenda-item { border-top: var(--kreska) solid var(--linia-jasna); }
+.agenda-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: var(--odstep-2); align-items: start; width: 100%; padding: 9px 8px 9px 10px; border: 0; border-left: var(--pasek-akcentu) solid transparent; background: none; text-align: left; font: inherit; font-size: var(--t-lista); line-height: 1.4; color: inherit; }
+button.agenda-row { cursor: pointer; transition: background-color .2s, border-color .2s; }
+.agenda-item.is-sub .agenda-row { padding-left: 26px; }
+.agenda-item.is-current .agenda-row { border-left-color: var(--czerwien); }
+.agenda-item.is-selected .agenda-row { background: var(--powierzchnia-miekka); border-left-color: var(--tekst-mocny); }
+.agenda-no { font-weight: 700; font-style: italic; color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+.agenda-item.is-current .agenda-no { color: var(--akcent-tekst); }
+.agenda-title { min-width: 0; color: var(--tekst-mocny); overflow-wrap: break-word; hyphens: auto; }
+.agenda-item.is-current .agenda-title { font-weight: 600; }
+.agenda-item.is-locked .agenda-title { color: var(--tekst-drugorzedny); }
+.agenda-item.st-wycofany .agenda-title { text-decoration: line-through; color: var(--tekst-drugorzedny); }
+.agenda-meta { grid-column: 3; display: flex; justify-content: flex-end; align-items: center; max-width: 9em; text-align: right; }
+.agenda-meta:empty { display: none; }
+.agenda-state { padding-top: .15em; font-size: var(--t-meta); font-weight: 600; font-style: italic; line-height: 1.3; color: var(--tekst-drugorzedny); }
+@media (hover: hover) and (pointer: fine) {
+  button.agenda-row:hover { background: var(--powierzchnia-miekka); border-left-color: var(--linia-aktywna); }
+  .agenda-item.is-current button.agenda-row:hover { border-left-color: var(--czerwien); }
+  .agenda-item.is-selected button.agenda-row:hover { border-left-color: var(--tekst-mocny); }
+}
+/* W wąskiej kolumnie (kolumna porządku w panelu, telefon) stan stoi pod tytułem, żeby tytuł nie zwężał się do kilku słów */
+.agenda { container-type: inline-size; }
+@container (max-width: 24rem) {
+  .agenda-row { grid-template-columns: 2.6em minmax(0, 1fr); }
+  .agenda-meta { grid-column: 2; justify-content: flex-start; max-width: none; text-align: left; }
+  .agenda-state { padding-top: 0; }
+}
+@media (pointer: coarse) { .agenda-row { min-height: 44px; } }
+@media (forced-colors: active) {
+  .agenda-item.is-current .agenda-row { border-left-color: Highlight; }
+  .agenda-item.is-selected .agenda-row:not(:focus-visible) { border-left-color: CanvasText; outline: var(--kreska) solid CanvasText; outline-offset: calc(-1 * var(--kreska)); }
+}
+
+/* Materiały */
+.material-list { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.material-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label act' 'meta .'; align-items: baseline; gap: 2px var(--odstep-3); width: 100%; text-align: left; padding: .7em .9em; border: 0; border-left: var(--pasek-akcentu) solid var(--linia-aktywna); background: var(--powierzchnia-miekka); font: inherit; font-size: var(--t-lista); font-weight: 600; line-height: 1.35; color: var(--tekst-mocny); cursor: pointer; transition: border-color .2s; }
+.material-link__label { grid-area: label; overflow-wrap: break-word; }
+.material-link__meta { grid-area: meta; font-size: var(--t-maly); font-weight: 400; color: var(--tekst-drugorzedny); }
+/* „Czytaj” jest szare (zasada 3.5), czerwienieje po najechaniu i przy fokusie */
+.material-link__act { grid-area: act; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; color: var(--tekst-drugorzedny); }
+.material-link:focus-visible .material-link__act { color: var(--akcent-tekst); }
+@media (hover: hover) and (pointer: fine) { .material-link:hover { border-left-color: var(--czerwien); } .material-link:hover .material-link__act { color: var(--akcent-tekst); } }
+/* Na telefonie tytuł zajmuje całą szerokość, a „Czytaj” stoi w wierszu dopisku */
+@media (max-width: 560px) { .material-link { padding: .6em .8em; } .material-link.has-meta { grid-template-areas: 'label label' 'meta act'; } }
+.material-row { display: flex; flex-direction: column; gap: 6px; }
+
+/* Widok uczestnika: kolumna 47,5rem, najpierw to, co trzeba zrobić teraz */
+.member { width: 47.5rem; max-width: 100%; margin-inline: auto; display: flex; flex-direction: column; gap: var(--odstep-6); }
+@media (max-width: 760px) { .member { gap: var(--odstep-4); } }
+.presence { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: var(--odstep-3) var(--odstep-4); flex-wrap: wrap; }
+@media (max-width: 560px) { .presence { flex-direction: column; align-items: flex-start; } }
+.presence > div { display: flex; flex-direction: column; gap: 2px; }
+.motions > .motion:first-child { border-top: 0; padding-top: 0; }
+.presence-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--odstep-1) var(--odstep-4); padding: var(--odstep-2) var(--odstep-5); background: var(--powierzchnia); border: var(--kreska) solid var(--linia); }
+.presence-row p { font-size: var(--t-lista); font-weight: 600; color: var(--tekst-mocny); }
+.presence-row .link { font-size: var(--t-lista); }
+.now-title { display: flex; gap: .6em; align-items: baseline; font-weight: 600; font-size: var(--t-sprawa); line-height: 1.25; color: var(--tekst-mocny); }
+.now-title .agenda-no { flex: none; color: var(--akcent-tekst); }
+.vote-closed p { font-size: var(--t-tekst); }
+.vote-closed strong { color: var(--tekst-mocny); }
+
+/* Karta głosowania. Pasek „teraz” daje klasa is-teraz, a fraza tytułu do słów „w sprawie” jest pogrubiona. */
+.vote-subject { font-weight: 600; font-size: var(--t-sprawa); line-height: 1.25; color: var(--tekst-mocny); }
+:is(.vote-subject, .now-title):has(b) { font-weight: 400; }
+:is(.vote-subject, .now-title) b { font-weight: 700; }
+[data-naglowek-glosowania]:focus { outline: none; }
+.vote-facts { gap: var(--odstep-3) var(--odstep-8); }
+.vote-context .fact dd { font-weight: 400; }
+.vote-agenda { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.vote-agenda__list { list-style: none; padding: 0; display: flex; flex-direction: column; }
+.vote-agenda__list li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: var(--odstep-2); padding: 6px 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-lista); line-height: 1.4; color: var(--tekst-mocny); overflow-wrap: break-word; hyphens: auto; }
+.vote-agenda__list li.is-sub { padding-left: 26px; }
+.vote-choose { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.vote-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--odstep-2); margin-top: var(--odstep-1); }
+.vote-buttons .oi-opt { min-height: 64px; padding: .7em 1em; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); font-size: 1.25rem; font-weight: 700; line-height: 1.25; color: var(--tekst-mocny); }
+@media (max-width: 560px) { .vote-buttons { grid-template-columns: minmax(0, 1fr); } }
+/* Najmniejsze telefony: niższe przyciski głosu, mniejsze odstępy w karcie i niższy odnośnik do treści, żeby trzy
+   przyciski mieściły się na pierwszym ekranie także przy uchwale z materiałem (320×640) */
+@media (max-width: 360px) {
+  .vote-card { gap: var(--odstep-3); }
+  .vote-card .material-link { padding-block: .45em; }
+  .vote-buttons { gap: var(--odstep-1); margin-top: 0; }
+  .vote-buttons .oi-opt { min-height: 56px; padding-block: .55em; }
+  .vote-facts.facts--liczby .fact dd { font-size: var(--t-sprawa); }
+}
+.vote-embedded { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.voted, .vote-pending { display: flex; flex-direction: column; gap: 2px; }
+.voted strong, .vote-pending strong { font-weight: 700; font-size: var(--t-karta); color: var(--tekst-mocny); }
+.vote-pending > div { margin-top: var(--odstep-2); }
+.voted:focus { outline: none; }
+.voted:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+.fingerprint { display: flex; flex-direction: column; gap: 4px; padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.countdown { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.countdown strong { font-weight: 700; font-style: italic; }
+.countdown-soon strong { color: var(--akcent-tekst); }
+/* Okno „Potwierdź głos”: kto głosuje, wybór dużym pismem i zdanie o trybie */
+.vote-confirm { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.vote-confirm .confirm-choice { font-size: var(--t-sekcja); font-style: normal; line-height: 1.15; }
+.vote-confirm .confirm-choice strong { font-weight: 700; color: var(--tekst-mocny); }
+
+/* Wynik głosowania: słowo mówi, jaki jest wynik, kolor tylko wzmacnia */
+.result { display: flex; flex-direction: column; gap: var(--odstep-3); background: var(--powierzchnia); border: var(--kreska) solid var(--linia); padding: 20px 22px; }
+.result > .oi-tag { align-self: flex-start; }
+.screen .result > .oi-tag { align-self: center; }
+.oi-card .result { background: var(--powierzchnia-miekka); border-color: var(--linia-jasna); }
+.result-subject { font-weight: 600; font-size: var(--t-karta); line-height: 1.35; color: var(--tekst-mocny); }
+.result-label { font-weight: 300; font-style: italic; color: var(--akcent-duzy); font-size: var(--t-sekcja); line-height: 1.15; }
+.result-label b { font-weight: 700; }
+/* Głosowanie przerwane (F7): formuła bez czerwieni, bo to nie jest rozstrzygnięcie */
+.result-label--neutral { color: var(--tekst-mocny); }
+.result .oi-stat { background: var(--powierzchnia); }
+.result-meta { font-size: var(--t-maly); color: var(--tekst-drugorzedny); }
+.results { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.named { list-style: none; padding: 0; }
+.named li { display: flex; justify-content: space-between; gap: var(--odstep-3); padding: 5px 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-maly); }
+
+/* Czytnik materiałów. Stopnie A− i A+ to wybór czytającego, więc stoją poza skalą pisma. */
+.reader { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.reader-head { display: flex; justify-content: space-between; gap: var(--odstep-3); align-items: flex-start; padding-bottom: var(--odstep-3); border-bottom: var(--kreska) solid var(--linia); }
+.reader-head > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.reader-head h2, .reader-head h3 { font-weight: 600; font-size: var(--t-karta); line-height: 1.3; }
+.reader-tools { display: flex; gap: var(--odstep-2); flex: none; }
+.doc { max-width: var(--wiersz-tekstu); line-height: 1.66; overflow-wrap: anywhere; color: var(--tekst); }
+.reader-small .doc { font-size: 15px; } .reader-normal .doc { font-size: var(--t-tekst); } .reader-large .doc { font-size: 19.5px; } .reader-xlarge .doc { font-size: 23px; }
+.doc > * + * { margin-top: .7em; }
+.doc h1, .doc h2, .doc h3, .doc h4 { font-weight: 600; font-size: 1em; text-align: center; margin: 1.1em 0 .5em; color: var(--tekst-mocny); }
+.doc table { display: block; overflow-x: auto; border-collapse: collapse; max-width: 100%; }
+.doc td, .doc th { border: var(--kreska) solid var(--linia); padding: 6px 8px; vertical-align: top; font-size: .9em; min-width: 80px; }
+.doc ol, .doc ul { padding-left: 1.5em; }
+/* Okno czytnika: „A−” i „A+” w nagłówku okna, a w trakcie głosowania uwaga przyklejona pod nagłówkiem */
+.reader-modal { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.reader-vote { position: sticky; top: var(--glowa-okna, 0px); z-index: 1; display: flex; flex-direction: column; gap: var(--odstep-2); }
+.modal-head .reader-tools { flex: none; }
+@media (max-width: 760px) {
+  dialog.modal-backdrop:has(.reader-modal) { padding: 0; place-items: stretch; }
+  .modal:has(> .modal-body > .reader-modal) { width: 100%; height: 100vh; height: 100dvh; max-height: none; border: 0; }
+  .modal:has(> .modal-body > .reader-modal) > .modal-head { gap: var(--odstep-2); padding: max(var(--odstep-2), env(safe-area-inset-top, 0px)) max(var(--odstep-4), env(safe-area-inset-right, 0px)) var(--odstep-2) max(var(--odstep-4), env(safe-area-inset-left, 0px)); }
+  .modal:has(> .modal-body > .reader-modal) > .modal-head h2 { font-size: var(--t-karta); }
+  .modal:has(> .modal-body > .reader-modal) > .modal-head .oi-mark { display: none; }
+  .modal:has(> .modal-body > .reader-modal) > .modal-body { padding-bottom: calc(var(--odstep-6) + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Wiadomości. Przycisk „Wyślij” stoi pod polem na telefonie i w kolumnie węższej niż 400 px. */
+.message-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--odstep-2); max-height: 340px; overflow: auto; }
+.message-list li { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); max-width: 92%; }
+.message-list li.is-mine { align-self: flex-end; border-left-color: var(--czerwien); }
+.message-meta { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; color: var(--tekst-drugorzedny); }
+.message-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--t-lista); line-height: 1.45; }
+.message-form { container-type: inline-size; }
+.message-row { display: flex; flex-wrap: wrap; gap: var(--odstep-2); align-items: center; }
+.message-row .oi-input { flex: 1 1 0; min-width: 0; }
+/* Komunikat o pustym polu: na komputerze pod wierszem, a gdy przycisk stoi pod polem, między polem a przyciskiem */
+.message-error { order: 3; flex-basis: 100%; }
+@container (max-width: 400px) {
+  .message-row { flex-direction: column; align-items: stretch; }
+  .message-row .oi-input { flex: none; }
+  .message-row > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+  .message-error { order: 0; }
+}
+@media (max-width: 480px) {
+  .message-row { flex-direction: column; align-items: stretch; }
+  .message-row .oi-input { flex: none; }
+  .message-row > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+  .message-error { order: 0; }
+}
+
+/* Podsumowanie zamkniętego posiedzenia */
+.summary-note { gap: var(--odstep-3); }
+.summary-note .oi-label { margin-bottom: 0; }
+.results-table th[scope="row"] { min-width: 14em; }
+.results-table td:last-child { min-width: 9em; }
+.results-table td:last-child b { font-weight: 700; color: var(--tekst-mocny); }
+/* Do 560 px wiersz tabeli wyników jest blokiem: numer i przedmiot, pod nimi wynik, liczby z etykietą nad wartością
+   i tryb. Nagłówki zostają dla czytnika ekranu, a role ARIA zachowują znaczenie tabeli mimo innego układu. */
+@media (max-width: 560px) {
+  .results-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .results-table, .results-table tbody { display: block; }
+  .results-table tr { display: grid; grid-template-columns: 2.2em repeat(3, auto) minmax(0, 1fr); grid-template-areas: 'nr subj subj subj subj' '. wynik wynik wynik wynik' '. za przeciw wstrz .' '. tryb tryb tryb tryb'; gap: var(--odstep-1) var(--odstep-4); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+  .results-table tbody tr:first-child { border-top: 0; }
+  .results-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; text-align: left; }
+  .results-table th[scope="row"], .results-table td:last-child { min-width: 0; }
+  .results-table tr > :nth-child(1) { grid-area: nr; font-weight: 700; font-style: italic; color: var(--tekst-mocny); }
+  .results-table tr > :nth-child(2) { grid-area: subj; }
+  .results-table tr > :nth-child(3) { grid-area: tryb; font-size: var(--t-meta); color: var(--tekst-drugorzedny); }
+  .results-table tr > :nth-child(3)::before { content: attr(data-label) " "; content: attr(data-label) " " / ""; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; }
+  .results-table tr > :nth-child(4) { grid-area: za; }
+  .results-table tr > :nth-child(5) { grid-area: przeciw; }
+  .results-table tr > :nth-child(6) { grid-area: wstrz; }
+  .results-table tr > :nth-child(7) { grid-area: wynik; }
+  .results-table td.oi-liczba[data-label] { text-align: left; font-weight: 600; color: var(--tekst-mocny); }
+  .results-table td.oi-liczba[data-label]::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+}
+
+/* Wynik: zawsze trzy kafelki obok siebie */
+.result .oi-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .result .oi-stat span { font-size: var(--t-znacznik); letter-spacing: .04em; } }
+@media (max-width: 480px) { .result .oi-stat { padding: 12px 10px 10px; } }
+/* Do 360 px trzy kafelki nie mieszczą podpisów co najmniej 11,5 px, więc układają się w wiersze („1 WSTRZYMAŁO SIĘ”). */
+@media (max-width: 360px) {
+  .result .oi-stats { grid-template-columns: minmax(0, 1fr); }
+  .result .oi-stat { display: flex; align-items: baseline; gap: var(--odstep-3); padding: var(--odstep-2) var(--odstep-3); }
+  .result .oi-stat span { margin-top: 0; }
+}
+
+/* Osoby przy punkcie (F12): etykieta nad wartością, każda osoba w osobnym wierszu. W wierszu porządku obrad mniejsze pismo. */
+.people-facts .person-line { display: block; }
+.people-facts.is-compact { display: flex; flex-wrap: wrap; gap: 2px var(--odstep-5); margin-top: 2px; }
+.people-fact { display: flex; flex-direction: column; min-width: 0; }
+.people-fact__label { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.people-facts.is-compact .person-line { font-size: var(--t-meta); font-weight: 400; line-height: 1.4; color: var(--tekst-drugorzedny); }
+.agenda-title > .people-facts { font-weight: 400; }
+/* Spotkanie robocze w pasku posiedzenia (F5): na szerszym ekranie znacznik obok stanu, a do 760 px stan niesie krótki
+   tytuł „Spotkanie robocze, 26.11.2026”, żeby pasek miał jeden wiersz (jeden znacznik i tytuł). */
+.bar-working { display: contents; }
+@media (max-width: 760px) { .bar-working { display: none; } }
+/* Wynik nieogłoszony (F2) i zdanie o głosowaniu próbnym (F1) */
+.result-pending { font-size: var(--t-tekst); font-weight: 600; color: var(--tekst-mocny); }
+.vote-trial { font-size: var(--t-lista); line-height: 1.45; color: var(--tekst-mocny); }
