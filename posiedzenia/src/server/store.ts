@@ -1,7 +1,9 @@
 import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
-import type {Account, Meeting, Roster} from '../shared/types.ts';
+import type {Account, DocType, Meeting, Roster} from '../shared/types.ts';
+import {defaultDocTypes} from '../shared/doctypes.ts';
+import {migrateMeeting} from '../shared/migrate.ts';
 import {councilMemberLabel, seedRoster} from './seed.ts';
 
 const schema = `
@@ -27,6 +29,7 @@ CREATE TABLE IF NOT EXISTS material_versions(
 CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY, meeting_id TEXT NOT NULL, name TEXT NOT NULL, size INTEGER NOT NULL, mime TEXT NOT NULL, created INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS secret_keys(ballot_id TEXT PRIMARY KEY, private_pem TEXT NOT NULL, n TEXT NOT NULL, e TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS secret_votes(ballot_id TEXT NOT NULL, token_hash TEXT NOT NULL, choice TEXT NOT NULL, PRIMARY KEY(ballot_id, token_hash)) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS doc_types(id TEXT PRIMARY KEY, name TEXT NOT NULL, adopted TEXT NOT NULL, rejected TEXT NOT NULL, voted INTEGER NOT NULL, ord INTEGER NOT NULL, active INTEGER NOT NULL);
 `;
 
 export interface UserRow {
@@ -44,6 +47,7 @@ export class Store {
   dir: string;
   private cache = new Map<string, Meeting>();
   private rosterCache: Roster | null = null;
+  private docTypeCache: DocType[] | null = null;
 
   constructor(dir: string) {
     this.dir = dir;
@@ -58,6 +62,13 @@ export class Store {
       this.db.prepare("UPDATE memberships SET label = ? WHERE label = 'Członek ORPiP'").run(councilMemberLabel);
       this.db.prepare("INSERT INTO meta(key, value) VALUES ('etykieta-skladu', '1')").run();
     }
+    // Wersja 2 (F11): słownik rodzajów dokumentów z wartościami domyślnymi, wpisany raz przy pierwszym starcie.
+    if (!this.db.prepare("SELECT 1 FROM meta WHERE key = 'rodzaje-dokumentow'").get()) {
+      this.transaction(() => {
+        for (const t of defaultDocTypes) this.db.prepare('INSERT OR IGNORE INTO doc_types VALUES (?,?,?,?,?,?,?)').run(t.id, t.name, t.adopted, t.rejected, t.voted ? 1 : 0, t.order, t.active ? 1 : 0);
+        this.db.prepare("INSERT INTO meta(key, value) VALUES ('rodzaje-dokumentow', '1')").run();
+      });
+    }
   }
 
   private seed(roster: Roster) {
@@ -71,7 +82,7 @@ export class Store {
   transaction<T>(fn: () => T): T {
     this.db.exec('BEGIN IMMEDIATE');
     try { const result = fn(); this.db.exec('COMMIT'); return result; }
-    catch (error) { this.db.exec('ROLLBACK'); this.cache.clear(); throw error; }
+    catch (error) { this.db.exec('ROLLBACK'); this.cache.clear(); this.docTypeCache = null; throw error; }
   }
 
   roster(): Roster {
@@ -82,12 +93,35 @@ export class Store {
     return this.rosterCache = {organs, persons, memberships};
   }
 
+  docTypes(): DocType[] {
+    if (this.docTypeCache) return this.docTypeCache;
+    const rows = this.db.prepare('SELECT * FROM doc_types ORDER BY ord, name').all() as any[];
+    return this.docTypeCache = rows.map(r => ({id: r.id, name: r.name, adopted: r.adopted, rejected: r.rejected, voted: !!r.voted, order: Number(r.ord), active: !!r.active}));
+  }
+  saveDocType(t: DocType) {
+    this.db.prepare(`INSERT INTO doc_types VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, adopted=excluded.adopted,
+      rejected=excluded.rejected, voted=excluded.voted, ord=excluded.ord, active=excluded.active`).run(t.id, t.name, t.adopted, t.rejected, t.voted ? 1 : 0, t.order, t.active ? 1 : 0);
+    this.docTypeCache = null;
+  }
+  deleteDocType(id: string) {
+    this.db.prepare('DELETE FROM doc_types WHERE id=?').run(id);
+    this.docTypeCache = null;
+  }
+  /** Rodzaj użyty w materiale, w głosowaniu albo jako „Co jest głosowane” w punkcie któregoś posiedzenia. */
+  docTypeUsed(id: string) {
+    return this.meetingIds().some(mid => {
+      const m = this.meeting(mid);
+      return !!m && (m.materials.some(x => x.type === id) || m.ballots.some(b => b.docType === id) || m.agenda.some(i => i.docType === id));
+    });
+  }
+
   meeting(id: string): Meeting | null {
     const cached = this.cache.get(id);
     if (cached) return cached;
     const row = this.db.prepare('SELECT data FROM meetings WHERE id=?').get(id) as {data: string} | undefined;
     if (!row) return null;
-    const meeting = JSON.parse(row.data) as Meeting;
+    // Dane zapisane przed wersją 2 dostają nowe pola przy odczycie (migrateMeeting), a zapisują się przy następnej zmianie.
+    const meeting = migrateMeeting(JSON.parse(row.data) as Meeting);
     this.cache.set(id, meeting);
     return meeting;
   }

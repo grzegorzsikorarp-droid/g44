@@ -29,7 +29,8 @@ export async function docxToHtml(buffer: Buffer) {
 }
 export const markdownToHtml = (text: string) => cleanHtml(marked.parse(text, {async: false}) as string);
 const actPattern = /^(uchwała|stanowisko|apel|rezolucja|oświadczenie|deklaracja)\s+nr\.?\s*(\S+(?:\s+\S+)?)/iu;
-const typeOf: Record<string, MaterialType> = {uchwała: 'uchwala', stanowisko: 'oswiadczenie', oświadczenie: 'oswiadczenie', apel: 'apel', rezolucja: 'rezolucja', deklaracja: 'deklaracja'};
+// Rodzaje ze słownika domyślnego (F11): „stanowisko” i „oświadczenie” to dwa osobne rodzaje.
+const typeOf: Record<string, MaterialType> = {uchwała: 'uchwala', stanowisko: 'stanowisko', oświadczenie: 'oswiadczenie', apel: 'apel', rezolucja: 'rezolucja', deklaracja: 'deklaracja'};
 
 // Plik z kilkoma aktami (np. 12 uchwał PWZ w jednym DOCX) dzieli się na osobne projekty
 // w miejscach, gdzie akapit zaczyna się od „Uchwała nr …” (także stanowisko, apel itd.).

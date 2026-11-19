@@ -6,20 +6,25 @@ import {parseAgendaText} from '../src/shared/agenda.ts';
 import type {Meeting} from '../src/shared/types.ts';
 import {actor, context, newMeeting, presidium} from './helpers.ts';
 
+// Wersja 2: na posiedzeniu stacjonarnym obecność zgłoszoną przez członka potwierdza prowadzący (F9), a dalsze punkty
+// wymagają stwierdzenia kworum (F5). Wynik każdego głosowania trzeba ogłosić przed kolejną czynnością (F2).
 function opened(present = presidium) {
   const ctx = context();
   let m = newMeeting(ctx);
   m = apply(m, {type: 'open'}, actor('si'), ctx);
   for (const p of present.filter(p => p !== 'si')) m = apply(m, {type: 'presence', who: p, present: true}, actor(p), ctx.tick());
+  if (present.some(p => p !== 'si')) m = apply(m, {type: 'presence_confirm_all'}, actor('si'), ctx.tick());
+  m = apply(m, {type: 'quorum'}, actor('si'), ctx.tick());
   return {ctx, m};
 }
+const announce = (m: Meeting, ctx: ReturnType<typeof context>) => apply(m, {type: 'announce', ballotId: m.ballots.at(-1)!.id}, actor('si'), ctx.tick());
 function adoptAgenda(m: Meeting, ctx: ReturnType<typeof context>) {
   const point = m.agenda.find(i => i.kind === 'porzadek')!;
   m = apply(m, {type: 'item_start', itemId: point.id}, actor('si'), ctx.tick());
   m = apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
   const b = m.ballots.at(-1)!;
   for (const p of b.eligible) m = apply(m, {type: 'vote', ballotId: b.id, choice: 'za'}, actor(p), ctx.tick());
-  return m;
+  return announce(m, ctx);
 }
 const resolutionItem = (m: Meeting) => m.agenda.find(i => i.kind === 'uchwaly')!;
 
@@ -36,7 +41,8 @@ test('przed przyjęciem porządku nie można przejść do dalszych spraw; po prz
   assert.equal(adopted.agendaAdopted, true);
   assert.equal(adopted.ballots[0].closeReason, 'wszyscy');
   assert.equal(resultLabel(adopted.ballots[0]), 'Porządek obrad przyjęty');
-  const next = apply(adopted, {type: 'item_start', itemId: resolutionItem(adopted).id}, actor('si'), ctx.tick());
+  // Wersja 2 (F4): punkty 3 i 4 czekają, więc rozpoczęcie punktu 5 wymaga powodu.
+  const next = apply(adopted, {type: 'item_start', itemId: resolutionItem(adopted).id, reason: 'Protokół i sprawozdania rozpatrzymy po uchwałach.'}, actor('si'), ctx.tick());
   assert.equal(next.currentItemId, resolutionItem(next).id);
 });
 
@@ -77,6 +83,7 @@ test('osoba przybyła w trakcie dołącza do otwartego głosowania', () => {
   m = apply(m, {type: 'ballot_open', itemId: resolutionItem(m).id, purpose: 'uchwala', subject: 'Uchwała nr 3', mode: 'jawne', minutes: 5}, actor('si'), ctx.tick());
   const id = m.ballots.at(-1)!.id;
   m = apply(m, {type: 'presence', who: 'ak', present: true}, actor('ak'), ctx.tick());
+  m = apply(m, {type: 'presence_confirm', who: 'ak', accept: true}, actor('si'), ctx.tick());
   assert.ok(m.ballots.at(-1)!.eligible.includes('ak'));
   assert.deepEqual(m.ballots.at(-1)!.joined, ['ak']);
   m = apply(m, {type: 'vote', ballotId: id, choice: 'przeciw'}, actor('ak'), ctx.tick());
@@ -98,10 +105,11 @@ test('głosowanie tajne wymaga postanowienia Prezydium, a potem nie ujawnia, kto
   let m = adoptAgenda(start, ctx);
   const it = resolutionItem(m);
   assert.throws(() => apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx), /możliwe dopiero po uchwaleniu przez Prezydium tajności głosowania/);
-  m = apply(m, {type: 'mode_motion', itemId: it.id, mode: 'tajne', minutes: 2}, actor('si'), ctx.tick());
+  m = apply(m, {type: 'mode_motion', itemId: it.id, mode: 'tajne', minutes: 2, proposedBy: 'ag'}, actor('si'), ctx.tick());
   const motion = m.ballots.at(-1)!;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: motion.id, choice: p === 'eo' ? 'przeciw' : 'za'}, actor(p), ctx.tick());
   assert.equal(m.agenda.find(i => i.id === it.id)!.mode, 'tajne');
+  m = announce(m, ctx);
   m = apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx.tick());
   const secret = m.ballots.at(-1)!;
   assert.equal(secret.modeBasis, 'uchwalone przez Prezydium w głosowaniu nr 2');
@@ -125,6 +133,7 @@ test('reasumpcja: 1/3 podpisów obecnych, tylko głosowanie jawne, tylko raz (§
   m = apply(m, {type: 'ballot_open', itemId: resolutionItem(m).id, purpose: 'uchwala', subject: 'Uchwała nr 6', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
   const original = m.ballots.at(-1)!.id;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: original, choice: p === 'si' || p === 'ag' ? 'za' : 'przeciw'}, actor(p), ctx.tick());
+  m = announce(m, ctx);
   assert.throws(() => apply(m, {type: 'motion_create', ballotId: original, justification: 'za krótko'}, actor('ag'), ctx), /Uzasadnij/);
   m = apply(m, {type: 'motion_create', ballotId: original, justification: 'Część osób zgłasza pomyłkę przy oddawaniu głosu.'}, actor('ag'), ctx.tick());
   let motion = m.motions[0];
@@ -139,6 +148,7 @@ test('reasumpcja: 1/3 podpisów obecnych, tylko głosowanie jawne, tylko raz (§
   const vote = m.ballots.at(-1)!.id;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: vote, choice: 'za'}, actor(p), ctx.tick());
   assert.equal(m.motions[0].status, 'przyjety');
+  m = announce(m, ctx);
   m = apply(m, {type: 'reasumption_open', motionId: motion.id, minutes: 2}, actor('si'), ctx.tick());
   const repeat = m.ballots.at(-1)!;
   assert.equal(repeat.reasumptionOf, original);

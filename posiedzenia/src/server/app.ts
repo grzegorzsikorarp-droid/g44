@@ -6,12 +6,13 @@ import {fileURLToPath} from 'node:url';
 import {gzipSync} from 'node:zlib';
 import {randomUUID} from 'node:crypto';
 import {accountView, Store, type UserRow} from './store.ts';
-import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
+import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_REFRESH_MS, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
 import {SecretBallots} from './secret.ts';
 import {cleanHtml, docxToHtml, guessType, htmlHash, markdownToHtml, splitActs, textToHtml} from './documents.ts';
 import {minutesDoc, minutesFileName, minutesHtml, type MinutesLook} from './minutes.ts';
-import {advance, apply, canView, createMeeting, DomainError, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
+import {advance, apply, canView, createMeeting, DomainError, duplicateMeeting, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
+import {docTypeInput, sortedDocTypes} from '../shared/doctypes.ts';
 import {personName} from '../shared/roster.ts';
 import {summary, viewFor} from '../shared/view.ts';
 import type {Account, Actor, MaterialRef, MaterialType, Meeting} from '../shared/types.ts';
@@ -22,7 +23,6 @@ const mime: Record<string, string> = {
   '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2',
   '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
-const materialTypes: MaterialType[] = ['uchwala', 'rezolucja', 'oswiadczenie', 'deklaracja', 'apel', 'sprawozdanie', 'protokol', 'informacja', 'inny'];
 const fail = (message: string, status = 400): never => { throw Object.assign(new Error(message), {status}); };
 
 async function body(req: IncomingMessage, max: number) {
@@ -80,18 +80,27 @@ export async function createApplication(options: AppOptions = {}) {
   const assets = new Map<string, {bytes: Buffer; gzip: Buffer}>();
 
   const context = (): Context => ({
-    roster: store.roster(), now: now(), newId: randomUUID,
+    roster: store.roster(), now: now(), newId: randomUUID, docTypes: store.docTypes(),
     secret: {openKey: id => secret.openKey(id), tally: id => secret.tally(id), closeKey: id => secret.closeKey(id)},
   });
+  const view = (m: Meeting, a: Actor) => viewFor(m, a, store.roster());
   const write = <T>(fn: () => T) => { try { return store.transaction(fn); } finally { afterWrite(); } };
 
-  function actorOf(req: IncomingMessage): Actor | null {
+  // F13: zapytanie z ważną sesją, gdy od ostatniego przedłużenia minęło co najmniej 15 minut, przesuwa jej wygaśnięcie
+  // na teraz + 12 godzin i zwraca ciasteczko z nowym Max-Age (`refresh`). Ostatnie przedłużenie to wygaśnięcie − 12 godzin.
+  function sessionOf(req: IncomingMessage): {actor: Actor; refresh: string | null} | null {
     const token = cookieToken(req);
     if (!token) return null;
-    const row = db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>? AND u.disabled=0').get(hashToken(token), now()) as UserRow | undefined;
+    const hash = hashToken(token), t = now();
+    const row = db.prepare('SELECT u.*, s.expires AS session_expires FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>? AND u.disabled=0').get(hash, t) as (UserRow & {session_expires: number}) | undefined;
     if (!row) return null;
     const account = accountView(row);
-    return {account, personId: account.personId, name: account.personId ? personName(store.roster(), account.personId) : account.displayName};
+    let refresh: string | null = null;
+    if (t - (Number(row.session_expires) - SESSION_SECONDS * 1000) >= SESSION_REFRESH_MS) {
+      db.prepare('UPDATE sessions SET expires=? WHERE token=?').run(t + SESSION_SECONDS * 1000, hash);
+      refresh = sessionCookie(token, secure);
+    }
+    return {actor: {account, personId: account.personId, name: account.personId ? personName(store.roster(), account.personId) : account.displayName}, refresh};
   }
   function loginCookie(userId: string) {
     const token = newToken();
@@ -126,6 +135,20 @@ export async function createApplication(options: AppOptions = {}) {
     }
   }, options.tickMs ?? 1000);
   ticker.unref();
+
+  // F11: rodzaj materiału musi istnieć w słowniku i być włączony. Bez rodzaju aplikacja rozpoznaje go z tytułu.
+  function materialType(raw: unknown, title: string): MaterialType {
+    const types = store.docTypes(), wanted = typeof raw === 'string' ? raw.trim() : '';
+    if (!wanted) {
+      const guess = guessType(title);
+      return types.some(t => t.id === guess && t.active) ? guess : types.some(t => t.id === 'inny') ? 'inny' : guess;
+    }
+    const found = types.find(t => t.id === wanted) ?? fail('Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+    if (!found.active) fail('Ten rodzaj dokumentu jest wyłączony. Wybierz inny rodzaj.');
+    return found.id;
+  }
+  /** Rodzaj rozpoznany z pliku: gdy nie ma go w słowniku, „inny”. */
+  const knownType = (type: MaterialType) => store.docTypes().some(t => t.id === type) ? type : 'inny';
 
   function addMaterial(m: Meeting, actor: Actor, input: {title: string; type: MaterialType; number: string; html: string; source: string; fileId: string | null; fileName: string | null}) {
     const ref: MaterialRef = {
@@ -200,7 +223,9 @@ export async function createApplication(options: AppOptions = {}) {
         return json(res, result);
       }
 
-      const actor = actorOf(req);
+      const session = path.startsWith('/api/') ? sessionOf(req) : null;
+      const actor = session?.actor ?? null;
+      if (session?.refresh) res.setHeader('Set-Cookie', session.refresh);
       if (path === '/api/session' && method === 'GET') {
         const setupRequired = !store.hasUsers();
         return json(res, {account: actor?.account ?? null, setupRequired, roster: actor || setupRequired ? store.roster() : null, version: VERSION});
@@ -293,6 +318,30 @@ export async function createApplication(options: AppOptions = {}) {
           }
         }
 
+        // F11: słownik rodzajów dokumentów. Czyta każdy zalogowany, zmienia administrator.
+        if (path === '/api/doc-types') {
+          if (method === 'GET') return json(res, {docTypes: sortedDocTypes(store.docTypes())});
+          if (method === 'POST') {
+            if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+            const input = await jsonBody(req, 10000);
+            write(() => store.saveDocType(docTypeInput(input ?? {}, store.docTypes())));
+            return json(res, {docTypes: sortedDocTypes(store.docTypes())}, 201);
+          }
+        }
+        const dt = path.match(/^\/api\/doc-types\/([a-z0-9_]{1,40})$/);
+        if (dt && (method === 'PUT' || method === 'DELETE')) {
+          if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+          const current = store.docTypes().find(t => t.id === dt[1]) ?? fail('Nie znaleziono rodzaju dokumentu.', 404);
+          if (method === 'PUT') {
+            const input = await jsonBody(req, 10000);
+            write(() => store.saveDocType(docTypeInput(input ?? {}, store.docTypes(), current)));
+          } else {
+            if (store.docTypeUsed(current.id)) fail('Ten rodzaj jest już użyty w materiale, punkcie albo głosowaniu. Możesz go tylko wyłączyć.', 409);
+            write(() => store.deleteDocType(current.id));
+          }
+          return json(res, {docTypes: sortedDocTypes(store.docTypes())});
+        }
+
         if (path === '/api/people' && method === 'GET') {
           // Lista kont potrzebna organizatorowi do zaproszeń (głos doradczy, goście).
           const roster = store.roster();
@@ -318,7 +367,7 @@ export async function createApplication(options: AppOptions = {}) {
           });
           if (!isOrganizer(store.roster(), draft, a)) fail('Posiedzenie przygotowuje biuro, przewodniczący lub wiceprzewodniczący.', 403);
           write(() => store.saveMeeting(draft, now()));
-          return json(res, {meeting: viewFor(draft, a)}, 201);
+          return json(res, {meeting: view(draft, a)}, 201);
         }
 
         const mm = path.match(/^\/api\/meetings\/([\w-]+)(\/.*)?$/);
@@ -328,7 +377,7 @@ export async function createApplication(options: AppOptions = {}) {
             const m = meetingFor(id, a);
             const etag = `"${VERSION}-${m.revision}-${a.account.id}"`;
             if (req.headers['if-none-match'] === etag) { res.writeHead(304, {'ETag': etag, 'X-Server-Now': String(now()), 'Cache-Control': 'private, no-cache'}); return res.end(); }
-            return json(res, {meeting: viewFor(m, a)}, 200, {'ETag': etag, 'Cache-Control': 'private, no-cache'});
+            return json(res, {meeting: view(m, a)}, 200, {'ETag': etag, 'Cache-Control': 'private, no-cache'});
           }
           if (rest === '' && method === 'DELETE') {
             const m = meetingFor(id, a);
@@ -345,7 +394,34 @@ export async function createApplication(options: AppOptions = {}) {
               store.saveMeeting(updated, now());
               return updated;
             });
-            return json(res, {meeting: viewFor(next, a)});
+            return json(res, {meeting: view(next, a)});
+          }
+          // F6: powielenie posiedzenia z kopią treści materiałów i plików (nowe posiedzenie nie zależy od starego).
+          if (rest === '/duplicate' && method === 'POST') {
+            const src = meetingFor(id, a);
+            if (!isOrganizer(store.roster(), src, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
+            const {meeting: copy, materialMap} = duplicateMeeting(src, {id: randomUUID(), now: now(), newId: randomUUID, createdBy: a.name});
+            const files = new Map<string, string | null>();
+            for (const ref of src.materials) {
+              if (!ref.fileId || !materialMap.has(ref.id) || files.has(ref.fileId)) continue;
+              const row = db.prepare('SELECT * FROM files WHERE id=? AND meeting_id=?').get(ref.fileId, src.id) as {name: string; mime: string} | undefined;
+              let bytes: Buffer | null = null;
+              try { if (row) bytes = await readFile(join(dataDir, 'files', ref.fileId)); } catch { bytes = null; }
+              files.set(ref.fileId, row && bytes ? await saveFile(copy.id, {buffer: bytes, name: row.name, mime: row.mime}) : null);
+            }
+            write(() => {
+              for (const ref of copy.materials) {
+                const oldId = [...materialMap].find(([, v]) => v === ref.id)![0];
+                const old = src.materials.find(x => x.id === oldId)!;
+                const row = db.prepare('SELECT html, hash, source FROM material_versions WHERE material_id=? AND version=?').get(old.id, old.version) as {html: string; hash: string; source: string} | undefined;
+                const html = row?.html ?? '';
+                ref.hash = htmlHash(html); ref.size = Buffer.byteLength(html);
+                db.prepare('INSERT INTO material_versions VALUES (?,?,?,?,?,?,?,?)').run(ref.id, 1, copy.id, html, ref.hash, row?.source ?? 'text', now(), a.name);
+                if (old.fileId) { ref.fileId = files.get(old.fileId) ?? null; if (!ref.fileId) ref.fileName = null; }
+              }
+              store.saveMeeting(copy, now());
+            });
+            return json(res, {meeting: view(copy, a)}, 201);
           }
           if (rest === '/secret/issue' && method === 'POST') {
             const input = await jsonBody(req, 10000);
@@ -380,7 +456,7 @@ export async function createApplication(options: AppOptions = {}) {
               created = write(() => {
                 const m = structuredClone(meetingFor(id, a));
                 requireEditor(m, a);
-                const refs = [addMaterial(m, a, {title, type: materialTypes.includes(input.type) ? input.type : guessType(title), number: String(input.number ?? ''), html, source: input.format === 'markdown' ? 'markdown' : 'text', fileId: null, fileName: null})];
+                const refs = [addMaterial(m, a, {title, type: materialType(input.type, title), number: String(input.number ?? ''), html, source: input.format === 'markdown' ? 'markdown' : 'text', fileId: null, fileName: null})];
                 attachCreated(m, refs, input.itemId ? String(input.itemId) : null, false, a);
                 store.saveMeeting(m, now());
                 return refs;
@@ -389,6 +465,7 @@ export async function createApplication(options: AppOptions = {}) {
               const form = await readUpload(req, origin);
               const file = form.get('file');
               if (!(file instanceof File)) fail('Wybierz plik.');
+              materialType(form.get('type'), '');  // zły rodzaj odrzuca się przed zapisaniem pliku
               const upload = await convert(file as File);
               const fileId = await saveFile(id, upload);
               const parts = form.get('split') === '1' && upload.source === 'docx' ? splitActs(upload.html) : [];
@@ -398,16 +475,15 @@ export async function createApplication(options: AppOptions = {}) {
                 const m = structuredClone(meetingFor(id, a));
                 requireEditor(m, a);
                 const title = String(form.get('title') ?? '').trim() || upload.name.replace(/\.[^.]+$/, '');
-                const t = String(form.get('type') ?? '') as MaterialType;
                 const refs = parts.length
-                  ? parts.map(part => addMaterial(m, a, {title: part.title, type: part.type, number: part.number, html: part.html, source: 'docx', fileId, fileName: upload.name}))
-                  : [addMaterial(m, a, {title, type: materialTypes.includes(t) ? t : guessType(title), number: String(form.get('number') ?? ''), html: upload.html, source: upload.source, fileId, fileName: upload.name})];
+                  ? parts.map(part => addMaterial(m, a, {title: part.title, type: knownType(part.type), number: part.number, html: part.html, source: 'docx', fileId, fileName: upload.name}))
+                  : [addMaterial(m, a, {title, type: materialType(form.get('type'), title), number: String(form.get('number') ?? ''), html: upload.html, source: upload.source, fileId, fileName: upload.name})];
                 attachCreated(m, refs, parentId, createItems && parts.length > 0, a);
                 store.saveMeeting(m, now());
                 return refs;
               });
             }
-            return json(res, {meeting: viewFor(store.meeting(id)!, a), created: created.map(r => r.id)}, 201);
+            return json(res, {meeting: view(store.meeting(id)!, a), created: created.map(r => r.id)}, 201);
           }
           const mat = rest.match(/^\/materials\/([\w-]+)(\/version)?$/);
           if (mat) {
@@ -434,7 +510,7 @@ export async function createApplication(options: AppOptions = {}) {
                 store.saveMeeting(next, now());
                 return next;
               });
-              return json(res, {meeting: viewFor(next, a)});
+              return json(res, {meeting: view(next, a)});
             }
             if (mat[2] && method === 'POST') {
               requireEditor(m, a);
@@ -462,7 +538,7 @@ export async function createApplication(options: AppOptions = {}) {
                 store.saveMeeting(next, now());
                 return next;
               });
-              return json(res, {meeting: viewFor(next, a)});
+              return json(res, {meeting: view(next, a)});
             }
           }
           const fileMatch = rest.match(/^\/files\/(plik_[\w-]+)$/);

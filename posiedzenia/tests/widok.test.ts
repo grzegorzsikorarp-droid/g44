@@ -13,16 +13,20 @@ function adopted() {
   let m = newMeeting(ctx);
   m = apply(m, {type: 'open'}, actor('si'), ctx);
   for (const p of presidium.filter(p => p !== 'si')) m = apply(m, {type: 'presence', who: p, present: true}, actor(p), ctx.tick());
+  // Wersja 2: potwierdzenie zgłoszonej obecności (F9), stwierdzenie kworum (F5) i ogłoszenie wyniku (F2).
+  m = apply(m, {type: 'presence_confirm_all'}, actor('si'), ctx.tick());
+  m = apply(m, {type: 'quorum'}, actor('si'), ctx.tick());
   const point = m.agenda.find(i => i.kind === 'porzadek')!;
   m = apply(m, {type: 'item_start', itemId: point.id}, actor('si'), ctx.tick());
   m = apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: m.ballots.at(-1)!.id, choice: 'za'}, actor(p), ctx.tick());
+  m = apply(m, {type: 'announce', ballotId: m.ballots.at(-1)!.id}, actor('si'), ctx.tick());
   return {ctx, m};
 }
 const voteAll = (m: Meeting, ctx: ReturnType<typeof context>, choice: 'za' | 'przeciw' = 'za') => {
   const id = m.ballots.at(-1)!.id;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: id, choice}, actor(p), ctx.tick());
-  return m;
+  return apply(m, {type: 'announce', ballotId: id}, actor('si'), ctx.tick());
 };
 // Materiał dopisuje do posiedzenia serwer, więc test dodaje go tak samo, z pominięciem poleceń domeny.
 const withMaterial = (m: Meeting, type: MaterialType, title: string) => {
@@ -74,11 +78,12 @@ test('formuły wyniku: „Uchwała podjęta”, „Sprawozdanie przyjęte”, �
   assert.equal(materialTypeOf(m, b), 'sprawozdanie');
   assert.equal(resultLabel(b, materialTypeOf(m, b)), 'Sprawozdanie przyjęte');
 
-  m = apply(m, {type: 'mode_motion', itemId: resolutions.id, mode: 'tajne', minutes: 2}, actor('si'), ctx.tick());
+  m = apply(m, {type: 'mode_motion', itemId: resolutions.id, mode: 'tajne', minutes: 2, proposedBy: 'ag'}, actor('si'), ctx.tick());
   m = voteAll(m, ctx);
   assert.equal(resultLabel(m.ballots.at(-1)!), 'Wniosek o głosowanie tajne przyjęty');
 
-  m = apply(m, {type: 'ballot_open', itemId: resolutions.id, purpose: 'uchwala', subject: 'Uchwała nr 109/IX/2026 w sprawie delegowania przedstawicieli', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
+  // Wersja 2 (F3): po uchwaleniu tajności w punkcie „Podjęcie uchwał” głosowanie jawne odbywa się w innym punkcie.
+  m = apply(m, {type: 'ballot_open', itemId: reports.id, purpose: 'uchwala', subject: 'Uchwała nr 109/IX/2026 w sprawie delegowania przedstawicieli', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
   m = voteAll(m, ctx, 'przeciw');
   assert.equal(resultLabel(m.ballots.at(-1)!, null), 'Uchwała nie została podjęta');
 });

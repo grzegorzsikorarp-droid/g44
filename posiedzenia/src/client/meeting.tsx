@@ -1,7 +1,7 @@
 import {useContext, useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {Command} from '../shared/meeting.ts';
 import {canChairOrgan, isChairman, noticeDays} from '../shared/meeting.ts';
-import {awaitingVote, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
+import {awaitingVote, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
 import {membership, organMembers} from '../shared/roster.ts';
 import type {AgendaItem, Choice, MaterialType, Meeting} from '../shared/types.ts';
 import {request, serverNow, useLive} from './api.ts';
@@ -458,7 +458,7 @@ function CurrentItem(props: {it: AgendaItem; accent: boolean}) {
   return <section class={'oi-card now' + (props.accent ? ' is-teraz' : '')} aria-labelledby={id}>
     <span class="oi-label">Bieżący punkt obrad</span>
     <h2 class="now-title" id={id}><span class="agenda-no">{itemNumber(m.agenda, it.id)}</span><span><TitleLead text={it.title}/></span></h2>
-    {it.presenter && <dl class="facts"><Fact label="Przedstawia">{it.presenter}</Fact></dl>}
+    {it.presenters.length > 0 && <dl class="facts">{presenterGroups(it).map(g => <Fact key={g.kind} label={g.label}>{g.people.join('; ')}</Fact>)}</dl>}
     {materials.length > 0 && <div class="material-list">{materials.map(x => <MaterialLink key={x.id} id={x.id} version={x.version}
       label={same(x.title, it.title) ? (x.type === 'uchwala' ? 'Treść uchwały' : 'Treść materiału') : x.title} meta={`wersja ${x.version}`}/>)}</div>}
   </section>;

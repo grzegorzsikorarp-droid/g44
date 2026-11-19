@@ -16,10 +16,14 @@ function adopted() {
   let m = newMeeting(ctx);
   m = apply(m, {type: 'open'}, actor('si'), ctx);
   for (const p of presidium.filter(p => p !== 'si')) m = apply(m, {type: 'presence', who: p, present: true}, actor(p), ctx.tick());
+  // Wersja 2: potwierdzenie zgłoszonej obecności (F9), stwierdzenie kworum (F5) i ogłoszenie wyniku (F2).
+  m = apply(m, {type: 'presence_confirm_all'}, actor('si'), ctx.tick());
+  m = apply(m, {type: 'quorum'}, actor('si'), ctx.tick());
   const point = m.agenda.find(i => i.kind === 'porzadek')!;
   m = apply(m, {type: 'item_start', itemId: point.id}, actor('si'), ctx.tick());
   m = apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, actor('si'), ctx.tick());
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: m.ballots.at(-1)!.id, choice: 'za'}, actor(p), ctx.tick());
+  m = apply(m, {type: 'announce', ballotId: m.ballots.at(-1)!.id}, actor('si'), ctx.tick());
   return {ctx, m};
 }
 const byTitle = (m: Meeting, title: string) => m.agenda.find(i => i.title === title)!;

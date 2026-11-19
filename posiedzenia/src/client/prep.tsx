@@ -3,7 +3,7 @@ import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks'
 import {parseAgendaText} from '../shared/agenda.ts';
 import type {Command} from '../shared/meeting.ts';
 import {canChairOrgan, isChairman, materialTypeLabel, noticeDays} from '../shared/meeting.ts';
-import {itemNumber, orderedAgenda} from '../shared/rules.ts';
+import {itemNumber, orderedAgenda, presentersText} from '../shared/rules.ts';
 import {organMembers} from '../shared/roster.ts';
 import type {AgendaItem, MaterialType, Meeting, MeetingMode} from '../shared/types.ts';
 import {request} from './api.ts';
@@ -111,7 +111,7 @@ export function AgendaEditor(props: {rowExtra?: (it: AgendaItem) => ComponentChi
         const siblings = m.agenda.filter(i => i.parentId === it.parentId), index = siblings.indexOf(it);
         const no = itemNumber(m.agenda, it.id);
         const count = it.materialIds.length;
-        const meta = [it.presenter ? `Przedstawia ${it.presenter}` : '', count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : ''].filter(Boolean).join(', ');
+        const meta = [presentersText(it), count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : ''].filter(Boolean).join(', ');
         return <li key={it.id} class={'edit-row' + (it.parentId ? ' is-sub' : '')} data-pozycja={it.id}>
           <span class="agenda-no">{no}</span>
           {editing === it.id
@@ -162,15 +162,19 @@ function ItemEditForm(props: {it: AgendaItem; onDone: () => void}) {
   const {it} = props;
   const adopted = m.agendaAdopted;
   const [title, setTitle] = useState(it.title);
-  const [presenter, setPresenter] = useState(it.presenter);
+  // Pole „Przedstawia” zmienia pierwszą osobę z listy `presenters` (F12); pozostałe osoby zostają bez zmian.
+  const [presenter, setPresenter] = useState(it.presenters[0]?.name ?? '');
   const first = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => { first.current?.focus(); }, []);
   return <form class="edit-form" onSubmit={async e => {
     e.preventDefault();
     const cmd: Extract<Command, {type: 'item_edit'}> = {type: 'item_edit', itemId: it.id};
     if (!adopted && title.replace(/\s+/g, ' ').trim() !== it.title) cmd.title = title;
-    if (presenter.trim() !== it.presenter) cmd.presenter = presenter.trim();
-    if (cmd.title === undefined && cmd.presenter === undefined) { props.onDone(); return; }
+    if (presenter.trim() !== (it.presenters[0]?.name ?? '')) {
+      const rest = it.presenters.slice(1);
+      cmd.presenters = presenter.trim() ? [{...(it.presenters[0] ?? {role: '', kind: 'referuje' as const}), name: presenter.trim()}, ...rest] : rest;
+    }
+    if (cmd.title === undefined && cmd.presenters === undefined) { props.onDone(); return; }
     if (await send(cmd)) props.onDone();
   }}>
     {!adopted && <Field label={nounOf(m).name}><input ref={first} value={title} onInput={e => setTitle((e.target as HTMLInputElement).value)} maxLength={400} required/></Field>}

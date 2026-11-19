@@ -1,6 +1,6 @@
 import type {Account, AgendaItem, Ballot, Meeting, Motion, Roster} from '../shared/types.ts';
 import {membership, organMembers, organOf, personName} from '../shared/roster.ts';
-import {choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
+import {choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
 import {noticeDays} from '../shared/meeting.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
@@ -247,7 +247,7 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   const head = `<h3>${t(`${d.procedure ? '' : 'Ad '}${itemNumber(m.agenda, it.id)}. ${it.title}`)}</h3>`;
   const parts: string[] = [];
   if (first && m.openedAt) parts.push(p(openingText(d)));
-  if (it.presenter.trim()) parts.push(p(`Przedstawia ${it.presenter.trim().replace(/\.$/, '')}.`));
+  for (const g of presenterGroups(it)) parts.push(p(`${g.label} ${g.people.join('; ').replace(/\.$/, '')}.`));
   const mats = m.materials.filter(x => it.materialIds.includes(x.id));
   if (mats.length) parts.push(p(`${mats.length === 1 ? 'Materiał' : 'Materiały'} do ${d.procedure ? 'sprawy' : 'punktu'} ${listing(mats.map(x => quoted(x.title)))}.`, 'muted'));
   if (it.note.trim()) parts.push(`<div class="note">${t(it.note.trim()).replace(/\n/g, '<br>')}</div>`);

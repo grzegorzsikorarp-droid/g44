@@ -1,5 +1,5 @@
 import type {ComponentChildren} from 'preact';
-import {itemNumber, materialTypeOf, presentMembers, quorumFor} from '../shared/rules.ts';
+import {itemNumber, materialTypeOf, presentersText, presentMembers, quorumFor} from '../shared/rules.ts';
 import {organMembers} from '../shared/roster.ts';
 import type {Meeting} from '../shared/types.ts';
 import {useLive, useNow} from './api.ts';
@@ -57,7 +57,7 @@ export function RoomScreen({id}: {id: string}) {
     </State>;
   } else if (result) body = <ResultCard b={result} big kind={materialTypeOf(m, result)}/>;
   else if (material) body = <State label="Materiał" title={material.title} lead><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
-  else if (current) body = <State label={`Punkt ${itemNumber(m.agenda, current.id)}`} title={current.title} lead>{current.presenter && <p class="screen-sub">Przedstawia {current.presenter}</p>}</State>;
+  else if (current) body = <State label={`Punkt ${itemNumber(m.agenda, current.id)}`} title={current.title} lead>{current.presenters.length > 0 && <p class="screen-sub">{presentersText(current)}</p>}</State>;
   else body = <State label={meetingState(m.status, true).label} title={m.title} still/>;
   return <main class="screen">
     <header class="screen-head">

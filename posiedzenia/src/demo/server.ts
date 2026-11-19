@@ -1,6 +1,8 @@
 // Wersja próbna: ten sam przebieg posiedzenia co w aplikacji, ale „serwer” działa w przeglądarce.
 // Przechwytuje zapytania /api/… i odpowiada na nie tymi samymi regułami z src/shared.
-import {advance, apply, canView, createMeeting, DomainError, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
+import {advance, apply, canView, createMeeting, DomainError, duplicateMeeting, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
+import {defaultDocTypes, docTypeInput, sortedDocTypes} from '../shared/doctypes.ts';
+import {migrateMeeting} from '../shared/migrate.ts';
 import {bytesToHex, fdhSync, hexToBytes, keyFingerprintSync, modPow, verifySignature} from '../shared/blind.ts';
 import {sha256} from '../shared/sha256.ts';
 import {summary, viewFor} from '../shared/view.ts';
@@ -8,7 +10,7 @@ import {textToHtml} from '../shared/text.ts';
 import {personName} from '../shared/roster.ts';
 import {minutesBody} from '../server/minutes.ts';
 import {brand} from '../client/brand.ts';
-import type {Account, Actor, Choice, MaterialRef, MaterialType, Meeting, Roster} from '../shared/types.ts';
+import type {Account, Actor, Choice, DocType, MaterialRef, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {demoAccounts, demoMeetings, demoRoster} from './seed.ts';
 
 interface Key { n: string; e: string; p: string; q: string; dp: string; dq: string; qi: string }
@@ -16,9 +18,10 @@ interface State {
   version: 1; roster: Roster; accounts: Account[]; current: string | null;
   meetings: Record<string, Meeting>; materials: Record<string, {meetingId: string; versions: Record<number, string>}>;
   keys: Record<string, Key>; secretVotes: Record<string, {t: string; c: Choice}[]>;
+  /** Słownik rodzajów dokumentów (F11); stan zapisany przed wersją 2 dostaje wartości domyślne przy wczytaniu. */
+  docTypes: DocType[];
 }
 const STORE = 'posiedzenia-proba-v1';
-const types: MaterialType[] = ['uchwala', 'rezolucja', 'oswiadczenie', 'deklaracja', 'apel', 'sprawozdanie', 'protokol', 'informacja', 'inny'];
 const encoder = new TextEncoder();
 const hashHtml = (html: string) => bytesToHex(sha256(encoder.encode(html)));
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16));
@@ -39,13 +42,21 @@ export class DemoServer {
   private fresh(): State {
     const now = Date.now();
     const {meetings, materials} = demoMeetings(now, newId, hashHtml);
-    const state: State = {version: 1, roster: demoRoster, accounts: structuredClone(demoAccounts), current: null, meetings: {}, materials: {}, keys: {}, secretVotes: {}};
+    const state: State = {version: 1, roster: demoRoster, accounts: structuredClone(demoAccounts), current: null, meetings: {}, materials: {}, keys: {}, secretVotes: {}, docTypes: structuredClone(defaultDocTypes)};
     for (const m of meetings) state.meetings[m.id] = m;
     for (const x of materials) state.materials[x.ref.id] = {meetingId: x.meetingId, versions: {1: x.html}};
     return state;
   }
   private load(): State | null {
-    try { const raw = localStorage.getItem(STORE); const s = raw ? JSON.parse(raw) as State : null; return s?.version === 1 ? s : null; } catch { return null; }
+    try {
+      const raw = localStorage.getItem(STORE);
+      const s = raw ? JSON.parse(raw) as State : null;
+      if (s?.version !== 1) return null;
+      // Stan zapisany przed wersją 2: słownik rodzajów i nowe pola posiedzeń (migrateMeeting).
+      s.docTypes ??= structuredClone(defaultDocTypes);
+      for (const m of Object.values(s.meetings)) migrateMeeting(m);
+      return s;
+    } catch { return null; }
   }
   private save() { try { localStorage.setItem(STORE, JSON.stringify(this.state)); } catch { /* bez zapisu — próba działa do zamknięcia strony */ } }
   reset() { this.state = this.fresh(); this.save(); }
@@ -72,7 +83,7 @@ export class DemoServer {
 
   private context(): Context {
     return {
-      roster: this.state.roster, now: Date.now(), newId,
+      roster: this.state.roster, now: Date.now(), newId, docTypes: this.state.docTypes,
       secret: {
         openKey: id => {
           const key = this.pool.shift() ?? fail('Przeglądarka przygotowuje klucz głosowania tajnego. Spróbuj ponownie za kilka sekund.', 409);
@@ -113,18 +124,33 @@ export class DemoServer {
     return m;
   }
   private put(m: Meeting) { this.state.meetings[m.id] = m; this.save(); return m; }
+  private view(m: Meeting, a: Actor) { return viewFor(m, a, this.state.roster); }
+  // F11: rodzaj materiału ze słownika, włączony; bez rodzaju „inny”, jak dotąd w wersji próbnej.
+  private materialType(raw: unknown): MaterialType {
+    const wanted = typeof raw === 'string' ? raw.trim() : '';
+    if (!wanted) return 'inny';
+    const found = this.state.docTypes.find(t => t.id === wanted) ?? fail('Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+    if (!found.active) fail('Ten rodzaj dokumentu jest wyłączony. Wybierz inny rodzaj.');
+    return found.id;
+  }
 
   minutes(id: string) {
     const actor = this.actor() ?? fail('Wybierz osobę.', 401);
     return minutesBody(this.meetingFor(id, actor), this.state.roster, this.state.accounts, Date.now(), {office: brand.officeLower, regulation: brand.regulation});
   }
 
-  // Skróty próby: obecność wszystkich i głosy pozostałych osób.
+  // Skróty próby: obecność wszystkich i głosy pozostałych osób. Obecność jest potwierdzona (F9): każda osoba zgłasza ją
+  // sama, a potwierdza osoba prowadząca obrady, a gdy nikt nie prowadzi, biuro.
   everyonePresent(meetingId: string) {
     let m = this.state.meetings[meetingId];
     if (!m || m.kind !== 'posiedzenie' || (m.status !== 'trwa' && m.status !== 'przerwa')) return 'Najpierw otwórz posiedzenie.';
     for (const ms of this.state.roster.memberships.filter(x => x.organ === m.organ)) {
-      if (m.attendance[ms.personId] !== 'obecny') m = apply(m, {type: 'presence', who: ms.personId, present: true}, this.actorFor(ms.personId), this.context());
+      if (m.attendance[ms.personId] !== 'obecny' && m.attendance[ms.personId] !== 'zgloszony') m = apply(m, {type: 'presence', who: ms.personId, present: true}, this.actorFor(ms.personId), this.context());
+    }
+    if (Object.values(m.attendance).includes('zgloszony')) {
+      const office = this.state.accounts.find(a => a.kind === 'biuro' && !a.disabled)!;
+      const confirmer = m.chair.current ? this.actorFor(m.chair.current) : {account: office, personId: null, name: office.displayName};
+      m = apply(m, {type: 'presence_confirm_all'}, confirmer, this.context());
     }
     this.put(m);
     return '';
@@ -213,7 +239,31 @@ export class DemoServer {
           date: /^\d{4}-\d{2}-\d{2}$/.test(input.date) ? input.date : new Date().toISOString().slice(0, 10), time: /^\d{2}:\d{2}$/.test(input.time) ? input.time : '10:00',
           place: String(input.place ?? ''), mode: kind === 'procedura' ? 'zdalne' : input.mode === 'zdalne' ? 'zdalne' : 'stacjonarne', createdBy: a.name, now: Date.now(), newId, endsAt: Number(input.endsAt) || undefined});
         if (!isOrganizer(this.state.roster, m, a)) fail('Posiedzenie przygotowuje biuro, przewodniczący lub wiceprzewodniczący.', 403);
-        return json({meeting: viewFor(this.put(m), a)}, 201);
+        return json({meeting: this.view(this.put(m), a)}, 201);
+      }
+      if (path === '/api/doc-types') {
+        if (method === 'GET') return json({docTypes: sortedDocTypes(this.state.docTypes)});
+        if (method === 'POST') {
+          if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+          this.state.docTypes.push(docTypeInput(input ?? {}, this.state.docTypes));
+          this.save();
+          return json({docTypes: sortedDocTypes(this.state.docTypes)}, 201);
+        }
+      }
+      const dt = path.match(/^\/api\/doc-types\/([a-z0-9_]{1,40})$/);
+      if (dt && (method === 'PUT' || method === 'DELETE')) {
+        if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+        const at = this.state.docTypes.findIndex(t => t.id === dt[1]);
+        if (at < 0) fail('Nie znaleziono rodzaju dokumentu.', 404);
+        if (method === 'PUT') this.state.docTypes[at] = docTypeInput(input ?? {}, this.state.docTypes, this.state.docTypes[at]);
+        else {
+          const id = dt[1];
+          const used = Object.values(this.state.meetings).some(m => m.materials.some(x => x.type === id) || m.ballots.some(b => b.docType === id) || m.agenda.some(i => i.docType === id));
+          if (used) fail('Ten rodzaj jest już użyty w materiale, punkcie albo głosowaniu. Możesz go tylko wyłączyć.', 409);
+          this.state.docTypes.splice(at, 1);
+        }
+        this.save();
+        return json({docTypes: sortedDocTypes(this.state.docTypes)});
       }
       const mm = path.match(/^\/api\/meetings\/([\w-]+)(\/.*)?$/);
       if (!mm) fail('Nie znaleziono tej funkcji.', 404);
@@ -221,7 +271,7 @@ export class DemoServer {
       if (rest === '' && method === 'GET') {
         const m = this.meetingFor(id, a), etag = `"${m.revision}-${a.account.id}"`;
         if (headers.get('If-None-Match') === etag) return new Response(null, {status: 304, headers: {ETag: etag, 'X-Server-Now': String(Date.now())}});
-        return json({meeting: viewFor(m, a)}, 200, {ETag: etag});
+        return json({meeting: this.view(m, a)}, 200, {ETag: etag});
       }
       if (rest === '' && method === 'DELETE') {
         const m = this.meetingFor(id, a);
@@ -230,7 +280,19 @@ export class DemoServer {
         return json({ok: true});
       }
       if (rest === '/command' && method === 'POST') {
-        return json({meeting: viewFor(this.put(apply(this.meetingFor(id, a), input as Command, a, this.context())), a)});
+        return json({meeting: this.view(this.put(apply(this.meetingFor(id, a), input as Command, a, this.context())), a)});
+      }
+      if (rest === '/duplicate' && method === 'POST') {
+        const src = this.meetingFor(id, a);
+        if (!isOrganizer(this.state.roster, src, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
+        const {meeting: copy, materialMap} = duplicateMeeting(src, {id: newId(), now: Date.now(), newId, createdBy: a.name});
+        for (const [oldId, newRef] of materialMap) {
+          const old = src.materials.find(x => x.id === oldId)!, html = this.state.materials[oldId]?.versions[old.version] ?? '';
+          this.state.materials[newRef] = {meetingId: copy.id, versions: {1: html}};
+          const ref = copy.materials.find(x => x.id === newRef)!;
+          ref.hash = hashHtml(html); ref.size = html.length; ref.fileId = null; ref.fileName = null;
+        }
+        return json({meeting: this.view(this.put(copy), a)}, 201);
       }
       if (rest === '/secret/issue' && method === 'POST') {
         const next = secretIssue(this.meetingFor(id, a), String(input.ballotId), a, this.context());
@@ -249,14 +311,14 @@ export class DemoServer {
         const text = String(input.text ?? '');
         if (!text.trim()) fail('Wklej treść materiału.');
         const html = textToHtml(text), title = String(input.title ?? '').trim() || 'Materiał';
-        const ref: MaterialRef = {id: newId(), title, type: types.includes(input.type) ? input.type : 'inny', number: String(input.number ?? ''), version: 1, hash: hashHtml(html), size: html.length, fileId: null, fileName: null, createdAt: Date.now()};
+        const ref: MaterialRef = {id: newId(), title, type: this.materialType(input.type), number: String(input.number ?? ''), version: 1, hash: hashHtml(html), size: html.length, fileId: null, fileName: null, createdAt: Date.now()};
         m.materials.push(ref);
         this.state.materials[ref.id] = {meetingId: m.id, versions: {1: html}};
         const item = m.agenda.find(i => i.id === input.itemId);
         if (item) item.materialIds.push(ref.id);
         m.log.push({at: Date.now(), text: `Dodano materiał „${title}”.`, by: a.name});
         m.revision++;
-        return json({meeting: viewFor(this.put(m), a), created: [ref.id]}, 201);
+        return json({meeting: this.view(this.put(m), a), created: [ref.id]}, 201);
       }
       const mat = rest.match(/^\/materials\/([\w-]+)(\/version)?$/);
       if (mat) {
@@ -274,7 +336,7 @@ export class DemoServer {
           next.materials = next.materials.filter(x => x.id !== ref.id);
           for (const it of next.agenda) it.materialIds = it.materialIds.filter(x => x !== ref.id);
           next.revision++;
-          return json({meeting: viewFor(this.put(next), a)});
+          return json({meeting: this.view(this.put(next), a)});
         }
         if (mat[2] && method === 'POST') {
           if (init?.body instanceof FormData) fail('W wersji próbnej nową wersję wklej jako tekst.');
@@ -283,7 +345,7 @@ export class DemoServer {
           target.version++; target.hash = hashHtml(html); target.size = html.length;
           store.versions[target.version] = html;
           next.revision++;
-          return json({meeting: viewFor(this.put(next), a)});
+          return json({meeting: this.view(this.put(next), a)});
         }
       }
       return fail('Ta funkcja nie jest dostępna w wersji próbnej.', 404);

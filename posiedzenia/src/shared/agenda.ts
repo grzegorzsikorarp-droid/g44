@@ -14,7 +14,7 @@ export const presidiumTemplate: [string, ItemKind][] = [
 ];
 
 export function newItem(id: string, title: string, kind: ItemKind, parentId: string | null = null): AgendaItem {
-  return {id, parentId, title: cleanTitle(title), kind, status: 'oczekuje', materialIds: [], note: '', presenter: ''};
+  return {id, parentId, title: cleanTitle(title), kind, status: 'oczekuje', materialIds: [], note: '', presenters: []};
 }
 
 // Końcowa kropka, średnik albo dwukropek znika, chyba że kropka kończy skrót (np. „2026 r.”, „ust.”, „pkt.”).
