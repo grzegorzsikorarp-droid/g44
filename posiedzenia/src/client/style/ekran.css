@@ -43,3 +43,21 @@
 .screen .result .oi-stat b { font-size: clamp(3rem, min(2rem + 5vw, 11vh), 7.5rem); }
 .screen .result .oi-stat span { font-size: clamp(.8rem, .6rem + .6vw, 1.4rem); }
 .screen .result-meta { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); }
+/* Krótszy tytuł nad listą (projekt porządku obrad), żeby lista mieściła się na ekranie */
+.screen-body h1.is-small { font-size: clamp(1.6rem, min(1rem + 2.4vw, 5.5vh), 3.6rem); }
+/* Osoby przy punkcie (F12): etykieta nad listą osób, każda osoba w osobnym wierszu, wyśrodkowane */
+.screen-people { justify-content: center; gap: 1.2vh 5vw; }
+.screen-people .fact { text-align: center; }
+.screen-people .fact dt { font-size: clamp(.8rem, .55rem + .5vw, 1.25rem); }
+.screen-people .fact dd { font-size: clamp(1.1rem, .8rem + 1vw, 2rem); line-height: 1.3; }
+.screen-people .person-line { display: block; }
+/* Projekt porządku obrad przy jego przyjmowaniu (F8): numer w osobnej kolumnie, podpunkty z wcięciem */
+.screen-draft { list-style: none; margin: 0; padding: 0; width: min(1200px, 100%); text-align: left; font-size: clamp(1.05rem, min(.7rem + 1.3vw, 3.4vh), 2.1rem); line-height: 1.25; color: var(--tekst-mocny); }
+.screen-draft.is-long { font-size: clamp(.95rem, min(.6rem + 1vw, 2.6vh), 1.6rem); }
+.screen-draft li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 0 .5em; padding: .3em 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.screen-draft li:first-child { border-top: 0; }
+.screen-draft li.is-sub { margin-left: 3.1em; }
+.screen-draft__no { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Spotkanie robocze (F5): znacznik pod tytułem posiedzenia i zdanie w stopce */
+.screen-working { display: inline-flex; margin-top: var(--odstep-1); }
+.screen-foot-note { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); color: var(--tekst-drugorzedny); }

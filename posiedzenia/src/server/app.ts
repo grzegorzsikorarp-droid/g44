@@ -14,7 +14,7 @@ import {advance, apply, canView, createMeeting, DomainError, duplicateMeeting, i
 import {newItem} from '../shared/agenda.ts';
 import {docTypeInput, sortedDocTypes} from '../shared/doctypes.ts';
 import {personName} from '../shared/roster.ts';
-import {summary, viewFor} from '../shared/view.ts';
+import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import type {Account, Actor, MaterialRef, MaterialType, Meeting} from '../shared/types.ts';
 
 export const VERSION = '0.1.0';
@@ -437,12 +437,14 @@ export async function createApplication(options: AppOptions = {}) {
           if (rest === '/protokol' && method === 'GET') {
             const m = meetingFor(id, a);
             // Plik do edycji w Wordzie: ten sam tekst projektu protokołu jako dokument HTML pobierany z rozszerzeniem .doc.
+            // Słownik rodzajów (F11) i wyniki, których ta osoba jeszcze nie widzi (F2), jak w widoku posiedzenia.
+            const look = {...minutesLook(), options: {docTypes: store.docTypes(), hideUnannounced: !seesUnannounced(m, a, store.roster())}};
             if (url.searchParams.get('format') === 'doc') {
               res.writeHead(200, {'Content-Type': 'application/msword', 'Content-Disposition': `attachment; filename="${minutesFileName(m)}"`, 'Cache-Control': 'private, no-store'});
-              return res.end(minutesDoc(m, store.roster(), accounts(), now(), minutesLook()));
+              return res.end(minutesDoc(m, store.roster(), accounts(), now(), look));
             }
             res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store'});
-            return res.end(minutesHtml(m, store.roster(), accounts(), now(), minutesLook()));
+            return res.end(minutesHtml(m, store.roster(), accounts(), now(), look));
           }
           if (rest === '/materials' && method === 'POST') {
             requireEditor(meetingFor(id, a), a);

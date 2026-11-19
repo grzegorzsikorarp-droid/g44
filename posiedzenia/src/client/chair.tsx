@@ -98,12 +98,17 @@ function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: stri
   if (m.status === 'przerwa') return {text: 'przerwę w obradach', other: false};
   const open = m.ballots.find(b => b.status === 'otwarte');
   if (open) return {text: open.purpose === 'proba' ? 'trwające głosowanie próbne' : 'trwające głosowanie', other: false};
+  // Wynik w sprawie ekran sali pokazuje dopiero po ogłoszeniu (F2), a wynik głosowania próbnego od razu (F1).
   const result = shown?.kind === 'wynik' ? m.ballots.find(b => b.id === shown.id) : undefined;
-  if (result) return {text: `wynik głosowania nr ${result.number}, także na telefonach`, other: true};
+  if (result) return {text: result.purpose === 'proba' ? 'wynik głosowania próbnego' : result.announcedAt ? `wynik głosowania nr ${result.number}, także na telefonach` : `zakończenie głosowania nr ${result.number}, bez wyniku do czasu ogłoszenia`, other: true};
+  const ended = shown?.kind === 'glosowanie' ? m.ballots.find(b => b.id === shown.id && b.status === 'zamkniete' && (b.purpose === 'proba' || !b.announcedAt)) : undefined;
+  if (ended) return {text: ended.purpose === 'proba' ? 'wynik głosowania próbnego' : `zakończenie głosowania nr ${ended.number}, bez wyniku do czasu ogłoszenia`, other: true};
   const material = shown?.kind === 'material' ? m.materials.find(x => x.id === shown.id) : undefined;
   if (material) return {text: `materiał „${material.title}”, także na telefonach`, other: true, material: material.id};
   const point = shown?.kind === 'punkt' ? m.agenda.find(i => i.id === shown.id) : undefined;
   if (point && point.id !== current?.id) return {text: `punkt ${itemNumber(m.agenda, point.id)}`, other: true, item: point.id};
+  // F8: przy przyjmowaniu porządku sala widzi projekt porządku obrad ze zmianami na żywo.
+  if (current?.kind === 'porzadek' && draftLive(m)) return {text: 'projekt porządku obrad ze zmianami na żywo', other: false, item: current.id};
   if (current) return {text: `bieżący punkt ${itemNumber(m.agenda, current.id)}`, other: false, item: current.id};
   return {text: 'tytuł posiedzenia', other: false};
 }

@@ -46,10 +46,11 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
       <Fold title="Jak przeprowadzić próbne posiedzenie?">
         <ol class="demo-help">
           <li>Wybierz Przewodniczącą <strong>Barbarę Wiśniewską</strong>, otwórz „Posiedzenie Prezydium (próbne)” i kliknij <strong>Otwórz posiedzenie</strong>.</li>
-          <li>Zmień osobę na członka, otwórz posiedzenie i kliknij <strong>Potwierdzam obecność</strong> albo użyj skrótu „Wszyscy członkowie obecni”. Zgłoszoną obecność potwierdza Przewodnicząca przyciskiem <strong>Potwierdź wszystkie zgłoszenia</strong>.</li>
-          <li>Wróć do Przewodniczącej. W punkcie 1 kliknij <strong>Stwierdzam kworum</strong>, w punkcie 2 <strong>Rozpocznij ten punkt</strong>, a potem <strong>Otwórz głosowanie</strong>. <strong>Głosowanie próbne</strong> w karcie „Obrady” sprawdzi, czy głosowanie działa.</li>
-          <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Potem jako Przewodnicząca kliknij <strong>Ogłoś wynik głosowania</strong>.</li>
-          <li>W punktach 5.1–5.4 złóż wniosek o głosowanie tajne i wniosek o reasumpcję.</li>
+          <li>Zmień osobę na członka, otwórz posiedzenie i kliknij <strong>Potwierdzam obecność</strong>. Na posiedzeniu stacjonarnym to zgłoszenie, które potwierdza Przewodnicząca przyciskiem <strong>Potwierdź obecność</strong> albo <strong>Potwierdź wszystkie zgłoszenia</strong>. Skrót „Wszyscy członkowie obecni” zgłasza i od razu potwierdza obecność pozostałych osób.</li>
+          <li>Jako Przewodnicząca kliknij <strong>Głosowanie próbne</strong> w karcie „Obrady” i zagłosuj. Próba sprawdza, czy głosowanie działa, nie ma skutków, a jej wynik widać od razu.</li>
+          <li>W punkcie 1 kliknij <strong>Stwierdzam kworum</strong>. W punkcie 2 kliknij <strong>Rozpocznij ten punkt</strong>. Projekt porządku zmienisz, przeciągając kafelki, a członkowie widzą zmiany od razu. Potem kliknij <strong>Otwórz głosowanie</strong>.</li>
+          <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Członkowie widzą wynik dopiero wtedy, gdy Przewodnicząca kliknie <strong>Ogłoś wynik głosowania</strong>, i dopiero potem obrady idą dalej.</li>
+          <li>W punktach 5.1–5.4 złóż wniosek o głosowanie tajne, wskazując, kto go zgłasza, i wniosek o reasumpcję. Projekt protokołu otworzysz w szczegółach posiedzenia.</li>
         </ol>
       </Fold>
       {confirmReset

@@ -1,7 +1,7 @@
 import {createMeeting} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
 import {textToHtml} from '../shared/text.ts';
-import type {Account, MaterialRef, Meeting, Roster} from '../shared/types.ts';
+import type {Account, MaterialRef, MaterialType, Meeting, Presenter, Roster} from '../shared/types.ts';
 
 // Dane fikcyjne wersji próbnej — żadna z tych osób nie istnieje.
 const people: [string, string, string, string, boolean][] = [
@@ -49,14 +49,33 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   const today = new Date(now - new Date(now).getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const notice = new Date(now - 9 * 86400000).toISOString().slice(0, 10);
   const materials: {meetingId: string; ref: MaterialRef; html: string}[] = [];
-  const material = (meetingId: string, title: string, number: string, text: string) => {
+  const material = (meetingId: string, title: string, number: string, text: string, type: MaterialType = 'uchwala') => {
     const html = textToHtml(text);
-    const ref: MaterialRef = {id: newId(), title, type: 'uchwala', number, version: 1, hash: hash(html), size: html.length, fileId: null, fileName: null, createdAt: now};
+    const ref: MaterialRef = {id: newId(), title, type, number, version: 1, hash: hash(html), size: html.length, fileId: null, fileName: null, createdAt: now};
     materials.push({meetingId, ref, html});
     return ref;
   };
   const meeting: Meeting = createMeeting({id: newId(), organ: 'prezydium', kind: 'posiedzenie', title: 'Posiedzenie Prezydium (próbne)', date: today, time: '10:00', place: 'Sala posiedzeń (przykład)', mode: 'stacjonarne', createdBy: 'Biuro', now, newId});
   meeting.noticeDate = notice;
+  // Osoby przy punktach (F12): funkcje ze składu fikcyjnego, a sprawozdanie referuje osoba z głosem doradczym.
+  const secretary: Presenter = {name: 'Marta Kaczmarek', role: 'Sekretarz', kind: 'referuje'};
+  meeting.agenda.find(i => i.kind === 'protokol')!.presenters = [secretary];
+  // Sprawy bieżące z rodzajami dokumentów ze słownika (F11): sprawozdanie i stanowisko, każde z formułą wyniku.
+  const current = meeting.agenda.find(i => i.kind === 'sprawozdania')!;
+  const report = material(meeting.id, 'Sprawozdanie z kontroli finansowej za III kwartał 2026 r. (przykład)', '',
+    'Sprawozdanie z kontroli finansowej (dane fikcyjne)\n\n1. Kontrola objęła wydatki w III kwartale 2026 r.\n2. Nie stwierdzono nieprawidłowości.', 'sprawozdanie');
+  const position = material(meeting.id, 'Stanowisko w sprawie bezpiecznej obsady dyżurów (przykład)', '',
+    'Prezydium Okręgowej Rady (dane fikcyjne)\n\nPrezydium zwraca uwagę, że obsada dyżurów powinna odpowiadać potrzebom pacjentów (przykład).', 'stanowisko');
+  meeting.materials.push(report, position);
+  const reportItem = newItem(newId(), report.title, 'sprawa', current.id);
+  reportItem.materialIds = [report.id];
+  reportItem.docType = 'sprawozdanie';
+  reportItem.presenters = [{name: 'Halina Kowalczyk', role: 'Przewodnicząca Okręgowej Komisji Rewizyjnej', kind: 'referuje'}];
+  const positionItem = newItem(newId(), position.title, 'sprawa', current.id);
+  positionItem.materialIds = [position.id];
+  positionItem.docType = 'stanowisko';
+  positionItem.presenters = [{name: 'Ewa Dąbrowska', role: 'II Wiceprzewodnicząca', kind: 'prowadzi'}, {name: 'Joanna Szymańska', role: 'Członek Prezydium', kind: 'referuje'}];
+  meeting.agenda.splice(meeting.agenda.indexOf(current) + 1, 0, reportItem, positionItem);
   const resolutions = meeting.agenda.find(i => i.kind === 'uchwaly')!;
   const acts: [string, string, string][] = [
     ['117', 'Katarzyna Nowicka', '1170001P'], ['118', 'Magdalena Pawlak', '1180002P'], ['119', 'Natalia Michalska', '1190003P'],
@@ -68,6 +87,7 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
     meeting.materials.push(ref);
     const sub = newItem(newId(), title, 'sprawa', resolutions.id);
     sub.materialIds = [ref.id];
+    sub.presenters = [secretary];
     meeting.agenda.splice(at++, 0, sub);
   }
   const patronage = material(meeting.id, 'Uchwała nr 108/IX/2026 w sprawie objęcia patronatem konferencji', '108/IX/2026',
@@ -75,6 +95,7 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   meeting.materials.push(patronage);
   const sub = newItem(newId(), patronage.title, 'sprawa', resolutions.id);
   sub.materialIds = [patronage.id];
+  sub.presenters = [{name: 'Tomasz Lewandowski', role: 'I Wiceprzewodniczący', kind: 'referuje'}];
   meeting.agenda.splice(at, 0, sub);
 
   const procedure: Meeting = createMeeting({id: newId(), organ: 'prezydium', kind: 'procedura', title: 'Głosowanie między posiedzeniami (próbne)', date: today, time: '00:00', place: '', mode: 'zdalne', createdBy: 'Biuro', now, newId, endsAt: now + 4 * 3600000});

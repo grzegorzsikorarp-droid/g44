@@ -5,10 +5,10 @@ import {defaultDocTypes, docTypeInput, sortedDocTypes} from '../shared/doctypes.
 import {migrateMeeting} from '../shared/migrate.ts';
 import {bytesToHex, fdhSync, hexToBytes, keyFingerprintSync, modPow, verifySignature} from '../shared/blind.ts';
 import {sha256} from '../shared/sha256.ts';
-import {summary, viewFor} from '../shared/view.ts';
+import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import {textToHtml} from '../shared/text.ts';
 import {personName} from '../shared/roster.ts';
-import {minutesBody} from '../server/minutes.ts';
+import {minutesBody, minutesTitle} from '../server/minutes.ts';
 import {brand} from '../client/brand.ts';
 import type {Account, Actor, Choice, DocType, MaterialRef, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {demoAccounts, demoMeetings, demoRoster} from './seed.ts';
@@ -136,7 +136,14 @@ export class DemoServer {
 
   minutes(id: string) {
     const actor = this.actor() ?? fail('Wybierz osobę.', 401);
-    return minutesBody(this.meetingFor(id, actor), this.state.roster, this.state.accounts, Date.now(), {office: brand.officeLower, regulation: brand.regulation});
+    const m = this.meetingFor(id, actor);
+    return minutesBody(m, this.state.roster, this.state.accounts, Date.now(), {office: brand.officeLower, regulation: brand.regulation},
+      {docTypes: this.state.docTypes, hideUnannounced: !seesUnannounced(m, actor, this.state.roster)});
+  }
+
+  minutesTitle(id: string) {
+    const actor = this.actor() ?? fail('Wybierz osobę.', 401);
+    return minutesTitle(this.meetingFor(id, actor));
   }
 
   // Skróty próby: obecność wszystkich i głosy pozostałych osób. Obecność jest potwierdzona (F9): każda osoba zgłasza ją

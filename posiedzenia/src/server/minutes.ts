@@ -1,6 +1,7 @@
-import type {Account, AgendaItem, Ballot, Meeting, Motion, Roster} from '../shared/types.ts';
+import type {Account, AgendaItem, Ballot, DocType, Meeting, Motion, Roster} from '../shared/types.ts';
 import {membership, organMembers, organOf, personName} from '../shared/roster.ts';
-import {choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel} from '../shared/rules.ts';
+import {ballotDocType, choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenceOf, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resultLabel, resultPendingText, unannounced} from '../shared/rules.ts';
+import {defaultDocTypes} from '../shared/doctypes.ts';
 import {noticeDays} from '../shared/meeting.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
@@ -8,6 +9,8 @@ import {typo} from '../shared/typo.ts';
 // Projekt protokołu: dokument organu z nagłówkiem, rozdziałami I–VI, przebiegiem obrad z głosowaniami w punktach,
 // podpisami i stopką. Ten sam tekst trafia na stronę do druku, do pliku do edycji w Wordzie i do okna wersji próbnej,
 // dlatego nie zawiera nazw zależnych od wersji (podaje je wywołujący w `names` i `look`).
+// Spotkanie robocze bez kworum (F5) ma zamiast protokołu notatkę: bez rozdziału „Podjęte uchwały”, z podpisem osoby
+// prowadzącej i osoby sporządzającej notatkę. Głosowania próbne (F1) są tylko w zdaniu w rozdziale I.
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]!);
 /** Tekst dokumentu: polska typografia (twarde spacje jak w interfejsie), potem znaki HTML. */
@@ -30,23 +33,42 @@ const addDays = (iso: string, days: number) => {
 const quoted = (text: string) => `„${text.replace(/„/g, '»').replace(/”/g, '«')}”`;
 // Dane w nawiasie: nawias wewnątrz nawiasu staje się kwadratowy, np. „(wyznaczenie przez przewodniczącego [§ 16])”.
 const inParens = (text: string) => `(${text.replace(/\(/g, '[').replace(/\)/g, ']')})`;
+/** Powód do protokołu bez kropki na końcu (kropka stoi po cudzysłowie). */
+const reasonText = (reason: string) => quoted(reason.trim().replace(/\.$/, ''));
 const listing = (items: string[]) => items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} i ${items[items.length - 1]}`;
 const modeWord = (mode: Ballot['mode']) => mode === 'tajne' ? 'tajne' : mode === 'imienne' ? 'imienne' : 'jawne';
 const DOTS = '……';
 
 /** Dzień posiedzenia w dokumencie: z otwarcia, a przed otwarciem z daty posiedzenia (RRRR-MM-DD). */
 export const minutesDay = (m: Meeting) => m.openedAt ? dayOf(m.openedAt) : m.date;
+/** Spotkanie robocze (F5): dokumentem jest notatka zamiast protokołu. */
+const isNote = (m: Pick<Meeting, 'kind' | 'working'>) => m.kind === 'posiedzenie' && !!m.working;
+/** Nazwa dokumentu w oknie, na pasku i w tytule strony: „Projekt protokołu” albo „Projekt notatki”. */
+export const minutesTitle = (m: Pick<Meeting, 'kind' | 'working'>) => isNote(m) ? 'Projekt notatki' : 'Projekt protokołu';
 /** Nazwa pliku do edycji w Wordzie, np. „projekt-protokolu-prezydium-2026-11-19.doc”. */
-export const minutesFileName = (m: Meeting) => `projekt-protokolu-${m.kind === 'procedura' ? 'glosowanie' : m.organ}-${minutesDay(m)}.doc`;
+export const minutesFileName = (m: Meeting) => `projekt-${isNote(m) ? 'notatki' : 'protokolu'}-${m.kind === 'procedura' ? 'glosowanie' : m.organ}-${minutesDay(m)}.doc`;
 /** Nagłówek stron od drugiej przy wydruku. */
-export const minutesPageHeader = (m: Meeting) => `Projekt protokołu, ${m.kind === 'procedura' ? 'głosowanie między posiedzeniami' : 'posiedzenie'} z dnia ${shortDate(minutesDay(m))}`;
+export const minutesPageHeader = (m: Meeting) => isNote(m)
+  ? `Projekt notatki, spotkanie robocze z dnia ${shortDate(minutesDay(m))}`
+  : `Projekt protokołu, ${m.kind === 'procedura' ? 'głosowanie między posiedzeniami' : 'posiedzenie'} z dnia ${shortDate(minutesDay(m))}`;
 
 /** Nazwy zależne od wersji: biuro w bierniku („zapisane przez biuro Izby”) i regulamin w dopełniaczu. */
 export interface MinutesNames { office?: string; regulation?: string }
+/**
+ * Dane zależne od osoby i słownika: rodzaje dokumentów (F11, wymóg głosowania w punktach; bez nich rodzaje domyślne)
+ * i ukrycie wyników, których osoba jeszcze nie widzi (F2, `hideUnannounced` dla osób bez `seesUnannounced`).
+ */
+export interface MinutesOptions { docTypes?: DocType[]; hideUnannounced?: boolean }
 
 interface Doc {
   m: Meeting; roster: Roster; accounts: Account[]; procedure: boolean; office: string; regulation: string;
   placed: Map<string, Ballot[]>; loose: Ballot[];
+  /** Głosowania próbne (F1): tylko zdanie w rozdziale I, poza przebiegiem obrad i wykazem uchwał. */
+  trials: Ballot[];
+  /** Notatka ze spotkania roboczego (F5) zamiast protokołu. */
+  note: boolean;
+  /** Słownik rodzajów dokumentów (F11) i głosowania z wynikiem ukrytym przed tą osobą (F2). */
+  types: DocType[]; hidden: Set<string>;
   /** Plik do edycji w Wordzie: fakty, porządek i podpisy w prostszym zapisie, który edytory tekstu odczytują wiernie. */
   word: boolean;
 }
@@ -78,6 +100,25 @@ function chairAt(m: Meeting, at: number) {
   for (const c of m.chair.changes) if (c.at <= at) current = c.to;
   return current;
 }
+/**
+ * Kto zapisał albo potwierdził obecność, w bierniku bez odmiany nazwiska: „osobę prowadzącą obrady (Anna Nowak)”,
+ * „członka Prezydium (…)”, „inną osobę (…)” albo biuro („biuro Izby”). Imię i nazwisko stoi w nawiasie w mianowniku.
+ */
+function byWhom(d: Doc, name: string, at: number) {
+  const {m, roster} = d;
+  const chair = chairAt(m, at);
+  if (chair && name === personName(roster, chair)) return `osobę prowadzącą obrady (${name})`;
+  const person = roster.persons.find(x => x.name === name);
+  if (person) return membership(roster, m.organ, person.id) ? `członka Prezydium (${name})` : `inną osobę (${name})`;
+  return d.office;
+}
+/** Członkowie organu obecni w danej chwili według listy obecności (ostatnie przybycie albo wyjście przed tą chwilą). */
+function presentAt(d: Doc, at: number) {
+  return organMembers(d.roster, d.m.organ).filter(ms => {
+    const last = [...d.m.presenceLog].reverse().find(e => e.who === ms.personId && !e.guest && e.at <= at && (e.type === 'przybycie' || e.type === 'wyjscie'));
+    return last?.type === 'przybycie';
+  }).length;
+}
 /** Najgłębszy punkt porządku, który trwał w danej chwili (rozpoczęty i niezakończony przed nią). */
 function itemAt(m: Meeting, at: number) {
   let found: AgendaItem | undefined;
@@ -104,12 +145,14 @@ function homeOf(m: Meeting, b: Ballot, depth = 0): string | null {
   return null;
 }
 
-const notVoted = new Set<Ballot['purpose']>(['porzadek', 'zmiana_porzadku', 'protokol', 'tryb', 'reasumpcja', 'wniosek']);
-/** Głosowanie nad uchwałą: materiał rodzaju „uchwała”, a bez materiału przedmiot „Uchwała…”, „Projekt uchwały…”. */
+const notVoted = new Set<Ballot['purpose']>(['porzadek', 'zmiana_porzadku', 'protokol', 'tryb', 'reasumpcja', 'wniosek', 'proba']);
+/**
+ * Głosowanie nad uchwałą: rodzaj sprawy zapisany przy otwarciu (F11), a w starszych głosowaniach materiał rodzaju
+ * „uchwała”, a bez materiału przedmiot „Uchwała…”, „Projekt uchwały…”.
+ */
 function isResolution(m: Meeting, b: Ballot) {
   if (notVoted.has(b.purpose)) return false;
-  const kind = materialTypeOf(m, b);
-  return kind ? kind === 'uchwala' : resolutionSubject.test(b.subject.trim());
+  return ballotDocType(m, b) === 'uchwala';
 }
 
 /** „Głosowało … osób” i podobne: czasownik zgodny z liczebnikiem, bez rodzaju gramatycznego osób. */
@@ -122,7 +165,7 @@ function ballotEnd(b: Ballot) {
   // wszyscy obecni, a nie wszyscy uprawnieni (osoby, które wyszły, wymienia zdanie absentText).
   if (b.closeReason === 'wszyscy') return b.result && b.result.cast < b.result.eligible ? 'zakończone, gdy zagłosowali wszyscy obecni' : 'zakończone, gdy zagłosowali wszyscy uprawnieni';
   if (b.closeReason === 'czas') return 'zakończone po upływie wyznaczonego czasu';
-  if (b.closeReason === 'prowadzacy') return b.remote ? 'zakończone przed terminem' : 'zakończone przez osobę prowadzącą obrady';
+  if (b.closeReason === 'prowadzacy') return b.remote ? 'zakończone przed terminem z policzeniem głosów' : 'zakończone przez osobę prowadzącą obrady';
   return 'zakończone';
 }
 /** Osoby, które wyszły z posiedzenia w trakcie głosowania i nie oddały głosu (czasownik zgodny z „osoba”, bez rodzaju osób). */
@@ -137,6 +180,22 @@ function ballotSpan(b: Ballot) {
   return dayOf(b.openedAt) === dayOf(end) ? `od godz. ${time(b.openedAt)} do godz. ${time(end)}` : `od ${shortAt(b.openedAt)} do ${shortAt(end)}`;
 }
 
+/** Głosowanie między posiedzeniami: kto oddał głos albo pobrał kartę (bez wyborów, poza wykazem imiennym). */
+function remoteParticipation(d: Doc, b: Ballot) {
+  const names = (ids: string[]) => ids.map(id => personName(d.roster, id)).join(', ');
+  const eligible = b.eligible.length;
+  let text = eligible === 1 ? 'Uprawniony 1 członek Prezydium.' : `Uprawnionych ${eligible} członków Prezydium.`;
+  if (b.secret) {
+    const took = b.eligible.filter(id => b.secret!.issued.includes(id));
+    text += took.length ? ` ${persons(took.length, ['Kartę do głosowania pobrała', 'Kartę do głosowania pobrały', 'Kartę do głosowania pobrało'])} (${names(took)}).` : ' Nikt nie pobrał karty do głosowania.';
+  } else {
+    const voted = b.eligible.filter(id => id in b.votes), missing = b.eligible.filter(id => !(id in b.votes));
+    text += voted.length ? ` ${persons(voted.length, ['Głos oddała', 'Głos oddały', 'Głos oddało'])} (${names(voted)}).` : ' Nikt nie oddał głosu.';
+    if (voted.length && missing.length) text += ` ${persons(missing.length, ['Głosu nie oddała', 'Głosu nie oddały', 'Głosu nie oddało'])} (${names(missing)}).`;
+  }
+  return p(text);
+}
+
 function ballotBlock(d: Doc, b: Ballot) {
   const {m, roster} = d;
   const r = b.result;
@@ -144,34 +203,34 @@ function ballotBlock(d: Doc, b: Ballot) {
     `<p class="ballot-head"><strong>${t(`Głosowanie nr ${b.number}`)}</strong> ${t(inParens(`${modeWord(b.mode)}${b.modeBasis ? `, ${b.modeBasis}` : ''}`))}</p>`,
     p(b.subject, 'ballot-subject'),
   ];
+  // F14: kto zgłosił wniosek o głosowanie tajne albo imienne.
+  if (b.target?.kind === 'tryb' && b.target.proposedBy) lines.push(p(`Wniosek zgłasza ${who(d, b.target.proposedBy)}.`));
   if (b.reasumptionOf) lines.push(p(`Reasumpcja głosowania nr ${m.ballots.find(x => x.id === b.reasumptionOf)?.number ?? DOTS} (§ 12).`, 'muted'));
   if (b.material) lines.push(p(`Treść poddana pod głosowanie ${quoted(b.material.title)}, wersja ${b.material.version} (skrót ${b.material.hash.slice(0, 12)}).`, 'muted'));
   else if (isResolution(m, b)) lines.push(p('Projekt uchwały nie był dołączony w aplikacji.', 'muted'));
+  // F7: głosowanie między posiedzeniami przerwane bez rozstrzygnięcia, bez policzenia głosów.
+  if (b.aborted) {
+    lines.push(p(`Głosowanie trwało ${ballotSpan(b)} i zostało przerwane. Powód ${reasonText(b.aborted.reason)}. Głosów nie policzono, rozstrzygnięcie nie zapadło.`));
+    if (b.remote) lines.push(remoteParticipation(d, b));
+    return `<div class="ballot">${lines.join('')}</div>`;
+  }
+  // F2: wynik, którego ta osoba jeszcze nie widzi, zostaje w dokumencie ukryty tak jak w aplikacji.
+  if (d.hidden.has(b.id)) {
+    lines.push(p(resultPendingText, 'muted'));
+    return `<div class="ballot">${lines.join('')}</div>`;
+  }
   if (!r) {
     lines.push(p('Głosowanie nie zostało zakończone.', 'muted'));
     return `<div class="ballot">${lines.join('')}</div>`;
   }
+  // Formuła wyniku zapisana w głosowaniu przy otwarciu (F11), a w starszych głosowaniach liczona po dawnemu.
   lines.push(table(`Wynik głosowania nr ${b.number}`, ['Za', 'Przeciw', 'Wstrzymało się', 'Wynik'], [[String(r.za), String(r.przeciw), String(r.wstrzymuje), t(resultLabel(b, materialTypeOf(m, b)))]], [0, 1, 2], false, 'result-table'));
   lines.push(p(`Głosowało ${r.cast} z ${r.eligible} ${r.eligible === 1 ? 'uprawnionego' : 'uprawnionych'}, wymagane kworum ${r.quorum}. Głosowanie ${ballotSpan(b)}, ${ballotEnd(b)}.${absentText(d, b)}`));
   if (b.secret) {
     lines.push(`<p class="muted">${t(`Głosowanie tajne przeprowadzono w systemie elektronicznym. Pobrano kart ${b.secret.issued.length}, oddano głosów ${b.secret.cast}. Odcisk klucza głosowania`)} <code>${esc(b.secret.fingerprint)}</code>. ${t('System nie zapisuje powiązania między osobą a głosem.')}</p>`);
   }
   if (b.mode === 'imienne') lines.push(table(`Wykaz imienny głosowania nr ${b.number}`, ['Imię i nazwisko', 'Głos'], b.eligible.map(id => [t(personName(roster, id)), t(b.votes[id] ? choiceLabel[b.votes[id]] : 'brak głosu')])));
-  if (b.remote) {
-    // Głosowanie między posiedzeniami: kto oddał głos albo pobrał kartę (bez wyborów, poza wykazem imiennym).
-    const names = (ids: string[]) => ids.map(id => personName(roster, id)).join(', ');
-    const eligible = b.eligible.length;
-    let text = eligible === 1 ? 'Uprawniony 1 członek Prezydium.' : `Uprawnionych ${eligible} członków Prezydium.`;
-    if (b.secret) {
-      const took = b.eligible.filter(id => b.secret!.issued.includes(id));
-      text += took.length ? ` ${persons(took.length, ['Kartę do głosowania pobrała', 'Kartę do głosowania pobrały', 'Kartę do głosowania pobrało'])} (${names(took)}).` : ' Nikt nie pobrał karty do głosowania.';
-    } else {
-      const voted = b.eligible.filter(id => id in b.votes), missing = b.eligible.filter(id => !(id in b.votes));
-      text += voted.length ? ` ${persons(voted.length, ['Głos oddała', 'Głos oddały', 'Głos oddało'])} (${names(voted)}).` : ' Nikt nie oddał głosu.';
-      if (voted.length && missing.length) text += ` ${persons(missing.length, ['Głosu nie oddała', 'Głosu nie oddały', 'Głosu nie oddało'])} (${names(missing)}).`;
-    }
-    lines.push(p(text));
-  }
+  if (b.remote) lines.push(remoteParticipation(d, b));
   if (b.supersededBy) lines.push(p(`Wynik zastąpiono wynikiem reasumpcji w głosowaniu nr ${m.ballots.find(x => x.id === b.supersededBy)?.number ?? DOTS}.`, 'muted'));
   return `<div class="ballot">${lines.join('')}</div>`;
 }
@@ -224,21 +283,39 @@ function openingText(d: Doc) {
   return text;
 }
 
-/** Adnotacje przy punktach bez zapisu: odroczenie, wycofanie, punkt nierozpatrzony, bez głosowania, do uzupełnienia. */
+/**
+ * Adnotacje przy punktach bez zapisu: odroczenie, wycofanie, punkt nierozpatrzony, bez głosowania, do uzupełnienia.
+ * Powód odroczenia, wycofania albo nierozpatrzenia przy zamknięciu posiedzenia (F4) stoi w tym samym zdaniu.
+ */
 function itemNotes(d: Doc, it: AgendaItem, first: boolean) {
   const {m} = d;
   if (d.procedure) return [];
   const closed = m.status === 'zakonczone';
   const parent = it.parentId ? m.agenda.find(i => i.id === it.parentId) : undefined;
-  if (it.status === 'odroczony') return ['Punkt odroczono.'];
-  if (it.status === 'wycofany') return ['Punkt wycofano.'];
+  // Punkt główny z podpunktami nie ma własnego powodu: bierze go od podpunktów, gdy wszystkie mają ten sam.
+  const subs = m.agenda.filter(c => c.parentId === it.id);
+  const reason = it.statusReason ?? (subs.length && subs.every(c => c.statusReason === subs[0].statusReason) ? subs[0].statusReason : undefined);
+  const why = reason?.trim() ? ` Powód ${reasonText(reason)}.` : '';
+  if (it.status === 'odroczony') return [`Punkt odroczono.${why}`];
+  if (it.status === 'wycofany') return [`Punkt wycofano.${why}`];
   // Punkt „Zamknięcie posiedzenia” nie jest rozpoczynany: zamyka go zamknięcie posiedzenia.
-  if (it.kind === 'zamkniecie') return closed && m.closedAt ? [`Zamknięcie posiedzenia o godz. ${time(m.closedAt)}.`] : [];
-  if (it.status === 'oczekuje') return closed && parent?.status !== 'odroczony' && parent?.status !== 'wycofany' ? ['Punkt nie był rozpatrywany.'] : [];
-  if (m.agenda.some(c => c.parentId === it.id)) return [];
-  if (it.status === 'zakonczony' && needsVote(m, it) && !itemVoted(m, it)) return ['Punkt zakończono bez głosowania.'];
+  if (it.kind === 'zamkniecie') return closed && m.closedAt ? [`Zamknięcie ${d.note ? 'spotkania' : 'posiedzenia'} o godz. ${time(m.closedAt)}.`] : [];
+  if (it.status === 'oczekuje') return closed && parent?.status !== 'odroczony' && parent?.status !== 'wycofany' ? [`Punkt nie był rozpatrywany.${why}`] : [];
+  if (subs.length) return [];
+  if (it.status === 'zakonczony' && needsVote(m, it, d.types) && !itemVoted(m, it)) return [`Punkt zakończono bez głosowania.${why}`];
   const recorded = first || !!it.note.trim() || (d.placed.get(it.id)?.length ?? 0) > 0;
   return recorded ? [] : ['Przebieg do uzupełnienia.'];
+}
+
+/**
+ * Osoby przy punkcie (F12): fakty „Prowadzi punkt” i „Referuje” z etykietą nad wartością, każda osoba
+ * w osobnym wierszu („Imię Nazwisko, Funkcja”). W pliku do Worda prosta tabela jak fakty pod tytułem.
+ */
+function peopleFacts(d: Doc, it: AgendaItem) {
+  const groups = presenterGroups(it);
+  if (!groups.length) return '';
+  if (d.word) return `<table class="facts">${groups.map(g => `<tr><th scope="row">${t(g.label)}</th><td>${g.people.map(x => t(x)).join('<br>')}</td></tr>`).join('')}</table>`;
+  return `<dl class="facts minutes-facts item-people">${groups.map(g => `<div class="fact"><dt>${t(g.label)}</dt><dd>${g.people.map(x => `<span class="person-line">${t(x)}</span>`).join('')}</dd></div>`).join('')}</dl>`;
 }
 
 // Nagłówek punktu stoi w jednym bloku z pierwszą częścią przebiegu, więc w druku nie zostaje sam na końcu strony.
@@ -247,7 +324,10 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   const head = `<h3>${t(`${d.procedure ? '' : 'Ad '}${itemNumber(m.agenda, it.id)}. ${it.title}`)}</h3>`;
   const parts: string[] = [];
   if (first && m.openedAt) parts.push(p(openingText(d)));
-  for (const g of presenterGroups(it)) parts.push(p(`${g.label} ${g.people.join('; ').replace(/\.$/, '')}.`));
+  const people = peopleFacts(d, it);
+  if (people) parts.push(people);
+  // F4: punkt rozpoczęty poza kolejnością przyjętego porządku obrad.
+  if (it.outOfOrder) parts.push(p(`Punkt rozpatrzono poza kolejnością przyjętego porządku obrad. Powód ${reasonText(it.outOfOrder.reason)}.`));
   const mats = m.materials.filter(x => it.materialIds.includes(x.id));
   if (mats.length) parts.push(p(`${mats.length === 1 ? 'Materiał' : 'Materiały'} do ${d.procedure ? 'sprawy' : 'punktu'} ${listing(mats.map(x => quoted(x.title)))}.`, 'muted'));
   if (it.note.trim()) parts.push(`<div class="note">${t(it.note.trim()).replace(/\n/g, '<br>')}</div>`);
@@ -256,9 +336,12 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   return `<section class="item"><div class="item-start">${head}${parts[0] ?? ''}</div>${parts.slice(1).join('')}</section>`;
 }
 
-/** Obecność z wpisów: „obecność od 10:02, wyjście 11:30, powrót 11:45” albo „nieobecność”. */
+/**
+ * Obecność z wpisów: „obecność od 10:02, wyjście 11:30, powrót 11:45” albo „nieobecność”. Zgłoszenia obecności (F9)
+ * nie są obecnością: liczy się dopiero potwierdzenie (przybycie).
+ */
 function presenceText(m: Meeting, who: string, guest: boolean) {
-  const events = m.presenceLog.filter(e => e.who === who && !!e.guest === guest);
+  const events = m.presenceLog.filter(e => e.who === who && !!e.guest === guest && (e.type === 'przybycie' || e.type === 'wyjscie'));
   if (!events.length) return 'nieobecność';
   let arrived = false;
   return events.map(e => {
@@ -268,17 +351,43 @@ function presenceText(m: Meeting, who: string, guest: boolean) {
     return text;
   }).join(', ');
 }
-/** Kto zapisał pierwsze przybycie: sama osoba w aplikacji, osoba prowadząca obrady, inny członek albo biuro. */
+/**
+ * Sposób potwierdzenia pierwszego przybycia: potwierdzenie przez samą osobę w aplikacji (posiedzenie zdalne),
+ * zgłoszenie w aplikacji potwierdzone przez osobę prowadzącą obrady albo biuro (F9) albo zapis przez inną osobę.
+ * Bez przybycia: zgłoszenie czekające na potwierdzenie, niepotwierdzone, odrzucone albo wycofane.
+ */
 function confirmedBy(d: Doc, who: string, guest: boolean, ownName: string) {
-  const {m, roster} = d;
-  const first = m.presenceLog.find(e => e.who === who && !!e.guest === guest && e.type === 'przybycie');
-  if (!first) return '';
+  const {m} = d;
+  const own = m.presenceLog.filter(e => e.who === who && !!e.guest === guest);
+  const first = own.find(e => e.type === 'przybycie');
+  if (!first) {
+    if (presenceOf(m, who, guest) === 'zgloszony') return m.status === 'zakonczone' ? 'zgłoszenie w aplikacji, niepotwierdzone' : 'zgłoszenie w aplikacji, czeka na potwierdzenie';
+    const dropped = [...own].reverse().find(e => e.type === 'odrzucenie');
+    if (!dropped) return '';
+    return dropped.by === ownName ? 'zgłoszenie w aplikacji, wycofane' : `zgłoszenie w aplikacji, odrzucone przez ${byWhom(d, dropped.by, dropped.at)}`;
+  }
   if (first.by === ownName) return 'potwierdzenie w aplikacji';
-  const chair = chairAt(m, first.at);
-  if (chair && first.by === personName(roster, chair)) return 'zapisane przez osobę prowadzącą obrady';
-  const person = roster.persons.find(x => x.name === first.by);
-  if (person) return membership(roster, m.organ, person.id) ? `zapisane przez członka Prezydium (${first.by})` : `zapisane przez inną osobę (${first.by})`;
-  return `zapisane przez ${d.office}`;
+  return first.reportedAt ? `zgłoszenie w aplikacji, potwierdzone przez ${byWhom(d, first.by, first.at)}` : `zapisane przez ${byWhom(d, first.by, first.at)}`;
+}
+
+/**
+ * Sposób zakończenia głosowania między posiedzeniami (F7): przed terminem z policzeniem głosów albo przerwanie
+ * z powodem bez rozstrzygnięcia. Starsze zapisy bez `ended` rozpoznaje się po wpisie dziennika i powodach zamknięcia.
+ */
+function procedureEnd(d: Doc) {
+  const {m} = d;
+  if (m.ended?.how === 'przerwij') return `przerwano, powód ${reasonText(m.ended.reason ?? '')}, rozstrzygnięcie nie zapadło (${m.ended.by})`;
+  if (m.ended) return `przed terminem z policzeniem głosów (${m.ended.by})`;
+  const early = [...m.log].reverse().find(l => l.text === 'Głosowanie między posiedzeniami zakończono przed czasem.');
+  const reasons = m.ballots.map(b => b.closeReason);
+  return early ? `przed terminem, ${early.by}` : reasons.length && reasons.every(r => r === 'wszyscy') ? 'zagłosowali wszyscy uprawnieni' : reasons.includes('czas') ? 'upłynął termin' : 'przed terminem';
+}
+/** Zmiany terminu głosowania między posiedzeniami (F7): przedłużenie albo skrócenie, z godzinami i osobą. */
+function deadlineChanges(d: Doc) {
+  const changes = d.m.deadlineChanges ?? [];
+  if (!changes.length) return '';
+  return `<h2>${t('Zmiany terminu głosowania')}</h2>` + table('Zmiany terminu głosowania', ['Zmiana', 'Dotychczasowy termin', 'Nowy termin', 'Zmienia'],
+    changes.map(c => [t(shortAt(c.at)), t(shortAt(c.from)), t(`${shortAt(c.to)} (${c.to > c.from ? 'przedłużenie' : 'skrócenie'})`), t(c.by)]));
 }
 
 function invitedRows(d: Doc) {
@@ -300,6 +409,7 @@ function chapterOne(d: Doc) {
   else out.push(p('Posiedzenia jeszcze nie otwarto.'));
   for (const c of m.chair.changes) out.push(p(`Od godz. ${time(c.at)} obrady prowadzi ${who(d, c.to)}${c.reason ? ` ${inParens(c.reason)}` : ''}.`));
   if (m.chair.deputy) out.push(p(`Na czas nieobecności przewodniczącego zastępuje go ${who(d, m.chair.deputy)}${m.chair.deputyBasis ? ` ${inParens(m.chair.deputyBasis)}` : ''}.`));
+  if (m.working) out.push(p(workingText(d)));
   // Przerwy z par wpisów dziennika „Przerwa w obradach.” i „Wznowienie obrad.”.
   const breaks: {from: number; to?: number}[] = [];
   for (const l of m.log) {
@@ -311,6 +421,8 @@ function chapterOne(d: Doc) {
     const point = it ? ` (punkt ${itemNumber(m.agenda, it.id)})` : '';
     out.push(p(b.to ? `Obrady przerwano w godz. ${time(b.from)}–${time(b.to)}${point}.` : `Obrady przerwano o godz. ${time(b.from)}${point}.`));
   }
+  // F1: głosowanie próbne jednym zdaniem, bez wyniku (nie ma skutków).
+  for (const b of d.trials) out.push(p(`O godz. ${time(b.openedAt)} przeprowadzono głosowanie próbne (${modeWord(b.mode)}) w celu sprawdzenia działania systemu.`));
   if (m.mode === 'zdalne') {
     let host = '';
     try { host = m.link ? new URL(m.link).hostname : ''; } catch { host = ''; }
@@ -318,6 +430,21 @@ function chapterOne(d: Doc) {
       + (host ? `Uczestnicy łączyli się przez ${host}, a obecność potwierdzali i głosy oddawali w aplikacji, każdy na własnym koncie.` : 'Uczestnicy obecność potwierdzali i głosy oddawali w aplikacji, każdy na własnym koncie.')));
   }
   return out.join('');
+}
+
+/**
+ * Spotkanie robocze (F5): brak kworum z liczbami (ostatnie stwierdzenie przed rozpoczęciem spotkania roboczego,
+ * a bez niego obecni według listy obecności) i godzina, od której obrady szły jako spotkanie robocze.
+ */
+function workingText(d: Doc) {
+  const {m} = d;
+  const w = m.working!;
+  const total = organMembers(d.roster, m.organ).length;
+  const check = [...m.quorumChecks].reverse().find(q => q.at <= w.at);
+  const first = check && check.present < check.required
+    ? `O godz. ${time(check.at)} stwierdzono brak kworum (obecnych ${check.present} z ${total} członków Prezydium, wymagane co najmniej ${check.required}, § 8 ust. 2).`
+    : `Nie stwierdzono kworum (obecnych ${presentAt(d, w.at)} z ${total} członków Prezydium, wymagane co najmniej ${quorumFor(total)}, § 8 ust. 2).`;
+  return `${first} Od godz. ${time(w.at)} obrady kontynuowano jako spotkanie robocze. Bez kworum Prezydium nie podejmuje uchwał.`;
 }
 
 function chapterTwo(d: Doc) {
@@ -328,11 +455,11 @@ function chapterTwo(d: Doc) {
   out.push(table('Lista obecności', head, members.map(ms => {
     const name = personName(roster, ms.personId);
     return [t(name), t(ms.label), t(presenceText(m, ms.personId, false)), t(confirmedBy(d, ms.personId, false, name))];
-  })));
+  }), [], true, 'attendance-table'));
   const invited = invitedRows(d);
   if (invited.length) {
     out.push(`<h3>${t('Osoby z głosem doradczym i goście')}</h3>`);
-    out.push(table('Osoby z głosem doradczym i goście', head, invited.map(a => [t(a.name), t(a.label), t(presenceText(m, a.id, true)), t(confirmedBy(d, a.id, true, a.name))])));
+    out.push(table('Osoby z głosem doradczym i goście', head, invited.map(a => [t(a.name), t(a.label), t(presenceText(m, a.id, true)), t(confirmedBy(d, a.id, true, a.name))]), [], true, 'attendance-table'));
   }
   // Zdanie o składzie i lista stwierdzeń kworum w jednym bloku: w druku lista nie zaczyna sama następnej strony.
   const checks = m.quorumChecks.length ? '<ul class="quorum-checks">' + m.quorumChecks.map(q => `<li>${t(`O godz. ${time(q.at)} stwierdzono ${q.present >= q.required ? 'kworum' : 'brak kworum'}, obecnych ${q.present}, wymagane ${q.required}.`)}</li>`).join('') + '</ul>' : '';
@@ -350,8 +477,26 @@ function chapterThree(d: Doc) {
     return `<li>${line(top)}${subs.length ? '<ol>' + subs.map(s => `<li>${line(s)}</li>`).join('') + '</ol>' : ''}</li>`;
   }).join('') + '</ol>';
   const adoption = [...m.ballots].reverse().find(b => b.purpose === 'porzadek' && b.result?.adopted);
-  const sentence = m.agendaAdopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.') : 'Porządek obrad nie został przyjęty.';
-  return `<h2>${t('III. Porządek obrad')}</h2>` + list + p(sentence);
+  const sentence = m.agendaAdopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.')
+    : d.note ? 'Porządku obrad nie przyjęto. Na spotkaniu roboczym nie przeprowadza się głosowań.' : 'Porządek obrad nie został przyjęty.';
+  return `<h2>${t('III. Porządek obrad')}</h2>` + list + draftChanges(d, adoption) + p(sentence);
+}
+
+/**
+ * Zmiany projektu porządku obrad na posiedzeniu (F8): wpisy dziennika z oznaczeniem `projekt` do chwili przyjęcia
+ * porządku, z godziną, przed zdaniem o przyjęciu porządku.
+ */
+function draftChanges(d: Doc, adoption: Ballot | undefined) {
+  const {m} = d;
+  const until = m.agendaAdopted && adoption?.closedAt ? adoption.closedAt : Infinity;
+  const entries = m.log.filter(l => l.tag === 'projekt' && l.at <= until);
+  if (!entries.length) return '';
+  const text = (l: {at: number; text: string}) => {
+    const change = l.text.replace(/^Zmieniono projekt porządku obrad\.\s*/, '').replace(' ma nową nazwę ', ' otrzymał nową nazwę ');
+    return `O godz. ${time(l.at)} ${change.charAt(0).toLowerCase()}${change.slice(1)}`;
+  };
+  return p(m.agendaAdopted ? 'Przed przyjęciem porządku obrad osoba prowadząca obrady zmieniła jego projekt.' : `W trakcie ${d.note ? 'spotkania' : 'posiedzenia'} osoba prowadząca obrady zmieniła projekt porządku obrad.`)
+    + '<ul class="draft-changes">' + entries.map(l => `<li>${t(text(l))}</li>`).join('') + '</ul>';
 }
 
 function chapterFour(d: Doc) {
@@ -365,7 +510,7 @@ function chapterFour(d: Doc) {
 
 function chapterFive(d: Doc) {
   const {m} = d;
-  const adopted = m.ballots.filter(b => b.result?.adopted && !b.supersededBy && isResolution(m, b)).sort((x, y) => x.number - y.number);
+  const adopted = m.ballots.filter(b => b.result?.adopted && !b.supersededBy && !d.hidden.has(b.id) && isResolution(m, b)).sort((x, y) => x.number - y.number);
   const out = [`<h2>${t('V. Podjęte uchwały')}</h2>`];
   if (!adopted.length) return out.concat(p('Nie podjęto uchwał.')).join('');
   out.push(table('Podjęte uchwały', ['Numer', 'W sprawie', 'Za', 'Przeciw', 'Wstrzymało się'], adopted.map(b => {
@@ -378,18 +523,25 @@ function chapterFive(d: Doc) {
   return out.join('');
 }
 
-function chapterSix() {
-  return `<h2>${t('VI. Załączniki')}</h2>` + p('Wykaz załączników do uzupełnienia przez sekretarza.')
-    + '<ol class="attachments">' + ['Lista obecności.', 'Porządek obrad.', 'Podjęte uchwały.', 'Materiały rozpatrzone na posiedzeniu.'].map(x => `<li>${t(x)}</li>`).join('') + '</ol>';
+// Notatka ze spotkania roboczego (F5) nie ma rozdziału „Podjęte uchwały”, więc załączniki mają numer V.
+function chapterSix(d: Doc) {
+  const list = d.note ? ['Lista obecności.', 'Porządek obrad.', 'Materiały omówione na spotkaniu.'] : ['Lista obecności.', 'Porządek obrad.', 'Podjęte uchwały.', 'Materiały rozpatrzone na posiedzeniu.'];
+  return `<h2>${t(`${d.note ? 'V' : 'VI'}. Załączniki`)}</h2>` + p('Wykaz załączników do uzupełnienia przez sekretarza.')
+    + '<ol class="attachments">' + list.map(x => `<li>${t(x)}</li>`).join('') + '</ol>';
 }
 
 function signatures(d: Doc) {
   const {m, roster} = d;
   const secretary = organMembers(roster, m.organ).find(ms => ms.func === 'sekretarz');
-  const people: [string, string][] = [
-    [d.procedure ? 'Zarządzający głosowanie' : 'Przewodniczący obrad', m.chair.current ? personName(roster, m.chair.current) : DOTS],
+  const chair = m.chair.current ? personName(roster, m.chair.current) : DOTS;
+  // F10: protokolant z danych do protokołu. Notatkę (F5) podpisuje osoba prowadząca i osoba, która ją sporządza.
+  const people: [string, string][] = d.note ? [
+    ['Osoba prowadząca spotkanie', chair],
+    ['Osoba sporządzająca notatkę', m.recorder || DOTS],
+  ] : [
+    [d.procedure ? 'Zarządzający głosowanie' : 'Przewodniczący obrad', chair],
     ['Sekretarz lub zastępujący go członek Prezydium', secretary ? personName(roster, secretary.personId) : DOTS],
-    ['Protokolant (jeżeli został wyznaczony)', DOTS],
+    ['Protokolant (jeżeli został wyznaczony)', m.recorder || DOTS],
   ];
   if (d.word) return '<table class="signatures"><tr>' + people.map(([role, name]) => `<td>${'.'.repeat(30)}<br>${t(role)}<br><b>${t(name)}</b></td>`).join('') + '</tr></table>';
   return '<div class="signatures">' + people.map(([role, name]) => `<div class="signature"><span class="signature-role">${t(role)}</span><span class="signature-name">${t(name)}</span></div>`).join('') + '</div>';
@@ -397,6 +549,7 @@ function signatures(d: Doc) {
 
 function footer(d: Doc, generatedAt: number) {
   const {m} = d;
+  if (d.note) return p(`Projekt notatki wygenerowany z zapisu aplikacji ${longAt(generatedAt)}. Uchwały w sprawach z porządku obrad podejmie Prezydium na posiedzeniu z kworum.`, 'muted footer');
   const what = d.procedure ? 'głosowania' : 'obrad';
   const deadline = m.closedAt
     ? `Termin sporządzenia protokołu ${longDate(addDays(dayOf(m.closedAt), 21))} (21 dni od zakończenia ${what}).`
@@ -412,53 +565,63 @@ function attendanceSheet(d: Doc, organName: string) {
     ...organMembers(roster, m.organ).map(ms => [t(personName(roster, ms.personId)), t(ms.label), '']),
     ...invitedRows(d).map(a => [t(a.name), t(a.label), '']),
   ];
-  return '<section class="attachment">' + p('Załącznik nr 1 do protokołu', 'draft') + `<h2>${t('Lista obecności')}</h2>`
-    + p(`Posiedzenie ${organName} z dnia ${longDate(minutesDay(m))}`)
+  return '<section class="attachment">' + p(`Załącznik nr 1 do ${d.note ? 'notatki' : 'protokołu'}`, 'draft') + `<h2>${t('Lista obecności')}</h2>`
+    + p(`${d.note ? 'Spotkanie robocze' : 'Posiedzenie'} ${organName} z dnia ${longDate(minutesDay(m))}`)
     + table('Lista obecności do podpisu', ['Imię i nazwisko', 'Funkcja', 'Podpis'], rows, [], true, 'sign-sheet') + '</section>';
 }
 
-export function minutesBody(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, names: MinutesNames = {}) {
-  return render(m, roster, accounts, generatedAt, names, false);
+export function minutesBody(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, names: MinutesNames = {}, options: MinutesOptions = {}) {
+  return render(m, roster, accounts, generatedAt, names, options, false);
 }
 
-function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, names: MinutesNames, word: boolean) {
+function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, names: MinutesNames, options: MinutesOptions, word: boolean) {
   const organ = organOf(roster, m.organ);
   const council = (organOf(roster, 'rada')?.name ?? 'Okręgowa Rada').replace(/^Okręgowa Rada/, 'Okręgowej Rady');
   const procedure = m.kind === 'procedura';
-  const d: Doc = {m, roster, accounts, procedure, office: names.office ?? 'biuro', regulation: names.regulation ?? `Regulaminu ${council}`, placed: new Map(), loose: [], word};
+  const note = isNote(m);
+  const d: Doc = {
+    m, roster, accounts, procedure, office: names.office ?? 'biuro', regulation: names.regulation ?? `Regulaminu ${council}`, placed: new Map(), loose: [], trials: [],
+    note, types: options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced ? unannounced(m).map(b => b.id) : []), word,
+  };
   const known = new Set(m.agenda.map(i => i.id));
   for (const b of [...m.ballots].sort((x, y) => x.openedAt - y.openedAt || x.number - y.number)) {
+    if (b.purpose === 'proba') { d.trials.push(b); continue; }
     const home = homeOf(m, b);
     if (home && known.has(home)) d.placed.set(home, [...(d.placed.get(home) ?? []), b]);
     else d.loose.push(b);
   }
   const organName = organ?.name ?? 'Prezydium';
+  const number = m.protocolNumber?.trim() || DOTS;
   const facts: [string, string][] = [];
   if (procedure) {
     const end = m.closedAt ?? m.endsAt;
     facts.push(['Termin głosowania', m.openedAt ? `od ${shortAt(m.openedAt)}${end ? ` do ${shortAt(end)}` : ''}` : end ? `do ${shortAt(end)}` : DOTS]);
+    // F10: data powiadomienia członków, zwołujący i protokolant z danych do protokołu.
+    facts.push(['Powiadomienie członków', m.noticeDate ? longDate(m.noticeDate) : DOTS]);
     if (m.chair.current) facts.push(['Zarządzający', who(d, m.chair.current)]);
-    if (m.status === 'zakonczone') {
-      const early = [...m.log].reverse().find(l => l.text === 'Głosowanie między posiedzeniami zakończono przed czasem.');
-      const reasons = m.ballots.map(b => b.closeReason);
-      facts.push(['Zakończenie', early ? `przed terminem, ${early.by}` : reasons.length && reasons.every(r => r === 'wszyscy') ? 'zagłosowali wszyscy uprawnieni' : reasons.includes('czas') ? 'upłynął termin' : 'przed terminem']);
-    }
+    if (m.convener) facts.push(['Zwołuje', who(d, m.convener)]);
+    facts.push(['Protokołuje', m.recorder || DOTS]);
+    if (m.status === 'zakonczone') facts.push(['Zakończenie', procedureEnd(d)]);
   } else {
     const hours = m.openedAt ? (m.closedAt ? `${time(m.openedAt)}–${time(m.closedAt)}` : time(m.openedAt)) : m.time;
     facts.push(['Termin', `${longDate(minutesDay(m))}, godz. ${hours}`]);
     if (m.place.trim()) facts.push(['Miejsce', m.place.trim()]);
     facts.push(['Tryb', m.mode === 'zdalne' ? `posiedzenie zdalne (§ 14 ust. 5 ${d.regulation})` : 'posiedzenie stacjonarne']);
+    facts.push(['Zwołuje', m.convener ? who(d, m.convener) : DOTS]);
     if (m.chair.current) facts.push(['Prowadzi', who(d, m.chair.current)]);
-    facts.push(['Protokołuje', DOTS]);
+    facts.push([note ? 'Notatkę sporządza' : 'Protokołuje', m.recorder || DOTS]);
   }
   const title = procedure
-    ? `${t('Protokół z głosowania między posiedzeniami')} <b>${t(organName)}</b>`
-    : `${t(`Protokół nr ${DOTS} z posiedzenia`)} <b>${t(organName)}</b> ${t(`z dnia ${longDate(minutesDay(m))}`)}`;
+    ? `${t(`Protokół nr ${number} z głosowania między posiedzeniami`)} <b>${t(organName)}</b>`
+    : note
+      ? `${t('Notatka ze spotkania roboczego')} <b>${t(organName)}</b> ${t(`z dnia ${longDate(minutesDay(m))}`)}`
+      : `${t(`Protokół nr ${number} z posiedzenia`)} <b>${t(organName)}</b> ${t(`z dnia ${longDate(minutesDay(m))}`)}`;
   const factList = word
     ? `<table class="facts">${facts.map(([label, value]) => `<tr><th scope="row">${t(label)}</th><td>${t(value)}</td></tr>`).join('')}</table>`
     : `<dl class="facts minutes-facts">${facts.map(([label, value]) => `<div class="fact"><dt>${t(label)}</dt><dd>${t(value)}</dd></div>`).join('')}</dl>`;
-  const parts = [`<header><p class="draft">${t('Projekt do uzupełnienia przez sekretarza')}</p><h1>${title}</h1>${factList}</header>`];
+  const parts = [`<header><p class="draft">${t(note ? 'Projekt notatki do uzupełnienia' : 'Projekt do uzupełnienia przez sekretarza')}</p><h1>${title}</h1>${factList}</header>`];
   if (procedure) {
+    parts.push(deadlineChanges(d));
     parts.push(`<h2>${t('Sprawy i wyniki')}</h2>`);
     for (const it of orderedAgenda(m.agenda)) {
       if (!d.placed.get(it.id)?.length && !it.note.trim() && !it.materialIds.length) continue;
@@ -469,13 +632,15 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
       + m.messages.map(x => `<li><strong>${t(x.authorName)}</strong>, ${t(`${longAt(x.at)} ${quoted(x.text)}`)}</li>`).join('') + '</ul>');
     parts.push(signatures(d), footer(d, generatedAt));
   } else {
-    parts.push(chapterOne(d), chapterTwo(d), chapterThree(d), chapterFour(d), chapterFive(d), chapterSix(), signatures(d), footer(d, generatedAt));
+    parts.push(chapterOne(d), chapterTwo(d), chapterThree(d), chapterFour(d));
+    if (!note) parts.push(chapterFive(d));
+    parts.push(chapterSix(d), signatures(d), footer(d, generatedAt));
     if (m.mode === 'stacjonarne') parts.push(attendanceSheet(d, organName));
   }
   return parts.join('\n');
 }
 
-export interface MinutesLook { css?: string | null; logo?: string | null; nameplate?: [string, string] | null; org?: string; names?: MinutesNames }
+export interface MinutesLook { css?: string | null; logo?: string | null; nameplate?: [string, string] | null; org?: string; names?: MinutesNames; options?: MinutesOptions }
 
 // Pełna strona do druku: ten sam arkusz stylów co aplikacja (krój, kolory i nagłówki Izby), znak Izby na górze.
 // Blok stylu dodaje nagłówek stron od drugiej (numery stron są w protokol.css).
@@ -485,9 +650,9 @@ export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], gen
   const header = minutesPageHeader(m).replace(/["\\]/g, '\\$&');
   const pages = `<style>@media print{@page{@top-left{content:"${header}"}}@page:first{@top-left{content:none}}}</style>`;
   const doc = `/api/meetings/${encodeURIComponent(m.id)}/protokol?format=doc`;
-  return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Projekt protokołu – ${esc(m.title)}</title>${style}${pages}</head>
-<body class="oi-root minutes-page"><div class="toolbar"><span class="kicker">${t('Projekt protokołu')}</span><div class="toolbar-actions"><a class="oi-btn oi-btn--obrys" href="${esc(doc)}"><span>${t('Pobierz do edycji w Wordzie')}</span></a><button type="button" class="oi-btn" data-print><span>${t('Drukuj lub zapisz jako PDF')}</span></button></div></div>
-<main>${plate}<article class="minutes-view">${minutesBody(m, roster, accounts, generatedAt, look.names)}</article></main><script src="/druk.js"></script></body></html>`;
+  return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(minutesTitle(m))} – ${esc(m.title)}</title>${style}${pages}</head>
+<body class="oi-root minutes-page"><div class="toolbar"><span class="kicker">${t(minutesTitle(m))}</span><div class="toolbar-actions"><a class="oi-btn oi-btn--obrys" href="${esc(doc)}"><span>${t('Pobierz do edycji w Wordzie')}</span></a><button type="button" class="oi-btn" data-print><span>${t('Drukuj lub zapisz jako PDF')}</span></button></div></div>
+<main>${plate}<article class="minutes-view">${minutesBody(m, roster, accounts, generatedAt, look.names, look.options)}</article></main><script src="/druk.js"></script></body></html>`;
 }
 
 // Plik do edycji w Wordzie: ten sam tekst z prostym stylem wewnętrznym (Titillium Web albo Arial, bez kolorów), bez skryptów.
@@ -505,8 +670,8 @@ const docStyle = '@page Section1{size:21cm 29.7cm;margin:2cm}div.Section1{page:S
 export function minutesDoc(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, look: MinutesLook = {}) {
   const org = look.org ? `<p class="org">${t(look.org)}</p>` : '';
   // Łącznik słów (U+2060) wokół półpauzy w przedziałach nie jest potrzebny w edytorze i bywa w nim widoczny.
-  const body = render(m, roster, accounts, generatedAt, look.names ?? {}, true).replace(/\u2060/g, '');
-  return `<!doctype html><html lang="pl" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="ProgId" content="Word.Document"><title>${t(`Projekt protokołu – ${m.title}`)}</title>`
+  const body = render(m, roster, accounts, generatedAt, look.names ?? {}, look.options ?? {}, true).replace(/\u2060/g, '');
+  return `<!doctype html><html lang="pl" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="ProgId" content="Word.Document"><title>${t(`${minutesTitle(m)} – ${m.title}`)}</title>`
     + `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]--><style>${docStyle}</style></head>`
     + `<body><div class="Section1">${org}<article class="minutes-view">${body}</article></div></body></html>`;
 }

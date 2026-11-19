@@ -56,8 +56,10 @@ document.addEventListener('click', event => {
   event.preventDefault();
   const match = link.getAttribute('href')!.match(/^\/api\/meetings\/([\w-]+)\/protokol$/);
   let body = '<p>Pobieranie plików jest dostępne w pełnej aplikacji.</p>';
-  try { if (match) body = server.minutes(match[1]); } catch (e) { body = `<p>${(e as Error).message}</p>`; }
-  render(<Modal title="Projekt protokołu" wide onClose={close}><div class="minutes-view" dangerouslySetInnerHTML={{__html: body}}/></Modal>, overlay);
+  let title = 'Projekt protokołu';
+  try { if (match) { body = server.minutes(match[1]); title = server.minutesTitle(match[1]); } } catch (e) { body = `<p>${(e as Error).message}</p>`; }
+  // Spotkanie robocze (F5) ma projekt notatki zamiast projektu protokołu.
+  render(<Modal title={title} wide onClose={close}><div class="minutes-view" dangerouslySetInnerHTML={{__html: body}}/></Modal>, overlay);
 }, true);
 
 render(<App/>, document.getElementById('app')!);
