@@ -194,6 +194,8 @@ dialog.modal-backdrop::backdrop { background: transparent; }
 .confirm-details { display: flex; flex-direction: column; gap: var(--odstep-2); }
 .confirm-choice { font-weight: 300; font-style: italic; font-size: var(--t-sprawa); color: var(--tekst-mocny); }
 .confirm-choice strong { font-weight: 700; color: var(--akcent-duzy); }
+/* Powód pod nieaktywnym przyciskiem (pole „ack”) nie przesuwa w dół przycisku „Anuluj” obok. */
+.confirm-actions { align-items: flex-start; }
 /* Na telefonie potwierdzenie stoi przy dolnej krawędzi, a przyciski są jeden pod drugim, główny na górze. */
 @media (max-width: 560px) {
   dialog.modal-backdrop.modal-confirm { place-items: end stretch; padding: max(var(--odstep-3), env(safe-area-inset-top, 0px)) 0 0; }

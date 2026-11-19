@@ -1,40 +1,117 @@
-/* Panel prowadzącego */
-.chair { display: grid; grid-template-columns: 310px minmax(0, 1fr) 350px; gap: var(--odstep-6); align-items: start; }
-.chair-col { display: flex; flex-direction: column; gap: var(--odstep-4); min-width: 0; }
+/* Panel prowadzenia obrad (tryb pracy). Od 1280 px trzy kolumny: porządek, punkt, obrady. Od 761 do 1279 px dwie
+   kolumny, a treść prawej stoi pod środkową. Do 760 px zakładki „Porządek”, „Punkt”, „Obrady” z licznikami. */
+.chair { display: grid; grid-template-columns: 280px minmax(0, 1fr) 340px; grid-template-areas: 'left main right'; gap: var(--odstep-6); align-items: start; }
+.chair-left { grid-area: left; }
+.chair-main { grid-area: main; }
+.chair-right { grid-area: right; }
+.chair-col { display: flex; flex-direction: column; gap: var(--odstep-6); min-width: 0; }
 .chair-tabs { display: none; }
-/* Kolumna porządku przykleja się pod paskiem posiedzenia (jego wysokość w --pasek-posiedzenia) */
-.chair-left { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--odstep-4)); max-height: calc(100vh - var(--pasek-posiedzenia, 0px) - 32px); overflow: auto; }
-@media (max-width: 1180px) {
-  .chair { grid-template-columns: 1fr; gap: var(--odstep-4); }
-  .chair-tabs { display: flex; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px)); z-index: 20; background: var(--tlo); padding-block: var(--odstep-2); margin-block: calc(-1 * var(--odstep-2)) 0; }
-  .chair-tabs .oi-opt { text-align: center; }
-  .chair-col { display: none; }
-  .chair-col.is-shown { display: flex; }
-  .chair-left { position: static; max-height: none; }
+/* Lewa kolumna stoi pod paskiem posiedzenia i nie przewija się jako całość. Przewija się karta porządku,
+   więc jej obrys jest zawsze pełny. */
+.chair-left { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--odstep-4)); }
+.chair-agenda { max-height: calc(100vh - env(safe-area-inset-top, 0px) - var(--pasek-posiedzenia, 0px) - 2 * var(--odstep-4)); overflow: auto; overscroll-behavior: contain; }
+@media (max-width: 1279px) {
+  .chair { grid-template-columns: 260px minmax(0, 1fr); grid-template-areas: 'left main' 'left right'; }
 }
-.item-work.is-current { border-left: var(--pasek-akcentu) solid var(--czerwien); }
+@media (max-width: 760px) {
+  .chair { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; gap: var(--odstep-4); }
+  .chair-left, .chair-main, .chair-right { grid-area: auto; }
+  .chair-tabs { display: flex; flex-wrap: nowrap; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px)); z-index: 20; background: var(--tlo); padding-block: var(--odstep-2); margin-block: calc(-1 * var(--odstep-2)) 0; }
+  .chair-col { display: none; gap: var(--odstep-4); }
+  .chair-col.is-shown { display: flex; }
+  .chair-left { position: static; }
+  .chair-agenda { max-height: none; overflow: visible; }
+  /* Przewijanie do fokusu zostawia miejsce na pasek posiedzenia i zakładki (wysokość zakładek w --zakladki-panelu). */
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--zakladki-panelu, 0px)); }
+  .chair-tabs .oi-opt { scroll-margin-top: calc(-1 * (var(--pasek-posiedzenia, 0px) + var(--zakladki-panelu, 0px))); }
+}
+.chair-tabs .oi-opt { flex: 1 1 0; min-width: 0; padding: .6em .4em; font-size: var(--t-maly); text-align: center; }
+
+/* Karta „Czeka na Twoją decyzję”: sprawy oddzielone kreską, pierwszy przycisk główny */
+.decision { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.decisions > .oi-card__title + .decision { padding-top: 0; border-top: 0; }
+.decision > p { font-size: var(--t-lista); font-weight: 600; color: var(--tekst-mocny); }
+.decision-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-2) var(--odstep-4); }
+.read-aloud { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.read-aloud p { font-size: var(--t-lista); line-height: 1.55; max-width: var(--wiersz-tekstu); }
+
+/* Trwające głosowanie */
+.live-ballot .oi-progress__txt { text-transform: none; letter-spacing: .02em; }
+.pending { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.pending ul { list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--odstep-6); }
+@media (min-width: 900px) { .pending ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pending li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0 var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-lista); line-height: 1.35; color: var(--tekst-mocny); }
+.pending > p { font-size: var(--t-lista); }
+.live-foot { display: flex; flex-direction: column; gap: var(--odstep-4); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.live-foot .fingerprint { padding-top: 0; border-top: 0; }
+
+/* Karta punktu */
 .item-title { font-weight: 600; font-size: var(--t-sprawa); line-height: 1.3; color: var(--tekst-mocny); }
-.next-step { display: flex; flex-direction: column; gap: 6px; padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
-.ballot-form { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-3); }
-.live-ballot { border-left: var(--pasek-akcentu) solid var(--czerwien); }
-.live-ballot .oi-progress { margin-top: 2px; }
-.pending ul { list-style: none; padding: 0; display: flex; flex-direction: column; }
-.pending li { display: flex; justify-content: space-between; align-items: center; gap: var(--odstep-3); padding: 7px 0; border-top: var(--kreska) solid var(--linia-jasna); }
-.quorum { background: var(--powierzchnia-miekka); padding: 14px 16px; display: flex; flex-direction: column; gap: var(--odstep-3); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.item-title:has(b) { font-weight: 400; }
+.item-title b { font-weight: 700; }
+.item-title:focus { outline: none; }
+.item-title--wiersz { font-size: var(--t-lista); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.is-zwiniete { gap: var(--odstep-1); }
+.next-step { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.item-side { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-2) var(--odstep-5); }
+.item-side:empty { display: none; }
+.assign-material { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.result-line { display: flex; flex-direction: column; gap: var(--odstep-1); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.result-line__subject { font-size: var(--t-maly); color: var(--tekst-drugorzedny); line-height: 1.4; }
+.result-line__verdict { font-size: var(--t-lista); font-weight: 400; color: var(--tekst-mocny); }
+.result-line__verdict b { font-weight: 700; }
+.result-line__counts { font-size: var(--t-maly); color: var(--tekst); }
+.result-line .fold { margin-top: var(--odstep-2); }
+
+/* Formularz głosowania: tryb i czas to przyciski wyboru, uchwalony tryb jest stałym faktem */
+.ballot-form { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-4); }
+.ballot-done { gap: var(--odstep-2); }
+.seg-tryb .oi-opt { flex: 1 1 6em; }
+.seg-czas .oi-opt { flex: 1 1 4.5em; text-align: center; }
+.seg-cel .oi-opt { flex: 1 1 10em; }
+.oi-opt[aria-disabled="true"] { color: var(--tekst-wylaczony); border-left-color: var(--linia); cursor: not-allowed; }
+.oi-opt[aria-disabled="true"]:hover { border-left-color: var(--linia); }
+.mode-fixed { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--tekst-mocny); }
+
+/* Kworum w punkcie otwarcia */
+.quorum { background: var(--powierzchnia-miekka); padding: var(--odstep-3) var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-3); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
 .quorum.is-ok { border-left-color: var(--tekst-mocny); }
 .quorum.is-low { border-left-color: var(--czerwien); }
+
+/* Karta „Obrady”: zakończenie obrad za kreską */
+.controls-end { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+
+/* Zamknięcie posiedzenia: lista kontrolna */
+.close-check { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.close-check ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.close-check li { padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); line-height: 1.45; }
+
+/* Lista obecności: zdanie z liczbą obecnych, znaczniki tylko przy wyjątkach, działania jako szare odnośniki */
+.attendance-summary { font-size: var(--t-lista); font-weight: 600; color: var(--tekst-mocny); }
 .attendance { list-style: none; padding: 0; }
-.attendance li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); padding: 9px 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.attendance li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
 .att-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
 .att-name strong { font-weight: 600; color: var(--tekst-mocny); font-size: var(--t-lista); }
 .att-name small { color: var(--tekst-drugorzedny); font-size: var(--t-meta); }
-.att-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.att-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--odstep-1); flex: none; text-align: right; }
+
+/* Notatka do protokołu, przebieg obrad i sekcje rozwijane w prawej kolumnie */
+.note-editor { display: flex; flex-direction: column; gap: var(--odstep-2); }
 .log { list-style: none; padding: 0; font-size: var(--t-maly); max-height: 340px; overflow: auto; }
-.log li { display: grid; grid-template-columns: 3.4em 1fr; gap: var(--odstep-2); padding: 6px 0; border-top: var(--kreska) solid var(--linia-jasna); line-height: 1.45; }
+.log li { display: grid; grid-template-columns: 3.4em 1fr; gap: var(--odstep-2); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); line-height: 1.45; }
 .log time { font-weight: 700; font-style: italic; color: var(--tekst-drugorzedny); font-variant-numeric: tabular-nums; }
 .motion { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-3); display: flex; flex-direction: column; gap: var(--odstep-2); }
 .fold summary { font-size: var(--t-lista); }
+.chair .oi-card .fold .oi-faq__a, .chair-right .fold .oi-faq__a { display: flex; flex-direction: column; gap: var(--odstep-3); }
 
-/* Zakładki panelu prowadzącego w jednym rzędzie także na wąskim ekranie */
-.chair-tabs { flex-wrap: nowrap; }
-.chair-tabs .oi-opt { flex: 1 1 0; min-width: 0; padding: .6em .4em; font-size: var(--t-maly); }
+/* „Czytaj” przy materiale jest szary (zasada 3.5), czerwienieje po najechaniu i przy fokusie */
+.chair .material-link__act { color: var(--tekst-drugorzedny); }
+.chair .material-link:focus-visible .material-link__act { color: var(--akcent-tekst); }
+@media (hover: hover) and (pointer: fine) { .chair .material-link:hover .material-link__act { color: var(--akcent-tekst); } }
+
+/* Fakty w kartach panelu mają pismo wierszy list, tak jak fakty w pasku posiedzenia (najwyżej 10 rozmiarów pisma
+   także w trakcie głosowania). Duże liczby i fakty w oknach zostają bez zmian. */
+.chair .facts:not(.facts--liczby, dialog *) .fact dd { font-size: var(--t-lista); }
+
+/* Przyciski w kolumnach kart panelu nie rozciągają się */
+:is(.decision, .pending, .live-foot, .mode-fixed, .assign-material, .controls-end, .note-editor, .read-aloud) > :is(.oi-btn, .link, .btn-wrap) { align-self: flex-start; }
