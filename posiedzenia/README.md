@@ -1,6 +1,6 @@
 # Posiedzenia OIPiP w Słupsku — etap 1: Prezydium
 
-Aplikacja do prowadzenia posiedzeń Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku i do głosowań między posiedzeniami. Prowadzący pracuje na komputerze, a członkowie Prezydium na telefonach, w zwykłej przeglądarce, bez instalowania aplikacji.
+Aplikacja do prowadzenia posiedzeń Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku i do głosowań między posiedzeniami. Osoba prowadząca obrady pracuje na komputerze, a członkowie Prezydium na telefonach, w zwykłej przeglądarce, bez instalowania aplikacji.
 
 Plan: **etap 1 — Prezydium** (ten kod), etap 2 — Okręgowa Rada (wybory prezydium, komisje), etap 3 — Okręgowy Zjazd.
 
@@ -14,13 +14,13 @@ Wymagania wynikają z wiążących dokumentów: Regulaminu Okręgowej Rady (uchw
 | Zwołanie | Termin, miejsce, tryb stacjonarny lub zdalny (z odnośnikiem do połączenia). Aplikacja ostrzega, gdy od zawiadomienia mija mniej niż 7 dni. | § 6 ust. 3, § 7 ust. 1 |
 | Porządek obrad | Uproszczony szablon dla Prezydium (decyzja z 18.11.2026). Można go wczytać z tekstu skopiowanego z Worda. Dalsze sprawy są dostępne dopiero po przyjęciu porządku w głosowaniu. Później zmiany wymagają osobnego głosowania. | § 9 ust. 2, § 14 ust. 4 |
 | Prowadzenie | Prowadzi przewodniczący lub wiceprzewodniczący. Przewodniczący wyznacza zastępcę, może przekazać prowadzenie i przejąć je po powrocie. | § 9 ust. 1, § 16 |
-| Obecność i kworum | Członek potwierdza obecność telefonem albo zaznacza ją prowadzący lub biuro; wejścia i wyjścia są zapisywane z godziną. Kworum to co najmniej 4 z 7. Bez kworum nie da się otworzyć głosowania. | § 8 ust. 2 |
+| Obecność i kworum | Członek potwierdza obecność telefonem albo zapisuje ją osoba prowadząca obrady lub biuro; wejścia i wyjścia są zapisywane z godziną. Kworum to co najmniej 4 z 7. Bez kworum nie da się otworzyć głosowania. | § 8 ust. 2 |
 | Głosowania | Domyślnie jawne. Imienne i tajne wymagają wcześniejszego postanowienia Prezydium (wniosek głosowany w aplikacji). Rozstrzyga zwykła większość, czyli więcej „za” niż „przeciw”. Głosowanie trwa określony czas, ma licznik i kończy się wcześniej, gdy zagłosują wszyscy uprawnieni. | § 8 ust. 3, § 11 |
 | Tajność | Ślepe podpisy RSA (opis niżej): serwer wie, że głosowała uprawniona osoba, ale nie wie, jak głosowała. | § 11 ust. 3 |
 | Reasumpcja | Tylko dla głosowania jawnego, na tym samym posiedzeniu i tylko raz. Wniosek z uzasadnieniem musi poprzeć co najmniej 1/3 obecnych, a decyzję o reasumpcji podejmuje Prezydium. | § 12 |
-| Między posiedzeniami | Procedura zdalna z oknem czasowym (np. kilka godzin), licznikiem i wspólnym kanałem wiadomości. Rozstrzygnięcie wymaga co najmniej 4 głosujących. | § 14 ust. 5 |
+| Między posiedzeniami | Głosowanie zdalne w wyznaczonym czasie (np. kilka godzin), z licznikiem i wspólnym kanałem wiadomości. Rozstrzygnięcie wymaga co najmniej 4 głosujących. | § 14 ust. 5 |
 | Materiały | Pliki DOCX, Markdown i TXT zamieniają się w lekki tekst do czytania na telefonie, a oryginał można pobrać. Plik z kilkoma uchwałami (np. PWZ) dzieli się na osobne dokumenty i podpunkty. Głosowanie dotyczy wersji utrwalonej przy jego otwarciu. | — |
-| Protokół | Projekt protokołu powstaje z zapisu obrad: obecność, porządek, przebieg, wyniki oraz wykaz imienny przy głosowaniu imiennym. Zawiera miejsca na podpisy. | § 13 |
+| Protokół | Projekt protokołu powstaje z zapisu obrad w układzie dokumentu organu: zwołanie i prowadzenie obrad, lista obecności, porządek, przebieg z głosowaniami przy punktach, podjęte uchwały, załączniki i podpisy. Można go wydrukować, zapisać jako PDF albo pobrać do edycji w Wordzie. | § 13 |
 | Ekran sali | Osobny widok na rzutnik: bieżący punkt, trwające głosowanie i ogłoszony wynik. | — |
 
 ## Jak działa tajne głosowanie
@@ -75,7 +75,7 @@ Aplikacja korzysta z identyfikacji wizualnej Okręgowej Izby Pielęgniarek i Po�
 ```
 src/shared/   logika regulaminowa bez zależności (typy, skład, kworum, przebieg posiedzenia, ślepe podpisy)
 src/server/   serwer HTTP na node:http + node:sqlite, logowanie, materiały, karty tajne, protokół
-src/client/   interfejs Preact: panel prowadzącego, widok telefonu, przygotowanie, procedura, konta, ekran sali
+src/client/   interfejs Preact: panel prowadzenia obrad, widok telefonu, przygotowanie, głosowanie między posiedzeniami, konta, ekran sali
 src/demo/     wersja próbna: ten sam interfejs, serwer symulowany w przeglądarce, dane fikcyjne
 tests/        testy logiki, kryptografii i pełnego przebiegu przez API
 ```
