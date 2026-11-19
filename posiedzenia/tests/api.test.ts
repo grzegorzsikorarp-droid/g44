@@ -125,7 +125,7 @@ test('pełny przebieg posiedzenia Prezydium przez API: konta, porządek, głosow
 
     const minutes = await si.call(`/api/meetings/${id}/protokol`);
     assert.equal(minutes.status, 200);
-    assert.match(minutes.body, /Głosowanie tajne w systemie elektronicznym: pobrano kart 7, oddano głosów 7/);
+    assert.match(minutes.body, /Głosowanie tajne przeprowadzono w\u00a0systemie elektronicznym\. Pobrano kart 7, oddano głosów 7/);
     assert.match(minutes.body, /Sebastian Irzykowski/);
     assert.doesNotMatch(minutes.body, /<script>(?!.*druk)/);
   } finally { await stop(); }

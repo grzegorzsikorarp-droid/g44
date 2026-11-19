@@ -1,25 +1,43 @@
-/* Ekran sali: duże, czytelne informacje bez elementów sterowania. Ma własną skalę pisma (clamp), czytelną z sali. */
+/* Ekran sali: duże, czytelne informacje bez elementów sterowania. Ma własną skalę pisma (clamp), czytelną z sali.
+   Każdy stan ma ten sam wzór: skośna etykieta nad tytułem, oba wyśrodkowane, pod tytułem szczegóły. */
 .screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--powierzchnia); }
 .screen-head, .screen-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--odstep-4) var(--odstep-8); flex-wrap: wrap; padding: 1.4vh max(3vw, 20px); }
 .screen-head { border-bottom: var(--kreska) solid var(--linia); }
 .screen-foot { border-top: var(--kreska) solid var(--linia); }
 .screen-head .plate img { height: clamp(40px, 6.5vh, 76px); }
-.screen-head-title { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 12em; }
+/* Nazwa przy znaku jest widoczna przy każdej szerokości (w innych miejscach do 1100 px się chowa). */
+.screen-head .plate-name { display: block; font-size: clamp(.85rem, .5rem + .6vw, 1.25rem); }
+.screen-head-title { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 12em; }
 .screen-head-title strong { font-weight: 300; font-style: italic; font-size: clamp(1rem, .8rem + .8vw, 1.7rem); line-height: 1.2; color: var(--tekst-mocny); }
 .screen-clock { font-weight: 700; font-style: italic; font-size: clamp(1.3rem, 1rem + 1.2vw, 2.4rem); color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
-.screen-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2.4vh; text-align: center; padding: 4vh max(5vw, 20px); }
-.screen-body h1 { font-weight: 300; font-style: italic; color: var(--tekst-mocny); font-size: clamp(2rem, 1.2rem + 3.4vw, 4.8rem); line-height: 1.12; max-width: 26ch; text-wrap: balance; }
-.screen-body > .oi-tag { align-self: center; }
-.screen-body .oi-tag > span { font-size: clamp(.8rem, .6rem + .7vw, 1.3rem); }
-.screen-big .countdown strong { display: block; color: var(--akcent-duzy); font-size: clamp(4rem, 2rem + 9vw, 11rem); line-height: 1; }
+/* Skala zależy od szerokości i wysokości okna (min z vw i vh): stan mieści się na ekranie rzutnika bez przewijania. */
+.screen-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2vh; text-align: center; padding: 3vh max(5vw, 20px); }
+.screen-body h1 { font-weight: 300; font-style: italic; color: var(--tekst-mocny); font-size: clamp(2rem, min(1.2rem + 3.4vw, 7.5vh), 4.8rem); line-height: 1.12; max-width: 26ch; text-wrap: balance; }
+.screen-body h1.is-long { font-size: clamp(1.6rem, min(1rem + 2.4vw, 5.5vh), 3.6rem); max-width: 34ch; }
+.screen-body h1 b { font-weight: 700; }
+/* Etykieta nad tytułem (także w wyniku): wyśrodkowana, w jednej skali we wszystkich stanach */
+.screen-body > .oi-tag, .screen .result > .oi-tag { align-self: center; }
+.screen-body .oi-tag > span { font-size: clamp(.9rem, .5rem + .9vw, 1.5rem); }
+.screen-big .countdown strong { display: block; color: var(--akcent-duzy); font-size: clamp(3.5rem, min(2rem + 9vw, 16vh), 11rem); line-height: 1; }
 .screen-sub { font-size: clamp(1.1rem, .9rem + 1vw, 2rem); color: var(--tekst-drugorzedny); }
+/* Postęp głosowania pod liczbą oddanych głosów */
+.screen-progress { width: min(900px, 70vw); }
+.screen-progress .oi-progress__bar { height: 12px; }
+/* Odcisk klucza głosowania tajnego: ten sam kod członkowie widzą na telefonach */
+.screen-key { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: var(--odstep-2) var(--odstep-4); }
+.screen-key .kicker { font-size: clamp(.8rem, .55rem + .5vw, 1.25rem); }
+.screen-key code { font-size: clamp(1.25rem, .9rem + 1.1vw, 2.4rem); letter-spacing: .08em; padding: .1em .5em; }
+/* Powrót do posiedzenia: w aplikacji tylko na wąskim oknie (w wersji próbnej zawsze) */
 .screen-back { font-size: var(--t-lista); }
+.screen-back--waski { display: none; }
+@media (max-width: 759.98px) { .screen-back--waski { display: inline-flex; } }
 .screen-foot .fact dt { font-size: clamp(.7rem, .6rem + .3vw, .95rem); }
 .screen-foot .fact dd { font-size: clamp(1rem, .8rem + .6vw, 1.5rem); }
-.screen .result { width: min(1300px, 100%); align-items: center; text-align: center; padding: 4vh 4vw; gap: 2.4vh; }
+/* Wynik na ekranie sali: bez obrysu i tła, w skali ekranu */
+.screen .result { width: min(1300px, 100%); align-items: center; text-align: center; padding: 0; gap: 2.4vh; border: 0; background: none; }
 .screen .result .oi-stats { width: 100%; }
 .screen .result-subject { font-size: clamp(1.3rem, 1rem + 1.4vw, 2.6rem); }
-.screen .result-label { font-size: clamp(2.4rem, 1.4rem + 4vw, 6rem); }
-.screen .result .oi-stat b { font-size: clamp(3rem, 2rem + 5vw, 7.5rem); }
+.screen .result-label { font-size: clamp(2.4rem, min(1.4rem + 4vw, 10vh), 6rem); }
+.screen .result .oi-stat b { font-size: clamp(3rem, min(2rem + 5vw, 11vh), 7.5rem); }
 .screen .result .oi-stat span { font-size: clamp(.8rem, .6rem + .6vw, 1.4rem); }
 .screen .result-meta { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); }

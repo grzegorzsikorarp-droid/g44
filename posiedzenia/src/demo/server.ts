@@ -7,6 +7,7 @@ import {summary, viewFor} from '../shared/view.ts';
 import {textToHtml} from '../shared/text.ts';
 import {personName} from '../shared/roster.ts';
 import {minutesBody} from '../server/minutes.ts';
+import {brand} from '../client/brand.ts';
 import type {Account, Actor, Choice, MaterialRef, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {demoAccounts, demoMeetings, demoRoster} from './seed.ts';
 
@@ -115,7 +116,7 @@ export class DemoServer {
 
   minutes(id: string) {
     const actor = this.actor() ?? fail('Wybierz osobę.', 401);
-    return minutesBody(this.meetingFor(id, actor), this.state.roster, this.state.accounts, Date.now());
+    return minutesBody(this.meetingFor(id, actor), this.state.roster, this.state.accounts, Date.now(), {office: brand.officeLower, regulation: brand.regulation});
   }
 
   // Skróty próby: obecność wszystkich i głosy pozostałych osób.
@@ -169,7 +170,7 @@ export class DemoServer {
         if (token.length !== 32 || !verifySignature(BigInt('0x' + String(input.signature)), fdhSync(token, n, sha256), n, e)) fail('Karta do głosowania nie ma ważnego podpisu.', 403);
         const t = bytesToHex(sha256(token)), list = (this.state.secretVotes[b!.id] ??= []);
         if (list.some(v => v.t === t)) return json({ok: true, duplicate: true});
-        if (b!.status !== 'otwarte') fail('Głosowanie zostało zakończone przed przyjęciem głosu.', 409);
+        if (b!.status !== 'otwarte') fail('Głosowanie zakończyło się, zanim głos dotarł. Głos nie został policzony.', 409);
         list.push({t, c: input.choice});
         try { this.put(secretCast(m, b!.id, this.context())); } catch (error) { list.pop(); throw error; }
         return json({ok: true});
@@ -190,7 +191,7 @@ export class DemoServer {
         if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
         if (method === 'POST') {
           if (!/^[a-z0-9._-]{3,64}$/.test(input.username ?? '')) fail('Login musi mieć od 3 do 64 znaków. Użyj małych liter bez polskich znaków, cyfr, kropki, myślnika lub podkreślenia.');
-          if (this.state.accounts.some(x => x.username === input.username)) fail('Ten login jest już zajęty.', 409);
+          if (this.state.accounts.some(x => x.username === input.username)) fail('Ten login jest już zajęty. Wpisz inny login.', 409);
           if (input.kind === 'czlonek') fail('Członkowie mają już konta w wersji próbnej.');
           this.state.accounts.push({id: 'a-' + newId(), username: input.username, kind: input.kind, personId: null, displayName: String(input.displayName || input.username), label: String(input.label ?? ''), admin: !!input.admin, mustChange: false, disabled: false});
         }
@@ -224,7 +225,7 @@ export class DemoServer {
       }
       if (rest === '' && method === 'DELETE') {
         const m = this.meetingFor(id, a);
-        if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Robi to organizator.', 403);
+        if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Usuwa je biuro, przewodniczący albo wiceprzewodniczący.', 403);
         delete this.state.meetings[id]; this.save();
         return json({ok: true});
       }
@@ -244,7 +245,7 @@ export class DemoServer {
         if (init?.body instanceof FormData) fail('W wersji próbnej dodaj materiał przyciskiem „Wklej tekst”. Pliki Word i PDF obsługuje pełna aplikacja.');
         const m = structuredClone(this.meetingFor(id, a));
         if (m.status === 'zakonczone') fail('Posiedzenie zostało zamknięte.');
-        if (!isOrganizer(this.state.roster, m, a) && m.chair.current !== a.personId) fail('Materiały dodaje organizator lub prowadzący.', 403);
+        if (!isOrganizer(this.state.roster, m, a) && m.chair.current !== a.personId) fail('Materiały dodaje biuro albo osoba prowadząca obrady.', 403);
         const text = String(input.text ?? '');
         if (!text.trim()) fail('Wklej treść materiału.');
         const html = textToHtml(text), title = String(input.title ?? '').trim() || 'Materiał';
@@ -268,7 +269,7 @@ export class DemoServer {
           return json({material: {...ref, version, hash: hashHtml(html), html}});
         }
         if (!mat[2] && method === 'DELETE') {
-          if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Materiał usuwa organizator przed otwarciem posiedzenia.', 403);
+          if (!isOrganizer(this.state.roster, m, a) || m.status !== 'przygotowanie') fail('Materiał można usunąć tylko przed otwarciem posiedzenia.', 403);
           const next = structuredClone(m);
           next.materials = next.materials.filter(x => x.id !== ref.id);
           for (const it of next.agenda) it.materialIds = it.materialIds.filter(x => x !== ref.id);
@@ -289,7 +290,7 @@ export class DemoServer {
     } catch (error) {
       const status = error instanceof DomainError ? error.status : (error as {status?: number}).status ?? 500;
       if (status === 500) console.error(error);
-      return json({error: status === 500 ? 'Nie udało się wykonać działania.' : (error as Error).message}, status);
+      return json({error: status === 500 ? 'Nie udało się wykonać tej czynności. Odśwież stronę i spróbuj ponownie. Jeśli błąd się powtórzy, zgłoś go biuru.' : (error as Error).message}, status);
     }
   }
 }

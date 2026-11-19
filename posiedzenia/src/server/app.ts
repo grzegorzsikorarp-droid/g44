@@ -9,7 +9,7 @@ import {accountView, Store, type UserRow} from './store.ts';
 import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
 import {SecretBallots} from './secret.ts';
 import {cleanHtml, docxToHtml, guessType, htmlHash, markdownToHtml, splitActs, textToHtml} from './documents.ts';
-import {minutesHtml, type MinutesLook} from './minutes.ts';
+import {minutesDoc, minutesFileName, minutesHtml, type MinutesLook} from './minutes.ts';
 import {advance, apply, canView, createMeeting, DomainError, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
 import {personName} from '../shared/roster.ts';
@@ -30,7 +30,7 @@ async function body(req: IncomingMessage, max: number) {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > max) fail('Plik lub żądanie przekracza dozwoloną wielkość.', 413);
+    if (size > max) fail('Plik jest za duży. Dodaj plik do 10 MB.', 413);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -53,7 +53,7 @@ export async function createApplication(options: AppOptions = {}) {
     if (cssHref === undefined) {
       try { cssHref = /<link[^>]+rel="stylesheet"[^>]+href="(\/assets\/[^"]+\.css)"/.exec(readFileSync(join(clientDir, 'index.html'), 'utf8'))?.[1] ?? null; } catch { cssHref = null; }
     }
-    return {css: cssHref, logo: '/brand/logo/znak-oipip-slupsk.svg', nameplate: ['Okręgowa Izba Pielęgniarek i Położnych', 'w Słupsku'], org: 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku'};
+    return {css: cssHref, logo: '/brand/logo/znak-oipip-slupsk.svg', nameplate: ['Okręgowa Izba Pielęgniarek i Położnych', 'w Słupsku'], org: 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku', names: {office: 'biuro Izby'}};
   };
   const now = options.now ?? Date.now;
   const local = (host: string) => ['localhost', '127.0.0.1', '[::1]'].includes(host);
@@ -109,7 +109,7 @@ export async function createApplication(options: AppOptions = {}) {
   }
   function requireEditor(m: Meeting, actor: Actor) {
     if (m.status === 'zakonczone') fail('Posiedzenie zostało zamknięte.');
-    if (!isOrganizer(store.roster(), m, actor) && m.chair.current !== actor.personId) fail('Materiały dodaje organizator lub prowadzący.', 403);
+    if (!isOrganizer(store.roster(), m, actor) && m.chair.current !== actor.personId) fail('Materiały dodaje biuro Izby albo osoba prowadząca obrady.', 403);
   }
 
   // Zamykanie głosowań po upływie czasu także wtedy, gdy nikt akurat nie odświeża strony.
@@ -150,7 +150,7 @@ export async function createApplication(options: AppOptions = {}) {
     if (ext === '.md' || ext === '.markdown') return {html: markdownToHtml(buffer.toString('utf8')), source: 'markdown', buffer, name, mime: 'text/markdown'};
     if (ext === '.txt') return {html: textToHtml(buffer.toString('utf8')), source: 'text', buffer, name, mime: 'text/plain'};
     if (ext === '.pdf') return {html: '', source: 'pdf', buffer, name, mime: 'application/pdf'};
-    return fail('Dozwolone pliki: DOCX, PDF, TXT, Markdown.');
+    return fail('Dodaj plik DOCX, PDF, TXT albo Markdown.');
   }
   async function saveFile(meetingId: string, upload: {buffer: Buffer; name: string; mime: string}) {
     const id = 'plik_' + randomUUID();
@@ -192,7 +192,7 @@ export async function createApplication(options: AppOptions = {}) {
           if (!b?.secret) fail('Nie znaleziono głosowania tajnego.', 404);
           const check = secret.check(b!.id, b!.secret!, input.token, input.signature);
           if (check.used) return {ok: true, duplicate: true};
-          if (b!.status !== 'otwarte') fail('Głosowanie zostało zakończone przed przyjęciem głosu.', 409);
+          if (b!.status !== 'otwarte') fail('Głosowanie zakończyło się, zanim głos dotarł. Głos nie został policzony.', 409);
           secret.record(b!.id, check.tokenHash, input.choice);
           store.saveMeeting(secretCast(m, b!.id, context()), now());
           return {ok: true};
@@ -208,7 +208,7 @@ export async function createApplication(options: AppOptions = {}) {
       if (path === '/api/setup' && method === 'POST') {
         const input = await jsonBody(req, 10000);
         if (store.hasUsers()) fail('Administrator został już utworzony.', 409);
-        if (!setupKey || hashToken(String(input.token ?? '').trim()) !== hashToken(setupKey)) fail('Nieprawidłowy kod pierwszego uruchomienia.', 403);
+        if (!setupKey || hashToken(String(input.token ?? '').trim()) !== hashToken(setupKey)) fail('Kod pierwszego uruchomienia jest nieprawidłowy. Skopiuj go z pliku data/pierwsze-uruchomienie.txt.', 403);
         const username = validUsername(input.username), password = await passwordHash(validPassword(input.password));
         const personId = input.personId ? String(input.personId) : null;
         if (personId && !store.roster().persons.some(p => p.id === personId)) fail('Wybierz osobę ze składu.');
@@ -231,7 +231,7 @@ export async function createApplication(options: AppOptions = {}) {
         if (attempts.size > 5000) for (const [k, v] of attempts) if (v.until < t) attempts.delete(k);
         const row = store.userByName(username);
         const ok = await passwordMatches(input.password, row?.password ?? dummyHash);
-        if (!row || row.disabled || !ok) { bucket.count++; attempts.set(key, bucket); fail('Nieprawidłowy login lub hasło.', 401); }
+        if (!row || row.disabled || !ok) { bucket.count++; attempts.set(key, bucket); fail('Login lub hasło są nieprawidłowe. Sprawdź oba pola. W haśle liczy się wielkość liter.', 401); }
         attempts.delete(key);
         return json(res, {account: accountView(row!)}, 200, {'Set-Cookie': loginCookie(row!.id)});
       }
@@ -272,7 +272,7 @@ export async function createApplication(options: AppOptions = {}) {
               if (!store.roster().persons.some(p => p.id === personId)) fail('Wybierz osobę ze składu.');
               displayName = personName(store.roster(), personId);
             } else if (displayName.length < 3) fail('Podaj imię i nazwisko albo nazwę konta.');
-            if (store.userByName(username)) fail('Ten login jest już zajęty.', 409);
+            if (store.userByName(username)) fail('Ten login jest już zajęty. Wpisz inny login.', 409);
             if (personId && db.prepare('SELECT 1 FROM users WHERE person_id=?').get(personId)) fail('Ta osoba ma już konto.', 409);
             db.prepare('INSERT INTO users(id,username,password,kind,person_id,display_name,label,admin,must_change,created) VALUES (?,?,?,?,?,?,?,?,1,?)')
               .run(randomUUID(), username, password, kind, personId, displayName, String(input.label ?? '').slice(0, 120), input.admin ? 1 : 0, now());
@@ -332,7 +332,7 @@ export async function createApplication(options: AppOptions = {}) {
           }
           if (rest === '' && method === 'DELETE') {
             const m = meetingFor(id, a);
-            if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Robi to organizator.', 403);
+            if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Usuwa je biuro Izby, przewodniczący albo wiceprzewodniczący.', 403);
             write(() => store.deleteMeeting(id));
             return json(res, {ok: true});
           }
@@ -360,6 +360,11 @@ export async function createApplication(options: AppOptions = {}) {
           }
           if (rest === '/protokol' && method === 'GET') {
             const m = meetingFor(id, a);
+            // Plik do edycji w Wordzie: ten sam tekst projektu protokołu jako dokument HTML pobierany z rozszerzeniem .doc.
+            if (url.searchParams.get('format') === 'doc') {
+              res.writeHead(200, {'Content-Type': 'application/msword', 'Content-Disposition': `attachment; filename="${minutesFileName(m)}"`, 'Cache-Control': 'private, no-store'});
+              return res.end(minutesDoc(m, store.roster(), accounts(), now(), minutesLook()));
+            }
             res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store'});
             return res.end(minutesHtml(m, store.roster(), accounts(), now(), minutesLook()));
           }
@@ -417,7 +422,7 @@ export async function createApplication(options: AppOptions = {}) {
               return json(res, {material: {...ref, version, hash: row!.hash, html: row!.html}}, 200, {ETag: etag, 'Cache-Control': 'private, no-cache'});
             }
             if (!mat[2] && method === 'DELETE') {
-              if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Materiał usuwa organizator przed otwarciem posiedzenia.', 403);
+              if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Materiał można usunąć tylko przed otwarciem posiedzenia.', 403);
               if (m.ballots.some(b => b.material?.id === ref.id)) fail('Nad tym materiałem już głosowano.');
               const next = write(() => {
                 const next = structuredClone(meetingFor(id, a));
@@ -489,7 +494,7 @@ export async function createApplication(options: AppOptions = {}) {
     } catch (error) {
       const status = error instanceof DomainError ? error.status : (error as {status?: number}).status ?? 500;
       if (status === 500) console.error(error);
-      if (!res.headersSent) json(res, {error: status === 500 ? 'Nie udało się wykonać działania.' : (error as Error).message}, status);
+      if (!res.headersSent) json(res, {error: status === 500 ? 'Nie udało się wykonać tej czynności. Odśwież stronę i spróbuj ponownie. Jeśli błąd się powtórzy, zgłoś go biuru Izby.' : (error as Error).message}, status);
       else res.end();
     }
   });
