@@ -93,8 +93,16 @@ export interface Ballot {
   reasumptionOf?: string; supersededBy?: string; target?: BallotTarget;
   /** Rodzaj dokumentu i formuły wyniku zapisane w chwili otwarcia (F11). Stare głosowania ich nie mają. */
   docType?: string; formulas?: {adopted: string; rejected: string};
-  /** Głosowanie między posiedzeniami przerwane bez rozstrzygnięcia (F7): bez wyniku i bez ogłoszenia. */
-  aborted?: Reasoned;
+  /**
+   * Głosowanie między posiedzeniami przerwane bez rozstrzygnięcia (F7): bez wyniku i bez ogłoszenia. Wybory nie zostają
+   * w danych; `voters` to lista osób, które oddały głos w głosowaniu jawnym (w tajnym lista pobranych kart jest w `secret`).
+   */
+  aborted?: Reasoned & {voters?: string[]};
+  /**
+   * Skutek rozstrzygnięcia czeka na ogłoszenie wyniku (F2): przyjęcie porządku, zmiana porządku, tryb głosowania,
+   * rozstrzygnięcie wniosku o reasumpcję i zastąpienie wyniku. Głosowania zamknięte przed tą zmianą mają skutek już zapisany.
+   */
+  outcomePending?: true;
 }
 
 export interface Motion {

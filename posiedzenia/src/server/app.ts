@@ -68,6 +68,7 @@ export async function createApplication(options: AppOptions = {}) {
   let scrub = false;
   const secret = new SecretBallots(store, () => { scrub = true; });
   const afterWrite = () => { if (scrub) { scrub = false; setImmediate(() => store.scrubSecretTraces()); } };
+  if (store.purgeAbortedVotes()) store.scrubSecretTraces();
 
   const tokenPath = join(dataDir, 'pierwsze-uruchomienie.txt');
   let setupKey = '';
@@ -81,7 +82,11 @@ export async function createApplication(options: AppOptions = {}) {
 
   const context = (): Context => ({
     roster: store.roster(), now: now(), newId: randomUUID, docTypes: store.docTypes(),
-    secret: {openKey: id => secret.openKey(id), tally: id => secret.tally(id), closeKey: id => secret.closeKey(id)},
+    secret: {
+      openKey: id => secret.openKey(id), tally: id => secret.tally(id), closeKey: id => secret.closeKey(id),
+      // F7: karty głosowania przerwanego bez rozstrzygnięcia nie zostają w bazie (ślady w WAL usuwa scrubSecretTraces).
+      discard: id => { db.prepare('DELETE FROM secret_votes WHERE ballot_id=?').run(id); },
+    },
   });
   const view = (m: Meeting, a: Actor) => viewFor(m, a, store.roster());
   const write = <T>(fn: () => T) => { try { return store.transaction(fn); } finally { afterWrite(); } };
@@ -400,7 +405,7 @@ export async function createApplication(options: AppOptions = {}) {
           if (rest === '/duplicate' && method === 'POST') {
             const src = meetingFor(id, a);
             if (!isOrganizer(store.roster(), src, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
-            const {meeting: copy, materialMap} = duplicateMeeting(src, {id: randomUUID(), now: now(), newId: randomUUID, createdBy: a.name});
+            const {meeting: copy, materialMap} = duplicateMeeting(src, {id: randomUUID(), now: now(), newId: randomUUID, createdBy: a.name, docTypes: store.docTypes()});
             const files = new Map<string, string | null>();
             for (const ref of src.materials) {
               if (!ref.fileId || !materialMap.has(ref.id) || files.has(ref.fileId)) continue;

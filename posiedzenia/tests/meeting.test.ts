@@ -108,8 +108,10 @@ test('głosowanie tajne wymaga postanowienia Prezydium, a potem nie ujawnia, kto
   m = apply(m, {type: 'mode_motion', itemId: it.id, mode: 'tajne', minutes: 2, proposedBy: 'ag'}, actor('si'), ctx.tick());
   const motion = m.ballots.at(-1)!;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: motion.id, choice: p === 'eo' ? 'przeciw' : 'za'}, actor(p), ctx.tick());
-  assert.equal(m.agenda.find(i => i.id === it.id)!.mode, 'tajne');
+  // F2: tryb wynika z rozstrzygnięcia dopiero po ogłoszeniu wyniku.
+  assert.equal(m.agenda.find(i => i.id === it.id)!.mode, undefined);
   m = announce(m, ctx);
+  assert.equal(m.agenda.find(i => i.id === it.id)!.mode, 'tajne');
   m = apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'uchwala', subject: 'Uchwała nr 5', mode: 'tajne', minutes: 3}, actor('si'), ctx.tick());
   const secret = m.ballots.at(-1)!;
   assert.equal(secret.modeBasis, 'uchwalone przez Prezydium w głosowaniu nr 2');
@@ -147,12 +149,14 @@ test('reasumpcja: 1/3 podpisów obecnych, tylko głosowanie jawne, tylko raz (§
   m = apply(m, {type: 'motion_vote', motionId: motion.id, minutes: 2}, actor('si'), ctx.tick());
   const vote = m.ballots.at(-1)!.id;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: vote, choice: 'za'}, actor(p), ctx.tick());
-  assert.equal(m.motions[0].status, 'przyjety');
+  assert.equal(m.motions[0].status, 'glosowany', 'rozstrzygnięcie wniosku zapada przy ogłoszeniu wyniku (F2)');
   m = announce(m, ctx);
+  assert.equal(m.motions[0].status, 'przyjety');
   m = apply(m, {type: 'reasumption_open', motionId: motion.id, minutes: 2}, actor('si'), ctx.tick());
   const repeat = m.ballots.at(-1)!;
   assert.equal(repeat.reasumptionOf, original);
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: repeat.id, choice: 'za'}, actor(p), ctx.tick());
+  m = announce(m, ctx);
   assert.equal(m.ballots.find(b => b.id === original)!.supersededBy, repeat.id);
   assert.equal(m.ballots.find(b => b.id === repeat.id)!.result!.adopted, true);
   assert.throws(() => apply(m, {type: 'motion_create', ballotId: repeat.id, justification: 'Ponowna wątpliwość co do wyniku.'}, actor('kn'), ctx), /tylko raz/);
@@ -180,6 +184,9 @@ test('zmiana przyjętego porządku wymaga głosowania, a przyjęta wchodzi do po
   m = apply(m, {type: 'agenda_change', change: {op: 'dodaj', title: 'Patronat nad konferencją', parentId: null, afterId: resolutionItem(m).id}, minutes: 2}, actor('si'), ctx.tick());
   const b = m.ballots.at(-1)!;
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: b.id, choice: 'za'}, actor(p), ctx.tick());
+  // F2: zmiana wchodzi do porządku przy ogłoszeniu wyniku.
+  assert.ok(!m.agenda.some(i => i.title === 'Patronat nad konferencją'));
+  m = announce(m, ctx);
   const added = m.agenda.find(i => i.title === 'Patronat nad konferencją')!;
   assert.ok(added.addedAfterAdoption);
   assert.equal(itemNumber(m.agenda, added.id), '6');

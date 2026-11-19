@@ -6,7 +6,7 @@ import {useLive, useNow} from './api.ts';
 import type {ViewBallot, ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Chip, Countdown, Fact, fmtShort, fmtTime, Tag, TitleLead, usePageTitle} from './ui.tsx';
-import {draftLive, ResultCard} from './meeting.tsx';
+import {draftLive, proposerSentence, ResultCard} from './meeting.tsx';
 import {Plate} from './plate.tsx';
 import {brand} from './brand.ts';
 import {breakSince, meetingState, modeName} from './stany.ts';
@@ -87,7 +87,7 @@ export function RoomScreen({id}: {id: string}) {
       </div>
       {open.secret && <p class="screen-key"><span class="kicker">Odcisk klucza głosowania</span><code>{open.secret.fingerprint}</code></p>}
     </State>;
-  } else if (result) body = visible(result) ? <ResultCard b={result} big kind={materialTypeOf(m, result)}/> : pending(result);
+  } else if (result) body = visible(result) ? <ResultCard b={result} big kind={materialTypeOf(m, result)} proposer={proposerSentence(s.roster, m.organ, result)}/> : pending(result);
   else if (ended) body = ended.purpose === 'proba' ? <ResultCard b={ended} big/> : pending(ended);
   else if (material) body = <State label="Materiał" title={material.title} lead><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
   else if (current && current.kind === 'porzadek' && current.id === m.currentItemId && draftLive(m)) {

@@ -1,7 +1,7 @@
 import {useContext, useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {Command} from '../shared/meeting.ts';
 import {canChairOrgan, isChairman, noticeDays} from '../shared/meeting.ts';
-import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel, resultPendingText} from '../shared/rules.ts';
+import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, modeLabel, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel, resultPendingProcedureText, resultPendingText} from '../shared/rules.ts';
 import {membership, organMembers, personName} from '../shared/roster.ts';
 import type {AgendaItem, Choice, DocType, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {request, serverNow, useLive} from './api.ts';
@@ -38,9 +38,13 @@ export function proposerSentence(roster: Roster, organ: string, b: Pick<ViewBall
   const label = membership(roster, organ, who)?.label;
   return `Wniosek zgłasza ${personName(roster, who)}${label ? `, ${label}` : ''}.`;
 }
-/** Projekt porządku zmienia się na żywo (F8): bieżący punkt to „Przyjęcie porządku obrad”, porządek nie jest przyjęty i nic się nie głosuje. */
+/**
+ * Projekt porządku zmienia się na żywo (F8): bieżący punkt to „Przyjęcie porządku obrad”, porządek nie jest przyjęty,
+ * nic się nie głosuje, a wszystkie wyniki są ogłoszone (porządek przyjmuje się przy ogłoszeniu wyniku, F2).
+ */
 export const draftLive = (m: ViewMeeting) => m.kind === 'posiedzenie' && m.status !== 'zakonczone' && !m.agendaAdopted
-  && m.agenda.find(i => i.id === m.currentItemId)?.kind === 'porzadek' && !m.ballots.some(b => b.status === 'otwarte');
+  && m.agenda.find(i => i.id === m.currentItemId)?.kind === 'porzadek' && !m.ballots.some(b => b.status === 'otwarte')
+  && !m.ballots.some(b => b.status === 'zamkniete' && b.purpose !== 'proba' && !b.aborted && !b.announcedAt);
 
 export function MeetingPage({id}: {id: string}) {
   const s = useSession();
@@ -170,7 +174,7 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
   const open = !procedure && liveNow ? m.ballots.find(b => b.status === 'otwarte') : undefined;
   const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length;
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
-  const short = procedure ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : `Posiedzenie Prezydium, ${shortDate(m)}`;
+  const short = procedure ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : `${m.working ? 'Spotkanie robocze' : 'Posiedzenie Prezydium'}, ${shortDate(m)}`;
   // Po zamknięciu posiedzenia „Projekt protokołu” jest przyciskiem głównym w podsumowaniu, więc pasek go nie powtarza.
   const protocol = m.status !== 'przygotowanie' && !(m.status === 'zakonczone' && !procedure) && (organizer || (m.status === 'zakonczone' && s.isMember(m.organ)));
   const votes = open ? castOf(open) : null;
@@ -285,7 +289,7 @@ export function emphasize(text: string) {
  * rodzaj materiału z posiedzenia, jeśli stoi w jego kontekście (ekran sali go nie ma). Głosowanie przerwane (F7)
  * ma formułę i powód bez liczb, a wynik jeszcze nieogłoszony (F2) zdanie, że ogłosi go osoba prowadząca obrady.
  */
-export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: MaterialType | null}) {
+export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: MaterialType | null; proposer?: string | null}) {
   const {b} = props;
   const ctx = useContext(MeetingCtx);
   const session = useContext(SessionContext);
@@ -293,15 +297,22 @@ export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: Material
   const trial = b.purpose === 'proba';
   const label = trial ? `Wynik próbnego głosowania ${modeGenitive(b.mode)}` : `Wynik głosowania ${modeGenitive(b.mode)} nr ${b.number}${b.reasumptionOf ? ' po reasumpcji' : ''}`;
   const head = props.big ? <Tag>{label}</Tag> : <span class="oi-label">{label}</span>;
-  const subject = <p class="result-subject">{props.big ? <TitleLead text={b.subject}/> : b.subject}</p>;
-  if (b.aborted) return <div class={'result' + (props.big ? ' result-big' : '')}>
-    {head}{subject}
-    <p class="result-label">{emphasize(resultLabel(b))}</p>
-    <p class="result-meta">{`Powód „${b.aborted.reason}”. Głosów nie policzono.`}</p>
-  </div>;
+  // Przy głosowaniu próbnym z domyślnym przedmiotem etykieta i rozstrzygnięcie mówią już „głosowanie próbne” (F1).
+  const subject = trial && b.subject === 'Głosowanie próbne' ? null : <p class="result-subject">{props.big ? <TitleLead text={b.subject}/> : b.subject}</p>;
+  // Przerwane (F7): bez słowa „Wynik” w etykiecie i bez czerwieni, bo rozstrzygnięcie nie zapadło.
+  if (b.aborted) {
+    const title = `Głosowanie ${modeLabel[b.mode]} nr ${b.number}`;
+    return <div class={'result' + (props.big ? ' result-big' : '')}>
+      {props.big ? <Tag dark>{title}</Tag> : <span class="oi-label">{title}</span>}{subject}
+      <p class="result-label result-label--neutral">{emphasize(resultLabel(b))}</p>
+      <p class="result-meta">{`Powód „${b.aborted.reason}”. Głosów nie policzono.`}</p>
+    </div>;
+  }
+  // W głosowaniu między posiedzeniami nie ma obrad: wynik ogłasza przewodniczący albo wiceprzewodniczący (F2).
+  const pendingText = ctx?.m.kind === 'procedura' ? resultPendingProcedureText : resultPendingText;
   if (!r) return b.status === 'zamkniete' && b.resultHidden ? <div class={'result' + (props.big ? ' result-big' : '')}>
     {props.big ? <Tag>{ballotTitle(b)}</Tag> : <span class="oi-label">{ballotTitle(b)}</span>}{subject}
-    <p class="result-pending">{resultPendingText}</p>
+    <p class="result-pending">{pendingText}</p>
   </div> : null;
   const kind = props.kind !== undefined ? props.kind : ctx ? materialTypeOf(ctx.m, b) : null;
   const reason = b.closeReason === 'czas' ? ' Upłynął czas głosowania.' : b.closeReason === 'prowadzacy' ? ' Głosowanie zakończyła osoba prowadząca obrady.' : '';
@@ -309,7 +320,8 @@ export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: Material
     ? `Zagłosowali wszyscy uprawnieni (${r.eligible}).${trial ? '' : ` Wymagane kworum ${r.quorum}.`}`
     : `Głosowało ${r.cast} z ${r.eligible} uprawnionych.${trial ? '' : ` Wymagane kworum ${r.quorum}.`}${reason}`;
   const replaced = b.supersededBy && ctx ? ctx.m.ballots.find(x => x.id === b.supersededBy) : undefined;
-  const proposer = session && ctx ? proposerSentence(session.roster, ctx.m.organ, b) : null;
+  // F14: zdanie o wnioskodawcy także na ekranie sali, który przekazuje je w `proposer` (nie ma kontekstu posiedzenia).
+  const proposer = props.proposer !== undefined ? props.proposer : session && ctx ? proposerSentence(session.roster, ctx.m.organ, b) : null;
   return <div class={'result' + (props.big ? ' result-big' : '')}>
     {head}{subject}
     <p class="result-label">{emphasize(resultLabel(b, kind))}</p>
@@ -662,7 +674,8 @@ export function Motions() {
   const present = presentMembers(m as Meeting, s.roster);
   // Na spotkaniu roboczym (F5) nie składa się wniosków. Głosowania próbnego i przerwanego nie poddaje się reasumpcji.
   const canAct = !!me && s.isMember(m.organ) && m.attendance[me] === 'obecny' && m.status !== 'zakonczone' && !m.working;
-  const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && b.mode === 'jawne' && !b.aborted && !['reasumpcja', 'tryb', 'proba'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
+  // Wniosek dotyczy wyniku ogłoszonego (F2): głosowanie z wynikiem czekającym na ogłoszenie nie jest na liście.
+  const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && !!b.announcedAt && !b.resultHidden && b.mode === 'jawne' && !b.aborted && !['reasumpcja', 'tryb', 'proba'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
   const shown = m.motions.filter(x => x.status !== 'wycofany');
   if (!shown.length && (!canAct || !eligibleBallots.length)) return null;
   const needed = reasumptionSignaturesNeeded(present.length);
@@ -733,7 +746,8 @@ function Summary() {
       </dl>
     </div>
     <section class="oi-card"><CardTitle level={2}>Porządek obrad</CardTitle><AgendaList compact/></section>
-    <section>
+    {/* Spotkanie robocze bez głosowań (F5): zdanie zamiast pustej sekcji wyników z licznikiem. */}
+    {m.working && !final.length ? <p class="muted">Na spotkaniu roboczym nie przeprowadza się głosowań.</p> : <section>
       <SectionHead count={`${final.length} ${plural(final.length, 'głosowanie', 'głosowania', 'głosowań')}`}>Wyniki głosowań</SectionHead>
       {/* Role ARIA powtarzają znaczenie tabeli, bo do 560 px wiersze mają układ bloków (uczestnik.css). */}
       {final.length > 0 && <div class="oi-table-wrap"><table class="oi-table results-table" role="table" aria-label="Wyniki głosowań">
@@ -746,7 +760,7 @@ function Summary() {
           <td role="cell">{emphasize(resultLabel(b, materialTypeOf(m, b)))}</td>
         </tr>)}</tbody>
       </table></div>}
-    </section>
+    </section>}
     {named.map(b => <section class="oi-card" key={b.id}><CardTitle level={2}>Wykaz imienny głosowania nr {b.number}</CardTitle><NamedList b={b}/></section>)}
   </div>;
 }

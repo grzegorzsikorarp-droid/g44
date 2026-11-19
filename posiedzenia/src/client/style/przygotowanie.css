@@ -84,6 +84,13 @@
 .people-editor { display: flex; flex-direction: column; gap: var(--odstep-3); }
 .person-row { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
 .person-row .row > * { flex: 1 1 12em; }
+/* Imię i nazwisko na całą szerokość wiersza (długie nazwiska się nie ucinają), funkcja pod nim */
+.person-row .row > :first-child { flex-basis: 100%; }
+/* Telefon: formularz edycji punktu pod numerem na całą szerokość i węższe wcięcie wiersza osoby */
+@media (max-width: 480px) {
+  .edit-row > .edit-form { grid-column: 1 / -1; }
+  .person-row { padding-inline: var(--odstep-3); }
+}
 .person-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--odstep-2) var(--odstep-4); }
 .person-tools .oi-seg { flex: 1 1 16em; }
 .people-add > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }

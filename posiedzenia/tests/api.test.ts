@@ -90,10 +90,11 @@ test('pełny przebieg posiedzenia Prezydium przez API: konta, porządek, głosow
     let ballot = state.ballots.at(-1);
     await Promise.all(presidium.map(p => cmd(members.get(p)!, {type: 'vote', ballotId: ballot.id, choice: 'za'})));
     state = (await si.ok(`/api/meetings/${id}`)).meeting;
-    assert.equal(state.agendaAdopted, true);
+    assert.equal(state.agendaAdopted, false, 'porządek przyjmuje się przy ogłoszeniu wyniku (F2)');
     assert.equal(state.ballots.at(-1).result.za, 7);
     assert.deepEqual(state.ballots.at(-1).votes, {}, 'w głosowaniu jawnym widoczne są tylko liczby');
-    await cmd(si, {type: 'announce', ballotId: ballot.id});
+    state = (await cmd(si, {type: 'announce', ballotId: ballot.id})).meeting;
+    assert.equal(state.agendaAdopted, true);
 
     // postanowienie o tajności, potem głosowanie tajne ze ślepymi podpisami
     await cmd(si, {type: 'item_start', itemId: resolutions.id, reason: 'Protokół z poprzedniego posiedzenia nie jest jeszcze gotowy.'});

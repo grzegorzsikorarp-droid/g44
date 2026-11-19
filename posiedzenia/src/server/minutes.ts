@@ -1,6 +1,6 @@
 import type {Account, AgendaItem, Ballot, DocType, Meeting, Motion, Roster} from '../shared/types.ts';
 import {membership, organMembers, organOf, personName} from '../shared/roster.ts';
-import {ballotDocType, choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenceOf, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resultLabel, resultPendingText, unannounced} from '../shared/rules.ts';
+import {ballotDocType, choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenceOf, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resultLabel, resultPendingProcedureText, resultPendingText, unannounced} from '../shared/rules.ts';
 import {defaultDocTypes} from '../shared/doctypes.ts';
 import {noticeDays} from '../shared/meeting.ts';
 import {plural} from '../shared/text.ts';
@@ -102,7 +102,8 @@ function chairAt(m: Meeting, at: number) {
 }
 /**
  * Kto zapisał albo potwierdził obecność, w bierniku bez odmiany nazwiska: „osobę prowadzącą obrady (Anna Nowak)”,
- * „członka Prezydium (…)”, „inną osobę (…)” albo biuro („biuro Izby”). Imię i nazwisko stoi w nawiasie w mianowniku.
+ * „członka Prezydium (…)”, „inną osobę (…)” albo biuro z nazwą konta („biuro Izby (Biuro Drugie)”). Imię i nazwisko
+ * albo nazwa konta stoi w nawiasie w mianowniku.
  */
 function byWhom(d: Doc, name: string, at: number) {
   const {m, roster} = d;
@@ -110,7 +111,8 @@ function byWhom(d: Doc, name: string, at: number) {
   if (chair && name === personName(roster, chair)) return `osobę prowadzącą obrady (${name})`;
   const person = roster.persons.find(x => x.name === name);
   if (person) return membership(roster, m.organ, person.id) ? `członka Prezydium (${name})` : `inną osobę (${name})`;
-  return d.office;
+  // F9: przy kilku kontach biura nazwa konta mówi, kto potwierdził obecność.
+  return name && name !== 'system' ? `${d.office} (${name})` : d.office;
 }
 /** Członkowie organu obecni w danej chwili według listy obecności (ostatnie przybycie albo wyjście przed tą chwilą). */
 function presentAt(d: Doc, at: number) {
@@ -189,7 +191,9 @@ function remoteParticipation(d: Doc, b: Ballot) {
     const took = b.eligible.filter(id => b.secret!.issued.includes(id));
     text += took.length ? ` ${persons(took.length, ['Kartę do głosowania pobrała', 'Kartę do głosowania pobrały', 'Kartę do głosowania pobrało'])} (${names(took)}).` : ' Nikt nie pobrał karty do głosowania.';
   } else {
-    const voted = b.eligible.filter(id => id in b.votes), missing = b.eligible.filter(id => !(id in b.votes));
+    // F7: głosowanie przerwane nie zachowuje wyborów, tylko listę głosujących (`aborted.voters`).
+    const cast = new Set(b.aborted?.voters ?? Object.keys(b.votes));
+    const voted = b.eligible.filter(id => cast.has(id)), missing = b.eligible.filter(id => !cast.has(id));
     text += voted.length ? ` ${persons(voted.length, ['Głos oddała', 'Głos oddały', 'Głos oddało'])} (${names(voted)}).` : ' Nikt nie oddał głosu.';
     if (voted.length && missing.length) text += ` ${persons(missing.length, ['Głosu nie oddała', 'Głosu nie oddały', 'Głosu nie oddało'])} (${names(missing)}).`;
   }
@@ -216,7 +220,7 @@ function ballotBlock(d: Doc, b: Ballot) {
   }
   // F2: wynik, którego ta osoba jeszcze nie widzi, zostaje w dokumencie ukryty tak jak w aplikacji.
   if (d.hidden.has(b.id)) {
-    lines.push(p(resultPendingText, 'muted'));
+    lines.push(p(d.procedure ? resultPendingProcedureText : resultPendingText, 'muted'));
     return `<div class="ballot">${lines.join('')}</div>`;
   }
   if (!r) {
@@ -231,7 +235,7 @@ function ballotBlock(d: Doc, b: Ballot) {
   }
   if (b.mode === 'imienne') lines.push(table(`Wykaz imienny głosowania nr ${b.number}`, ['Imię i nazwisko', 'Głos'], b.eligible.map(id => [t(personName(roster, id)), t(b.votes[id] ? choiceLabel[b.votes[id]] : 'brak głosu')])));
   if (b.remote) lines.push(remoteParticipation(d, b));
-  if (b.supersededBy) lines.push(p(`Wynik zastąpiono wynikiem reasumpcji w głosowaniu nr ${m.ballots.find(x => x.id === b.supersededBy)?.number ?? DOTS}.`, 'muted'));
+  if (b.supersededBy && !d.hidden.has(b.supersededBy)) lines.push(p(`Wynik zastąpiono wynikiem reasumpcji w głosowaniu nr ${m.ballots.find(x => x.id === b.supersededBy)?.number ?? DOTS}.`, 'muted'));
   return `<div class="ballot">${lines.join('')}</div>`;
 }
 
@@ -246,14 +250,19 @@ function motionText(d: Doc, x: Motion) {
   const closed = m.status === 'zakonczone';
   let text = `Wniosek o reasumpcję głosowania nr ${number(x.ballotId)} zgłoszono o godz. ${time(x.createdAt)}. Uzasadnienie ${quoted(reason)}.`;
   if (x.filedAt !== undefined) text += ` Poparło go ${x.signatures.length} z ${x.presentAtFiling ?? DOTS} obecnych członków Prezydium, wymagana co najmniej 1/3.`;
-  switch (x.status) {
+  // F2: rozstrzygnięcie wniosku zapada przy ogłoszeniu wyniku głosowania nad nim; do tego czasu wniosek jest „w głosowaniu”.
+  const vote = m.ballots.find(b => b.id === x.voteBallotId);
+  const status = vote && d.hidden.has(vote.id) ? 'glosowany' : x.status;
+  switch (status) {
     case 'zbiera_podpisy': {
       if (closed) return text + ' Wniosek nie zebrał wymaganej liczby podpisów.';
       const present = presentMembers(m, d.roster);
       return text + ` Wniosek zbiera podpisy (${x.signatures.filter(id => present.includes(id)).length} z ${reasumptionSignaturesNeeded(present.length)}).`;
     }
     case 'zlozony': return text + (closed ? ' Wniosku nie poddano pod głosowanie.' : ' Wniosek czeka na decyzję Prezydium.');
-    case 'glosowany': return text + ` Głosowanie nad wnioskiem (nr ${number(x.voteBallotId)}) nie zostało zakończone.`;
+    case 'glosowany': return text + (vote?.status === 'zamkniete'
+      ? ` Wynik głosowania nad wnioskiem (nr ${number(x.voteBallotId)}) czeka na ogłoszenie.`
+      : ` Głosowanie nad wnioskiem (nr ${number(x.voteBallotId)}) nie zostało zakończone.`);
     case 'przyjety': return text + (x.repeatBallotId
       ? ` Prezydium przyjęło wniosek w głosowaniu nr ${number(x.voteBallotId)}, ponowne głosowanie nr ${number(x.repeatBallotId)}.`
       : ` Prezydium przyjęło wniosek w głosowaniu nr ${number(x.voteBallotId)}. ${closed ? 'Ponownego głosowania nie przeprowadzono.' : 'Ponowne głosowanie jeszcze się nie odbyło.'}`);
@@ -477,25 +486,29 @@ function chapterThree(d: Doc) {
     return `<li>${line(top)}${subs.length ? '<ol>' + subs.map(s => `<li>${line(s)}</li>`).join('') + '</ol>' : ''}</li>`;
   }).join('') + '</ol>';
   const adoption = [...m.ballots].reverse().find(b => b.purpose === 'porzadek' && b.result?.adopted);
-  const sentence = m.agendaAdopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.')
-    : d.note ? 'Porządku obrad nie przyjęto. Na spotkaniu roboczym nie przeprowadza się głosowań.' : 'Porządek obrad nie został przyjęty.';
-  return `<h2>${t('III. Porządek obrad')}</h2>` + list + draftChanges(d, adoption) + p(sentence);
+  // F2: porządek przyjmuje się przy ogłoszeniu wyniku. Osoba, która wyniku jeszcze nie widzi, nie dostaje zdania
+  // o przyjęciu porządku; osoba prowadząca obrady widzi je od razu po zamknięciu głosowania.
+  const hiddenAdoption = m.ballots.some(b => b.purpose === 'porzadek' && d.hidden.has(b.id));
+  const adopted = !hiddenAdoption && (m.agendaAdopted || !!adoption?.outcomePending);
+  const sentence = adopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.')
+    : hiddenAdoption ? '' : d.note ? 'Porządku obrad nie przyjęto. Na spotkaniu roboczym nie przeprowadza się głosowań.' : 'Porządek obrad nie został przyjęty.';
+  return `<h2>${t('III. Porządek obrad')}</h2>` + list + draftChanges(d, adopted ? adoption : undefined, adopted) + (sentence ? p(sentence) : '');
 }
 
 /**
  * Zmiany projektu porządku obrad na posiedzeniu (F8): wpisy dziennika z oznaczeniem `projekt` do chwili przyjęcia
  * porządku, z godziną, przed zdaniem o przyjęciu porządku.
  */
-function draftChanges(d: Doc, adoption: Ballot | undefined) {
+function draftChanges(d: Doc, adoption: Ballot | undefined, adopted: boolean) {
   const {m} = d;
-  const until = m.agendaAdopted && adoption?.closedAt ? adoption.closedAt : Infinity;
+  const until = adopted && adoption?.closedAt ? adoption.closedAt : Infinity;
   const entries = m.log.filter(l => l.tag === 'projekt' && l.at <= until);
   if (!entries.length) return '';
   const text = (l: {at: number; text: string}) => {
     const change = l.text.replace(/^Zmieniono projekt porządku obrad\.\s*/, '').replace(' ma nową nazwę ', ' otrzymał nową nazwę ');
     return `O godz. ${time(l.at)} ${change.charAt(0).toLowerCase()}${change.slice(1)}`;
   };
-  return p(m.agendaAdopted ? 'Przed przyjęciem porządku obrad osoba prowadząca obrady zmieniła jego projekt.' : `W trakcie ${d.note ? 'spotkania' : 'posiedzenia'} osoba prowadząca obrady zmieniła projekt porządku obrad.`)
+  return p(adopted ? 'Przed przyjęciem porządku obrad osoba prowadząca obrady zmieniła jego projekt.' : `W trakcie ${d.note ? 'spotkania' : 'posiedzenia'} osoba prowadząca obrady zmieniła projekt porządku obrad.`)
     + '<ul class="draft-changes">' + entries.map(l => `<li>${t(text(l))}</li>`).join('') + '</ul>';
 }
 
@@ -510,7 +523,7 @@ function chapterFour(d: Doc) {
 
 function chapterFive(d: Doc) {
   const {m} = d;
-  const adopted = m.ballots.filter(b => b.result?.adopted && !b.supersededBy && !d.hidden.has(b.id) && isResolution(m, b)).sort((x, y) => x.number - y.number);
+  const adopted = m.ballots.filter(b => b.result?.adopted && (!b.supersededBy || d.hidden.has(b.supersededBy)) && !d.hidden.has(b.id) && isResolution(m, b)).sort((x, y) => x.number - y.number);
   const out = [`<h2>${t('V. Podjęte uchwały')}</h2>`];
   if (!adopted.length) return out.concat(p('Nie podjęto uchwał.')).join('');
   out.push(table('Podjęte uchwały', ['Numer', 'W sprawie', 'Za', 'Przeciw', 'Wstrzymało się'], adopted.map(b => {

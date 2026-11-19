@@ -1,6 +1,7 @@
 import type {Actor, Ballot, Choice, Meeting, Roster} from './types.ts';
 import {itemNumber, unannounced} from './rules.ts';
 import {membership} from './roster.ts';
+import {cleanTitle} from './agenda.ts';
 
 /**
  * Kto widzi wynik zamkniętego głosowania przed jego ogłoszeniem (F2): na posiedzeniu osoba prowadząca obrady i konto
@@ -27,10 +28,14 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster): MeetingView 
   const v = structuredClone(m) as MeetingView;
   const hidden = seesUnannounced(m, actor, roster) ? new Set<string>() : new Set(unannounced(m).map(b => b.id));
   for (const b of v.ballots) {
-    b.voted = b.secret ? [...b.secret.issued] : Object.keys(b.votes);
-    if (actor.personId && !b.secret && b.votes[actor.personId]) b.myVote = b.votes[actor.personId];
-    if (b.status === 'otwarte' || b.mode !== 'imienne') b.votes = {};
-    if (hidden.has(b.id)) { delete b.result; b.votes = {}; b.resultHidden = true; }
+    b.voted = b.secret ? [...b.secret.issued] : b.aborted?.voters ? [...b.aborted.voters] : Object.keys(b.votes);
+    if (actor.personId && !b.secret && !b.aborted && b.votes[actor.personId]) b.myVote = b.votes[actor.personId];
+    // F7: głosowanie przerwane bez rozstrzygnięcia nie ujawnia wyborów, także imienne.
+    if (b.status === 'otwarte' || b.mode !== 'imienne' || b.aborted) b.votes = {};
+    if (hidden.has(b.id)) {
+      delete b.result; b.votes = {}; b.resultHidden = true;
+      if (!b.outcomePending) hideOutcome(v, b);
+    }
   }
   if (hidden.size) {
     for (const entry of v.log) {
@@ -38,6 +43,38 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster): MeetingView 
     }
   }
   return v;
+}
+
+/**
+ * F2, dane sprzed poprawki: głosowanie zamknięte bez ogłoszenia wyniku ma już zapisany skutek rozstrzygnięcia (nowe
+ * głosowania dostają go dopiero przy ogłoszeniu). Widok osoby, która nie widzi wyniku, cofa ten skutek: porządek
+ * nieprzyjęty i punkt „Przyjęcie porządku obrad” w toku, punkt bez uchwalonego trybu, wniosek o reasumpcję
+ * w głosowaniu, wynik pierwotnego głosowania niezastąpiony, a punkt dodany zmianą porządku niewidoczny.
+ */
+function hideOutcome(v: MeetingView, b: Ballot) {
+  if (b.purpose === 'porzadek') {
+    v.agendaAdopted = false;
+    const point = v.agenda.find(i => i.kind === 'porzadek');
+    if (point?.status === 'zakonczony') { point.status = 'w_toku'; delete point.endedAt; }
+  }
+  const target = b.target;
+  if (target?.kind === 'tryb') {
+    const it = v.agenda.find(i => i.id === target.itemId);
+    if (it?.modeBasis?.endsWith(`w głosowaniu nr ${b.number}`)) { delete it.mode; delete it.modeBasis; }
+  }
+  if (target?.kind === 'reasumpcja') {
+    const motion = v.motions.find(x => x.id === target.motionId);
+    if (motion && (motion.status === 'przyjety' || motion.status === 'odrzucony')) motion.status = 'glosowany';
+  }
+  if (target?.kind === 'zmiana_porzadku' && target.change.op === 'dodaj') {
+    const title = cleanTitle(target.change.title);
+    const added = [...v.agenda].reverse().find(i => i.addedAfterAdoption && i.status === 'oczekuje' && i.title === title);
+    if (added) v.agenda = v.agenda.filter(i => i.id !== added.id && i.parentId !== added.id);
+  }
+  if (b.reasumptionOf) {
+    const original = v.ballots.find(x => x.id === b.reasumptionOf);
+    if (original?.supersededBy === b.id) delete original.supersededBy;
+  }
 }
 
 // Wiersz listy posiedzeń. `currentNumber` to numer bieżącego punktu (np. „4.1”). `ballots` nie liczy głosowań

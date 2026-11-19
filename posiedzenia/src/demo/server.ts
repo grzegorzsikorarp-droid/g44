@@ -97,6 +97,7 @@ export class DemoServer {
           return counts;
         },
         closeKey: id => { delete this.state.keys[id]; },
+        discard: id => { delete this.state.secretVotes[id]; },
       },
     };
   }
@@ -292,7 +293,7 @@ export class DemoServer {
       if (rest === '/duplicate' && method === 'POST') {
         const src = this.meetingFor(id, a);
         if (!isOrganizer(this.state.roster, src, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
-        const {meeting: copy, materialMap} = duplicateMeeting(src, {id: newId(), now: Date.now(), newId, createdBy: a.name});
+        const {meeting: copy, materialMap} = duplicateMeeting(src, {id: newId(), now: Date.now(), newId, createdBy: a.name, docTypes: this.state.docTypes});
         for (const [oldId, newRef] of materialMap) {
           const old = src.materials.find(x => x.id === oldId)!, html = this.state.materials[oldId]?.versions[old.version] ?? '';
           this.state.materials[newRef] = {meetingId: copy.id, versions: {1: html}};

@@ -63,7 +63,7 @@ test('protokół: dane do protokołu, głosowanie próbne w rozdziale I, zmiany 
   assert.match(body, /O godz\. \d\d:\d\d dodano punkt 4 „Patronat nad konferencją”\./);
   // F9: obecność zgłoszona w aplikacji i potwierdzona przez prowadzącego albo biuro.
   assert.match(body, /Anna Grzegorczyk I Wiceprzewodnicząca obecność od \d\d:\d\d zgłoszenie w aplikacji, potwierdzone przez osobę prowadzącą obrady \(Sebastian Irzykowski\)/);
-  assert.match(body, /Jolanta Woźniak .{0,40}zgłoszenie w aplikacji, potwierdzone przez biuro Izby/);
+  assert.match(body, /Jolanta Woźniak .{0,40}zgłoszenie w aplikacji, potwierdzone przez biuro Izby \(Biuro Izby\)/);
   assert.doesNotMatch(body, /wyjście/, 'zgłoszenie obecności nie jest wyjściem');
 });
 
@@ -153,9 +153,26 @@ test('protokół głosowania między posiedzeniami: zmiany terminu, przerwanie z
   assert.ok(!seesUnannounced(counted, actor('kn'), roster));
   const hidden = doc(counted, {hideUnannounced: true});
   assert.match(hidden, /Zakończenie przed terminem z policzeniem głosów \(Sebastian Irzykowski\)/);
-  assert.match(hidden, /Głosowanie zakończone\. Wynik ogłosi osoba prowadząca obrady\./);
+  // W głosowaniu między posiedzeniami nie ma obrad: wynik ogłasza przewodniczący albo wiceprzewodniczący.
+  assert.match(hidden, /Głosowanie zakończone\. Wynik ogłosi przewodniczący albo wiceprzewodniczący\./);
   assert.doesNotMatch(hidden, /Uchwała podjęta|Uchwała nie została podjęta|Wstrzymało się/);
   const shown = doc(counted);
   assert.match(shown, /zakończone przed terminem z policzeniem głosów/);
-  assert.doesNotMatch(shown, /Wynik ogłosi osoba prowadząca obrady/);
+  assert.doesNotMatch(shown, /Wynik ogłosi/);
+});
+
+test('protokół: przed ogłoszeniem wyniku osoba bez wglądu nie dostaje zdania o przyjęciu porządku ani rozstrzygnięcia wniosku, a biuro widzi nazwę konta', () => {
+  let {ctx, m} = opened();
+  m = apply(m, {type: 'item_start', itemId: item(m, 'porzadek').id}, chair, ctx.tick());
+  m = apply(m, {type: 'ballot_open', itemId: item(m, 'porzadek').id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  const member = doc(m, {hideUnannounced: true});
+  assert.doesNotMatch(member, /Porządek obrad przyjęto/);
+  assert.doesNotMatch(member, /Porządek obrad nie został przyjęty/);
+  assert.match(member, /Głosowanie zakończone\. Wynik ogłosi osoba prowadząca obrady\./);
+  assert.match(doc(m), /Porządek obrad przyjęto w głosowaniu nr 1\./, 'osoba prowadząca obrady widzi wynik od razu');
+  m = announce(m, ctx);
+  assert.match(doc(m, {hideUnannounced: true}), /Porządek obrad przyjęto w głosowaniu nr 1\./);
+  // F9: przy kilku kontach biura protokół podaje nazwę konta, które potwierdziło obecność.
+  assert.match(doc(m), /potwierdzone przez biuro Izby \(Biuro Izby\)/);
 });

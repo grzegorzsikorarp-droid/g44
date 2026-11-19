@@ -452,3 +452,141 @@ test('F14: wniosek o tryb zapisuje, kto go zgłosił; zgłasza członek obecny n
   assert.deepEqual(last(m).target, {kind: 'tryb', itemId: it.id, mode: 'imienne', proposedBy: 'eo'});
   assert.ok(m.log.some(e => e.text === 'Wniosek o przeprowadzenie głosowania imiennego w punkcie 3 „Przyjęcie protokołu z poprzedniego posiedzenia”, zgłasza Edyta Ostrowska.'));
 });
+
+test('F2: skutek rozstrzygnięcia zapada przy ogłoszeniu, a widok członka przed ogłoszeniem go nie pokazuje', () => {
+  let {ctx, m} = opened();
+  const point = item(m, 'porzadek');
+  m = apply(m, {type: 'item_start', itemId: point.id}, chair, ctx.tick());
+  m = apply(m, {type: 'ballot_open', itemId: point.id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  assert.equal(m.agendaAdopted, false, 'porządek przyjmuje się przy ogłoszeniu');
+  assert.equal(viewFor(m, actor('kn'), roster).agendaAdopted, false);
+  assert.equal(viewFor(m, actor('kn'), roster).agenda.find(i => i.id === point.id)!.status, 'w_toku');
+  // Projekt porządku nie zmienia się między zamknięciem głosowania a ogłoszeniem wyniku.
+  assert.throws(() => apply(m, {type: 'item_place', itemId: item(m, 'sprawozdania').id, parentId: null, beforeId: null}, chair, ctx), /Najpierw ogłoś wynik głosowania nr 1\./);
+  assert.throws(() => apply(m, {type: 'item_add', title: 'Patronat', parentId: null}, chair, ctx), /Najpierw ogłoś wynik/);
+  m = announce(m, ctx);
+  assert.equal(m.agendaAdopted, true);
+  assert.equal(item(m, 'porzadek').status, 'zakonczony');
+  // Wniosek o tryb: punkt bez trybu do ogłoszenia.
+  const it = item(m, 'protokol');
+  m = apply(m, {type: 'item_start', itemId: it.id}, chair, ctx.tick());
+  m = apply(m, {type: 'mode_motion', itemId: it.id, mode: 'tajne', minutes: 2, proposedBy: 'ag'}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  for (const view of [m, viewFor(m, actor('kn'), roster)]) {
+    const point = view.agenda.find(i => i.id === it.id)!;
+    assert.equal(point.mode, undefined);
+    assert.equal(point.modeBasis, undefined);
+  }
+  m = announce(m, ctx);
+  assert.equal(item(m, 'protokol').mode, 'tajne');
+  assert.equal(item(m, 'protokol').modeBasis, 'uchwalone przez Prezydium w głosowaniu nr 2');
+  // Wniosek o reasumpcję: w stanie „glosowany” do ogłoszenia wyniku głosowania nad nim.
+  m = apply(m, {type: 'ballot_open', itemId: it.id, purpose: 'wniosek', subject: 'Wniosek o poprawkę', mode: 'jawne', minutes: 2}, chair, ctx.tick());
+  m = announce(voteAll(m, ctx, 'przeciw'), ctx);
+  const original = last(m).id;
+  m = apply(m, {type: 'motion_create', ballotId: original, justification: 'Pomyłka przy oddawaniu głosu.'}, actor('ag'), ctx.tick());
+  for (const p of ['jw', 'kn']) m = apply(m, {type: 'motion_sign', motionId: m.motions[0].id, on: true}, actor(p), ctx.tick());
+  m = apply(m, {type: 'motion_vote', motionId: m.motions[0].id, minutes: 2}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  assert.equal(m.motions[0].status, 'glosowany');
+  assert.equal(viewFor(m, actor('kn'), roster).motions[0].status, 'glosowany');
+  m = announce(m, ctx);
+  assert.equal(m.motions[0].status, 'przyjety');
+  // Ponowne głosowanie zastępuje wynik dopiero po ogłoszeniu.
+  m = apply(m, {type: 'reasumption_open', motionId: m.motions[0].id, minutes: 2}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  assert.equal(m.ballots.find(b => b.id === original)!.supersededBy, undefined);
+  m = announce(m, ctx);
+  assert.equal(m.ballots.find(b => b.id === original)!.supersededBy, last(m).id);
+});
+
+test('F2: dane sprzed zmiany ze skutkiem zapisanym przy zamknięciu: widok członka go ukrywa, a ogłoszenie nie powtarza', () => {
+  let {ctx, m} = adopted();
+  const it = item(m, 'protokol');
+  m = apply(m, {type: 'item_start', itemId: it.id}, chair, ctx.tick());
+  m = apply(m, {type: 'agenda_change', change: {op: 'dodaj', title: 'Patronat nad konferencją', parentId: null, afterId: it.id}, minutes: 2}, chair, ctx.tick());
+  m = voteAll(m, ctx);
+  // Stary zapis: skutek wykonany przy zamknięciu, bez znacznika `outcomePending`.
+  const legacy = structuredClone(m);
+  delete last(legacy).outcomePending;
+  legacy.agenda.splice(legacy.agenda.findIndex(i => i.id === it.id) + 1, 0, {...structuredClone(it), id: 'dodany', title: 'Patronat nad konferencją', status: 'oczekuje', addedAfterAdoption: true});
+  const member = viewFor(legacy, actor('kn'), roster);
+  assert.ok(!member.agenda.some(i => i.id === 'dodany'), 'członek nie widzi punktu dodanego przed ogłoszeniem');
+  assert.ok(viewFor(legacy, chair, roster).agenda.some(i => i.id === 'dodany'));
+  const announced = announce(legacy, ctx);
+  assert.equal(announced.agenda.filter(i => i.title === 'Patronat nad konferencją').length, 1, 'skutek nie powtarza się przy ogłoszeniu');
+  // Stary zapis z przyjętym porządkiem przed ogłoszeniem.
+  const fresh = opened();
+  let old = apply(fresh.m, {type: 'item_start', itemId: item(fresh.m, 'porzadek').id}, chair, fresh.ctx.tick());
+  old = apply(old, {type: 'ballot_open', itemId: item(old, 'porzadek').id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, chair, fresh.ctx.tick());
+  old = structuredClone(voteAll(old, fresh.ctx));
+  delete last(old).outcomePending;
+  old.agendaAdopted = true;
+  Object.assign(item(old, 'porzadek'), {status: 'zakonczony', endedAt: fresh.ctx.now});
+  const view = viewFor(old, actor('kn'), roster);
+  assert.equal(view.agendaAdopted, false);
+  assert.equal(view.agenda.find(i => i.kind === 'porzadek')!.status, 'w_toku');
+  assert.equal(viewFor(old, chair, roster).agendaAdopted, true);
+});
+
+test('F7: przerwane głosowanie nie ujawnia ani nie zachowuje wyborów, zostaje lista głosujących', () => {
+  const ctx = context();
+  let m = newMeeting(ctx, 'procedura');
+  m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu'}, office, ctx.tick());
+  m = apply(m, {type: 'item_add', title: 'Uchwała nr 121/IX/2026 w sprawie delegacji'}, office, ctx.tick());
+  m = apply(m, {type: 'item_mode', itemId: m.agenda[0].id, mode: 'imienne', basis: 'uchwała Prezydium nr 99/IX/2026'}, office, ctx.tick());
+  m = apply(m, {type: 'item_mode', itemId: m.agenda[1].id, mode: 'tajne', basis: 'uchwała Prezydium nr 99/IX/2026'}, office, ctx.tick());
+  m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, office, ctx.tick());
+  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  const [named, secret] = m.ballots;
+  for (const [p, c] of [['ag', 'za'], ['jw', 'przeciw'], ['kn', 'za']] as const) m = apply(m, {type: 'vote', ballotId: named.id, choice: c}, actor(p), ctx.tick());
+  for (const p of ['ag', 'jw']) {
+    m = secretIssue(m, secret.id, actor(p), ctx.tick());
+    ctx.castSecret(secret.id, 'za');
+    m = secretCast(m, secret.id, ctx.tick());
+  }
+  assert.equal(ctx.secret!.tally(secret.id).za, 2);
+  m = apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały'}, chair, ctx.tick());
+  const stored = m.ballots.find(b => b.id === named.id)!;
+  assert.deepEqual(stored.votes, {}, 'wyborów nie ma w danych');
+  assert.deepEqual(stored.aborted!.voters, ['ag', 'jw', 'kn']);
+  assert.deepEqual(ctx.secret!.tally(secret.id), {za: 0, przeciw: 0, wstrzymuje: 0}, 'karty tajnego głosowania przerwanego są usunięte');
+  for (const who of [actor('kn'), chair, office]) {
+    const view = viewFor(m, who, roster).ballots.find(b => b.id === named.id)!;
+    assert.deepEqual(view.votes, {});
+    assert.equal(view.result, undefined);
+    assert.deepEqual(view.voted, ['ag', 'jw', 'kn']);
+  }
+  // Stary zapis przerwanego głosowania imiennego z wyborami: widok ich nie wysyła, a migracja usuwa.
+  const legacy = structuredClone(m);
+  const old = legacy.ballots.find(b => b.id === named.id)!;
+  old.votes = {ag: 'za', jw: 'przeciw', kn: 'za'};
+  delete old.aborted!.voters;
+  assert.deepEqual(viewFor(legacy, actor('kn'), roster).ballots.find(b => b.id === named.id)!.votes, {});
+  assert.deepEqual(viewFor(legacy, actor('kn'), roster).ballots.find(b => b.id === named.id)!.voted, ['ag', 'jw', 'kn']);
+  migrateMeeting(legacy);
+  assert.deepEqual(old.votes, {});
+  assert.deepEqual(old.aborted!.voters, ['ag', 'jw', 'kn']);
+});
+
+test('F11: rodzaju wyłączonego nie można wybrać w punkcie ani przy otwarciu głosowania, a powielenie go pomija', () => {
+  let {ctx, m} = adopted();
+  const types = defaultDocTypes.map(t => t.id === 'apel' ? {...t, active: false} : t);
+  const c = Object.assign(ctx, {docTypes: types});
+  const reports = item(m, 'sprawozdania');
+  const off = /Ten rodzaj dokumentu jest wyłączony\. Wybierz inny rodzaj\./;
+  assert.throws(() => apply(m, {type: 'item_edit', itemId: reports.id, docType: 'apel'}, chair, c), off);
+  m = apply(m, {type: 'item_start', itemId: reports.id, reason: 'Kolejność ustalona przed posiedzeniem.'}, chair, c.tick());
+  assert.throws(() => apply(m, {type: 'ballot_open', itemId: reports.id, purpose: 'inna', subject: 'Apel', mode: 'jawne', minutes: 2, docType: 'apel'}, chair, c), off);
+  // Rodzaj wybrany, zanim go wyłączono, zostaje w punkcie i przechodzi do głosowania.
+  const before = structuredClone(m);
+  before.agenda.find(i => i.id === reports.id)!.docType = 'apel';
+  const kept = apply(before, {type: 'item_edit', itemId: reports.id, docType: 'apel', note: 'Bez zmian'}, chair, c.tick());
+  assert.equal(kept.agenda.find(i => i.id === reports.id)!.docType, 'apel');
+  const voted = apply(kept, {type: 'ballot_open', itemId: reports.id, purpose: 'inna', subject: 'Apel', mode: 'jawne', minutes: 2}, chair, c.tick());
+  assert.equal(last(voted).docType, 'apel');
+  const copy = duplicateMeeting(before, {id: 'm9', now: c.now, newId: c.newId, createdBy: 'Biuro', docTypes: types}).meeting;
+  assert.equal(copy.agenda.find(i => i.kind === 'sprawozdania')!.docType, undefined);
+  assert.equal(duplicateMeeting(before, {id: 'm9', now: c.now, newId: c.newId, createdBy: 'Biuro'}).meeting.agenda.find(i => i.kind === 'sprawozdania')!.docType, 'apel');
+});

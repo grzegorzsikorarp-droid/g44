@@ -25,7 +25,10 @@ export function DraftAgenda() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [drag, setDrag] = useState<{id: string; dy: number; slot: Slot | null} | null>(null);
   const [focusAfter, setFocusAfter] = useState<{id: string; tool: string} | null>(null);
-  const gesture = useRef<{id: string; startY: number; top: number; slots: Slot[]} | null>(null);
+  // Położenia w geście są liczone względem początku listy (y w liście), więc przewinięcie strony w trakcie ruchu,
+  // także samoczynne przy krawędzi okna, nie przesuwa miejsc upuszczenia.
+  const gesture = useRef<{id: string; startAt: number; tileTop: number; tileBottom: number; clientY: number; slots: Slot[]; frame: number} | null>(null);
+  useEffect(() => () => { if (gesture.current?.frame) window.cancelAnimationFrame(gesture.current.frame); }, []);
   const items = orderedAgenda(m.agenda);
   const top = m.agenda.filter(i => !i.parentId);
   const agendaAt = top.findIndex(i => i.kind === 'porzadek');
@@ -42,14 +45,26 @@ export function DraftAgenda() {
   }, [focusAfter, m.revision]);
 
   // „Wyżej”: przed poprzedni punkt tej samej grupy. „Niżej”: za następny punkt, czyli przed punkt po nim albo na koniec.
-  // Punkt główny nie przechodzi przed „Przyjęcie porządku obrad” ani za „Zamknięcie posiedzenia”.
+  // Punkt główny nie przechodzi przed „Przyjęcie porządku obrad” ani za „Zamknięcie posiedzenia”. Pierwszy podpunkt
+  // idzie „Wyżej” na koniec poprzedniego punktu głównego, a ostatni „Niżej” na początek następnego (te same miejsca,
+  // co przy przeciąganiu), więc z klawiatury można przenieść podpunkt do innego punktu.
+  const hosts = top.filter(t => afterAgenda(t) && !fixedKinds.has(t.kind));
   const upTarget = (it: AgendaItem) => {
     const sib = siblingsOf(it), prev = sib[sib.indexOf(it) - 1];
+    if (it.parentId && !prev) {
+      const host = hosts[hosts.findIndex(t => t.id === it.parentId) - 1];
+      return host ? {parentId: host.id, beforeId: null} : undefined;
+    }
     if (!prev || (!it.parentId && !afterAgenda(prev))) return undefined;
     return {parentId: it.parentId, beforeId: prev.id};
   };
   const downTarget = (it: AgendaItem) => {
     const sib = siblingsOf(it), next = sib[sib.indexOf(it) + 1];
+    if (it.parentId && !next) {
+      const at = hosts.findIndex(t => t.id === it.parentId);
+      const host = at >= 0 ? hosts[at + 1] : undefined;
+      return host ? {parentId: host.id, beforeId: childrenOf(host)[0]?.id ?? null} : undefined;
+    }
     if (!next || (!it.parentId && next.kind === 'zamkniecie')) return undefined;
     return {parentId: it.parentId, beforeId: sib[sib.indexOf(it) + 2]?.id ?? null};
   };
@@ -60,7 +75,7 @@ export function DraftAgenda() {
     if (tool) setFocusAfter({id: it.id, tool});
   };
 
-  // Miejsca upuszczenia liczone z położenia kafelków w chwili chwycenia. Punkt główny staje przed innym punktem
+  // Miejsca upuszczenia liczone z położenia kafelków w liście w chwili chwycenia. Punkt główny staje przed innym punktem
   // głównym za „Przyjęciem porządku obrad” (z podpunktami), a podpunkt przed innym podpunktem albo na końcu punktu.
   const slotsFor = (it: AgendaItem, listTop: number): Slot[] => {
     const rect = (id: string) => box.current!.querySelector<HTMLElement>(`li[data-id="${id}"]`)!.getBoundingClientRect();
@@ -86,29 +101,66 @@ export function DraftAgenda() {
     }
     return slots;
   };
+  // Górna krawędź widocznej części strony: pod przyklejonym paskiem posiedzenia i zakładkami panelu.
+  const topEdge = () => Math.max(0, ...['.meeting-top', '.chair-tabs'].map(sel => {
+    const el = document.querySelector<HTMLElement>(sel);
+    return el && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect().bottom : 0;
+  }));
+  const EDGE = 60, STEP = 14;
+  // Stan przeciągania z bieżącego położenia wskaźnika: kafelek idzie za wskaźnikiem, ale nie wchodzi pod pasek
+  // posiedzenia ani poza dolną krawędź okna, a kreska staje w najbliższym miejscu upuszczenia.
+  const follow = () => {
+    const g = gesture.current;
+    if (!g || !box.current) return;
+    const listTop = box.current.getBoundingClientRect().top;
+    const at = g.clientY - listTop;
+    const slot = g.slots.reduce<Slot | null>((best, s) => !best || Math.abs(s.y - at) < Math.abs(best.y - at) ? s : best, null);
+    const min = topEdge() - listTop - g.tileTop, max = window.innerHeight - listTop - g.tileBottom;
+    setDrag({id: g.id, dy: Math.min(Math.max(at - g.startAt, min), Math.max(min, max)), slot});
+  };
+  // Przy krawędzi okna strona przewija się sama, dopóki wskaźnik tam jest.
+  const autoScroll = () => {
+    const g = gesture.current;
+    if (!g) return;
+    g.frame = 0;
+    const upper = topEdge() + EDGE, lower = window.innerHeight - EDGE;
+    const step = g.clientY < upper ? -STEP : g.clientY > lower ? STEP : 0;
+    if (!step) return;
+    const before = window.scrollY;
+    window.scrollBy(0, step);
+    if (window.scrollY !== before) follow();
+    g.frame = window.requestAnimationFrame(autoScroll);
+  };
   const grab = (e: PointerEvent, it: AgendaItem) => {
     if (busy || e.button > 0 || !box.current) return;
     e.preventDefault();
     const listTop = box.current.getBoundingClientRect().top;
-    gesture.current = {id: it.id, startY: e.clientY, top: listTop, slots: slotsFor(it, listTop)};
+    const tile = box.current.querySelector<HTMLElement>(`li[data-id="${it.id}"]`)!.getBoundingClientRect();
+    const last = it.parentId ? tile : box.current.querySelector<HTMLElement>(`li[data-id="${(childrenOf(it).at(-1) ?? it).id}"]`)!.getBoundingClientRect();
+    gesture.current = {id: it.id, startAt: e.clientY - listTop, tileTop: tile.top - listTop, tileBottom: last.bottom - listTop, clientY: e.clientY, slots: slotsFor(it, listTop), frame: 0};
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     setDrag({id: it.id, dy: 0, slot: null});
   };
   const moveTo = (e: PointerEvent) => {
     const g = gesture.current;
     if (!g) return;
-    const at = e.clientY - g.top;
-    const slot = g.slots.reduce<Slot | null>((best, s) => !best || Math.abs(s.y - at) < Math.abs(best.y - at) ? s : best, null);
-    setDrag({id: g.id, dy: e.clientY - g.startY, slot});
+    g.clientY = e.clientY;
+    follow();
+    if (!g.frame) g.frame = window.requestAnimationFrame(autoScroll);
+  };
+  const stop = () => {
+    const g = gesture.current;
+    if (g?.frame) window.cancelAnimationFrame(g.frame);
+    gesture.current = null;
+    return g;
   };
   const drop = () => {
-    const g = gesture.current, slot = drag?.slot;
-    gesture.current = null;
+    const g = stop(), slot = drag?.slot;
     setDrag(null);
     const it = g ? m.agenda.find(i => i.id === g.id) : undefined;
     if (it && slot && !slot.same) place(it, slot);
   };
-  const cancel = () => { gesture.current = null; setDrag(null); };
+  const cancel = () => { stop(); setDrag(null); };
 
   const removed = m.agenda.find(i => i.id === removing);
   return <section class="oi-card draft-agenda" aria-labelledby="projekt-porzadku">

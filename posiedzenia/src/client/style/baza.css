@@ -263,9 +263,13 @@ dialog.modal-backdrop::backdrop { background: transparent; }
   .oi-opt:is([aria-pressed="true"], [aria-selected="true"]):not(:focus-visible) { outline: var(--kreska-mocna) solid Highlight; outline-offset: calc(-1 * var(--kreska-mocna)); }
 }
 
-/* Górny pasek administratora (trzy pozycje nawigacji, F11): do 560 px nawigacja schodzi do drugiego wiersza
-   pod kontem, żeby nie zachodziła na znak Izby. Pozostałe osoby mają jeden wiersz jak dotąd. */
+/* Górny pasek administratora (trzy pozycje nawigacji, F11): do 560 px nawigacja schodzi do drugiego wiersza pod całym
+   paskiem, czyli pod białe pole znaku Izby razem z jego wolnym polem, a nie obok znaku. W pierwszym wierszu zostaje
+   znak i konto. Pozostałe osoby mają jeden wiersz jak dotąd. */
 @media (max-width: 560px) {
-  .topbar-side:has(.topbar-nav > a:nth-child(3)) { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-end; row-gap: 0; }
-  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav { order: 2; flex: 1 0 100%; justify-content: flex-end; }
+  .topbar:has(.topbar-nav > a:nth-child(3)) { flex-wrap: wrap; row-gap: 0; }
+  .topbar:has(.topbar-nav > a:nth-child(3)) .topbar-brand { margin-right: auto; }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) { display: contents; }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav { order: 3; flex: 1 0 100%; justify-content: flex-start; padding-top: var(--odstep-1); border-top: var(--kreska) solid var(--linia-jasna); }
+  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav a { min-width: 44px; }
 }

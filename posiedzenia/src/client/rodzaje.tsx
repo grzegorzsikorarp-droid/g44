@@ -49,7 +49,7 @@ export function DocTypesPage() {
             <td role="cell" data-label="Gdy przyjęto">{t.adopted}</td>
             <td role="cell" data-label="Gdy nie przyjęto">{t.rejected}</td>
             <td role="cell" data-label="Wymaga głosowania">{t.voted ? 'tak' : 'nie'}</td>
-            <td role="cell">{docTypeChip(t.active) ? <StateChip state={docTypeChip(t.active)}/> : <span>Włączony</span>}</td>
+            <td role="cell" data-label="Stan">{docTypeChip(t.active) ? <StateChip state={docTypeChip(t.active)}/> : <span>Włączony</span>}</td>
             <td role="cell" class="doctype-act"><span class="actions">
               <Button small haspopup label={`Zmień rodzaj ${t.name}`} onClick={() => setEditing(t)}>Zmień</Button>
               <Button kind="ghost" quiet small busy={busy} label={`${t.active ? 'Wyłącz' : 'Włącz'} rodzaj ${t.name}`} onClick={() => toggle(t)}>{t.active ? 'Wyłącz' : 'Włącz'}</Button>

@@ -24,6 +24,8 @@ export interface SecretHooks {
   openKey: (ballotId: string) => {n: string; e: string; fingerprint: string};
   tally: (ballotId: string) => {za: number; przeciw: number; wstrzymuje: number};
   closeKey: (ballotId: string) => void;
+  /** Usuwa oddane karty z wyborami głosowania przerwanego bez rozstrzygnięcia (F7), zanim klucz zostanie zniszczony. */
+  discard: (ballotId: string) => void;
 }
 /** `docTypes` to słownik rodzajów dokumentów (F11); bez niego obowiązują rodzaje domyślne. */
 export interface Context { roster: Roster; now: number; newId: () => string; secret?: SecretHooks; docTypes?: DocType[] }
@@ -130,12 +132,18 @@ function draftLog(m: Meeting, ctx: Context, actor: Actor, text: string) {
   if (m.status !== 'przygotowanie') log(m, ctx, actor, `Zmieniono projekt porządku obrad. ${text}`, {tag: 'projekt'});
 }
 const docTypesOf = (ctx: Context) => ctx.docTypes ?? defaultDocTypes;
+const disabledDocType = 'Ten rodzaj dokumentu jest wyłączony. Wybierz inny rodzaj.';
 /** Konto biura albo administratora: potwierdza obecność i widzi nieogłoszone wyniki. */
 const isOffice = (actor: Actor) => actor.account.kind === 'biuro' || actor.account.admin;
 // F2: dopóki wynik zamkniętego głosowania nie jest ogłoszony, prowadzenie obrad nie idzie dalej.
 function requireAnnounced(m: Meeting) {
   const message = announceFirst(m);
   if (message) fail(message);
+}
+// F2: na trwającym posiedzeniu projekt porządku zmienia się dopiero po ogłoszeniu wyniku, bo przyjęcie porządku zapada
+// przy ogłoszeniu (applyOutcome).
+function requireDraftAnnounced(m: Meeting) {
+  if (m.kind === 'posiedzenie' && m.status !== 'przygotowanie') requireAnnounced(m);
 }
 const workingRefusal = 'Na spotkaniu roboczym nie przeprowadza się głosowań.';
 /** Najwyżej 500 znaków powodu bez zbędnych spacji; pusty napis, gdy powodu nie podano. */
@@ -262,7 +270,7 @@ const fixedFormula = new Set<BallotPurpose>(['porzadek', 'zmiana_porzadku', 'try
 
 function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
   itemId: string | null; purpose: BallotPurpose; subject: string; mode: VoteMode; minutes: number;
-  materialId?: string | null; target?: Ballot['target']; reasumptionOf?: string; endsAt?: number; docType?: string | null;
+  materialId?: string | null; target?: Ballot['target']; reasumptionOf?: string; endsAt?: number; docType?: string | null; inherited?: boolean;
 }) {
   const remote = m.kind === 'procedura';
   const trial = input.purpose === 'proba';
@@ -297,7 +305,13 @@ function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
   // F11: rodzaj sprawy i formuły wyniku zapisane w chwili otwarcia.
   let docType: string | undefined, formulas: Ballot['formulas'];
   if (!fixedFormula.has(input.purpose)) {
-    if (input.docType) ensure(docTypeById(docTypesOf(ctx), input.docType), 'Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+    if (input.docType) {
+      const type = docTypeById(docTypesOf(ctx), input.docType);
+      ensure(type, 'Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+      // F11: wskazany wprost rodzaj musi być włączony; rodzaj odziedziczony z punktu, materiału albo z głosowania
+      // poddanego reasumpcji pozostaje dozwolony.
+      ensure(type.active || input.docType === it?.docType || input.inherited, disabledDocType);
+    }
     const chosen = docTypeFor(m, {explicit: input.docType, item: it, materialId: input.materialId, purpose: input.purpose, subject: input.subject});
     const type = docTypeById(docTypesOf(ctx), chosen);
     docType = chosen ?? undefined;
@@ -332,6 +346,22 @@ function closeBallot(m: Meeting, ctx: Context, b: Ballot, reason: NonNullable<Ba
     b.secret.issued.sort();
     ctx.secret!.closeKey(b.id);
   }
+  // F2: skutek rozstrzygnięcia zapada przy ogłoszeniu wyniku (applyOutcome), żeby nikt nie poznał go wcześniej.
+  if (b.purpose !== 'proba' && (b.reasumptionOf || b.purpose === 'porzadek' || b.target)) b.outcomePending = true;
+  const why = reason === 'wszyscy' ? 'zagłosowali wszyscy uprawnieni' : reason === 'czas' ? 'upłynął czas' : 'zakończone przez osobę prowadzącą obrady';
+  const tally = `Za ${b.result.za}, przeciw ${b.result.przeciw}, wstrzymało się ${b.result.wstrzymuje}.`;
+  log(m, ctx, null, b.purpose === 'proba' ? `Zakończono głosowanie próbne (${why}). ${tally}` : `Zakończono głosowanie nr ${b.number} (${why}). ${tally}`, {ballotId: b.id});
+}
+
+/**
+ * Skutek rozstrzygnięcia głosowania, wykonywany przy ogłoszeniu wyniku (F2): przyjęcie porządku obrad i zakończenie
+ * punktu „Przyjęcie porządku obrad”, zmiana porządku, tryb głosowania w punkcie, rozstrzygnięcie wniosku o reasumpcję
+ * i zastąpienie wyniku głosowania poddanego reasumpcji. Głosowania zamknięte przed tą zasadą (bez `outcomePending`)
+ * mają skutek już zapisany i drugi raz go nie dostają.
+ */
+function applyOutcome(m: Meeting, ctx: Context, b: Ballot) {
+  if (!b.outcomePending || !b.result) return;
+  delete b.outcomePending;
   const ok = b.result.adopted;
   if (b.reasumptionOf) {
     const original = m.ballots.find(x => x.id === b.reasumptionOf);
@@ -351,20 +381,21 @@ function closeBallot(m: Meeting, ctx: Context, b: Ballot, reason: NonNullable<Ba
     const motion = m.motions.find(x => x.id === (b.target as {motionId: string}).motionId);
     if (motion) motion.status = ok ? 'przyjety' : 'odrzucony';
   }
-  const why = reason === 'wszyscy' ? 'zagłosowali wszyscy uprawnieni' : reason === 'czas' ? 'upłynął czas' : 'zakończone przez osobę prowadzącą obrady';
-  const tally = `Za ${b.result.za}, przeciw ${b.result.przeciw}, wstrzymało się ${b.result.wstrzymuje}.`;
-  log(m, ctx, null, b.purpose === 'proba' ? `Zakończono głosowanie próbne (${why}). ${tally}` : `Zakończono głosowanie nr ${b.number} (${why}). ${tally}`, {ballotId: b.id});
 }
 
-// F7: przerwanie głosowania między posiedzeniami bez rozstrzygnięcia. Wyniku się nie liczy, a klucz głosowania tajnego
-// jest niszczony jak przy zwykłym zamknięciu; lista pobranych kart zostaje uporządkowana alfabetycznie.
+// F7: przerwanie głosowania między posiedzeniami bez rozstrzygnięcia. Wyniku się nie liczy. Wybory nie zostają w danych:
+// w jawnym zostaje tylko lista głosujących, a w tajnym karty z wyborami są usuwane (discard) i klucz niszczony jak przy
+// zwykłym zamknięciu; lista pobranych kart zostaje uporządkowana alfabetycznie.
 function abortBallot(m: Meeting, ctx: Context, actor: Actor, b: Ballot, reason: string) {
   b.status = 'zamkniete';
   b.closedAt = ctx.now;
   b.closeReason = 'przerwane';
   b.aborted = {reason, at: ctx.now, by: actor.name};
+  if (!b.secret) b.aborted.voters = Object.keys(b.votes).sort();
+  b.votes = {};
   if (b.secret) {
     b.secret.issued.sort();
+    ctx.secret!.discard(b.id);
     ctx.secret!.closeKey(b.id);
   }
   log(m, ctx, actor, `Przerwano głosowanie nr ${b.number}. Rozstrzygnięcie nie zapadło.`, {ballotId: b.id});
@@ -479,6 +510,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     }
     case 'item_add': {
       ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.', 403);
+      requireDraftAnnounced(m);
       const added = applyAgendaChange(m, ctx, {op: 'dodaj', title: cmd.title, parentId: cmd.parentId ?? null, afterId: cmd.afterId ?? null}, false);
       draftLog(m, ctx, actor, `Dodano ${added.parentId ? 'podpunkt' : 'punkt'} ${itemNumber(m.agenda, added.id)} ${quoted(added.title)}.`);
       break;
@@ -488,6 +520,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       if (cmd.title !== undefined) {
         ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
         ensure(cmd.title.trim(), 'Podaj nazwę punktu.');
+        requireDraftAnnounced(m);
         const before = it.title;
         it.title = cmd.title.replace(/\s+/g, ' ').trim().slice(0, 400);
         if (it.title !== before) draftLog(m, ctx, actor, `Punkt ${itemNumber(m.agenda, it.id)} ${quoted(before)} ma nową nazwę ${quoted(it.title)}.`);
@@ -497,7 +530,10 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         if (cmd.note !== undefined) it.note = cmd.note.slice(0, 20000);
         if (cmd.presenters !== undefined) it.presenters = cleanPresenters(cmd.presenters);
         if (cmd.docType !== undefined) {
-          ensure(!cmd.docType || docTypeById(docTypesOf(ctx), cmd.docType), 'Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+          const type = cmd.docType ? docTypeById(docTypesOf(ctx), cmd.docType) : undefined;
+          ensure(!cmd.docType || type, 'Nieznany rodzaj dokumentu. Wybierz rodzaj z listy.');
+          // F11: rodzaju wyłączonego przez administratora nie wybiera się na nowo; już wybrany może zostać.
+          ensure(!type || type.active || cmd.docType === it.docType, disabledDocType);
           if (cmd.docType) it.docType = cmd.docType; else delete it.docType;
         }
       }
@@ -506,6 +542,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'item_move': {
       ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
+      requireDraftAnnounced(m);
       const siblings = m.agenda.filter(i => i.parentId === it.parentId);
       const index = siblings.indexOf(it), other = siblings[index + cmd.direction];
       ensure(other, 'Punktu nie można przesunąć dalej.');
@@ -517,6 +554,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'item_place': {
       ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
+      requireDraftAnnounced(m);
       const from = itemNumber(m.agenda, it.id);
       placeItem(m, it, cmd.parentId ?? null, cmd.beforeId ?? null);
       const to = itemNumber(m.agenda, it.id);
@@ -527,6 +565,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       ensure(posiedzenie ? it.kind !== 'porzadek' : true, 'Punktu „Przyjęcie porządku obrad” nie można usunąć.');
+      requireDraftAnnounced(m);
       const number = itemNumber(m.agenda, it.id);
       applyAgendaChange(m, ctx, {op: 'usun', itemId: it.id}, false);
       draftLog(m, ctx, actor, `Usunięto ${it.parentId ? 'podpunkt' : 'punkt'} ${number} ${quoted(it.title)}.`);
@@ -534,6 +573,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     }
     case 'agenda_import': {
       ensure(canEditAgenda(roster, m, actor), 'Porządek wczytuje biuro, przewodniczący albo wiceprzewodniczący przed jego przyjęciem.', 403);
+      requireDraftAnnounced(m);
       const parsed = parseAgendaText(cmd.text.slice(0, 100000), {flat: m.kind === 'procedura'});
       ensure(parsed.items.length, parsed.warnings[0] ?? 'Brak punktów.');
       if (cmd.replace) {
@@ -769,6 +809,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       if (posiedzenie) { requireLive(m); requireChair(m, actor); }
       else ensure(canChairOrgan(roster, m.organ, actor.personId) || isOrganizer(roster, m, actor), 'Wynik ogłasza osoba prowadząca obrady.', 403);
       b.announcedAt ??= ctx.now;
+      applyOutcome(m, ctx, b);
       if (posiedzenie) m.presentation = {kind: 'wynik', id: b.id, at: ctx.now};
       log(m, ctx, actor, `Ogłoszono wynik głosowania nr ${b.number}.`);
       break;
@@ -847,7 +888,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const motion = m.motions.find(x => x.id === cmd.motionId) ?? fail('Nie znaleziono wniosku.', 404);
       ensure(motion.status === 'przyjety' && !motion.repeatBallotId, 'Ponowne głosowanie wymaga przyjęcia wniosku o reasumpcję.');
       const original = ballot(m, motion.ballotId);
-      const b = openBallot(m, ctx, actor, {itemId: original.itemId, purpose: original.purpose, subject: original.subject, mode: 'jawne', minutes: cmd.minutes, reasumptionOf: original.id, docType: original.docType});
+      const b = openBallot(m, ctx, actor, {itemId: original.itemId, purpose: original.purpose, subject: original.subject, mode: 'jawne', minutes: cmd.minutes, reasumptionOf: original.id, docType: original.docType, inherited: true});
       if (original.material) b.material = {...original.material};
       if (original.formulas) b.formulas = {...original.formulas};
       motion.repeatBallotId = b.id;
@@ -1015,11 +1056,12 @@ function endProcedure(m: Meeting, ctx: Context, actor: Actor, how: 'policz' | 'p
 /**
  * F6: nowe posiedzenie przez powielenie. Kopiuje rodzaj, tytuł, datę, godzinę, miejsce, tryb, odnośnik, zaproszenia,
  * zastępstwo i porządek (nowe identyfikatory, bez punktów wycofanych, stany „oczekuje”, bez notatek, dat, trybów
- * i powodów, z osobami przy punktach, rodzajem „Co jest głosowane” i materiałami). Materiały dostają nowe identyfikatory;
+ * i powodów, z osobami przy punktach, rodzajem „Co jest głosowane”, o ile nie jest wyłączony, i materiałami).
+ * Materiały dostają nowe identyfikatory;
  * treść i pliki kopiuje wywołujący według `materialMap` (stary identyfikator materiału na nowy). Bez daty zawiadomienia,
  * terminu głosowania między posiedzeniami i danych do protokołu.
  */
-export function duplicateMeeting(src: Meeting, input: {id: string; now: number; newId: () => string; createdBy: string}) {
+export function duplicateMeeting(src: Meeting, input: {id: string; now: number; newId: () => string; createdBy: string; docTypes?: DocType[]}) {
   const m = createMeeting({
     id: input.id, organ: src.organ, kind: src.kind, title: src.title, date: src.date, time: src.time, place: src.place,
     mode: src.mode, createdBy: input.createdBy, now: input.now, newId: input.newId,
@@ -1046,7 +1088,8 @@ export function duplicateMeeting(src: Meeting, input: {id: string; now: number; 
     copy.title = i.title;
     copy.materialIds = i.materialIds.filter(x => materialMap.has(x)).map(x => materialMap.get(x)!);
     copy.presenters = (i.presenters ?? []).map(p => ({...p}));
-    if (i.docType) copy.docType = i.docType;
+    // F11: rodzaj wyłączony przez administratora nie przechodzi do nowego posiedzenia.
+    if (i.docType && docTypeById(input.docTypes ?? defaultDocTypes, i.docType)?.active !== false) copy.docType = i.docType;
     return copy;
   });
   m.materials = materials;

@@ -43,7 +43,10 @@ export function ProcedureView() {
       {m.status === 'trwa' && m.endsAt && <VotingWindow endsAt={m.endsAt}/>}
       {m.status === 'zakonczone' && (m.ended?.how === 'przerwij'
         ? <Notice tone="ok" label="Głosowanie przerwane">{`Głosowanie przerwano ${fmtDateTime(m.ended.at)}. Powód „${m.ended.reason ?? ''}”. Rozstrzygnięcie nie zapadło.`}</Notice>
-        : <Notice tone="ok">Głosowanie zakończone. Wyniki są poniżej, a zestawienie do protokołu otwiera przycisk „Projekt protokołu”.</Notice>)}
+        // F2: wyniki, których osoba jeszcze nie widzi, ogłasza przewodniczący albo wiceprzewodniczący.
+        : m.ballots.some(b => b.resultHidden)
+          ? <Notice tone="ok">Głosowanie zakończone. Wyniki ogłosi przewodniczący albo wiceprzewodniczący.</Notice>
+          : <Notice tone="ok">Głosowanie zakończone. Wyniki są poniżej, a zestawienie do protokołu otwiera przycisk „Projekt protokołu”.</Notice>)}
       {m.status === 'zakonczone' && <DuplicateButton/>}
       <RejectedVote ballots={m.ballots}/>
       <Acts/>
@@ -66,7 +69,8 @@ function VotingWindow({endsAt}: {endsAt: number}) {
     <span class="oi-label" id={id}>Głosowanie trwa</span>
     <p class="window-due">{`do ${fmtDateTime(endsAt)}`}</p>
     <p class="window-left">zostało <Countdown endsAt={endsAt} label={false} long/></p>
-    {changed && <Notice>{`Termin zmieniono o godz. ${fmtTime(changed.at)}. Głosowanie potrwa do ${fmtDateTime(changed.to)}.`}</Notice>}
+    {/* Uwaga stoi w karcie z czerwonym paskiem, więc ma pasek w kolorze tekstu (oi-note--wazne), nie drugi czerwony. */}
+    {changed && <div class="oi-note oi-note--wazne notice"><div class="notice-text">{`Termin zmieniono o godz. ${fmtTime(changed.at)}. Głosowanie potrwa do ${fmtDateTime(changed.to)}.`}</div></div>}
     <p class="muted small">{`Uprawnionych do głosowania ${total}. Rozstrzygnięcie zapada przy udziale co najmniej ${quorumFor(total)} głosujących `}<span class="oi-nowrap">(§ 8 ust. 2)</span>{' zwykłą większością głosów. Głosowanie kończy się wcześniej, gdy zagłosują wszyscy.'}</p>
     {conductor && <div class="window-end actions">
       <Button small haspopup onClick={() => setAsk('termin')}>Zmień termin</Button>
@@ -94,7 +98,7 @@ function DeadlineDialog(props: {endsAt: number; onClose: () => void}) {
       if (chosen === props.endsAt) { setError('To jest obecny termin głosowania.'); return; }
       if (await send({type: 'procedure_deadline', endsAt: chosen})) props.onClose();
     }}>
-      <p>{`Głosowanie potrwa teraz do ${fmtDateTime(props.endsAt)}. Nowy termin obejmie wszystkie trwające głosowania, a członkowie zobaczą uwagę o zmianie i wiadomość w kanale.`}</p>
+      <p>{`Obecny termin to ${fmtDateTime(props.endsAt)}. Nowy termin obejmie wszystkie trwające głosowania, a członkowie zobaczą uwagę o zmianie i wiadomość w kanale.`}</p>
       <div class="deadline-field"><Field label="Nowy termin" hint="Co najmniej 5 minut od teraz. Termin można przedłużyć albo skrócić." error={error || undefined}>
         <input type="datetime-local" required value={value} onInput={e => { setError(''); setValue((e.target as HTMLInputElement).value); }}/>
       </Field></div>

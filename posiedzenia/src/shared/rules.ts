@@ -77,6 +77,8 @@ const legacyDecisions: Record<string, [string, string]> = {
 export const resolutionSubject = /^(uchwała|projekt uchwały|podjęcie uchwały)/i;
 /** Wynik zamkniętego głosowania, którego osoba jeszcze nie widzi (F2). */
 export const resultPendingText = 'Głosowanie zakończone. Wynik ogłosi osoba prowadząca obrady.';
+/** To samo w głosowaniu między posiedzeniami, w którym nie ma obrad: wynik ogłasza przewodniczący albo wiceprzewodniczący. */
+export const resultPendingProcedureText = 'Głosowanie zakończone. Wynik ogłosi przewodniczący albo wiceprzewodniczący.';
 /** Formuła głosowania przerwanego bez rozstrzygnięcia (F7). */
 export const abortedLabel = 'Głosowanie przerwane, rozstrzygnięcie nie zapadło';
 /** Formuła wyniku głosowania próbnego (F1). */

@@ -255,9 +255,10 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       {m.status === 'przerwa' && <Notice tone="warn">Trwa przerwa w obradach. Głosowania są wstrzymane.</Notice>}
       {decisions.length > 0 && <DecisionCard rows={decisions} teraz={focus === 'decyzja'} onMessages={showMessages}/>}
       {open && <LiveBallot b={open} readOnly={readOnly} teraz={focus === 'glosowanie'}/>}
-      {selected && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
-      {/* F8: przy przyjmowaniu porządku prowadzący układa projekt kafelkami, a członkowie widzą zmiany na żywo. */}
+      {/* F8: przy przyjmowaniu porządku prowadzący układa projekt kafelkami, a członkowie widzą zmiany na żywo.
+          Kafelki stoją przed kartą punktu z formularzem głosowania, żeby były widoczne bez przewijania. */}
       {!readOnly && draftLive(m) && <DraftAgenda/>}
+      {selected && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
     </section>
     <aside class={'chair-col chair-right' + (tab === 'obrady' ? ' is-shown' : '')} aria-label="Obrady">
       <MeetingControls readOnly={readOnly}/>
@@ -316,10 +317,14 @@ function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () =
       </div>;
       if (row.kind === 'obecnosc') {
         const name = nameOf(row.who, row.guest);
+        // Przy kilku zgłoszeniach głównym działaniem jest „Potwierdź wszystkie zgłoszenia”, a wiersze mają szare odnośniki.
+        const single = !props.rows.some(r => r.kind === 'obecnosc-wszystkie');
         return <div class="decision decision--obecnosc" key={row.key}>
-          <p>{`Obecność zgłasza ${name}, godz. ${fmtTime(row.at)}`}</p>
+          <p>Obecność zgłasza <span class="oi-nowrap">{name}</span>, godz. {fmtTime(row.at)}</p>
           <div class="decision-act">
-            <Button kind={kind()} small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true})}>Potwierdź obecność</Button>
+            {single
+              ? <Button kind={kind()} small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true})}>Potwierdź obecność</Button>
+              : <Button kind="ghost" quiet small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true})}>Potwierdź obecność</Button>}
             <Button kind="ghost" quiet small busy={busy} label={`Odrzuć zgłoszenie, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: false})}>Odrzuć</Button>
           </div>
         </div>;
@@ -633,16 +638,21 @@ function Quorum({main}: {main: Main}) {
   const blocked = announceFirst(m);
   // Dopóki kworum nie zostało stwierdzone, to jest działanie główne punktu otwarcia.
   const kind: Main = m.quorumChecks.length ? 'secondary' : main;
+  // Na spotkaniu roboczym (F5) zostają liczby i jedno zdanie, a „Stwierdzam kworum” tylko wtedy, gdy kworum jest.
+  if (m.working) return <div class={'quorum ' + (ok ? 'is-ok' : 'is-low')}>
+    <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label="Wymagane kworum (§ 8 ust. 2)">{required}</Fact></dl>
+    <p class="small">Stwierdzenie kworum niczego już nie zmienia.</p>
+    {ok && <div class="actions"><Button busy={busy} onClick={() => send({type: 'quorum'})}>Stwierdzam kworum</Button></div>}
+  </div>;
   return <div class={'quorum ' + (ok ? 'is-ok' : 'is-low')}>
     <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label="Wymagane kworum (§ 8 ust. 2)">{required}</Fact></dl>
     <p class="strong">{ok ? 'Jest kworum. Prezydium może podejmować uchwały.' : <>Brak kworum. Prezydium nie może podejmować uchwał <Ref>(§ 8 ust. 2).</Ref></>}</p>
     {last && <p class="muted small">{last.present >= last.required ? `Ostatnio stwierdzono o godz. ${fmtTime(last.at)}, że jest kworum.` : `Ostatnio stwierdzono o godz. ${fmtTime(last.at)} brak kworum.`}</p>}
-    {m.working && <p class="small">{workingSentence} Stwierdzenie kworum niczego już nie zmienia.</p>}
     <div class="actions">
       {ok ? <Button kind={kind} busy={busy} onClick={() => send({type: 'quorum'})}>Stwierdzam kworum</Button>
         : <><Button kind={kind} busy={busy} onClick={() => send({type: 'quorum'})}>Zapisz brak kworum</Button>
           {m.status === 'trwa' && <Button busy={busy} disabled={!!blocked} reason={blocked ?? undefined} onClick={() => send({type: 'break', on: true})}>Zarządź przerwę</Button>}
-          {!m.working && <Button haspopup busy={busy} onClick={() => setAsking(true)}>Kontynuuj jako spotkanie robocze</Button>}</>}
+          <Button haspopup busy={busy} onClick={() => setAsking(true)}>Kontynuuj jako spotkanie robocze</Button></>}
     </div>
     {asking && <WorkingConfirm onClose={() => setAsking(false)} onConfirm={() => send({type: 'working_start', reason: workingReason(m, s.roster)})}/>}
   </div>;
@@ -880,13 +890,14 @@ function NoteEditor({it, open}: {it: AgendaItem; open: boolean}) {
   };
   const load = () => { base.current = it.note; latest.current = it.note; held.current = false; setText(it.note); setConflict(null); };
   const keep = () => { base.current = it.note; held.current = false; setConflict(null); save(); };
-  return <Fold title="Notatka do protokołu" open={open}>
+  // Na spotkaniu roboczym (F5) dokumentem jest projekt notatki, a nie protokół.
+  return <Fold title={m.working ? 'Notatka do punktu' : 'Notatka do protokołu'} open={open}>
     <div class="note-editor">
       {conflict !== null && <Notice tone="warn">
         <p>Notatka została zmieniona na innym urządzeniu o godz. {fmtTime(conflict)}.</p>
         <div class="actions"><Button small onClick={load}>Wczytaj nową wersję</Button><Button small onClick={keep}>Zostaw moją</Button></div>
       </Notice>}
-      <Field label="Treść notatki" hint="Przebieg dyskusji, wnioski i ustalenia. Notatka trafi do projektu protokołu.">
+      <Field label="Treść notatki" hint={`Przebieg dyskusji, wnioski i ustalenia. Notatka trafi do projektu ${m.working ? 'notatki ze spotkania' : 'protokołu'}.`}>
         <textarea rows={4} value={text} onInput={e => type((e.target as HTMLTextAreaElement).value)} onBlur={save}/>
       </Field>
       <SaveStatus status={saved}/>
@@ -1035,7 +1046,7 @@ function TrialDialog(props: {onClose: () => void}) {
   const {send, busy} = useMeeting();
   const [mode, setMode] = useState<'jawne' | 'tajne'>('jawne');
   const [minutes, setMinutes] = useState('1');
-  return <Modal title="Otworzyć głosowanie próbne?" onClose={props.onClose}>
+  return <Modal title="Otworzyć głosowanie próbne?" onClose={props.onClose} closeButton={false} confirm initialFocus=".confirm-cancel">
     <form class="stack" onSubmit={e => {
       e.preventDefault();
       // Okno zamyka się od razu, żeby panel mógł przejść do trwającego głosowania (błąd pokazuje komunikat pod paskiem).
@@ -1044,9 +1055,9 @@ function TrialDialog(props: {onClose: () => void}) {
     }}>
       <p>Obecni członkowie zagłosują na telefonach tak jak w zwykłym głosowaniu. Głos nie ma żadnych skutków, a wynik zobaczą wszyscy od razu po zakończeniu. Głosowanie próbne nie trafia do wykazu uchwał.</p>
       <Segments label="Tryb" value={mode} options={[['jawne', 'Jawne'], ['tajne', 'Tajne']]} onChange={setMode}
-        hint="Głosowanie tajne sprawdza karty tajne tak samo jak w zwykłym głosowaniu tajnym."/>
+        hint="Tajne sprawdza też wydawanie kart do głosowania tajnego."/>
       <Segments label="Czas" value={minutes} options={[['1', '1 min'], ['2', '2 min'], ['3', '3 min']]} onChange={setMinutes}/>
-      <div class="actions"><Button kind="primary" type="submit" busy={busy}>Otwórz głosowanie próbne</Button><Button onClick={props.onClose}>Anuluj</Button></div>
+      <div class="actions confirm-actions"><Button kind="primary" type="submit" class="confirm-ok" busy={busy}>Otwórz głosowanie próbne</Button><Button class="confirm-cancel" onClick={props.onClose}>Anuluj</Button></div>
     </form>
   </Modal>;
 }
@@ -1102,7 +1113,7 @@ function Attendance() {
     const lead = label ? `${label}, ` : '';
     if (status === 'obecny') return ev ? `${lead}na posiedzeniu od godz. ${fmtTime(ev.at)}` : label;
     if (status === 'wyszedl') return ev ? `${lead}wyjście o godz. ${fmtTime(ev.at)}` : label;
-    if (status === 'zgloszony') return `${lead}zgłoszona${ev ? ` o godz. ${fmtTime(ev.at)}` : ''}, czeka na potwierdzenie`;
+    if (status === 'zgloszony') return `${lead}obecność zgłoszona${ev ? ` o godz. ${fmtTime(ev.at)}` : ''}, czeka na potwierdzenie`;
     return `${lead}bez potwierdzenia obecności`;
   };
   const row = (who: string, name: string, label: string, status: Presence | undefined, guest: boolean) => {
@@ -1123,14 +1134,16 @@ function Attendance() {
     </li>;
   };
   const lastOne = !!voting && waitingFor.length === 1 && (!voting.secret || voting.secret.cast >= voting.secret.issued.length);
-  const names = (list: typeof members) => list.map((ms, i) => <Fragment key={ms.personId}>{i === 0 ? '' : i === list.length - 1 ? ' i ' : ', '}<span class="oi-nowrap">{s.personName(ms.personId)}</span></Fragment>);
+  // Twarda spacja po „i” łączy spójnik z następnym imieniem i nazwiskiem.
+  const names = (list: typeof members) => list.map((ms, i) => <Fragment key={ms.personId}>{i === 0 ? '' : i === list.length - 1 ? ' i\u00a0' : ', '}<span class="oi-nowrap">{s.personName(ms.personId)}</span></Fragment>);
   return <section class="oi-card attendance-card">
     <CardTitle level={2}>Lista obecności</CardTitle>
     {/* Imię i nazwisko nie łamie się między wierszami. */}
     <p class="attendance-summary">Obecnych {members.filter(ms => m.attendance[ms.personId] === 'obecny').length} z {members.length}.
       {reported.length > 0 && <> Na potwierdzenie {plural(reported.length, 'czeka', 'czekają', 'czeka')} {names(reported)}.</>}
       {away.length > 0 && <> Poza posiedzeniem {names(away)}.</>}</p>
-    {canConfirm && pending.length > 0 && <div><Button small busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${pending.length})`}</Button></div>}
+    {/* Powyżej 760 px ten sam przycisk stoi obok w karcie „Czeka na Twoją decyzję”, więc tu go nie ma (att-confirm-all). */}
+    {canConfirm && pending.length > 0 && <div class="att-confirm-all"><Button small busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${pending.length})`}</Button></div>}
     <ul class="attendance">{members.map(ms => row(ms.personId, s.personName(ms.personId), ms.label, m.attendance[ms.personId], false))}</ul>
     {m.invited.length > 0 && <>
       <h3 class="card-sub">Głos doradczy i goście</h3>

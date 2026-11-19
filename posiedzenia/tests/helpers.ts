@@ -20,6 +20,7 @@ export function context(start = Date.parse('2026-11-20T10:00:00Z')) {
       return {za: list.filter(c => c === 'za').length, przeciw: list.filter(c => c === 'przeciw').length, wstrzymuje: list.filter(c => c === 'wstrzymuje').length};
     },
     closeKey: () => {},
+    discard: id => { secretVotes.delete(id); },
   };
   const ctx: Context & {tick: (ms?: number) => Context; castSecret: (ballotId: string, c: Choice) => void} = {
     roster, get now() { return now; }, newId: () => 'id' + (++seq), secret,

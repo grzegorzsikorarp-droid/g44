@@ -154,6 +154,29 @@ export class Store {
 
   close() { this.db.close(); }
 
+  /**
+   * F7, dane sprzed poprawki: głosowanie przerwane bez rozstrzygnięcia nie zachowuje wyborów. Usuwa karty tajnych
+   * głosowań przerwanych (tabela secret_votes) i zapisuje posiedzenia, w których migracja usunęła wybory z jawnych.
+   * Zwraca true, gdy coś usunięto (wtedy trzeba usunąć ślady w pliku bazy, scrubSecretTraces).
+   */
+  purgeAbortedVotes() {
+    let removed = false;
+    for (const {id, data} of this.db.prepare('SELECT id, data FROM meetings').all() as {id: string; data: string}[]) {
+      const raw = JSON.parse(data) as Meeting;
+      const aborted = raw.ballots.filter(b => b.aborted);
+      if (!aborted.length) continue;
+      for (const b of aborted) {
+        if (b.secret && Number(this.db.prepare('DELETE FROM secret_votes WHERE ballot_id=?').run(b.id).changes) > 0) removed = true;
+      }
+      if (aborted.some(b => Object.keys(b.votes ?? {}).length)) {
+        const m = this.meeting(id)!;
+        this.db.prepare('UPDATE meetings SET data=? WHERE id=?').run(JSON.stringify(m), id);
+        removed = true;
+      }
+    }
+    return removed;
+  }
+
   // Po zamknięciu tajnego głosowania: przebudowa pliku bazy (VACUUM) usuwa ślad kolejności
   // zapisu głosów, a punkt kontrolny WAL — kopię zmian z dziennika.
   scrubSecretTraces() {

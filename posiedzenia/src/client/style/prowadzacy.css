@@ -97,6 +97,9 @@
 .att-name strong { font-weight: 600; color: var(--tekst-mocny); font-size: var(--t-lista); }
 .att-name small { color: var(--tekst-drugorzedny); font-size: var(--t-meta); }
 .att-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--odstep-1); flex: none; text-align: right; }
+/* „Potwierdź wszystkie zgłoszenia” na liście obecności tylko w układzie z zakładkami. Szerzej ten sam przycisk stoi
+   obok, w karcie „Czeka na Twoją decyzję” (F9). */
+@media (min-width: 761px) { .chair .att-confirm-all { display: none; } }
 
 /* Notatka do protokołu, przebieg obrad i sekcje rozwijane w prawej kolumnie */
 .note-editor { display: flex; flex-direction: column; gap: var(--odstep-2); }
