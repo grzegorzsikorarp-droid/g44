@@ -164,6 +164,8 @@ input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 
 .meeting-head h1 b { display: block; }
 @media (max-width: 760px) { .meeting-head h1 { max-width: none; } .page-head .oi-hero__in { padding-block: var(--odstep-5) var(--odstep-5); } }
 .page { width: 90rem; max-width: 100%; margin-inline: auto; padding-block: var(--odstep-6) var(--odstep-14); padding-inline: max(var(--odstep-5), env(safe-area-inset-left, 0px)) max(var(--odstep-5), env(safe-area-inset-right, 0px)); }
+/* Kolumna dokumentu (75rem): ekrany inne niż panel prowadzenia obrad */
+.page.page--kolumna { width: var(--kolumna); }
 .page-head .page { padding-block: var(--odstep-8) var(--odstep-6); }
 @media (max-width: 760px) { .page { padding-block: var(--odstep-4) var(--odstep-11); } .page-head .page { padding-block: var(--odstep-5); } }
 

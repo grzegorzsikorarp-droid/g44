@@ -89,8 +89,9 @@ function keepFocusInside(dialog: HTMLDialogElement, e: KeyboardEvent) {
  * Okno dialogowe na natywnym <dialog> otwieranym przez showModal(): reszta strony jest nieaktywna,
  * Escape zamyka tylko wierzchnie okno, a po zamknięciu fokus wraca na element, który okno otworzył.
  * Fokus startuje na tytule albo na elemencie wskazanym selektorem `initialFocus`.
+ * `tools` stoi w nagłówku przed „Zamknij” (np. „A−” i „A+” czytnika materiałów).
  */
-export function Modal(props: {title: string; onClose: () => void; children: ComponentChildren; wide?: boolean; closeButton?: boolean; initialFocus?: string; confirm?: boolean}) {
+export function Modal(props: {title: string; onClose: () => void; children: ComponentChildren; wide?: boolean; closeButton?: boolean; initialFocus?: string; confirm?: boolean; tools?: ComponentChildren}) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -118,7 +119,7 @@ export function Modal(props: {title: string; onClose: () => void; children: Comp
     onKeyDown={e => keepFocusInside(dialog.current!, e)}>
     <div class="modal-shade" onClick={close}/>
     <section class={'modal' + (props.wide ? ' modal-wide' : '')}>
-      <header class="modal-head"><span class="oi-mark" aria-hidden="true"/><h2 id={id} tabIndex={-1} ref={heading}>{props.title}</h2>{props.closeButton !== false && <Button small onClick={close}>Zamknij</Button>}</header>
+      <header class="modal-head"><span class="oi-mark" aria-hidden="true"/><h2 id={id} tabIndex={-1} ref={heading}>{props.title}</h2>{props.tools}{props.closeButton !== false && <Button small onClick={close}>Zamknij</Button>}</header>
       <div class="modal-body">{props.children}</div>
     </section>
   </dialog>;
