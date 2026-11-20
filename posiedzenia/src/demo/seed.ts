@@ -127,7 +127,8 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   sub.presenters = [{name: 'Tomasz Lewandowski', role: 'I Wiceprzewodniczący', kind: 'referuje'}];
   meeting.agenda.splice(at, 0, sub);
 
-  const procedure: Meeting = createMeeting({id: newId(), organ: 'prezydium', kind: 'procedura', title: 'Głosowanie między posiedzeniami (próbne)', date: today, time: '00:00', place: '', mode: 'zdalne', createdBy: 'Biuro', now, newId, endsAt: now + 4 * 3600000});
+  // Wersja 3 (DA-21): głosowanie trwa co najmniej 24 godziny, więc rozpoczęcie w próbie nie wymaga powodu.
+  const procedure: Meeting = createMeeting({id: newId(), organ: 'prezydium', kind: 'procedura', title: 'Głosowanie między posiedzeniami (próbne)', date: today, time: '00:00', place: '', mode: 'zdalne', createdBy: 'Biuro', now, newId, endsAt: now + 26 * 3600000});
   const act = newItem(newId(), 'Uchwała nr 130/IX/2026 w sprawie delegowania przedstawicieli na szkolenie', 'sprawa');
   const ref = material(procedure.id, act.title, '130/IX/2026', 'Prezydium Okręgowej Rady\n\n§ 1\nDeleguje się dwie osoby na szkolenie regionalne (przykład).\n\n§ 2\nUchwała wchodzi w życie z dniem podjęcia.');
   procedure.materials.push(ref);
