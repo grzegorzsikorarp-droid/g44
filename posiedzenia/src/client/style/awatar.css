@@ -1,0 +1,10 @@
+/* Zdjęcie profilowe i kwadrat z inicjałami (SPEC-4 6.0, B3-41): kwadrat stoi prosto, bez zaokrągleń, kółek i skosu.
+   Tylko tokeny. Rozmiary 32 (górny pasek), 40 (listy, skład), 48 (prowadzenie obrad), 64 (ekran sali), 160 (Moje konto). */
+.avatar { display: inline-block; flex: none; box-sizing: border-box; border-radius: 0; object-fit: cover; vertical-align: middle; background: var(--powierzchnia-miekka); }
+.avatar--32 { width: 32px; height: 32px; font-size: 12px; }
+.avatar--40 { width: 40px; height: 40px; font-size: 14px; }
+.avatar--48 { width: 48px; height: 48px; font-size: 16px; }
+.avatar--64 { width: 64px; height: 64px; font-size: 22px; }
+.avatar--160 { width: 160px; height: 160px; font-size: 48px; }
+.avatar--inicjaly { display: inline-flex; align-items: center; justify-content: center; background: var(--grafit-700); color: var(--bialy); font-family: var(--font-sans); font-weight: 700; letter-spacing: .04em; line-height: 1; }
+img.avatar { border: var(--kreska) solid var(--linia); }

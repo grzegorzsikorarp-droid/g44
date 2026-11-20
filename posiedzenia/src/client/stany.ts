@@ -92,3 +92,49 @@ export function breakSince(m: Pick<Meeting, 'status' | 'log'>): number | null {
   for (let i = m.log.length - 1; i >= 0; i--) if (m.log[i].text === 'Przerwa w obradach.') return m.log[i].at;
   return null;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Wersja 4 (SPEC-4 8.2 D.3, pakiet D0): znaczniki dokumentów, przygotowania, udostępnienia, gotowości, poczty i pokazu.
+// Te same zasady co wyżej: wypełnienie dla stanu „trwa”, czerwony obrys dla tego, co trzeba zrobić, szary dla faktu.
+
+/** Stan protokołu (`protocolState` z catalog.ts, 6.8, 6.9). */
+export function protocolChip(state: 'projekt' | 'sporzadzony' | 'przyjety' | 'notatka'): ChipState {
+  switch (state) {
+    case 'projekt': return chip('Projekt');
+    case 'sporzadzony': return chip('Sporządzony');
+    case 'przyjety': return chip('Przyjęty');
+    case 'notatka': return chip('Notatka');
+  }
+}
+/** Dokument w trakcie obrad („Stan na 10:42”, 6.8, D-18) albo dokument w projekcie (`paperState` z papers.ts). */
+export const paperStateChip = (state: 'projekt' | 'stan_na' | 'ustalony', time = ''): ChipState | null =>
+  state === 'projekt' ? chip('Projekt') : state === 'stan_na' ? chip(`Stan na ${time}`.trim(), 'trwa') : null;
+/** Zgłoszenie sprawy (B2, DB-14); „Czeka na decyzję zwołującego” u osób przygotowujących bez prawa odrzucenia. */
+export function proposalChip(state: 'zgloszone' | 'wpisane' | 'odrzucone' | 'odlozone' | 'wycofane' | 'wygasle', waitsForConvener = false): ChipState {
+  switch (state) {
+    case 'zgloszone': return waitsForConvener ? chip('Czeka na decyzję zwołującego', 'otwarte') : chip('Zgłoszone', 'otwarte');
+    case 'wpisane': return chip('Wpisane do projektu');
+    case 'odrzucone': return chip('Odrzucone');
+    case 'odlozone': return chip('Odłożone');
+    case 'wycofane': return chip('Wycofane');
+    case 'wygasle': return chip('Wygasłe');
+  }
+}
+/** Udostępnienie materiału dla komunikacji (DB-42, `ArchiveInfo.commsRelease`); stan po zmianie opisuje zdanie z 6.8. */
+export const commsReleaseChip = (state: 'brak' | 'udostepniony' | 'zmieniony'): ChipState =>
+  state === 'udostepniony' ? chip('Udostępniono') : chip('Czeka na udostępnienie', 'otwarte');
+/** Wiersz „Do sprawdzenia” (K4-4, K4-7, `archive.checks`) i sprawdzenie gotowości punktu (B2-W12). */
+export const checkChip = (): ChipState => chip('Do sprawdzenia', 'otwarte');
+export const readinessCheckChip = (ok: boolean | 'sprawdzic'): ChipState => ok === 'sprawdzic' ? chip('Do sprawdzenia', 'otwarte') : ok ? chip('Gotowe') : chip('Brak', 'otwarte');
+/** Krok wiadomości próbnej (B2-P13): „Gotowe”, „Błąd”, „Pominięto”. */
+export const mailStepChip = (step: {ok: boolean; skipped?: boolean; text?: string}): ChipState =>
+  step.skipped || step.text === 'Pominięto' ? chip('Pominięto') : step.ok ? chip('Gotowe') : chip('Błąd', 'otwarte');
+/** Plik do pokazania dodany w trakcie obrad (B3-17). */
+export const liveDisplayChip = (): ChipState => chip('dodany w trakcie obrad');
+// Dodatki (D-11, D-12, D-14): znaczniki gotowe, ekrany dochodzą z dodatkami.
+export const overdueChip = (): ChipState => chip('Po terminie', 'otwarte');
+export function remarkChip(state: 'otwarta' | 'uwzgledniona' | 'nieuwzgledniona', version?: number): ChipState {
+  if (state === 'otwarta') return chip('Otwarta', 'otwarte');
+  return state === 'uwzgledniona' ? chip(version ? `Uwzględniona w wersji ${version}` : 'Uwzględniona') : chip('Nieuwzględniona');
+}
+export const approxPeriodChip = (): ChipState => chip('odtworzony');

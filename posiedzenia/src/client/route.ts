@@ -33,3 +33,43 @@ window.addEventListener('click', event => {
   event.preventDefault();
   go(link.getAttribute('href')!);
 }, true);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Wersja 4 (SPEC-4 8.2 D.3, pakiet D0): trasy nowych stron. Parametry stoją po znaku „?” w adresie trasy
+// (np. `#odbyte?rok=2026&rodzaj=posiedzenia`, `#zestawienie?od=2026-01-01&do=2026-12-31`, `#konto/statystyki?od=&do=`).
+// Trasa `#statystyki` („Statystyki składu”) dochodzi w dodatku D-13.
+export type V4Route =
+  | {page: 'konto'}
+  | {page: 'moje-statystyki'; query: URLSearchParams}
+  | {page: 'odbyte'; query: URLSearchParams}
+  | {page: 'zestawienie'; query: URLSearchParams}
+  | {page: 'dokumenty'; id: string}
+  | {page: 'skrzynka'};
+
+/** Część adresu trasy po „?” jako parametry (puste, gdy ich nie ma). */
+export const routeQuery = (hash: string) => new URLSearchParams(hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : '');
+/** Adres trasy z parametrami; puste wartości się pomija (np. `routeHref('#odbyte', {rok: '2026'})`). */
+export function routeHref(base: string, params: Record<string, string | null | undefined> = {}): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
+  const s = q.toString();
+  return s ? `${base}?${s}` : base;
+}
+/** Trasa wersji 4 albo null (trasy wersji 3 rozpoznaje app.tsx jak dotąd). */
+export function v4Route(hash: string): V4Route | null {
+  const path = hash.split('?')[0];
+  if (path === '#konto') return {page: 'konto'};
+  if (path === '#konto/statystyki') return {page: 'moje-statystyki', query: routeQuery(hash)};
+  if (path === '#odbyte') return {page: 'odbyte', query: routeQuery(hash)};
+  if (path === '#zestawienie') return {page: 'zestawienie', query: routeQuery(hash)};
+  if (path === '#skrzynka') return {page: 'skrzynka'};
+  const docs = path.match(/^#p-([\w-]+)\/dokumenty$/);
+  return docs ? {page: 'dokumenty', id: docs[1]} : null;
+}
+/** Konto „Komunikacja” (4.4) ma tylko „Odbyte posiedzenia” i „Moje konto”; inne trasy prowadzą na `session.home`. */
+export const commsRouteAllowed = (hash: string) => ['#odbyte', '#konto'].includes(hash.split('?')[0]);
+
+/** Strony dopisane przez punkt wejścia, np. „Skrzynka (próba)” w wersji próbnej (6.7.5); aplikacja Izby żadnych nie dopisuje. */
+const pages = new Map<string, () => unknown>();
+export function registerPage(path: string, render: () => unknown) { pages.set(path, render); }
+export const registeredPage = (hash: string) => pages.get(hash.split('?')[0]) ?? null;

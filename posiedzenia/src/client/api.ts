@@ -1,5 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {brand} from './brand.ts';
+import type {ViewMeeting} from './context.ts';
+import type {MeetingView} from '../shared/view.ts';
 
 let offset = 0;
 export const serverNow = () => Date.now() + offset;
@@ -13,16 +15,17 @@ export class ApiError extends Error {
   constructor(message: string, status: number) { super(message); this.status = status; }
 }
 
-export async function request<T = any>(path: string, options: {method?: string; body?: unknown; form?: FormData; anonymous?: boolean} = {}): Promise<T> {
-  const method = options.method ?? (options.body !== undefined || options.form ? 'POST' : 'GET');
+export async function request<T = any>(path: string, options: {method?: string; body?: unknown; form?: FormData; blob?: Blob; anonymous?: boolean} = {}): Promise<T> {
+  const method = options.method ?? (options.body !== undefined || options.form || options.blob ? 'POST' : 'GET');
   const headers: Record<string, string> = {};
   if (method !== 'GET') headers['X-Posiedzenia'] = '1';
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (options.blob) headers['Content-Type'] = options.blob.type || 'application/octet-stream';
   let res: Response;
   try {
     res = await fetch(path, {
       method, headers, credentials: options.anonymous ? 'omit' : 'same-origin',
-      body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
+      body: options.form ?? options.blob ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
     });
   } catch {
     throw new ApiError('Brak połączenia. Sprawdź internet i spróbuj ponownie.', 0);
@@ -88,4 +91,54 @@ export function useNow(step = 1000) {
     return () => window.clearInterval(timer);
   }, [step]);
   return now;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Wersja 4 (SPEC-4 8.2 D.3, pakiet D0).
+
+/** Posiedzenie w widoku osoby z polami wersji 4 (`prep` w przygotowaniu, `archive` po zamknięciu, 2.1). */
+export type MeetingData = ViewMeeting & Pick<MeetingView, 'prep' | 'archive'>;
+
+/**
+ * Wysłanie pliku (6.2, 6.6, 6.8): `FormData` (multipart, domyślnie POST) albo `Blob` z własnym typem (np. zdjęcie JPEG,
+ * domyślnie PUT). Odpowiedź i błędy jak w `request`. W wersji próbnej zapytanie obsługuje src/demo/server.ts.
+ */
+export function upload<T = any>(path: string, body: FormData | Blob, method?: 'POST' | 'PUT'): Promise<T> {
+  return body instanceof FormData ? request<T>(path, {method: method ?? 'POST', form: body}) : request<T>(path, {method: method ?? 'PUT', blob: body});
+}
+
+/**
+ * Pobranie pliku z serwera (dokumenty, teczka, CSV, pliki): odnośnik z atrybutem `download` w bieżącej stronie, bez nowej
+ * karty. W wersji próbnej taki odnośnik przechwytuje src/demo/papers-window.tsx (`Blob`, komunikat w ramce sandbox).
+ */
+export function download(url: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  a.setAttribute('download', '');
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/**
+ * Adres pliku do `<img>`, `<iframe>` albo `<video>` (pokaz, B3-22, B3-25). W aplikacji to adres trasy (pamięć podręczna
+ * przeglądarki, CSP `frame-src 'self'`). W wersji próbnej plik przychodzi z przechwyconego `fetch` jako adres `blob:`
+ * (7.3), zwalniany przy zmianie adresu. `null` nie pobiera niczego (np. w trakcie głosowania, T-2).
+ */
+export function useFileUrl(path: string | null): string | null {
+  const [url, setUrl] = useState<string | null>(brand.demo ? null : path);
+  useEffect(() => {
+    if (!brand.demo) { setUrl(path); return; }
+    setUrl(null);
+    if (!path) return;
+    let alive = true, made = '';
+    fetch(path, {credentials: 'same-origin'}).then(r => r.ok ? r.blob() : null).then(b => {
+      if (!alive || !b) return;
+      made = URL.createObjectURL(b);
+      setUrl(made);
+    }).catch(() => {});
+    return () => { alive = false; if (made) URL.revokeObjectURL(made); };
+  }, [path]);
+  return url;
 }

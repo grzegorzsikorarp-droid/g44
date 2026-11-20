@@ -157,6 +157,8 @@ export interface CatalogRow {
   term?: string | null; protocolNumber?: string;
   turnout?: {present: number; members: number};
   complete?: {have: number; of: number; items: {label: string; ok: boolean}[]};
+  /** Stan udostępnienia materiału dla komunikacji (DB-42) dla osób, które udostępniają, i konta „Komunikacja” (6.9, 4.4). */
+  commsRelease?: 'brak' | 'udostepniony' | 'zmieniony';
 }
 /** Komplet dokumentów posiedzenia (6.9): przy notatce projekt notatki i odnośnik. */
 export function completeness(m: Meeting, adoption: Adoption | null) {
@@ -207,6 +209,7 @@ export function catalogRows(meetings: Meeting[], env: Pick<CascadeEnv, 'roster' 
       photos: m.photos ? (seesPhotosLink(env.roster, m, actor) ? {url: m.photos.url} : 'jest') : 'brak',
     };
     if (scope === 'pelny') Object.assign(row, {term, protocolNumber: m.protocolNumber?.trim() ?? '', turnout: meetingTurnout(m, env.roster), complete});
+    if (canReleaseComms(env.roster, m, actor) || isCommsAccount(actor)) row.commsRelease = commsRelease(m);
     rows.push(row);
   }
   return rows.sort((a, b) => b.day.localeCompare(a.day) || a.title.localeCompare(b.title, 'pl'));

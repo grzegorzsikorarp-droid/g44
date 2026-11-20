@@ -7,6 +7,8 @@ import './proba.css';
 import {DemoServer} from './server.ts';
 import {DemoPicker} from './picker.tsx';
 import {installPaperLinks} from './papers-window.tsx';
+import {DemoInbox} from './inbox.tsx';
+import {registerPage} from '../client/route.ts';
 
 const server = new DemoServer();
 const realFetch = window.fetch.bind(window);
@@ -50,5 +52,7 @@ document.addEventListener('keydown', event => {
 // Wersja 4 (7.3): dokumenty, teczka, katalog, zestawienie, statystyki i pliki otwierają się w oknie na tej samej stronie
 // albo pobierają przez `Blob` (strona próbna nie otwiera nowych kart).
 installPaperLinks(server);
+// Wersja 4 (6.7.5, pakiet D0): „Skrzynka (próba)” jako strona aplikacji pod #skrzynka (tylko budowa wersji próbnej).
+registerPage('#skrzynka', () => <section class="oi-card"><DemoInbox/></section>);
 
 render(<App/>, document.getElementById('app')!);

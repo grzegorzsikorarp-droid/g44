@@ -11,11 +11,16 @@ import {isSectionId, SettingsPage, sectionName, visibleSections, type SectionId}
 import {settingsAccess} from '../shared/role.ts';
 import {personName} from '../shared/roster.ts';
 import {brand} from './brand.ts';
-import {currentRoute, go, onRoute} from './route.ts';
+import {commsRouteAllowed, currentRoute, go, onRoute, registeredPage, v4Route} from './route.ts';
+import type {VNode} from 'preact';
+import {AccountPage} from './account.tsx';
+import {MyStatsPage} from './stats.tsx';
+import {CatalogPage, ReportPage} from './catalog.tsx';
+import type {Session} from './session.ts';
 import {Plate} from './plate.tsx';
 import {acceptSession} from './general.ts';
 
-interface SessionInfo { account: Account | null; setupRequired: boolean; roster: Roster | null; docTypes?: DocType[] | null; general?: GeneralBundle | null }
+interface SessionInfo extends Partial<Omit<Session, 'account' | 'roster'>> { account: Account | null; setupRequired: boolean; roster: Roster | null; docTypes?: DocType[] | null; general?: GeneralBundle | null }
 
 const APP = 'Posiedzenia Prezydium';
 // Pamięć karty przeglądarki. W ramce bez własnego adresu (wersja próbna) jest niedostępna, a aplikacja działa bez niej.
@@ -80,8 +85,24 @@ export function App() {
   const settings = !!settingsMatch && sections.length > 0;
   const section: SectionId | null = settings && settingsMatch![1] && isSectionId(settingsMatch![1]) && sections.includes(settingsMatch![1]) ? settingsMatch![1] : null;
   const signedIn = !!info?.account && !info.account.mustChange;
+  // Wersja 4 (pakiet D0, SPEC-4 8.2 D.3): trasy nowych stron; konto „Komunikacja” wraca na swoją stronę startową (4.4).
+  const v4 = screen || meeting || settings ? null : v4Route(route);
+  const extraPage = signedIn && v4?.page === 'skrzynka' ? registeredPage(route) : null;
+  const commsHome = signedIn && info!.account!.kind === 'komunikacja' && !commsRouteAllowed(route) ? info!.home ?? '#odbyte' : null;
+  useEffect(() => { if (commsHome) go(commsHome); }, [commsHome]);
+  const docsId = v4?.page === 'dokumenty' ? v4.id : null;
+  useEffect(() => {
+    if (!docsId) return;
+    // #p-{id}/dokumenty: przewinięcie do karty „Dokumenty posiedzenia” i fokus na jej nagłówek, gdy karta się pojawi.
+    let n = 0;
+    const timer = window.setInterval(() => {
+      const card = document.getElementById('dokumenty-posiedzenia');
+      if (card || ++n > 30) { window.clearInterval(timer); card?.scrollIntoView({block: 'start'}); const h = card?.querySelector<HTMLElement>('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus(); } }
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [docsId]);
   const title = !info ? null : !info.account ? `Logowanie – ${APP}` : info.account.mustChange ? `Ustaw własne hasło – ${APP}` : screen || meeting ? null
-    : settings ? (section ? `${sectionName(section)} – Ustawienia ogólne` : `Ustawienia ogólne – ${APP}`) : `Lista posiedzeń – ${APP}`;
+    : settings ? (section ? `${sectionName(section)} – Ustawienia ogólne` : `Ustawienia ogólne – ${APP}`) : v4 ? null : `Lista posiedzeń – ${APP}`;
   // Tytuł karty ustawia się przed efektami ekranów, więc tytuł posiedzenia ustawiony niżej przez usePageTitle ma pierwszeństwo.
   useLayoutEffect(() => { document.title = title ?? APP; }, [title]);
 
@@ -108,11 +129,14 @@ export function App() {
     const Picker = brand.loginScreen;
     content = Picker ? <Picker onDone={load}/> : <Login setup={info.setupRequired} roster={info.roster} onDone={load}/>;
   } else {
-    const session = {account: info.account, roster: info.roster!};
+    const session: Session = {account: info.account, roster: info.roster!, avatars: info.avatars, photoCircle: info.photoCircle, can: info.can, mail: info.mail, home: info.home};
+    const page = !v4 ? null : v4.page === 'konto' ? <AccountPage onLogout={() => { logout(); }}/> : v4.page === 'moje-statystyki' ? <MyStatsPage query={v4.query}/>
+      : v4.page === 'odbyte' ? <CatalogPage query={v4.query}/> : v4.page === 'zestawienie' ? <ReportPage query={v4.query}/>
+      : v4.page === 'dokumenty' ? <MeetingPage id={v4.id}/> : extraPage ? extraPage() as VNode : null;
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : <Home/>}</main></>}
+        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
     </SessionContext.Provider>;
   }
   return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;

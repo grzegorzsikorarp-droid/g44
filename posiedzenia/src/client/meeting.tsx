@@ -22,6 +22,7 @@ import {DeputyCard, DuplicateButton, PrepEditor} from './prep.tsx';
 import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader, showBallot} from './reader.tsx';
 import {Messages} from './messages.tsx';
+import {PrepPreview} from './prep-preview.tsx';
 import {brand} from './brand.ts';
 import {typo} from '../shared/typo.ts';
 import {useDocTypes} from './doctypes.ts';
@@ -979,15 +980,6 @@ export function Motions() {
     {file && <>{intro}{file}</>}
     {form}
   </section>;
-}
-
-function PrepPreview() {
-  const {m} = useMeeting();
-  return <div class="member">
-    <Notice>Posiedzenie jest w przygotowaniu. Otworzy je przewodniczący lub wiceprzewodniczący. Wtedy na tym ekranie pojawi się potwierdzenie obecności i głosowania.</Notice>
-    <section class="oi-card"><CardTitle level={2}>Projekt porządku obrad</CardTitle><AgendaList compact/></section>
-    {m.materials.length > 0 && <section class="oi-card"><CardTitle level={2}>Materiały</CardTitle><div class="material-list">{m.materials.map(x => <MaterialLink key={x.id} id={x.id} version={x.version} label={x.title}/>)}</div></section>}
-  </div>;
 }
 
 // Podsumowanie zamkniętego posiedzenia: informacja o zamknięciu z projektem protokołu, porządek i tabela wyników.
