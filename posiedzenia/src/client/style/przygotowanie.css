@@ -4,7 +4,7 @@
    wiersza, więc w każdym wierszu jest w tym samym miejscu. */
 .edit-list { list-style: none; padding: 0; margin: 0; }
 .edit-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto auto; grid-template-areas: 'no main tools settings'; column-gap: var(--odstep-2); align-items: center; padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
-.edit-settings { grid-area: settings; }
+.edit-settings { grid-area: settings; display: flex; flex-wrap: wrap; gap: var(--odstep-1) var(--odstep-3); }
 .edit-row.is-sub { padding-left: var(--odstep-6); }
 .edit-row > .agenda-no { grid-area: no; align-self: start; padding-top: var(--odstep-1); }
 .edit-main { grid-area: main; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-block: var(--odstep-1); }
@@ -154,3 +154,5 @@
 .invite-form .oi-input { background: var(--powierzchnia); }
 .previous-guests { display: flex; flex-direction: column; gap: var(--odstep-1); }
 .previous-guests li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--odstep-3); }
+/* Wersja 4 (6.5, wiersz 9 „Do pokazania”): lista DisplayList (show.tsx, zespół F) w ustawieniach punktu bez kropek. */
+.item-settings .display-list .oi-list { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); }

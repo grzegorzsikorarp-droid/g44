@@ -7,6 +7,7 @@ import {useMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Button, Countdown, ErrorNotice, errorKindOf, LinkButton, Modal, type ErrorKind} from './ui.tsx';
 import {useDocTypes} from './doctypes.ts';
+import {htmlPages} from './show-pages.ts';
 
 type Loaded = MaterialRef & {html: string};
 const cache = new Map<string, Loaded>();
@@ -34,7 +35,12 @@ function SizeTools(props: {size: string; onSize: (size: string) => void}) {
 
 // Treść materiału pobiera się dopiero po otwarciu, więc odświeżanie obrad nie przesyła dokumentów.
 // W oknie stopień pisma ustawiają przyciski w nagłówku okna (`size`), a w karcie przyciski przy tytule.
-export function MaterialReader(props: {id: string; version: number; inline?: boolean; size?: string}) {
+/**
+ * Czytnik materiału. `shownPage` (SPEC-4 6.5, B3-25): przy pokazie materiału tekstowego na sali czytnik dzieli tekst na
+ * porcje tak samo jak ekran sali (`htmlPages`), dopisuje „Na sali strona {n}” i zaznacza tę porcję paskiem 6 px z lewej
+ * oraz słowami „pokazywane na sali” (stan nie tylko kolorem). Bez `shownPage` czytnik działa jak w wersji 3.
+ */
+export function MaterialReader(props: {id: string; version: number; inline?: boolean; size?: string; shownPage?: number}) {
   const {m} = useMeeting();
   const key = `${props.id}:${props.version}`;
   const [doc, setDoc] = useState<Loaded | null>(cache.get(key) ?? null);
@@ -58,9 +64,24 @@ export function MaterialReader(props: {id: string; version: number; inline?: boo
         : <div><span class="oi-label">{materialTypeLabel(doc.type)}{doc.number ? ` nr ${doc.number}` : ''}, wersja {doc.version}</span><h3>{doc.title}</h3></div>}
       {props.size === undefined && <SizeTools size={size} onSize={next => { setOwn(next); saveSize(next); }}/>}
     </header>
-    {doc.html ? <div class="doc" dangerouslySetInnerHTML={{__html: doc.html}}/> : <p class="muted">Ten materiał jest dostępny tylko jako plik do pobrania.</p>}
+    {doc.html && props.shownPage ? <ShownPages html={doc.html} page={props.shownPage}/>
+      : doc.html ? <div class="doc" dangerouslySetInnerHTML={{__html: doc.html}}/> : <p class="muted">Ten materiał jest dostępny tylko jako plik do pobrania.</p>}
     {doc.fileId && <div><LinkButton small href={`/api/meetings/${m.id}/files/${doc.fileId}`}>Pobierz oryginał{doc.fileName ? ` (${doc.fileName})` : ''}</LinkButton></div>}
   </article>;
+}
+
+/** Tekst materiału w porcjach pokazu z zaznaczoną porcją widoczną na sali (B3-25). */
+function ShownPages(props: {html: string; page: number}) {
+  const pages = htmlPages(props.html);
+  const shown = Math.min(Math.max(1, props.page), pages.length);
+  const mark = useRef<HTMLDivElement>(null);
+  useEffect(() => { mark.current?.scrollIntoView({block: 'nearest'}); }, [shown]);
+  return <div class="doc doc--pokaz">
+    <p class="small strong">{`Na sali strona ${shown}`}</p>
+    {pages.map((html, i) => i + 1 === shown
+      ? <div key={i} ref={mark} class="doc-page is-shown"><span class="oi-label">pokazywane na sali</span><div dangerouslySetInnerHTML={{__html: html}}/></div>
+      : <div key={i} class="doc-page" dangerouslySetInnerHTML={{__html: html}}/>)}
+  </div>;
 }
 
 // Uwaga w czytniku, gdy trwa głosowanie, w którym ta osoba może jeszcze oddać głos. Stoi pod nagłówkiem okna.

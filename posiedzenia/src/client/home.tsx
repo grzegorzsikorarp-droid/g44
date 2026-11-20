@@ -12,6 +12,9 @@ import {Button, Chip, ErrorNotice, Fact, Field, fmtDateTime, fmtShort, LinkButto
 import {meetingState} from './stany.ts';
 import {brand} from './brand.ts';
 import {go} from './route.ts';
+import {mayProposeWaiting} from './prep-rules.ts';
+import {ProposalDialog, WaitingDialog, waitingSentence} from './workspace.tsx';
+import type {Proposal} from '../shared/workspace.ts';
 
 interface Summary {
   id: string; kind: Meeting['kind']; title: string; date: string; time: string; place: string; mode: Meeting['mode'];
@@ -64,11 +67,14 @@ export function Home() {
     const now = data.meetings.filter(m => m.status === 'trwa' || m.status === 'przerwa');
     if (now.length === 1) go(`#p-${now[0].id}`);
   }, [data]);
+  const actor = {account: s.account, personId: s.personId, name: s.name};
+  const recent = [...done].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   return <>
     <header class="oi-hero page-head page-head--niski">
       <div class="page page--kolumna oi-hero__in">
         <h1>Posiedzenia <b>Prezydium</b></h1>
         <p class="oi-hero__lead">{brand.organ}{brand.term ? `, ${brand.term}` : ''}.</p>
+        {s.can.catalog && <MeetingsTabs current="biezace"/>}
         {/* Gdy trwa posiedzenie albo głosowanie, przyciskiem głównym ekranu jest przejście do niego (pas pod nagłówkiem). */}
         {organizer && <div class="actions">
           <Button kind={live.length ? 'secondary' : 'primary'} haspopup onClick={() => setCreating('posiedzenie')}>Przygotuj posiedzenie</Button>
@@ -82,7 +88,9 @@ export function Home() {
       {data && !list.length && <section class="oi-card"><h2 class="oi-card__title"><span class="oi-mark" aria-hidden="true"/><span>Nie ma jeszcze posiedzeń</span></h2><p class="muted">{organizer ? 'Utwórz pierwsze posiedzenie przyciskiem „Przygotuj posiedzenie”.' : 'Gdy biuro przygotuje posiedzenie, pojawi się tutaj.'}</p></section>}
       {live.length > 0 && <div class="live-bands">{live.map((m, i) => <LiveBand key={m.id} m={m} primary={i === 0}/>)}</div>}
       {prep.length > 0 && <Group title={organizer ? 'W przygotowaniu' : 'Zaplanowane'} items={prep} organizer={organizer}/>}
-      {done.length > 0 && <Group title="Zakończone" items={done} organizer={organizer}/>}
+      {done.length > 0 && <Group title="Zakończone" items={s.can.catalog ? recent.slice(0, 3) : done} organizer={organizer}
+        more={s.can.catalog ? <a class="oi-link" href="#odbyte">{`Wszystkie odbyte posiedzenia (${done.length})`}</a> : undefined}/>}
+      {data && !prep.length && <Waiting organizer={organizer} proposer={mayProposeWaiting(s.roster, ORGAN, actor)}/>}
     </div>
     {creating && <CreateMeeting kind={creating} onClose={() => setCreating(null)}/>}
   </>;
@@ -101,10 +109,44 @@ function LiveBand({m, primary}: {m: Summary; primary: boolean}) {
   </div>;
 }
 
-function Group(props: {title: string; items: Summary[]; organizer: boolean}) {
+function Group(props: {title: string; items: Summary[]; organizer: boolean; more?: preact.ComponentChildren}) {
   return <section>
     <SectionHead count={counts(props.items)}>{props.title}</SectionHead>
     <ul class="register">{props.items.map(m => <li key={m.id}><MeetingRow m={m} organizer={props.organizer}/></li>)}</ul>
+    {props.more && <p class="group-more">{props.more}</p>}
+  </section>;
+}
+
+/**
+ * Zakładki strony „Posiedzenia” (6.1, DB-8): „Bieżące” (`#`) i „Odbyte” (`#odbyte`). Zespół F montuje je w nagłówku
+ * strony „Odbyte posiedzenia” (catalog.tsx) z `current="odbyte"`. Konto „Komunikacja” ich nie ma.
+ */
+export function MeetingsTabs(props: {current: 'biezace' | 'odbyte'}) {
+  return <nav class="oi-seg meetings-tabs" aria-label="Posiedzenia">
+    <a class="oi-opt" href="#" aria-current={props.current === 'biezace' ? 'page' : undefined}>Bieżące</a>
+    <a class="oi-opt" href="#odbyte" aria-current={props.current === 'odbyte' ? 'page' : undefined}>Odbyte</a>
+  </nav>;
+}
+
+/**
+ * Gdy żadne posiedzenie nie jest w przygotowaniu (6.1, B2-W06): osoby z prawem zgłoszenia mają cichy przycisk „Zgłoś sprawę
+ * na najbliższe posiedzenie”, a osoby przygotowujące fakt „Zgłoszenia czekające na posiedzenie {n}” z „Pokaż”. Zbiór
+ * czekających wczytuje się raz przy wejściu na listę, bez odpytywania.
+ */
+function Waiting(props: {organizer: boolean; proposer: boolean}) {
+  const [list, setList] = useState<Proposal[] | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [showing, setShowing] = useState(false);
+  const [saved, setSaved] = useState('');
+  const load = () => request<{prep: {proposals: Proposal[]}}>(`/api/organs/${ORGAN}/czekajace`).then(r => setList(r.prep.proposals.filter(p => p.state === 'zgloszone'))).catch(() => setList([]));
+  useEffect(() => { if (props.organizer) load(); }, [props.organizer]);
+  if (!props.organizer && !props.proposer) return null;
+  return <section class="waiting stack-tight">
+    {props.organizer && list && <p class="waiting-fact">{waitingSentence(list.length)}{list.length > 0 && <> <Button kind="ghost" small quiet haspopup onClick={() => setShowing(true)}>Pokaż</Button></>}</p>}
+    {props.proposer && <div><Button kind="ghost" quiet haspopup onClick={() => setAsking(true)}>Zgłoś sprawę na najbliższe posiedzenie</Button></div>}
+    <p role="status" class="save-status">{saved}</p>
+    {asking && <ProposalDialog organ={ORGAN} onClose={() => setAsking(false)} onDone={() => { setAsking(false); setSaved(`Zapisano o godz. ${new Intl.DateTimeFormat('pl-PL', {timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit'}).format(Date.now())}.`); if (props.organizer) load(); }}/>}
+    {showing && list && <WaitingDialog proposals={list} onClose={() => setShowing(false)}/>}
   </section>;
 }
 

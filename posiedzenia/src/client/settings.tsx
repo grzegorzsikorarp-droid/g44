@@ -16,17 +16,20 @@ import {brand} from './brand.ts';
 import {setGeneral, useGeneral} from './general.ts';
 import {useSession} from './session.ts';
 import {Button, CardTitle, Confirm, ErrorNotice, Fact, Field, Fold, Modal, Notice, SectionHead, Segments, Tag, useAction, useMedia} from './ui.tsx';
-import {appRuleWhy, basisReason, BasisFields, dateHintText, HistoryFold, HistoryTable, MessagesRowEditor, messagesOptionLabel, MinutesRowEditor, NoticeDialog, OrganFact, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type EditorCtl} from './cascade-ui.tsx';
+import {WhyLocked, appRuleWhy, basisReason, BasisFields, dateHintText, HistoryFold, HistoryTable, MessagesRowEditor, messagesOptionLabel, MinutesRowEditor, NoticeDialog, OrganFact, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type EditorCtl} from './cascade-ui.tsx';
 import {AccountsPanel} from './accounts.tsx';
 import {KindsSection} from './rodzaje.tsx';
 import {DocTypeSelect, usePeople} from './people.tsx';
+import {MailSettingsSection} from './mail.tsx';
+import {Avatar} from './avatar.tsx';
 
-// Ustawienia ogólne (wersja 3, poziom 1 kaskady; specyfikacja rozdz. 5.2): dziewięć sekcji w czterech grupach.
+// Ustawienia ogólne (wersja 3, poziom 1 kaskady; specyfikacja rozdz. 5.2): dziesięć sekcji w czterech grupach (wersja 4
+// dodaje „Poczta e-mail” w grupie „Ludzie i dostęp”, SPEC-4 6.11).
 // Biuro zmienia ustawienia, przewodniczący i wiceprzewodniczący je oglądają, administrator zarządza kontami.
 // Wartości z regulaminu stoją z paragrafem, bez pól do zmiany. Każda zmiana trafia do historii zmian.
 // Nazwy sekcji i grup nie zawierają słowa „Izba”, bo te same pliki budują wersję próbną.
 
-export type SectionId = 'siedziba' | 'regulamin' | 'sklad' | 'konta' | 'wzory' | 'rodzaje' | 'glosowanie' | 'protokol' | 'historia';
+export type SectionId = 'siedziba' | 'regulamin' | 'sklad' | 'konta' | 'poczta' | 'wzory' | 'rodzaje' | 'glosowanie' | 'protokol' | 'historia';
 interface SectionInfo { id: SectionId; name: string; desc: string }
 const groups: {name: string; sections: SectionInfo[]}[] = [
   {name: 'Podstawy', sections: [
@@ -36,6 +39,7 @@ const groups: {name: string; sections: SectionInfo[]}[] = [
   ]},
   {name: 'Ludzie i dostęp', sections: [
     {id: 'konta', name: 'Konta i role', desc: 'Imienne konta, hasła tymczasowe i rola administratora.'},
+    {id: 'poczta', name: 'Poczta e-mail', desc: 'Serwer poczty, nadawca i wstępy wiadomości. Hasło jest tylko na serwerze aplikacji.'},
   ]},
   {name: 'Posiedzenia', sections: [
     {id: 'wzory', name: 'Wzory posiedzeń', desc: 'Punkty porządku obrad i ustawienia, od których zaczyna się nowe posiedzenie.'},
@@ -144,6 +148,7 @@ function Section(props: {id: SectionId; bundle: GeneralBundle | null; canEdit: b
     case 'regulamin': body = <RulesSection bundle={props.bundle}/>; break;
     case 'sklad': body = <CompositionSection bundle={props.bundle!} canEdit={props.canEdit}/>; break;
     case 'konta': body = <AccountsPanel/>; break;
+    case 'poczta': body = <MailSettingsSection bundle={props.bundle} canEdit={props.canEdit}/>; break;
     case 'wzory': body = <TemplatesSection bundle={props.bundle!} canEdit={props.canEdit}/>; break;
     case 'rodzaje': body = <><OrganFact organ={ORGAN}/><KindsSection bundle={props.bundle!} canEdit={props.canEdit}/></>; break;
     case 'glosowanie': body = <VotingSection bundle={props.bundle!} canEdit={props.canEdit}/>; break;
@@ -162,6 +167,7 @@ const historySections: {id: string; name: string; area?: SettingsArea; areas?: S
   {id: 'siedziba', name: 'Siedziba i kadencja', area: 'siedziba'},
   {id: 'sklad', name: 'Skład', area: 'sklad'},
   {id: 'konta', name: 'Konta i role', area: 'konta'},
+  {id: 'poczta', name: 'Poczta e-mail', area: 'poczta'},
   {id: 'wzory', name: 'Wzory posiedzeń', area: 'wzory'},
   {id: 'rodzaje', name: 'Rodzaje spraw i dokumentów', areas: ['rodzaje_dokumentow', 'rodzaje_spraw']},
   {id: 'glosowanie', name: 'Głosowanie i obrady', area: 'organ', keys: k => k !== 'recorder' && k !== 'noticeTemplate'},
@@ -365,7 +371,8 @@ function RulesSection(props: {bundle: GeneralBundle | null}) {
       <ul class="rule-list">{HOUSE_RULES.map(r => <li key={r.id}><strong>{r.title}</strong><span class="muted small">{dateDots(r.date)}</span><p>{r.text}</p></li>)}</ul>
     </Fold>
     <Fold title={`Zasady przyjęte dla aplikacji (${APP_RULES.length})`}>
-      <ul class="rule-list">{APP_RULES.map(r => <li key={r.id}><strong>{r.title}</strong><p>{r.text}</p></li>)}</ul>
+      <ul class="rule-list">{APP_RULES.map(r => <li key={r.id}><strong>{r.title}</strong><p>{r.text}</p>
+        <WhyLocked summary="Kiedy to się zmieni?">{r.question ? `Gdy zapadnie decyzja w tej sprawie (pytanie ${r.question}). Do tego czasu obowiązuje ta zasada.` : 'Gdy zapadnie decyzja o zmianie tej zasady. Do tego czasu obowiązuje.'}</WhyLocked></li>)}</ul>
     </Fold>
   </>;
 }
@@ -373,7 +380,9 @@ function RulesSection(props: {bundle: GeneralBundle | null}) {
 const compositionOps: [CompositionChange['op'], string][] = [['dodaj', 'Nowa osoba w składzie'], ['funkcja', 'Zmiana funkcji'], ['koniec', 'Koniec członkostwa'], ['liczba', 'Liczba miejsc']];
 
 function CompositionSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
-  const {roster} = useSession();
+  const {roster, avatars} = useSession();
+  // SPEC-4 6.11: kolumna zdjęcia 40 px tylko u osób, które widzą cudze zdjęcia (seesPhotos: sesja ma mapę zdjęć).
+  const photos = avatars !== null;
   const [open, setOpen] = useState(false);
   const members = organMembers(roster, ORGAN);
   const seats = organSettingsOf(props.bundle.general, ORGAN).seats;
@@ -389,8 +398,9 @@ function CompositionSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
         <Fact label="Wymagane kworum">{`${quorumOf(law, total)} z ${total}`}</Fact>
       </dl>
       <div class="oi-table-wrap"><table class="oi-table settings-table" role="table" aria-label="Skład Prezydium">
-        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Osoba</th><th scope="col" role="columnheader">Funkcja</th><th scope="col" role="columnheader">Od</th><th scope="col" role="columnheader">Podstawa</th><th scope="col" role="columnheader">Prowadzi obrady</th></tr></thead>
+        <thead role="rowgroup"><tr role="row">{photos && <th scope="col" role="columnheader" class="photo-col"><span class="sr-only">Zdjęcie</span></th>}<th scope="col" role="columnheader">Osoba</th><th scope="col" role="columnheader">Funkcja</th><th scope="col" role="columnheader">Od</th><th scope="col" role="columnheader">Podstawa</th><th scope="col" role="columnheader">Prowadzi obrady</th></tr></thead>
         <tbody role="rowgroup">{members.map(ms => <tr role="row" key={ms.personId}>
+          {photos && <td role="cell" class="photo-col"><Avatar personKey={ms.personId} name={person(ms.personId)} size={40}/></td>}
           <th scope="row" role="rowheader">{person(ms.personId)}</th>
           <td role="cell" data-label="Funkcja">{ms.label}</td>
           <td role="cell" data-label="Od" class="oi-nowrap">{ms.since ? dateDots(ms.since) : '–'}</td>
@@ -709,6 +719,7 @@ function VotingSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
       <SettingRow label="Projekt porządku obrad na żywo" state="zasada" at="ogolne" effective={zasada('D2')} value="Członkowie i ekran sali widzą każdą zmianę od razu"
         why="W punkcie „Przyjęcie porządku obrad” i przez całe spotkanie robocze, dopóki porządek nie jest przyjęty. Na ekranie sali stoi napis „Projekt porządku obrad”, bo spotkanie robocze niczego nie przyjmuje (§ 8 ust. 2)."/>
       <SettingRow label="Wynik głosowania" state="zasada" at="ogolne" effective={zasada('F2')} value="Widoczny po ogłoszeniu" why={houseRule('F2').text}/>
+      <StatsSinceRow since={organ.statsSince ?? ''} canEdit={props.canEdit}/>
     </SettingsList>
     <HistoryFold area="organ" version={props.bundle.revision} keys={k => k !== 'recorder' && k !== 'noticeTemplate'}/>
   </>;
@@ -777,5 +788,28 @@ function NoticeTemplateEditor(props: {close: (s?: string) => void; ctl: EditorCt
     <Field label="Wzór zawiadomienia" hint="Wstaw [termin], [miejsce], [porządek obrad], a przy posiedzeniu zdalnym [odnośnik]. Nazwę organu wstawi [organ w dopełniaczu]. Przygotowanie posiedzenia wstawi dane. Puste pole przywraca tekst domyślny.">
       <textarea rows={10} maxLength={4000} value={value} onInput={e => setValue((e.target as HTMLTextAreaElement).value)}/>
     </Field>
+  </RowEditor>;
+}
+
+/**
+ * „Statystyki liczą posiedzenia od dnia” (U-41, G-40, 6.11): biuro ustawia dzień albo przesuwa go wstecz; dzień, który
+ * wyłączy policzone już posiedzenia, wpisuje tylko przewodniczący z powodem (o tym rozstrzyga domena, `canSetStatsSince`).
+ * Wiceprzewodniczący widzi wiersz bez „Zmień”.
+ */
+function StatsSinceRow(props: {since: string; canEdit: boolean}) {
+  const s = useSession();
+  const chairman = s.membership(ORGAN)?.func === 'przewodniczacy';
+  const editable = props.canEdit || chairman;
+  return <SettingRow label="Statystyki liczą posiedzenia od dnia" value={props.since ? dateDots(props.since) : 'Od pierwszego posiedzenia'} effective={general(props.since)} at="ogolne" genitive="dnia startu statystyk"
+    hint="Ustaw dzień uruchomienia aplikacji, żeby posiedzenia ćwiczebne nie wchodziły do statystyk. Dotyczy wszystkich osób jednakowo. Dzień, który wyłączy już policzone posiedzenia, ustawia przewodniczący."
+    editor={editable ? (close, ctl) => <StatsSinceEditor close={close} ctl={ctl} initial={props.since} reason={chairman}/> : undefined}/>;
+}
+function StatsSinceEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial: string; reason: boolean}) {
+  const [value, setValue] = useState(props.initial);
+  const [reason, setReason] = useState('');
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={value !== props.initial}
+    onSave={() => saveSetting({area: 'organ', organ: ORGAN, key: 'statsSince', value, ...(props.reason && reason.trim() ? {reason: reason.trim()} : {})})}>
+    <Field label="Statystyki liczą posiedzenia od dnia" hint={dateHintText(value) || undefined}><input type="date" value={value} max={todayIso()} onInput={e => setValue((e.target as HTMLInputElement).value)}/></Field>
+    {props.reason && <Field label="Powód" hint="Trafi do historii zmian."><input value={reason} maxLength={500} onInput={e => setReason((e.target as HTMLInputElement).value)}/></Field>}
   </RowEditor>;
 }

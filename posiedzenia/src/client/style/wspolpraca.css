@@ -1,0 +1,30 @@
+/* Wspólne przygotowanie (SPEC-4 6.5, B2 2.13): karta „Przygotowanie posiedzenia” (bez is-teraz i bez przycisku głównego),
+   zgłoszenia ze znacznikami stanu, uwagi przy punkcie jako zwykła lista ol (bez role="log"), gotowość punktu.
+   Bez pasków postępu: postęp jest tekstem i liczbą. Tylko tokeny, zero zaokrągleń. */
+.prep-card .prep-progress { font-size: var(--t-karta); font-weight: 600; color: var(--tekst-mocny); }
+.prep-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--odstep-1) var(--odstep-3); }
+.prep-line p { margin: 0; }
+.proposal-list, .prep-comments { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.proposal { display: flex; flex-direction: column; gap: var(--odstep-1); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.proposal:first-child { border-top: 0; padding-top: 0; }
+.proposal__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--odstep-1) var(--odstep-3); }
+.proposal__head strong { color: var(--tekst-mocny); overflow-wrap: anywhere; }
+.proposal p { margin: 0; overflow-wrap: anywhere; }
+.thread { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.thread:first-child { border-top: 0; padding-top: 0; }
+.thread__replies { display: flex; flex-direction: column; gap: var(--odstep-2); margin-left: var(--odstep-4); padding-left: var(--odstep-3); border-left: var(--kreska-mocna) solid var(--linia); }
+.comment { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.comment__by { margin: 0; color: var(--tekst-drugorzedny); }
+.comment__text { margin: 0; white-space: pre-line; overflow-wrap: anywhere; color: var(--tekst); }
+.readiness { display: flex; flex-direction: column; gap: var(--odstep-2); margin-bottom: var(--odstep-4); }
+.readiness-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); }
+.readiness-list li { display: grid; grid-template-columns: minmax(8rem, 12rem) auto minmax(0, 1fr); align-items: baseline; gap: var(--odstep-1) var(--odstep-3); }
+.readiness-name { font-weight: 600; color: var(--tekst-mocny); }
+.readiness-text { font-size: var(--t-maly); overflow-wrap: anywhere; }
+@media (max-width: 560px) { .readiness-list li { grid-template-columns: auto minmax(0, 1fr); } .readiness-text { grid-column: 1 / -1; } }
+.item-comments { display: flex; flex-direction: column; gap: var(--odstep-2); margin-top: var(--odstep-5); padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+.item-comments h4:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+.preview-comments { display: flex; flex-direction: column; gap: var(--odstep-2); }
+/* Czytnik przy pokazie materiału tekstowego (B3-25): porcja widoczna na sali z paskiem 6 px i słowami „pokazywane na sali”. */
+.doc--pokaz .doc-page { padding-left: calc(var(--pasek-akcentu) + var(--odstep-3)); }
+.doc--pokaz .doc-page.is-shown { border-left: var(--pasek-akcentu) solid var(--czerwien); padding-left: var(--odstep-3); }

@@ -130,3 +130,4 @@ dl.settings { display: flex; flex-direction: column; margin: 0; background: var(
 .history-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--odstep-3) var(--odstep-4); margin-bottom: var(--odstep-4); }
 .history-filters .oi-field { flex: 1 1 14em; min-width: 0; }
 .history-filters select { width: 100%; }
+.settings-table .photo-col { width: 40px; padding-right: 0; }

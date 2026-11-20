@@ -1,7 +1,8 @@
 import {useState} from 'preact/hooks';
 import {sortedDocTypes} from '../shared/doctypes.ts';
 import {isLockedDocType, lawOf} from '../shared/law.ts';
-import {FUNCS, funcLabel, type CaseType, type GeneralBundle} from '../shared/settings.ts';
+import {COMMS_LEVELS, commsLevelLabel, docCommsLevel, FUNCS, funcLabel, type CaseType, type GeneralBundle} from '../shared/settings.ts';
+import type {CommsLevel} from '../shared/types.ts';
 import {compositionBasisText} from '../shared/settings.ts';
 import {organOfCode} from '../shared/roster.ts';
 import type {ActRef, DocType, Func} from '../shared/types.ts';
@@ -45,7 +46,7 @@ function DocTypesPanel(props: {bundle: GeneralBundle; canEdit: boolean}) {
     <div class="oi-table-wrap"><table class="oi-table doctype-table" role="table" aria-label="Rodzaje dokumentów">
       <thead role="rowgroup"><tr role="row">
         <th scope="col" role="columnheader">Nazwa</th><th scope="col" role="columnheader">Gdy przyjęto</th><th scope="col" role="columnheader">Gdy nie przyjęto</th>
-        <th scope="col" role="columnheader">Wymaga głosowania</th><th scope="col" role="columnheader">W wykazie aktów</th>
+        <th scope="col" role="columnheader">Wymaga głosowania</th><th scope="col" role="columnheader">W wykazie aktów</th><th scope="col" role="columnheader">W materiale dla komunikacji</th>
         {props.canEdit && <th scope="col" role="columnheader" class="doctype-act">Działania</th>}
       </tr></thead>
       <tbody role="rowgroup">{list.map(t => {
@@ -56,6 +57,7 @@ function DocTypesPanel(props: {bundle: GeneralBundle; canEdit: boolean}) {
           <td role="cell" data-label="Gdy nie przyjęto">{t.rejected}</td>
           <td role="cell" data-label="Wymaga głosowania">{locked ? `Tak, regulamin (${law.acts.voted[t.id]})` : t.voted ? 'Tak' : 'Nie'}</td>
           <td role="cell" data-label="W wykazie aktów">{t.inActs ? 'Tak' : 'Nie'}</td>
+          <td role="cell" data-label="W materiale dla komunikacji">{commsLevelLabel[docCommsLevel(t)]}</td>
           {props.canEdit && <td role="cell" class="doctype-act"><span class="actions">
             {locked
               ? <Button small haspopup label={`Zmień formuły, ${t.name}`} onClick={() => setEditing(t)}>Zmień formuły</Button>
@@ -76,10 +78,10 @@ function DocTypesPanel(props: {bundle: GeneralBundle; canEdit: boolean}) {
   </section>;
 }
 
-type Draft = {name: string; adopted: string; rejected: string; voted: boolean; inActs: boolean; order: string};
+type Draft = {name: string; adopted: string; rejected: string; voted: boolean; inActs: boolean; order: string; comms: CommsLevel | ''};
 const draftOf = (t?: DocType, next = 10): Draft => t
-  ? {name: t.name, adopted: t.adopted, rejected: t.rejected, voted: t.voted, inActs: t.inActs, order: String(t.order)}
-  : {name: '', adopted: '', rejected: '', voted: true, inActs: false, order: String(next)};
+  ? {name: t.name, adopted: t.adopted, rejected: t.rejected, voted: t.voted, inActs: t.inActs, order: String(t.order), comms: docCommsLevel(t)}
+  : {name: '', adopted: '', rejected: '', voted: true, inActs: false, order: String(next), comms: ''};
 
 // Okno dodawania i zmiany rodzaju. Komunikaty błędów są te same co w API (docTypeInput). Forma aktu z regulaminu ma tylko
 // nazwę, formuły wyniku, wykaz aktów i kolejność (G-1).
@@ -92,7 +94,7 @@ function DocTypeForm(props: {current?: DocType; next: number; onClose: () => voi
   return <Modal title={props.current ? `Zmień rodzaj „${props.current.name}”` : 'Nowy rodzaj dokumentu'} onClose={props.onClose}>
     <form class="stack" onSubmit={e => {
       e.preventDefault();
-      const body = {name: draft.name, adopted: draft.adopted, rejected: draft.rejected, inActs: draft.inActs, order: Number(draft.order), ...(locked ? {} : {voted: draft.voted})};
+      const body = {name: draft.name, adopted: draft.adopted, rejected: draft.rejected, inActs: draft.inActs, order: Number(draft.order), ...(locked ? {} : {voted: draft.voted}), ...(draft.comms ? {comms: draft.comms} : {})};
       run(async () => {
         const r = props.current
           ? await request<DocResult>(`/api/doc-types/${props.current.id}`, {method: 'PUT', body})
@@ -109,6 +111,8 @@ function DocTypeForm(props: {current?: DocType; next: number; onClose: () => voi
       <Segments label="W wykazie aktów protokołu" value={draft.inActs ? 'tak' : 'nie'} options={[['tak', 'Tak'], ['nie', 'Nie']]} onChange={v => set('inActs', v === 'tak')}
         hint="Rezolucje, oświadczenia, deklaracje i apele podejmuje się w trybie uchwał (§ 8 ust. 9). Zaznacz, jeśli mają stać w wykazie podjętych aktów."/>
       <Field label="Kolejność" hint="Liczba od 0 do 9999. Rodzaj z mniejszą liczbą stoi wyżej na listach."><input type="number" min={0} max={9999} step={1} value={draft.order} onInput={text('order')} required/></Field>
+      <Segments label="W materiale dla komunikacji" value={draft.comms || docCommsLevel({id: props.current?.id ?? '', voted: draft.voted})} options={COMMS_LEVELS.map(l => [l, commsLevelLabel[l]] as [CommsLevel, string])} onChange={v => set('comms', v)}
+        hint="Działa w rodzajach spraw, które mają wartość „Jak rodzaj dokumentu”. Sprawa bez rodzaju sprawy zawsze ma w materiale tylko liczbę. Zmiana dotyczy posiedzeń zamykanych od dziś."/>
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions"><Button kind="primary" type="submit" busy={busy}>{props.current ? 'Zapisz zmiany' : 'Dodaj rodzaj'}</Button><Button onClick={props.onClose}>Anuluj</Button></div>
     </form>
@@ -117,8 +121,10 @@ function DocTypeForm(props: {current?: DocType; next: number; onClose: () => voi
 
 /** Zdanie faktów rodzaju sprawy: dokument, sprawa finansowa i słowa do rozpoznawania. */
 function caseFacts(c: CaseType, types: DocType[]) {
-  const doc = types.find(t => t.id === c.docType)?.name ?? c.docType;
-  return [`Dokument ${doc}.`, c.financial ? 'Sprawa finansowa, podpisuje także skarbnik (§ 8 ust. 7).' : '',
+  const dt = types.find(t => t.id === c.docType);
+  const doc = dt?.name ?? c.docType;
+  const comms = c.comms ?? (dt ? docCommsLevel(dt) : 'liczba');
+  return [`Dokument ${doc}.`, `W materiale dla komunikacji ${commsLevelLabel[comms]}.`, c.financial ? 'Sprawa finansowa, podpisuje także skarbnik (§ 8 ust. 7).' : '',
     c.keywords.length ? `Rozpoznawana po słowach ${c.keywords.join(', ')}.` : 'Bez słów do rozpoznawania.', c.active ? '' : 'Wyłączony.'].filter(Boolean).join(' ');
 }
 
@@ -157,13 +163,16 @@ function CaseTypeForm(props: {bundle: GeneralBundle; current?: CaseType; onClose
   const [financial, setFinancial] = useState(c?.financial ?? false);
   const [pattern, setPattern] = useState(c?.titlePattern ?? '');
   const [presenter, setPresenter] = useState<Func | ''>(c?.presenterFunc ?? '');
+  const [comms, setComms] = useState<CommsLevel | ''>(c?.comms ?? '');
   const locked = isLockedDocType(docType, law);
+  const docLevel = (() => { const t = types.find(x => x.id === docType); return t ? docCommsLevel(t) : 'liczba'; })();
   return <Modal title={c ? `Zmień rodzaj sprawy „${c.name}”` : 'Nowy rodzaj sprawy'} onClose={props.onClose}>
     <form class="stack" onSubmit={e => {
       e.preventDefault();
       const keywords = words.split(/[,;\n]+/).map(w => w.trim()).filter(Boolean);
       const basis = act.number.trim() || act.date ? act : null;
       const caseType: Partial<CaseType> = {...(c ? {id: c.id} : {}), name, docType, organs: ['prezydium'], keywords, financial, titlePattern: pattern, presenterFunc: presenter || undefined, basis: basis as ActRef | undefined};
+      (caseType as Record<string, unknown>).comms = comms || '';
       if (!presenter) (caseType as Record<string, unknown>).presenterFunc = '';
       if (!basis) (caseType as Record<string, unknown>).basis = null;
       run(async () => {
@@ -189,6 +198,11 @@ function CaseTypeForm(props: {bundle: GeneralBundle; current?: CaseType; onClose
       <Field label="Domyślnie referuje"><select value={presenter} onChange={e => setPresenter((e.target as HTMLSelectElement).value as Func | '')}>
         <option value="">Bez wskazania</option>{FUNCS.map(f => <option key={f} value={f}>{funcLabel(f, 'prezydium')}</option>)}
       </select></Field>
+      <Field label="W materiale dla komunikacji" hint="Sprawy indywidualne, np. stwierdzenie prawa wykonywania zawodu albo zapomogi, ustaw na „Tylko liczba” albo „Nie trafia”. Zmiana dotyczy posiedzeń zamykanych od dziś.">
+        <select value={comms} onChange={e => setComms((e.target as HTMLSelectElement).value as CommsLevel | '')}>
+          <option value="">{`Jak rodzaj dokumentu (${commsLevelLabel[docLevel]})`}</option>{COMMS_LEVELS.map(l => <option key={l} value={l}>{commsLevelLabel[l]}</option>)}
+        </select>
+      </Field>
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions"><Button kind="primary" type="submit" busy={busy}>Zapisz rodzaj sprawy</Button><Button onClick={props.onClose}>Anuluj</Button></div>
     </form>

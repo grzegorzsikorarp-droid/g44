@@ -1,0 +1,21 @@
+/* Poczta (SPEC-4 6.7): okno wysyłki z podglądem w ramce bez skryptów, historia wysyłek, sekcja „Poczta e-mail”
+   i kroki wiadomości próbnej. Tylko tokeny, zero zaokrągleń; stan zawsze słowem (znaczniki z stany.ts). */
+.mail-dialog { min-width: 0; }
+.mail-people { border: 0; margin: 0; padding: 0; min-width: 0; }
+.mail-count { font-weight: 600; color: var(--tekst-mocny); }
+.mail-skipped { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--odstep-1); }
+.mail-preview { display: block; width: 100%; min-height: 22rem; border: var(--kreska) solid var(--linia); background: var(--bialy); }
+.mail-preview-text { margin: 0; padding: var(--odstep-3); max-height: 26rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: var(--kreska) solid var(--linia); background: var(--powierzchnia-miekka); font-family: var(--font-sans); font-size: var(--t-maly); }
+.mail-history { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.mail-history > li { padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.mail-history > li:first-child { border-top: 0; padding-top: 0; }
+.mail-history p { margin: 0 0 var(--odstep-1); overflow-wrap: anywhere; }
+.mail-people-list { list-style: none; margin: 0; padding: 0 0 0 var(--odstep-3); border-left: var(--kreska-mocna) solid var(--linia-jasna); display: flex; flex-direction: column; gap: var(--odstep-1); }
+.mail-people-list li { overflow-wrap: anywhere; }
+.mail-people-list .actions { display: inline-flex; margin-left: var(--odstep-2); }
+.mail-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-2) var(--odstep-3); }
+.mail-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); }
+.mail-steps li { display: grid; grid-template-columns: minmax(7rem, 9rem) auto minmax(0, 1fr); align-items: baseline; gap: var(--odstep-1) var(--odstep-3); }
+.mail-step__name { font-weight: 600; color: var(--tekst-mocny); }
+.mail-step__text { font-size: var(--t-maly); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .mail-steps li { grid-template-columns: auto minmax(0, 1fr); } .mail-step__text { grid-column: 1 / -1; } }

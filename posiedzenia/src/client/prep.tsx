@@ -18,7 +18,15 @@ import {useMeeting, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {announce, Button, CardTitle, Check, Confirm, ErrorNotice, Field, fmtDate, fmtTime, Fold, Modal, Notice, plural, Segments, StateChip, tabMemory, useAction, useMedia, useSaveStatus, type SaveState} from './ui.tsx';
 import {ItemEditForm} from './item-form.tsx';
-import {reviewChip} from './stany.ts';
+import {readinessCheckChip, reviewChip} from './stany.ts';
+import {PrepCard, ProposalsCard, WorkspacePanel} from './workspace.tsx';
+import {DisplayList} from './show.tsx';
+import type {MeetingData} from './api.ts';
+import {commentsSentence, itemCommentCount, proposalsTab, readinessSentence} from './prep-rules.ts';
+import {commsChoices, commsSourceText} from '../shared/comms.ts';
+import {commsLevelLabel} from '../shared/settings.ts';
+import type {CatalogRow} from '../shared/catalog.ts';
+import type {CommsLevel} from '../shared/types.ts';
 import {MaterialLink} from './reader.tsx';
 import {brand} from './brand.ts';
 import {go} from './route.ts';
@@ -78,23 +86,23 @@ interface PrepContext { show: (target: string) => void; openItem: string | null;
 const PrepCtx = createContext<PrepContext | null>(null);
 export const usePrep = () => useContext(PrepCtx);
 
-type PrepTab = 'porzadek' | 'posiedzenie' | 'przeglad';
+type PrepTab = 'porzadek' | 'zgloszenia' | 'posiedzenie' | 'przeglad';
 const TAB_KEY = 'posiedzenia:przygotowanie';
 /**
  * Układ przygotowania (rozdz. 5.4 i 5.5): od 961 px główna kolumna i kolumna boczna 370 px; do 760 px zakładki „Porządek”,
  * „Posiedzenie” i „Przegląd ({n})”, zapamiętane w karcie przeglądarki. Ten sam układ ma głosowanie między posiedzeniami.
  */
-export function PrepLayout(props: {main: ComponentChildren; review: ComponentChildren; settings: ComponentChildren; end: ComponentChildren}) {
+export function PrepLayout(props: {main: ComponentChildren; review: ComponentChildren; settings: ComponentChildren; end: ComponentChildren; top?: ComponentChildren; proposals?: ComponentChildren}) {
   const {m} = useMeeting();
   useFreshSettings(m);
   const phone = useMedia('(max-width: 760px)');
-  const [tab, setTabState] = useState<PrepTab>(() => (['porzadek', 'posiedzenie', 'przeglad'] as PrepTab[]).find(t => t === tabMemory.get(TAB_KEY)) ?? 'porzadek');
+  const [tab, setTabState] = useState<PrepTab>(() => (['porzadek', 'zgloszenia', 'posiedzenie', 'przeglad'] as PrepTab[]).find(t => t === tabMemory.get(TAB_KEY)) ?? 'porzadek');
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [sideEditing, setSideEditing] = useState(false);
   const setTab = (t: PrepTab) => { setTabState(t); tabMemory.set(TAB_KEY, t); };
   const show = (target: string) => {
     const item = target.startsWith('punkt:') ? target.slice(6) : null;
-    if (phone) setTab(item || target === 'materialy' ? 'porzadek' : 'posiedzenie');
+    if (phone) setTab(item || target === 'materialy' ? 'porzadek' : target === 'zgloszenia' && props.proposals ? 'zgloszenia' : target === 'przeglad' ? 'przeglad' : 'posiedzenie');
     if (item) setOpenItem(item);
     setTimeout(() => {
       const el = document.getElementById(item ? `ustawienia-punktu-${item}` : `ust-${target}`);
@@ -105,23 +113,36 @@ export function PrepLayout(props: {main: ComponentChildren; review: ComponentChi
     }, 80);
   };
   const ctx: PrepContext = {show, openItem, setOpenItem, setSideEditing, sideEditing};
+  // „Pokaż” z karty „Przygotowanie posiedzenia” (workspace.tsx): zgłoszenia albo przegląd przed otwarciem.
+  const showRef = useRef(show);
+  showRef.current = show;
+  useEffect(() => {
+    const on = (e: Event) => { e.preventDefault(); showRef.current(String((e as CustomEvent).detail)); };
+    window.addEventListener('posiedzenia:pokaz', on);
+    return () => window.removeEventListener('posiedzenia:pokaz', on);
+  }, []);
+  const proposalsTabInfo = proposalsTab((m as MeetingData).prep);
+  const current = tab === 'zgloszenia' && !props.proposals ? 'porzadek' : tab;
   const open = (m.effective?.review ?? []).filter(r => r.group !== 'gotowe').length;
   return <PrepCtx.Provider value={ctx}>
     <div class="prep">
       <DuplicatedNotice/>
       {phone ? <>
+        {props.top}
         <div class="oi-seg prep-tabs" role="group" aria-label="Części przygotowania">
-          <button type="button" class="oi-opt" aria-pressed={tab === 'porzadek'} onClick={() => setTab('porzadek')}>Porządek</button>
-          <button type="button" class="oi-opt" aria-pressed={tab === 'posiedzenie'} onClick={() => setTab('posiedzenie')}>{m.kind === 'procedura' ? 'Głosowanie' : 'Posiedzenie'}</button>
-          <button type="button" class="oi-opt" aria-pressed={tab === 'przeglad'} aria-label={`Przegląd, ${open} do uzupełnienia albo sprawdzenia`} onClick={() => setTab('przeglad')}>{`Przegląd (${open})`}</button>
+          <button type="button" class="oi-opt" aria-pressed={current === 'porzadek'} onClick={() => setTab('porzadek')}>Porządek</button>
+          {props.proposals && <button type="button" class="oi-opt" aria-pressed={current === 'zgloszenia'} aria-label={proposalsTabInfo.name} onClick={() => setTab('zgloszenia')}>{proposalsTabInfo.label}</button>}
+          <button type="button" class="oi-opt" aria-pressed={current === 'posiedzenie'} onClick={() => setTab('posiedzenie')}>{m.kind === 'procedura' ? 'Głosowanie' : 'Posiedzenie'}</button>
+          <button type="button" class="oi-opt" aria-pressed={current === 'przeglad'} aria-label={`Przegląd, ${open} do uzupełnienia albo sprawdzenia`} onClick={() => setTab('przeglad')}>{`Przegląd (${open})`}</button>
         </div>
         <div class="prep-main">
-          {tab === 'porzadek' && props.main}
-          {tab === 'posiedzenie' && <>{props.settings}<div class="prep-end">{props.end}</div></>}
-          {tab === 'przeglad' && props.review}
+          {current === 'porzadek' && props.main}
+          {current === 'zgloszenia' && props.proposals}
+          {current === 'posiedzenie' && <>{props.settings}<div class="prep-end">{props.end}</div></>}
+          {current === 'przeglad' && props.review}
         </div>
       </> : <>
-        <div class="prep-main">{props.main}</div>
+        <div class="prep-main">{props.top}{props.main}{props.proposals}</div>
         <aside class="prep-side">{props.review}{props.settings}</aside>
         <div class="prep-end">{props.end}</div>
       </>}
@@ -151,8 +172,12 @@ function useFreshSettings(m: ViewMeeting) {
 }
 
 export function PrepEditor() {
-  const {m} = useMeeting();
+  const {m, replace} = useMeeting();
+  const md = m as MeetingData;
+  const onChange = (next: MeetingData) => replace({meeting: next});
   return <PrepLayout
+    top={<PrepCard meeting={md} onChange={onChange}/>}
+    proposals={md.prep?.scope === 'pelny' ? <ProposalsCard meeting={md} onChange={onChange}/> : undefined}
     main={<>
       <section class="oi-card">
         <div class="panel-head"><CardTitle level={2}>Projekt porządku obrad</CardTitle></div>
@@ -286,7 +311,9 @@ export function AgendaEditor(props: {panel?: (it: AgendaItem, close: () => void)
         const siblings = m.agenda.filter(i => i.parentId === it.parentId), index = siblings.indexOf(it);
         const no = itemNumber(m.agenda, it.id);
         const count = it.materialIds.length;
-        const meta = inPrep ? itemFacts(m, it, bundle, types) : count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : '';
+        const prepView = (m as MeetingData).prep;
+    const comments = prepView?.scope === 'pelny' ? itemCommentCount(prepView.comments, it.id) : 0;
+    const meta = inPrep ? [itemFacts(m, it, bundle, types), readinessSentence(prepView?.readiness[it.id]), commentsSentence(comments)].filter(Boolean).join(' ') : count ? `${count} ${plural(count, 'materiał', 'materiały', 'materiałów')}` : '';
         const mandatory = !procedure && isMandatory(m as Meeting, it);
         const listed = !procedure && isListed(m as Meeting, it);
         const removable = procedure || (!mandatory && it.kind !== 'porzadek' && (!listed || skipper || !inPrep));
@@ -305,7 +332,8 @@ export function AgendaEditor(props: {panel?: (it: AgendaItem, close: () => void)
             : <>
               <div class="edit-main"><span class="edit-title">{it.title}</span><PeopleFacts it={it} compact/>{meta && <span class="edit-meta">{meta}</span>}</div>
               {!compact && tools}
-              {inPrep && <span class="edit-settings"><Button small quiet kind="ghost" class="tool-ustawienia" label={`Ustawienia ${noun.gen} ${no}`} onClick={() => setOpenItem(panelOpen ? null : it.id)}>Ustawienia</Button></span>}
+              {inPrep && <span class="edit-settings"><Button small quiet kind="ghost" class="tool-ustawienia" label={`Ustawienia ${noun.gen} ${no}`} onClick={() => setOpenItem(panelOpen ? null : it.id)}>Ustawienia</Button>
+            {prepView?.scope === 'pelny' && <Button small quiet kind="ghost" class="tool-uwagi" label={`Uwagi do ${procedure ? 'sprawy' : 'punktu'} ${no}`} onClick={() => { setOpenItem(it.id); setTimeout(() => { const h = document.getElementById(`uwagi-punktu-${it.id}`); h?.scrollIntoView({block: 'center'}); h?.focus({preventScroll: true}); }, 120); }}>{`Uwagi (${comments})`}</Button>}</span>}
             </>}
           {subFor === it.id && editing !== it.id && <SubItemForm no={no} busy={busy} onSubmit={e => add(e, it.id)}/>}
           {panelOpen && <div class="edit-extra">{compact && tools}{props.panel!(it, () => { setOpenItem(null); setFocusAfter({id: it.id, tool: 'tool-ustawienia'}); })}</div>}
@@ -410,7 +438,7 @@ const kindOptions: ItemKind[] = ['otwarcie', 'porzadek', 'protokol', 'sprawozdan
  * źródła z `m.effective.items`, a zmiana to polecenie `item_edit` (rodzaj, rodzaj sprawy, co jest głosowane, czas, osoby).
  */
 function ItemSettings(props: {it: AgendaItem; close: () => void}) {
-  const {m} = useMeeting();
+  const {m, replace} = useMeeting();
   const s = useSession();
   const actor = useActor();
   const cmd = useCommand();
@@ -451,9 +479,10 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
       <h3 id={`ustawienia-punktu-${it.id}`} tabIndex={-1} ref={heading}>{`Ustawienia punktu ${no}`}</h3>
       <Button kind="ghost" quiet small onClick={props.close}>Zamknij ustawienia punktu</Button>
     </div>
+    <ItemReadiness it={it} no={no}/>
     <SettingsList label={`Ustawienia punktu ${no}`}>
       <SettingRow label="Nazwa punktu" value={it.title} at="punkt" source="" genitive="nazwy punktu" actionLabel={`Zmień nazwę punktu ${no}`}
-        editor={(close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Nazwa punktu" initial={it.title} max={400} required onSave={title => cmd({type: 'item_edit', itemId: it.id, title})}/>}/>
+        editor={(close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Nazwa punktu" initial={it.title} max={400} required onSave={title => cmd({type: 'item_edit', itemId: it.id, title, expect: {title: it.title}})}/>}/>
       {mandatory
         ? <SettingRow label="Rodzaj punktu" value={itemKindLabel[it.kind]} at="punkt" state="regulamin" source={`Punkt obowiązkowy, ${basis}.`}/>
         : <SettingRow label="Rodzaj punktu" value={itemKindLabel[it.kind]} at={ownKindStamp ? 'punkt' : 'posiedzenie'} genitive="rodzaju punktu" actionLabel={`Zmień rodzaj punktu ${no}`}
@@ -478,6 +507,8 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
         genitive="osób przy punkcie" actionLabel={`Zmień osoby przy punkcie ${no}`}
         editor={(close, ctl) => <PresentersRowEditor close={close} ctl={ctl} it={it} no={no} onSave={presenters => cmd({type: 'item_edit', itemId: it.id, presenters})}/>}/>
       <SettingRow label="Materiały" at="punkt" source="" value={<ItemMaterials it={it} missing={needsMaterial ? (resolution || !docValue ? 'Brak. Punkt z uchwałą potrzebuje materiału.' : 'Brak. Ten punkt potrzebuje materiału.') : null}/>}/>
+      <SettingRow label="Do pokazania" at="punkt" source="" value={<DisplayList meeting={m as MeetingData} itemId={it.id} mode="przygotowanie" onChange={next => replace({meeting: next})}/>}/>
+      {(it.kind === 'protokol' || m.agenda.find(i => i.id === it.parentId)?.kind === 'protokol') && <ProtocolOfRow it={it} no={no}/>}
       <SettingRow label="Zasady głosowania" at="punkt" source="" value={e.voted.value
         ? `Głosowanie jawne, zwykła większość, wymagane kworum ${quorum.required} z ${quorum.total} (§ 8 ust. 2–3, § 11 ust. 1).`
         : 'W tym punkcie nie ma głosowania.'}/>
@@ -486,7 +517,9 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
         value={`Nie. Punkt dodano${addedAt ? ` ${dateDotsOf(addedAt)}` : ''}, po wysłaniu zawiadomienia. To zdanie trafi do protokołu (${law.notice.basis}).`}/>}
       {listed && !skipper && <SettingRow label="Pominięcie" at="punkt" state="regulamin" source=""
         value={`Ten punkt wymienia regulamin (${basis}). Pominąć go może przewodniczący, podając powód.`}/>}
+      {commsApplies(m, it) && <CommsRows it={it} no={no}/>}
     </SettingsList>
+    {(m as MeetingData).prep?.scope === 'pelny' && <ItemComments it={it} no={no}/>}
   </section>;
 }
 
@@ -641,10 +674,12 @@ export function ReviewCard() {
   const review = m.effective?.review ?? [];
   const procedure = m.kind === 'procedura';
   const groups: [ReviewRow['group'], string][] = [['uzupelnic', 'Do uzupełnienia'], ['sprawdzic', 'Do sprawdzenia'], ['gotowe', 'Gotowe']];
-  const proposals = review.filter(r => r.actions?.length && r.itemId);
+  const proposals = review.filter(r => r.actions?.length && r.itemId && !r.text.startsWith('Propozycja w punkcie'));
   const label = (r: ReviewRow) => r.itemId ? itemNumber(m.agenda, r.itemId) : '';
-  const accept = (r: ReviewRow) => run(async () => { const it = m.agenda.find(i => i.id === r.itemId); if (it?.caseTypeGuess) await cmd({type: 'item_edit', itemId: it.id, caseType: it.caseTypeGuess}); });
-  const reject = (r: ReviewRow) => run(async () => { await cmd({type: 'item_edit', itemId: r.itemId!, caseTypeGuess: null}); });
+  // Wersja 4 (6.5): wiersz „Propozycja w punkcie {nr} »protokół posiedzenia z dnia {data}«.” przyjmuje albo odrzuca „Dotyczy protokołu”.
+  const isProtocol = (r: ReviewRow) => r.text.startsWith('Propozycja w punkcie') && !!m.agenda.find(i => i.id === r.itemId)?.protocolOfGuess;
+  const accept = (r: ReviewRow) => run(async () => { const it = m.agenda.find(i => i.id === r.itemId); if (isProtocol(r) && it?.protocolOfGuess) await cmd({type: 'item_edit', itemId: it.id, protocolOf: it.protocolOfGuess}); else if (it?.caseTypeGuess) await cmd({type: 'item_edit', itemId: it.id, caseType: it.caseTypeGuess}); });
+  const reject = (r: ReviewRow) => run(async () => { await cmd(isProtocol(r) ? {type: 'item_edit', itemId: r.itemId!, protocolOfGuess: null} : {type: 'item_edit', itemId: r.itemId!, caseTypeGuess: null}); });
   const acceptAll = () => run(async () => {
     for (const r of proposals) { const it = m.agenda.find(i => i.id === r.itemId); if (it?.caseTypeGuess) await cmd({type: 'item_edit', itemId: it.id, caseType: it.caseTypeGuess}); }
     announce('Przyjęto propozycje rodzajów spraw.');
@@ -662,8 +697,8 @@ export function ReviewCard() {
           <span class="review-side"><StateChip state={reviewChip(r.group)}/>
             {r.actions?.length && r.itemId
               ? <span class="actions">
-                <Button kind="ghost" small quiet busy={busy} label={`Przyjmij propozycję rodzaju sprawy w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => accept(r)}>Przyjmij</Button>
-                <Button kind="ghost" small quiet busy={busy} label={`Odrzuć propozycję rodzaju sprawy w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => reject(r)}>Odrzuć</Button>
+                <Button kind="ghost" small quiet busy={busy} label={`Przyjmij propozycję ${isProtocol(r) ? 'protokołu' : 'rodzaju sprawy'} w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => accept(r)}>Przyjmij</Button>
+                <Button kind="ghost" small quiet busy={busy} label={`Odrzuć propozycję ${isProtocol(r) ? 'protokołu' : 'rodzaju sprawy'} w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => reject(r)}>Odrzuć</Button>
               </span>
               : r.target && prep && <Button kind="ghost" small quiet onClick={() => prep.show(r.target!)}>Pokaż</Button>}
           </span>
@@ -1089,5 +1124,109 @@ export function DeleteMeeting() {
     {confirm && <Confirm title={`Usunąć ${what}?`} kind="danger" confirm={`Usuń ${what}`} onClose={() => setConfirm(false)} text={<p>„{m.title}” zostanie trwale usunięte razem z materiałami. Można to zrobić tylko przed otwarciem.</p>}
       onConfirm={() => run(async () => { await request(`/api/meetings/${m.id}`, {method: 'DELETE'}); go(''); })}/>}
     {busy && <span class="muted small">Usuwanie…</span>}
+  </section>;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Wersja 4: części ustawień punktu w kolejności z 6.5 (S-23): „Gotowość punktu {nr}” nad wierszami, „Do pokazania”
+// (DisplayList zespołu F), „Dotyczy protokołu”, „W materiale dla komunikacji”, „Zdanie dla komunikacji” i pod wierszami
+// „Uwagi do punktu {nr} ({n})”. Sprawdzenia gotowości liczy domena (`prep.readiness`, B2-W12), linie źródła poziomów
+// komunikacji też (`commsSourceText`), klient tylko je pokazuje.
+
+const checkLabel: Record<string, string> = {material: 'Materiał', projekt_aktu: 'Projekt aktu', referent: 'Osoba referująca', rodzaj_sprawy: 'Rodzaj sprawy', protokol: 'Protokół'};
+/** „Gotowość punktu {nr}”: wiersze sprawdzeń ze znacznikami „Gotowe”, „Brak”, „Do sprawdzenia”; bez sprawdzeń niczego nie pokazuje. */
+function ItemReadiness(props: {it: AgendaItem; no: string}) {
+  const {m} = useMeeting();
+  const checks = (m as MeetingData).prep?.readiness[props.it.id];
+  if (!checks?.length) return null;
+  return <div class="readiness" role="group" aria-labelledby={`gotowosc-${props.it.id}`}>
+    <h4 class="kicker" id={`gotowosc-${props.it.id}`}>{`Gotowość ${m.kind === 'procedura' ? 'sprawy' : 'punktu'} ${props.no}`}</h4>
+    <ul class="readiness-list">{checks.map(c => <li key={c.key}>
+      <span class="readiness-name">{checkLabel[c.key] ?? c.key}</span>
+      <StateChip state={readinessCheckChip(c.actions?.length ? 'sprawdzic' : c.ok)}/>
+      <span class="readiness-text">{c.text}</span>
+    </li>)}</ul>
+  </div>;
+}
+
+/** Zamknięte posiedzenia organu z protokołem czekającym na przyjęcie (G-33): wiersze katalogu bez notatek i przyjętych. */
+function useProtocolCandidates(enabled: boolean) {
+  const [rows, setRows] = useState<CatalogRow[] | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    request<{rows: CatalogRow[]}>('/api/katalog').then(r => setRows(r.rows)).catch(() => setRows([]));
+  }, [enabled]);
+  return (rows ?? []).filter(r => !r.working && r.protocol.state !== 'przyjety' && r.protocol.state !== 'notatka');
+}
+const closedName = (r: Pick<CatalogRow, 'kind' | 'day'>) => `${r.kind === 'procedura' ? 'Głosowanie między posiedzeniami' : 'Posiedzenie'} z dnia ${dateDots(r.day)}`;
+const lowerName = (r: Pick<CatalogRow, 'kind' | 'day'>) => closedName(r).replace(/^./, c => c.toLocaleLowerCase('pl'));
+
+/** Wiersz 10 „Dotyczy protokołu” (U-28, G-33): lista zamkniętych posiedzeń i propozycja z „Przyjmij” i „Odrzuć”. */
+function ProtocolOfRow(props: {it: AgendaItem; no: string}) {
+  const cmd = useCommand();
+  const {it, no} = props;
+  const rows = useProtocolCandidates(true);
+  const chosen = rows.find(r => r.id === it.protocolOf);
+  const guess = !it.protocolOf && it.protocolOfGuess ? rows.find(r => r.id === it.protocolOfGuess) : undefined;
+  const why = guess && it.title.includes(dateDots(guess.day)) ? 'bo tytuł punktu zawiera tę datę' : 'bo to ostatnie posiedzenie bez przyjętego protokołu';
+  return <SettingRow label="Dotyczy protokołu" at="punkt" source="" genitive="protokołu, którego dotyczy punkt" actionLabel={`Zmień, którego protokołu dotyczy punkt ${no}`}
+    value={chosen ? closedName(chosen) : it.protocolOf ? 'Wybrane posiedzenie' : rows.length ? 'Nie wybrano' : 'Nie ma zamkniętych posiedzeń z protokołem czekającym na przyjęcie.'}
+    extra={guess && <div class="guess-line"><p class="setting-src">{`Propozycja »${lowerName(guess)}«, ${why}.`}</p><span class="actions">
+      <Button kind="ghost" small quiet label={`Przyjmij propozycję protokołu w punkcie ${no}`} onClick={() => cmd({type: 'item_edit', itemId: it.id, protocolOf: guess.id}).catch(() => {})}>Przyjmij</Button>
+      <Button kind="ghost" small quiet label={`Odrzuć propozycję protokołu w punkcie ${no}`} onClick={() => cmd({type: 'item_edit', itemId: it.id, protocolOfGuess: null}).catch(() => {})}>Odrzuć</Button>
+    </span></div>}
+    editor={rows.length ? (close, ctl) => <ProtocolOfEditor close={close} ctl={ctl} initial={it.protocolOf ?? ''} options={rows.map(r => [r.id, closedName(r)] as [string, string])}
+      onSave={v => cmd({type: 'item_edit', itemId: it.id, protocolOf: v || null})}/> : undefined}/>;
+}
+function ProtocolOfEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial: string; options: [string, string][]; onSave: (v: string) => Promise<unknown>}) {
+  const [value, setValue] = useState(props.initial);
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={value !== props.initial} onSave={() => props.onSave(value)}>
+    <Field label="Dotyczy protokołu"><select value={value} onChange={e => setValue((e.target as HTMLSelectElement).value)}><option value="">Nie wybrano</option>{props.options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></Field>
+  </RowEditor>;
+}
+
+/** Wiersze 15–16 dotyczą każdego punktu poza punktami porządkowymi i podpunktów punktów porządkowych (6.5). */
+function commsApplies(m: ViewMeeting, it: AgendaItem) {
+  const order = new Set<string>(['otwarcie', 'porzadek', 'zamkniecie', ...Object.keys(lawOf(m.organ).agenda.listed)].filter(k => k !== 'sprawa'));
+  return !order.has(it.kind) || !!it.parentId;
+}
+/** „W materiale dla komunikacji” i „Zdanie dla komunikacji” (U-24–U-27, G-22): wybór nie bardziej otwarty niż poziom 1. */
+function CommsRows(props: {it: AgendaItem; no: string}) {
+  const {m} = useMeeting();
+  const cmd = useCommand();
+  const bundle = useGeneral();
+  const types = useDocTypes();
+  const {it, no} = props;
+  if (!bundle) return null;
+  const env = {general: bundle.general, docTypes: types};
+  const choices = commsChoices(m as Meeting, it, env);
+  const level: CommsLevel = it.comms?.level && choices.includes(it.comms.level) ? it.comms.level : choices[0];
+  const sentence = it.comms?.sentence ?? '';
+  return <>
+    <SettingRow label="W materiale dla komunikacji" at="punkt" value={commsLevelLabel[level]} source={commsSourceText(m as Meeting, it, env)} genitive="poziomu w materiale dla komunikacji"
+      actionLabel={`Zmień poziom w materiale dla komunikacji w punkcie ${no}`} hint="Wartość utrwala się przy zamknięciu posiedzenia. Przy punkcie można tylko ograniczyć to, co trafi do materiału."
+      editor={(close, ctl) => <CommsLevelEditor close={close} ctl={ctl} initial={level} options={choices} onSave={v => cmd({type: 'item_edit', itemId: it.id, comms: {level: v}})}/>}/>
+    <SettingRow label="Zdanie dla komunikacji" at="punkt" source="" value={sentence || 'Nie wpisano.'} genitive="zdania dla komunikacji" actionLabel={`Zmień zdanie dla komunikacji w punkcie ${no}`}
+      hint={level === 'pomin' ? 'Przy poziomie „Nie trafia” zdanie nie trafia do materiału.' : undefined}
+      editor={(close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Zdanie dla komunikacji" initial={sentence} max={300}
+        hint="Jedno zdanie o tym, czego dotyczy sprawa, bez danych osób spoza organu. Trafi do materiału dla komunikacji przy poziomie „Pełna treść”, „Tytuł” i „Tylko liczba”."
+        onSave={v => cmd({type: 'item_edit', itemId: it.id, comms: {sentence: v}})}/>}/>
+  </>;
+}
+export function CommsLevelEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial: CommsLevel; options: CommsLevel[]; onSave: (v: CommsLevel) => Promise<unknown>}) {
+  const [value, setValue] = useState<CommsLevel>(props.initial);
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={value !== props.initial} onSave={() => props.onSave(value)}>
+    <Segments label="W materiale dla komunikacji" value={value} options={props.options.map(l => [l, commsLevelLabel[l]] as [CommsLevel, string])} onChange={setValue}/>
+  </RowEditor>;
+}
+
+/** „Uwagi do punktu {nr} ({n})” pod wierszami ustawień punktu (6.5 wiersz 17, B2 2.13). */
+function ItemComments(props: {it: AgendaItem; no: string}) {
+  const {m, replace} = useMeeting();
+  const prep = (m as MeetingData).prep;
+  const n = prep ? itemCommentCount(prep.comments, props.it.id) : 0;
+  return <section class="item-comments" aria-labelledby={`uwagi-punktu-${props.it.id}`}>
+    <h4 class="kicker" id={`uwagi-punktu-${props.it.id}`} tabIndex={-1}>{`Uwagi do ${m.kind === 'procedura' ? 'sprawy' : 'punktu'} ${props.no} (${n})`}</h4>
+    <WorkspacePanel meeting={m as MeetingData} itemId={props.it.id} onChange={next => replace({meeting: next})}/>
   </section>;
 }

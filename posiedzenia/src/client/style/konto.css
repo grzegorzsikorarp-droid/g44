@@ -1,0 +1,17 @@
+/* „Moje konto” (SPEC-4 6.2, B3-43): karty jedna pod drugą, na komputerze kolumna do 75rem. Zdjęcie i kwadrat z inicjałami
+   stoją prosto (bez skosu i zaokrągleń, 6.0). Okno „Kadr zdjęcia”: podgląd w kwadracie z ramką 1 px var(--linia), bez
+   kółka; suwaki z kwadratowymi uchwytami z tokenów (K4-27). Tylko tokeny. */
+.account-page { max-width: 75rem; margin-inline: auto; }
+.account-photo__row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-4); }
+.avatar-editor { max-width: 34rem; }
+.crop-frame { display: flex; justify-content: center; }
+.crop-canvas { display: block; width: min(320px, 100%); aspect-ratio: 1; height: auto; border: var(--kreska) solid var(--linia); background: var(--powierzchnia-miekka); touch-action: none; cursor: grab; }
+.crop-canvas:active { cursor: grabbing; }
+.crop-sliders { border: 0; margin: 0; padding: 0; min-width: 0; }
+.crop-slider label { display: flex; flex-direction: column; gap: var(--odstep-1); font-weight: 600; font-size: var(--t-maly); }
+.crop-slider input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; min-height: 44px; margin: 0; background: transparent; border-radius: 0; }
+.crop-slider input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--linia); border-radius: 0; }
+.crop-slider input[type="range"]::-moz-range-track { height: 6px; background: var(--linia); border-radius: 0; }
+.crop-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; margin-top: -9px; background: var(--tekst-mocny); border: 0; border-radius: 0; }
+.crop-slider input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; background: var(--tekst-mocny); border: 0; border-radius: 0; }
+.crop-slider input[type="range"]:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }

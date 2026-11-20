@@ -133,14 +133,16 @@ input[type="file"].oi-input::file-selector-button { font: inherit; font-weight: 
 .who { display: flex; flex-direction: column; text-align: right; line-height: 1.25; font-size: var(--t-maly); }
 .who strong { font-weight: 600; color: var(--tekst-mocny); }
 .who small { color: var(--tekst-drugorzedny); font-size: var(--t-meta); }
-.who-short { display: none; font-weight: 700; font-style: italic; font-size: var(--t-maly); color: var(--tekst-drugorzedny); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.topbar-account:focus-visible .who-short { color: var(--akcent-tekst); }
-/* Okno „Twoje konto”: wylogowanie na końcu, oddzielone kreską */
-.account-logout { padding-top: var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+/* Górny pasek: przycisk „Moje konto” ze zdjęciem 32 px i imieniem; przy wąskim ekranie samo zdjęcie (6.1). */
+.topbar-account { gap: var(--odstep-3); text-decoration: none; }
+.topbar-account[aria-current="page"] .who strong { color: var(--akcent-tekst); }
+.topbar-account:hover .who strong, .topbar-account:focus-visible .who strong { color: var(--akcent-tekst); }
+.topbar-account:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+.topbar-inbox { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--t-maly); font-weight: 600; color: var(--tekst); white-space: nowrap; }
+.topbar-inbox:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
 @media (max-width: 1100px) { .plate-name { display: none; } }
 @media (max-width: 760px) {
   .who, .topbar-app small { display: none; }
-  .topbar-account .who-short { display: inline; }
   .topbar-app strong { font-size: var(--t-karta); }
 }
 @media (max-width: 480px) {
@@ -235,7 +237,7 @@ dialog.modal-backdrop::backdrop { background: transparent; }
   .link:not([aria-disabled="true"]):not(:disabled):hover { text-decoration-thickness: 2.5px; }
   .link.quiet:not([aria-disabled="true"]):not(:disabled):hover { color: var(--akcent-tekst); }
   .oi-btn--ciemny:not([aria-disabled="true"]):not(:disabled):hover { background: var(--grafit-700); border-color: var(--grafit-700); }
-  .topbar-account:hover .who strong, .topbar-account:hover .who-short { color: var(--akcent-tekst); }
+  .topbar-account:hover .who strong { color: var(--akcent-tekst); }
 }
 /* Ekrany dotykowe: stan najechania z paczki znika po dotknięciu, a reakcja na wciśnięcie (:active) zostaje */
 @media (hover: none) {
@@ -273,4 +275,10 @@ dialog.modal-backdrop::backdrop { background: transparent; }
   .topbar-side:has(.topbar-nav > a:nth-child(2)) { display: contents; }
   .topbar-side:has(.topbar-nav > a:nth-child(2)) .topbar-nav { order: 3; flex: 1 0 100%; justify-content: flex-start; padding-top: var(--odstep-1); border-top: var(--kreska) solid var(--linia-jasna); }
   .topbar-side:has(.topbar-nav > a:nth-child(2)) .topbar-nav a { min-width: 44px; }
+}
+
+/* Wersja próbna (6.1, S-24): odnośnik „Skrzynka (próba)” w pasku wersji próbnej; na wąskim ekranie pasek się zawija. */
+@media (max-width: 760px) {
+  .topbar:has(.topbar-inbox) { flex-wrap: wrap; row-gap: 0; }
+  .topbar-side:has(.topbar-inbox) { flex: 1 1 0; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 0; column-gap: var(--odstep-3); }
 }

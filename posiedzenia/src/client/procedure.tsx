@@ -20,6 +20,10 @@ import {AgendaEditor, DateRowEditor, DeleteMeeting, DeputyCard, DocTypeEditor, D
   PresentersRowEditor, ReviewCard, useActor, useCommand} from './prep.tsx';
 import {MaterialLink} from './reader.tsx';
 import {Messages} from './messages.tsx';
+import type {MeetingData} from './api.ts';
+import {PrepArchive, PrepCard, ProposalsCard} from './workspace.tsx';
+import {PrepWorkspace} from './prep-preview.tsx';
+import {PapersCard} from './papers.tsx';
 import {appRuleWhy, dateHintText, RowEditor, SettingRow, SettingsList, TextRowEditor, type EditorCtl} from './cascade-ui.tsx';
 
 // Głosowanie między posiedzeniami (§ 14 ust. 5 Regulaminu Okręgowej Rady; wersja 3, rozdz. 5.5). Rozpoczyna je
@@ -46,19 +50,25 @@ const minimum = PROCEDURE_MIN_HOURS * 3600000;
 const generalOf = (bundle: GeneralBundle | null) => bundle?.general ?? defaultGeneral(defaultSite);
 
 export function ProcedureView() {
-  const {m} = useMeeting();
+  const {m, replace} = useMeeting();
+  const md = m as MeetingData;
+  const onChange = (next: MeetingData) => replace({meeting: next});
+  // B2-W20, 6.5: kanał wiadomości w przygotowaniu jest niewidoczny; działa od rozpoczęcia głosowania.
+  const channelLater = <p class="muted small">Kanał wiadomości zacznie działać po rozpoczęciu głosowania. Do tego czasu pisz w uwagach przygotowania.</p>;
   const s = useSession();
   const actor = useActor();
   if (m.status === 'przygotowanie') {
-    if (!s.isOrganizer(m.organ)) return <div class="member"><Notice>Głosowanie jeszcze się nie rozpoczęło. Przygotowuje je biuro, przewodniczący albo wiceprzewodniczący.</Notice><Acts/></div>;
+    if (!s.isOrganizer(m.organ)) return <div class="member"><PrepCard meeting={md} onChange={onChange}/><Notice>Głosowanie jeszcze się nie rozpoczęło. Przygotowuje je biuro, przewodniczący albo wiceprzewodniczący.</Notice><Acts/><PrepWorkspace/></div>;
     return <PrepLayout
+      top={<PrepCard meeting={md} onChange={onChange}/>}
+      proposals={md.prep?.scope === 'pelny' ? <ProposalsCard meeting={md} onChange={onChange}/> : undefined}
       main={<>
         <section class="oi-card"><CardTitle level={2}>Sprawy do głosowania</CardTitle><p class="muted small">Każda sprawa (np. uchwała) to osobne głosowanie. Dołącz do niej materiał, aby członkowie mogli go przeczytać przed oddaniem głosu.</p><AgendaEditor panel={(it, close) => <ActSettings it={it} close={close}/>}/></section>
         <section class="oi-card" id="ust-materialy" tabIndex={-1}><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
         <MeetingHistory/>
       </>}
       review={<><ReviewCard/><Start/></>}
-      settings={<><ProcedureSettings/><Messages secondary/></>}
+      settings={<><ProcedureSettings/>{channelLater}</>}
       end={<><DuplicateButton/><DeleteMeeting/></>}/>;
   }
   const manager = canManageProcedure(s.roster, m as Meeting, actor);
@@ -74,6 +84,8 @@ export function ProcedureView() {
       {m.status === 'zakonczone' && <DuplicateButton/>}
       <RejectedVote ballots={m.ballots}/>
       <Acts/>
+      {m.status === 'zakonczone' && <PapersCard meeting={md} onChange={onChange}/>}
+      {m.status === 'zakonczone' && <PrepArchive meeting={md}/>}
     </div>
     <aside class="procedure-side"><ProcedureSettings/><Messages/></aside>
   </div>;

@@ -3,7 +3,7 @@ import type {Account, DocType, Roster} from '../shared/types.ts';
 import type {GeneralBundle} from '../shared/settings.ts';
 import {ApiError, request} from './api.ts';
 import {SessionContext, useSession} from './session.ts';
-import {Button, Check, Chip, Confirm, ErrorNotice, errorKindOf, Fact, Field, LiveRegion, Modal, Notice, Tag, useAction, type ErrorKind} from './ui.tsx';
+import {Button, Check, Chip, ErrorNotice, errorKindOf, Field, LiveRegion, Notice, Tag, useAction, type ErrorKind} from './ui.tsx';
 import {Home} from './home.tsx';
 import {MeetingPage} from './meeting.tsx';
 import {RoomScreen} from './screen.tsx';
@@ -13,7 +13,8 @@ import {personName} from '../shared/roster.ts';
 import {brand} from './brand.ts';
 import {commsRouteAllowed, currentRoute, go, onRoute, registeredPage, v4Route} from './route.ts';
 import type {VNode} from 'preact';
-import {AccountPage} from './account.tsx';
+import {AccountPage, PasswordCard} from './account.tsx';
+import {Avatar} from './avatar.tsx';
 import {MyStatsPage} from './stats.tsx';
 import {CatalogPage, ReportPage} from './catalog.tsx';
 import type {Session} from './session.ts';
@@ -136,7 +137,7 @@ export function App() {
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
+        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : v4?.page === 'konto' || v4?.page === 'moje-statystyki' ? 'konto' : v4?.page === 'odbyte' ? (info.account.kind === 'komunikacja' ? 'odbyte' : 'lista') : v4 ? null : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
     </SessionContext.Provider>;
   }
   return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;
@@ -148,36 +149,38 @@ function SkipLink() {
 }
 
 // Na liście posiedzeń tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza.
-// Nawigacja ma dwie pozycje: „Posiedzenia” i „Ustawienia” (wersja 3). „Ustawienia” widzą biuro, administrator,
-// przewodniczący i wiceprzewodniczący (settingsAccess z role.ts).
-function TopBar(props: {current: 'lista' | 'ustawienia' | null; settings: boolean; onLogout: () => Promise<void>}) {
-  const {account, name, membership} = useSession();
-  const [open, setOpen] = useState(false);
-  const [leaving, setLeaving] = useState(false);
+// Nawigacja (SPEC-4 6.1, DB-8) ma najwyżej trzy pozycje: „Posiedzenia” (zakładki „Bieżące” i „Odbyte”), „Statystyki”
+// (dopiero z dodatkiem D-13, `session.can.rosterStats`) i „Ustawienia” (settingsAccess z role.ts). Konto „Komunikacja” ma
+// jedną pozycję „Odbyte posiedzenia”. „Moje konto” to przycisk z własnym zdjęciem i imieniem w górnym pasku (zamiast okna
+// „Twoje konto”); przy 320 px widać tylko zdjęcie albo inicjały, a imię jest w nazwie dostępnej. W wersji próbnej pasek ma
+// też odnośnik „Skrzynka (próba)” (S-24) i przycisk zmiany osoby.
+type TopCurrent = 'lista' | 'ustawienia' | 'konto' | 'odbyte' | null;
+function TopBar(props: {current: TopCurrent; settings: boolean; onLogout: () => Promise<void>}) {
+  const s = useSession();
+  const {account, name, membership} = s;
+  const comms = account.kind === 'komunikacja';
   const raw = membership('prezydium')?.label ?? account.label ?? '';
   const label = raw === name ? '' : raw;
   const who = <span class="who"><strong>{name}</strong>{label && <small>{label}</small>}</span>;
   return <header class="topbar">
-    <a class="topbar-brand" href="#" aria-label="Posiedzenia Prezydium, lista posiedzeń">
+    <a class="topbar-brand" href={comms ? '#odbyte' : '#'} aria-label={comms ? 'Posiedzenia Prezydium, odbyte posiedzenia' : 'Posiedzenia Prezydium, lista posiedzeń'}>
       <Plate decorative/>
       {props.current !== 'lista' && <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>}
     </a>
     <div class="topbar-side">
       <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">
-        <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>
-        {props.settings && <a href="#ustawienia" aria-current={props.current === 'ustawienia' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Ustawienia</a>}
+        {comms
+          ? <a href="#odbyte" aria-current={props.current === 'odbyte' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Odbyte posiedzenia</a>
+          : <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>}
+        {!comms && s.can.rosterStats && <a href="#statystyki"><span class="oi-mark" aria-hidden="true"/>Statystyki</a>}
+        {!comms && props.settings && <a href="#ustawienia" aria-current={props.current === 'ustawienia' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Ustawienia</a>}
       </nav>
-      {brand.demo
-        ? <>{who}<span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>
-        : <button type="button" class="topbar-account" aria-label={`Twoje konto, ${name}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{who}<span class="who-short">Twoje konto</span></button>}
+      {brand.demo && <a class="topbar-inbox" href="#skrzynka">Skrzynka (próba)</a>}
+      <a class="topbar-account" href="#konto" aria-label={`Moje konto, ${name}`} aria-current={props.current === 'konto' ? 'page' : undefined}>
+        {who}<Avatar personKey={s.avatarKey} name={name} size={32}/>
+      </a>
+      {brand.demo && <><span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>}
     </div>
-    {open && <Modal title="Twoje konto" onClose={() => setOpen(false)}>
-      <dl class="facts"><Fact label="Imię i nazwisko">{name}</Fact>{label && <Fact label="Funkcja">{label}</Fact>}<Fact label="Login"><code>{account.username}</code></Fact></dl>
-      <section class="stack"><h3 class="oi-card__title"><span class="oi-mark" aria-hidden="true"/><span>Zmiana hasła</span></h3><PasswordCard onDone={() => {}}/></section>
-      <div class="account-logout"><Button haspopup onClick={() => setLeaving(true)}>Wyloguj się</Button></div>
-      {leaving && <Confirm title="Wylogować się?" confirm="Wyloguj się" focus="cancel" onClose={() => setLeaving(false)} onConfirm={() => { props.onLogout(); }}
-        text={<p>Aby wrócić, zalogujesz się ponownie loginem i hasłem. Jeśli trwa posiedzenie, do tego czasu nie oddasz głosu.</p>}/>}
-    </Modal>}
   </header>;
 }
 
@@ -237,31 +240,4 @@ function Login(props: {setup: boolean; roster: Roster | null; onDone: () => void
       {!props.setup && <p class="muted small">Login i hasło tymczasowe otrzymasz od {brand.officeOf}. Przy pierwszym logowaniu ustawisz własne hasło. Nie pamiętasz hasła? {brand.office} nada Ci nowe hasło tymczasowe.</p>}
     </form>
   </main>;
-}
-
-function PasswordCard(props: {forced?: boolean; onDone: () => void}) {
-  const {busy, error, errorKind, run} = useAction();
-  const [ok, setOk] = useState(false);
-  const [show, setShow] = useState(false);
-  const [mismatch, setMismatch] = useState(false);
-  const repeat = useRef<HTMLInputElement>(null);
-  const type = show ? 'text' : 'password';
-  return <form class={props.forced ? 'oi-card login' : 'stack'} onSubmit={e => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const f = new FormData(form);
-    setOk(false);
-    if (f.get('password') !== f.get('repeat')) { setMismatch(true); repeat.current?.focus(); return; }
-    setMismatch(false);
-    run(async () => { await request('/api/password', {body: {currentPassword: f.get('current'), password: f.get('password')}}); setOk(true); form.reset(); props.onDone(); });
-  }}>
-    {props.forced && <><Plate big/><h1 class="app-title">Ustaw <b>własne hasło</b></h1><p>Zalogowano hasłem tymczasowym. Przed rozpoczęciem pracy ustaw własne hasło, które znasz tylko Ty.</p></>}
-    <Field label={props.forced ? 'Hasło tymczasowe' : 'Obecne hasło'}><input name="current" type={type} required autocomplete="current-password"/></Field>
-    <Field label="Nowe hasło" hint="Co najmniej 12 znaków."><input name="password" type={type} required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
-    <Field label="Powtórz nowe hasło" error={mismatch ? 'Wpisz w obu polach to samo nowe hasło.' : undefined}><input ref={repeat} name="repeat" type={type} required minLength={12} maxLength={200} autocomplete="new-password"/></Field>
-    <Check checked={show} onChange={setShow}>Pokaż hasło</Check>
-    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
-    {ok && <Notice tone="ok">Hasło zmienione.</Notice>}
-    <Button kind={props.forced ? 'primary' : 'secondary'} type="submit" wide={props.forced} busy={busy}>Zapisz hasło</Button>
-  </form>;
 }

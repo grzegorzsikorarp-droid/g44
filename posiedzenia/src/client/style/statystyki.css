@@ -1,0 +1,20 @@
+/* „Moje statystyki” (SPEC-4 6.3, B4 5.1): kafelki oi-stats, tabele oi-table i pasek tekstowy w stylu oi-progress__bar
+   (tor linia-jasna, wypełnienie tekst-mocny, bez zaokrągleń i gradientu, aria-hidden, liczba obok). Tylko tokeny.
+   Przy 320 px tabele mają trzy kolumny bez przewijania strony w poziomie. */
+.stats-page { max-width: 75rem; margin-inline: auto; }
+.stat-verdict { font-size: var(--t-lista); line-height: 1.5; color: var(--tekst-mocny); }
+.stat-tiles .oi-stat b { font-size: clamp(1.6rem, 6vw, 2.3rem); }
+.stat-table td, .stat-table th { vertical-align: middle; }
+.stat-table td:nth-child(2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stat-bar { display: flex; align-items: center; gap: var(--odstep-2); min-width: 7rem; }
+.stat-bar__track { position: relative; flex: 1 1 6rem; height: 8px; background: var(--linia-jasna); overflow: hidden; }
+.stat-bar__track > i { position: absolute; inset: 0 auto 0 0; background: var(--tekst-mocny); }
+.stat-bar__num { flex: none; min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; font-size: var(--t-maly); }
+.stat-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); }
+.stat-rows li { line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .stat-bar { min-width: 4.5rem; }
+  .stat-bar__track { flex-basis: 2.5rem; }
+  .stat-table th, .stat-table td { padding-inline: var(--odstep-2); }
+}
+@media print { .stat-bar__track { display: none; } }

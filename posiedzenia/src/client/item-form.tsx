@@ -60,6 +60,8 @@ export function ItemEditForm(props: {it: AgendaItem; onDone?: () => void; titleE
   const save = async () => {
     const cmd: Extract<Command, {type: 'item_edit'}> = {type: 'item_edit', itemId: it.id};
     if (editTitle && title.replace(/\s+/g, ' ').trim() !== it.title) cmd.title = title;
+    // G-31 (B2-W14): w przygotowaniu zmiana nazwy idzie z nazwą, którą osoba widziała, żeby nie nadpisać cudzej zmiany.
+    if (cmd.title !== undefined && m.status === 'przygotowanie') cmd.expect = {title: it.title};
     if (docEditable && docChanged) { cmd.docType = docType || null; if (live) cmd.reason = reason.replace(/\s+/g, ' ').trim(); }
     if (!samePresenters(presenters, it.presenters)) cmd.presenters = cleanPresenters(presenters);
     if (cmd.title === undefined && cmd.docType === undefined && cmd.presenters === undefined) { props.onDone?.(); return; }
