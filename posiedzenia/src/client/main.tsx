@@ -18,5 +18,6 @@ setBrand({
   officeOf: 'biura Izby',
   officeTo: 'biuru Izby',
   regulation: 'Regulaminu Okręgowej Rady Pielęgniarek i Położnych w Słupsku',
+  houseBy: 'przez Izbę',
 });
 render(<App/>, document.getElementById('app')!);

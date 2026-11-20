@@ -2,9 +2,8 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import type {Meeting} from '../shared/types.ts';
 import {request, useLive} from './api.ts';
 import {useSession} from './session.ts';
-import {Button, Chip, ErrorNotice, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, StateChip, useAction} from './ui.tsx';
+import {Button, Chip, ErrorNotice, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, Segments, StateChip, useAction} from './ui.tsx';
 import {meetingState} from './stany.ts';
-import {Segments} from './prep.tsx';
 import {brand} from './brand.ts';
 import {go} from './route.ts';
 

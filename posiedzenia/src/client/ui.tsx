@@ -342,3 +342,15 @@ export function Confirm(props: {title: string; text: ComponentChildren; confirm:
     </div>
   </Modal>;
 }
+
+/** Przyciski wyboru `oi-seg` z etykietą grupy (np. tryb posiedzenia). */
+export function Segments<T extends string>(props: {label: string; value: T; options: [T, string][]; onChange: (value: T) => void; hint?: ComponentChildren}) {
+  const id = useId();
+  return <div class="oi-field">
+    <span class="oi-field__label" id={id + '-e'}>{props.label}</span>
+    <div class="oi-seg seg-field" role="group" aria-labelledby={id + '-e'} aria-describedby={props.hint ? id + '-p' : undefined}>
+      {props.options.map(([value, label]) => <button key={value} type="button" class="oi-opt" aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{label}</button>)}
+    </div>
+    {props.hint && <span class="oi-field__hint" id={id + '-p'}>{props.hint}</span>}
+  </div>;
+}

@@ -76,6 +76,11 @@ export function readinessChip(state: Readiness): ChipState {
   }
 }
 
+/** Wersja 3: wiersz przeglądu przed otwarciem (`effective.review`); „Do sprawdzenia” także przy propozycji rodzaju sprawy. */
+export const reviewChip = (group: 'uzupelnic' | 'sprawdzic' | 'gotowe'): ChipState => readinessChip(group);
+/** Wersja 3: wpis dziennika albo fakt z odstępstwem, które trafia do protokołu (O-07). Szary obrys, bo to fakt, a nie zadanie. */
+export const deviationChip = (): ChipState => chip('Odstępstwo');
+
 /** Tryb głosowania w mianowniku: „głosowanie jawne”. */
 export const modeName = (mode: VoteMode | string) => mode === 'tajne' ? 'tajne' : mode === 'imienne' ? 'imienne' : 'jawne';
 /** Tryb głosowania w dopełniaczu: „wynik głosowania jawnego”. */

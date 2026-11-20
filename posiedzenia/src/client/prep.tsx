@@ -10,7 +10,8 @@ import type {AgendaItem, Meeting, MeetingMode} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useMeeting, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {announce, Button, CardTitle, Check, Chip, Confirm, ErrorNotice, Field, fmtShort, fmtTime, Fold, Modal, Notice, plural, SaveStatus, StateChip, useAction, useSaveStatus, type SaveState} from './ui.tsx';
+import {announce, Button, CardTitle, Check, Chip, Confirm, ErrorNotice, Field, fmtShort, fmtTime, Fold, Modal, Notice, plural, SaveStatus, Segments, StateChip, useAction, useSaveStatus, type SaveState} from './ui.tsx';
+import {ItemEditForm} from './item-form.tsx';
 import {readinessChip, type Readiness} from './stany.ts';
 import {MaterialLink} from './reader.tsx';
 import {brand} from './brand.ts';
@@ -181,43 +182,6 @@ function SubItemForm(props: {no: string; busy: boolean; onSubmit: (e: Event) => 
   return <form class="add-form sub-form" onSubmit={props.onSubmit}>
     <Field label={`Nowy podpunkt w punkcie ${props.no}`} hint="Np. Uchwała nr … w sprawie …"><input ref={input} name="title" maxLength={400} required/></Field>
     <Button small type="submit" busy={props.busy}>Dodaj podpunkt</Button>
-  </form>;
-}
-
-// Rodzaje punktów, w których nie wybiera się „Co jest głosowane” (otwarcie, przyjęcie porządku, zamknięcie).
-const noDocType = new Set(['otwarcie', 'porzadek', 'zamkniecie']);
-
-/**
- * Edycja w miejscu: nazwa (przed przyjęciem porządku), „Co jest głosowane w tym punkcie” (F11) i lista „Prowadzą
- * i referują” (F12). Zapis wysyła tylko zmienione pola. `autofocus` przenosi fokus na pierwsze pole po otwarciu.
- */
-export function ItemEditForm(props: {it: AgendaItem; onDone?: () => void; titleEditable?: boolean; autofocus?: boolean; onCancel?: () => void; status?: boolean}) {
-  const {m, send, busy} = useMeeting();
-  const saved = useSaveStatus();
-  const types = useDocTypes();
-  const {it} = props;
-  const editTitle = props.titleEditable ?? (!m.agendaAdopted && m.status !== 'zakonczone');
-  const [title, setTitle] = useState(it.title);
-  const [docType, setDocType] = useState(it.docType ?? '');
-  const [presenters, setPresenters] = useState(it.presenters);
-  const box = useRef<HTMLFormElement>(null);
-  useLayoutEffect(() => { if (props.autofocus !== false) box.current?.querySelector<HTMLElement>('input, select')?.focus(); }, []);
-  const no = itemNumber(m.agenda, it.id);
-  return <form class="edit-form" ref={box} onSubmit={async e => {
-    e.preventDefault();
-    const cmd: Extract<Command, {type: 'item_edit'}> = {type: 'item_edit', itemId: it.id};
-    if (editTitle && title.replace(/\s+/g, ' ').trim() !== it.title) cmd.title = title;
-    if (docType !== (it.docType ?? '')) cmd.docType = docType || null;
-    if (!samePresenters(presenters, it.presenters)) cmd.presenters = cleanPresenters(presenters);
-    if (cmd.title === undefined && cmd.docType === undefined && cmd.presenters === undefined) { props.onDone?.(); return; }
-    if (await (props.status ? saved.track(() => send(cmd)) : send(cmd))) props.onDone?.();
-  }}>
-    {editTitle && <Field label={nounOf(m).name}><input value={title} onInput={e => setTitle((e.target as HTMLInputElement).value)} maxLength={400} required/></Field>}
-    {!noDocType.has(it.kind) && <DocTypeSelect types={types} value={docType} onChange={setDocType} empty="Wynika z materiału"
-      hint="Rodzaj decyduje o formule wyniku, np. „Uchwała podjęta”, i o tym, czy w punkcie trzeba głosować."/>}
-    <PresentersEditor value={presenters} onChange={setPresenters} organ={m.organ} no={no}/>
-    <div class="actions"><Button small type="submit" busy={busy}>{props.status ? 'Zapisz dane punktu' : 'Zapisz'}</Button>{props.onCancel && <Button small kind="ghost" quiet onClick={props.onCancel}>Anuluj</Button>}</div>
-    {props.status && <SaveStatus status={saved} saved={t => `Zapisano dane punktu o godz. ${t}.`}/>}
   </form>;
 }
 
@@ -403,18 +367,6 @@ export function ProtocolFields(props: {draft: ProtocolDraft; set: <K extends key
       </select></Field>
     </div>
   </Fold>;
-}
-
-/** Przyciski wyboru `oi-seg` z etykietą grupy (np. tryb posiedzenia). */
-export function Segments<T extends string>(props: {label: string; value: T; options: [T, string][]; onChange: (value: T) => void; hint?: ComponentChildren}) {
-  const id = useId();
-  return <div class="oi-field">
-    <span class="oi-field__label" id={id + '-e'}>{props.label}</span>
-    <div class="oi-seg seg-field" role="group" aria-labelledby={id + '-e'} aria-describedby={props.hint ? id + '-p' : undefined}>
-      {props.options.map(([value, label]) => <button key={value} type="button" class="oi-opt" aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{label}</button>)}
-    </div>
-    {props.hint && <span class="oi-field__hint" id={id + '-p'}>{props.hint}</span>}
-  </div>;
 }
 
 function Details() {

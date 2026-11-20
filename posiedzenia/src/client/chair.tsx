@@ -7,10 +7,11 @@ import type {AgendaChange, AgendaItem, BallotPurpose, DocType, Meeting, Message,
 import {request, serverNow} from './api.ts';
 import {useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {announce, Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, StateChip, Tag, TitleLead, useSaveStatus} from './ui.tsx';
+import {announce, Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useSaveStatus} from './ui.tsx';
 import {agendaChip, itemChip, modeGenitive, modeName, presenceChip} from './stany.ts';
 import {AgendaList, beforeAdoption, draftLive, emphasize, proposerSentence, VoteCard, workingSentence} from './meeting.tsx';
-import {AgendaEditor, ItemEditForm, Segments} from './prep.tsx';
+import {AgendaEditor} from './prep.tsx';
+import {ItemEditForm} from './item-form.tsx';
 import {MaterialLink} from './reader.tsx';
 import {Messages} from './messages.tsx';
 import {useDocTypes} from './doctypes.ts';

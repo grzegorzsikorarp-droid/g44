@@ -3,9 +3,8 @@ import {sortedDocTypes} from '../shared/doctypes.ts';
 import type {DocType} from '../shared/types.ts';
 import {request} from './api.ts';
 import {setDocTypes} from './doctypes.ts';
-import {Button, CardTitle, Confirm, ErrorNotice, Field, Modal, StateChip, Tag, useAction} from './ui.tsx';
+import {Button, CardTitle, Confirm, ErrorNotice, Field, Modal, Segments, StateChip, Tag, useAction} from './ui.tsx';
 import {docTypeChip} from './stany.ts';
-import {Segments} from './prep.tsx';
 
 // Strona administratora „Rodzaje dokumentów” (F11, trasa #rodzaje): słownik rodzajów materiałów i spraw z formułami
 // wyniku, wymogiem głosowania, kolejnością i stanem. Rodzaju użytego w materiale, punkcie albo głosowaniu nie da się

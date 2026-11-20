@@ -1,7 +1,8 @@
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
-import type {Account, Roster} from '../shared/types.ts';
+import type {Account, OrganCode, Roster} from '../shared/types.ts';
 import {membership, personName} from '../shared/roster.ts';
+import {canCreate} from '../shared/role.ts';
 
 export interface Session { account: Account; roster: Roster }
 export const SessionContext = createContext<Session | null>(null);
@@ -17,7 +18,8 @@ export function useSession() {
     membership: ms,
     canChair: (organ: string) => !!ms(organ)?.canChair,
     isMember: (organ: string) => !!ms(organ),
-    isOrganizer: (organ: string) => account.admin || account.kind === 'biuro' || !!ms(organ)?.canChair,
+    /** Wersja 3: tworzy i przygotowuje posiedzenia (canCreate z role.ts): biuro, przewodniczący, wiceprzewodniczący; bez flagi administratora. */
+    isOrganizer: (organ: string) => canCreate(roster, organ as OrganCode, {account, personId, name: personId ? personName(roster, personId) : account.displayName}),
     personName: (id: string | null | undefined) => personName(roster, id),
   };
 }

@@ -376,6 +376,11 @@ function basisInput(raw: CompositionBasis, onlyAct: boolean): CompositionBasis {
   return bad('Ta zmiana wymaga podstawy. Wpisz, na czym się opiera.');
 }
 
+/** Komunikat G-5 dla niepełnej podstawy albo null, gdy podstawa jest kompletna (np. powód nieaktywnego „Zapisz”). */
+export function basisProblem(basis: CompositionBasis | null | undefined, onlyAct = false): string | null {
+  try { basisInput(basis as CompositionBasis, onlyAct); return null; } catch (e) { return (e as Error).message; }
+}
+
 /**
  * Zmiana składu organu z podstawą (DA-13, G-5). Zmiana obowiązuje od `since` (najpóźniej dziś) i nie czeka na koniec
  * posiedzeń: trwających nie dotyczy, bo ich skład zapisano przy otwarciu. `canChair` wylicza się z funkcji i profilu.

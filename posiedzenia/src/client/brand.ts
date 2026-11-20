@@ -24,6 +24,8 @@ export const brand = {
   officeOf: 'biura',
   /** Biuro w celowniku: „zgłoś go biuru Izby”. */
   officeTo: 'biuru',
+  /** Wersja 3: kto przyjął zasadę w linii źródła („Zasada przyjęta przez Izbę 20.11.2026.”); w wersji próbnej pusty. */
+  houseBy: '',
   /** Regulamin w dopełniaczu: „§ 14 ust. 5 Regulaminu Okręgowej Rady Pielęgniarek i Położnych w Słupsku”. */
   regulation: 'Regulaminu',
   loginScreen: null as ComponentType<{onDone: () => void}> | null,

@@ -1,12 +1,13 @@
-import {useEffect, useState} from 'preact/hooks';
+import {useContext, useEffect, useState} from 'preact/hooks';
 import {defaultDocTypes} from '../shared/doctypes.ts';
 import type {DocType} from '../shared/types.ts';
-import {request} from './api.ts';
+import {MeetingCtx} from './context.ts';
 
-// Słownik rodzajów dokumentów (F11) pobrany raz z GET /api/doc-types i wspólny dla wszystkich ekranów. Do czasu
-// wczytania (i bez połączenia) obowiązują rodzaje domyślne. Strona „Rodzaje dokumentów” po zapisie podaje nowy słownik.
+// Słownik rodzajów dokumentów (F11, wersja 3, I-9). Przychodzi z danymi sesji (GET /api/session, pole `docTypes`) dla
+// każdego zalogowanego, więc klient nie pyta o niego osobno. W posiedzeniu obowiązuje słownik zapisany przy otwarciu
+// (`frozen.docTypes`), gdy posiedzenie go ma. Bez sesji obowiązują rodzaje domyślne. Po zmianie słownika przez biuro
+// nowy słownik podaje setDocTypes (np. strona „Rodzaje dokumentów” po zapisie).
 let cache: DocType[] | null = null;
-let loading: Promise<void> | null = null;
 const listeners = new Set<(types: DocType[]) => void>();
 
 export function setDocTypes(types: DocType[]) {
@@ -14,23 +15,14 @@ export function setDocTypes(types: DocType[]) {
   for (const listener of listeners) listener(types);
 }
 
-function load() {
-  loading ??= request<{docTypes: DocType[]}>('/api/doc-types')
-    .then(r => setDocTypes(r.docTypes))
-    // Bez połączenia zostają rodzaje domyślne i nie ma ponownych prób przy kolejnych ekranach (także po głosie tajnym
-    // aplikacja nie wysyła dodatkowych zapytań). Strona „Rodzaje dokumentów” podaje nowy słownik po każdej zmianie.
-    .catch(() => setDocTypes(defaultDocTypes))
-    .finally(() => { loading = null; });
-  return loading;
-}
-
-/** Słownik rodzajów dokumentów wspólny dla ekranów. Po zmianie przez administratora nowy słownik podaje setDocTypes. */
+/** Słownik rodzajów dokumentów: w posiedzeniu zapisany przy otwarciu, poza nim z danych sesji. */
 export function useDocTypes() {
+  const meeting = useContext(MeetingCtx);
   const [types, setTypes] = useState<DocType[]>(cache ?? defaultDocTypes);
   useEffect(() => {
     listeners.add(setTypes);
-    if (cache) setTypes(cache); else load();
+    if (cache) setTypes(cache);
     return () => { listeners.delete(setTypes); };
   }, []);
-  return types;
+  return meeting?.m.frozen?.docTypes ?? types;
 }

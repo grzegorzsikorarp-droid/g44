@@ -1,5 +1,6 @@
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
-import type {Account, Roster} from '../shared/types.ts';
+import type {Account, DocType, Roster} from '../shared/types.ts';
+import type {GeneralBundle} from '../shared/settings.ts';
 import {ApiError, request} from './api.ts';
 import {SessionContext, useSession} from './session.ts';
 import {Button, Check, Chip, Confirm, ErrorNotice, errorKindOf, Fact, Field, LiveRegion, Modal, Notice, Tag, useAction, type ErrorKind} from './ui.tsx';
@@ -11,8 +12,9 @@ import {DocTypesPage} from './rodzaje.tsx';
 import {brand} from './brand.ts';
 import {currentRoute, go, onRoute} from './route.ts';
 import {Plate} from './plate.tsx';
+import {acceptSession} from './general.ts';
 
-interface SessionInfo { account: Account | null; setupRequired: boolean; roster: Roster | null }
+interface SessionInfo { account: Account | null; setupRequired: boolean; roster: Roster | null; docTypes?: DocType[] | null; general?: GeneralBundle | null }
 
 const APP = 'Posiedzenia Prezydium';
 // Pamięć karty przeglądarki. W ramce bez własnego adresu (wersja próbna) jest niedostępna, a aplikacja działa bez niej.
@@ -39,7 +41,8 @@ export function App() {
   const latest = useRef<SessionInfo | null>(null);
   latest.current = info;
   const leaving = useRef(false);
-  const load = () => request<SessionInfo>('/api/session').then(value => { setError(null); setInfo(value); }).catch(e => setError({text: e.message, kind: errorKindOf(e)}));
+  // Wersja 3 (I-9): ustawienia ogólne i słownik rodzajów dokumentów przychodzą z sesją (general.ts, doctypes.ts).
+  const load = () => request<SessionInfo>('/api/session').then(value => { setError(null); acceptSession(value); setInfo(value); }).catch(e => setError({text: e.message, kind: errorKindOf(e)}));
   useEffect(() => {
     load();
     const offRoute = onRoute(setHash);
