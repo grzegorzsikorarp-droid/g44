@@ -1,8 +1,14 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import type {Meeting} from '../shared/types.ts';
+import type {Meeting, MeetingMode} from '../shared/types.ts';
+import {lawOf, PROCEDURE_MIN_HOURS} from '../shared/law.ts';
+import {organSettingsOf, type MeetingTemplate} from '../shared/settings.ts';
+import {organOfCode} from '../shared/roster.ts';
+import {hoursText, isoDayOf} from '../shared/text.ts';
 import {request, useLive} from './api.ts';
 import {useSession} from './session.ts';
-import {Button, Chip, ErrorNotice, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, Segments, StateChip, useAction} from './ui.tsx';
+import {useGeneral} from './general.ts';
+import {dateHintText, OrganFact, sourceLineText} from './cascade-ui.tsx';
+import {Button, Chip, ErrorNotice, Fact, Field, fmtDateTime, fmtShort, LinkButton, Modal, Notice, plural, SectionHead, Segments, StateChip, useAction} from './ui.tsx';
 import {meetingState} from './stany.ts';
 import {brand} from './brand.ts';
 import {go} from './route.ts';
@@ -66,7 +72,7 @@ export function Home() {
         {/* Gdy trwa posiedzenie albo głosowanie, przyciskiem głównym ekranu jest przejście do niego (pas pod nagłówkiem). */}
         {organizer && <div class="actions">
           <Button kind={live.length ? 'secondary' : 'primary'} haspopup onClick={() => setCreating('posiedzenie')}>Przygotuj posiedzenie</Button>
-          <Button haspopup onClick={() => setCreating('procedura')}>Przygotuj głosowanie między posiedzeniami</Button>
+          {lawOf(ORGAN).betweenMeetings.allowed && <Button haspopup onClick={() => setCreating('procedura')}>Przygotuj głosowanie między posiedzeniami</Button>}
         </div>}
       </div>
     </header>
@@ -87,7 +93,7 @@ export function Home() {
 function LiveBand({m, primary}: {m: Summary; primary: boolean}) {
   const procedure = m.kind === 'procedura';
   const text = procedure
-    ? `${m.title}. Głosowanie do ${m.endsAt ? fmtDateTime(m.endsAt) : '–'}.`
+    ? `${m.title}. Trwa do ${m.endsAt ? fmtDateTime(m.endsAt) : '–'}.`
     : `${m.title}, ${fmtShort(m.date)}.${m.current ? ` Bieżący punkt ${m.currentNumber} ${quote(m.current)}.` : ''}`;
   return <div class="oi-note live-band">
     <div class="live-band__text"><span class="oi-label">{procedure ? 'Trwa głosowanie między posiedzeniami' : m.working ? 'Trwa spotkanie robocze' : 'Trwa posiedzenie'}</span><p>{text}</p></div>
@@ -108,7 +114,7 @@ function MeetingRow({m, organizer}: {m: Summary; organizer: boolean}) {
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
   const iso = procedure && m.endsAt ? warsawDay(m.endsAt) : m.date;
   const day = dateParts(iso);
-  const meta = procedure ? (m.endsAt ? `Głosowanie do ${fmtDateTime(m.endsAt)}` : 'Termin do ustalenia') : `godz. ${m.time}${m.place ? `, ${m.place}` : ''}`;
+  const meta = procedure ? (m.endsAt ? `${m.status === 'trwa' ? 'Trwa do' : 'Głosowanie do'} ${fmtDateTime(m.endsAt)}` : 'Termin do ustalenia') : `godz. ${m.time}${m.place ? `, ${m.place}` : ''}`;
   const action = m.status === 'zakonczone' ? 'Zobacz wyniki'
     : m.status === 'przygotowanie' ? (organizer ? 'Otwórz przygotowanie' : procedure ? 'Zobacz sprawy i materiały' : 'Zobacz porządek i materiały')
     : procedure ? 'Przejdź do głosowania' : 'Przejdź do obrad';
@@ -119,36 +125,85 @@ function MeetingRow({m, organizer}: {m: Summary; organizer: boolean}) {
   </a>;
 }
 
+// Okno „Nowe posiedzenie” (wersja 3, rozdz. 5.3): organ jako fakt, rodzaj, wzór posiedzenia, tytuł, termin, miejsce
+// i tryb. Wartości domyślne pochodzą z ustawień ogólnych i wzoru posiedzenia (useGeneral), a regulamin decyduje, czy
+// organ ma głosowania między posiedzeniami i posiedzenia zdalne.
 function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
+  const {roster} = useSession();
+  const bundle = useGeneral();
   const {busy, error, errorKind, run} = useAction();
-  const [mode, setMode] = useState<Meeting['mode']>('stacjonarne');
-  const tomorrow = new Date(Date.now() + 86400000);
-  const local = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  const procedure = props.kind === 'procedura';
-  return <Modal title={procedure ? 'Nowe głosowanie między posiedzeniami' : 'Nowe posiedzenie Prezydium'} onClose={props.onClose}>
+  const law = lawOf(ORGAN);
+  const organ = organOfCode(roster, ORGAN);
+  const settings = bundle ? organSettingsOf(bundle.general, ORGAN) : null;
+  const templates = settings?.templates ?? [];
+  const sitePlace = bundle?.general.site.place ?? brand.place;
+  const [kind, setKind] = useState<Meeting['kind']>(props.kind === 'procedura' && law.betweenMeetings.allowed ? 'procedura' : 'posiedzenie');
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
+  const template = templates.find(t => t.id === templateId) ?? templates[0];
+  const [mode, setMode] = useState<MeetingMode>(template?.defaults?.mode ?? 'stacjonarne');
+  const [time, setTime] = useState(template?.defaults?.time ?? '10:00');
+  const [date, setDate] = useState(() => isoDayOf(Date.now() + (law.notice.minDays + 1) * 86400000));
+  const [place, setPlace] = useState(sitePlace);
+  const [endsAt, setEndsAt] = useState(() => localInput(Date.now() + (settings?.procedureHours ?? 24) * 3600000));
+  const [touched, setTouched] = useState({mode: false, time: false});
+  const procedure = kind === 'procedura';
+  const [title, setTitle] = useState<string | null>(null);
+  const defaultTitle = procedure ? `Głosowanie między posiedzeniami ${organ.forms.genitive}` : `Posiedzenie ${organ.forms.genitive}`;
+  const pickTemplate = (id: string) => {
+    setTemplateId(id);
+    const t = templates.find(x => x.id === id);
+    if (!touched.mode) setMode(t?.defaults?.mode ?? 'stacjonarne');
+    if (!touched.time) setTime(t?.defaults?.time ?? '10:00');
+  };
+  const noticeDay = date ? isoDayOf(Date.parse(date + 'T12:00:00Z') - law.notice.minDays * 86400000) : '';
+  const tooSoon = !procedure && !!date && noticeDay < isoDayOf(Date.now());
+  const ends = endsAt ? new Date(endsAt).getTime() : NaN;
+  const shortTerm = procedure && Number.isFinite(ends) && ends - Date.now() < PROCEDURE_MIN_HOURS * 3600000;
+  const count = (t: MeetingTemplate) => t.items.length + t.items.reduce((n, i) => n + (i.children?.length ?? 0), 0);
+  const describe = (t: MeetingTemplate) => `${t.name}, ${count(t)} ${plural(count(t), 'punkt', 'punkty', 'punktów')}`;
+  const kinds: [Meeting['kind'], string][] = law.betweenMeetings.allowed ? [['posiedzenie', 'Posiedzenie'], ['procedura', 'Głosowanie między posiedzeniami']] : [['posiedzenie', 'Posiedzenie']];
+  const modes: [MeetingMode, string][] = law.remote.allowed ? [['stacjonarne', 'Stacjonarne'], ['zdalne', 'Zdalne']] : [['stacjonarne', 'Stacjonarne']];
+  const placeSource = place.trim() === sitePlace.trim() && sitePlace ? sourceLineText({value: sitePlace, source: 'ogolne', level: 1}, 'posiedzenie') : '';
+  return <Modal title={procedure ? 'Nowe głosowanie między posiedzeniami' : 'Nowe posiedzenie'} onClose={props.onClose}>
     <form class="stack" onSubmit={e => {
       e.preventDefault();
-      const f = new FormData(e.currentTarget);
       run(async () => {
         const body = procedure
-          ? {kind: 'procedura', title: f.get('title'), endsAt: new Date(String(f.get('endsAt'))).getTime(), date: String(f.get('endsAt')).slice(0, 10)}
-          : {kind: 'posiedzenie', title: f.get('title'), date: f.get('date'), time: f.get('time'), place: f.get('place'), mode};
+          ? {kind: 'procedura', organ: ORGAN, title: (title ?? defaultTitle).trim() || defaultTitle, endsAt: ends}
+          : {kind: 'posiedzenie', organ: ORGAN, template: template?.id, title: (title ?? defaultTitle).trim() || defaultTitle, date, time, place, mode};
         const {meeting} = await request<{meeting: Meeting}>('/api/meetings', {body});
         go(`#p-${meeting.id}`);
       });
     }}>
-      {procedure && <Notice>{`Prezydium może podejmować uchwały także między posiedzeniami, w głosowaniu zdalnym (§ 14 ust. 5 ${brand.regulation}). Członkowie głosują w wyznaczonym czasie i mogą wtedy pisać we wspólnym kanale wiadomości.`}</Notice>}
-      <Field label="Tytuł"><input name="title" required maxLength={200} defaultValue={procedure ? brand.procedureTitle : brand.meetingTitle}/></Field>
+      <OrganFact organ={ORGAN}/>
+      <Segments label="Rodzaj" value={kind} options={kinds} onChange={setKind}
+        hint={law.betweenMeetings.allowed ? undefined : law.betweenMeetings.reason}/>
+      {procedure && <Notice>{`Prezydium może podejmować uchwały także między posiedzeniami, w głosowaniu zdalnym (§ 14 ust. 5 ${organ.forms.regulation}). Członkowie głosują w wyznaczonym czasie i mogą wtedy pisać we wspólnym kanale wiadomości.`}</Notice>}
+      {!procedure && template && (templates.length > 1
+        ? <Segments column label="Wzór posiedzenia" value={template.id} options={templates.map(t => [t.id, describe(t)] as [string, string])} onChange={pickTemplate}/>
+        : <dl class="facts"><Fact label="Wzór posiedzenia">{describe(template)}</Fact></dl>)}
+      <Field label="Tytuł"><input name="title" maxLength={200} value={title ?? defaultTitle} onInput={e => setTitle((e.target as HTMLInputElement).value)}/></Field>
       {procedure
-        ? <Field label="Koniec głosowania" hint="Głosowanie zakończy się wcześniej, gdy zagłosują wszyscy uprawnieni. Termin można zmienić przed rozpoczęciem."><input name="endsAt" type="datetime-local" required defaultValue={local(tomorrow)}/></Field>
+        ? <Field label="Koniec głosowania" hint={shortTerm ? 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.' : `Jak w ustawieniach ogólnych, ${hoursText(settings?.procedureHours ?? 24)} od utworzenia. Głosowanie zakończy się wcześniej, gdy zagłosują wszyscy uprawnieni. Termin można zmienić przed rozpoczęciem.`}>
+          <input name="endsAt" type="datetime-local" required value={endsAt} onInput={e => setEndsAt((e.target as HTMLInputElement).value)}/>
+        </Field>
         : <>
-          <div class="row"><Field label="Data"><input name="date" type="date" required defaultValue={tomorrow.toISOString().slice(0, 10)}/></Field><Field label="Godzina"><input name="time" type="time" required defaultValue="10:00"/></Field></div>
-          <Field label="Miejsce"><input name="place" maxLength={200} defaultValue={brand.place}/></Field>
-          <Segments label="Tryb" value={mode} options={[['stacjonarne', 'Stacjonarne'], ['zdalne', 'Zdalne']]} onChange={setMode}
-            hint="Posiedzenie zdalne wymaga dwustronnej komunikacji w czasie rzeczywistym (§ 14 ust. 5). Odnośnik do połączenia dodasz w danych posiedzenia."/>
+          <div class="row row-top">
+            <Field label="Data" hint={[dateHintText(date), tooSoon ? `Do tej daty nie zdążysz wysłać zawiadomienia na ${law.notice.minDays} dni przed posiedzeniem (${law.notice.basis}). Krótszy termin trafi do protokołu.` : ''].filter(Boolean).join(' ') || undefined}>
+              <input name="date" type="date" required value={date} onInput={e => setDate((e.target as HTMLInputElement).value)}/>
+            </Field>
+            <Field label="Godzina"><input name="time" type="time" required value={time} onInput={e => { setTouched(t => ({...t, time: true})); setTime((e.target as HTMLInputElement).value); }}/></Field>
+          </div>
+          <Field label="Miejsce" hint={placeSource || undefined}><input name="place" maxLength={200} value={place} onInput={e => setPlace((e.target as HTMLInputElement).value)}/></Field>
+          <Segments label="Tryb" value={mode} options={modes} onChange={v => { setTouched(t => ({...t, mode: true})); setMode(v); }}
+            hint={law.remote.allowed ? 'Posiedzenie zdalne wymaga dwustronnej komunikacji w czasie rzeczywistym (§ 14 ust. 5). Odnośnik do połączenia dodasz w danych posiedzenia.' : law.remote.reason}/>
         </>}
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions"><Button kind="primary" type="submit" busy={busy}>{procedure ? 'Utwórz głosowanie' : 'Utwórz posiedzenie'}</Button><Button onClick={props.onClose}>Anuluj</Button></div>
     </form>
   </Modal>;
 }
+
+const ORGAN = 'prezydium' as const;
+// Data i godzina do pola datetime-local w strefie przeglądarki.
+const localInput = (ts: number) => new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 16);

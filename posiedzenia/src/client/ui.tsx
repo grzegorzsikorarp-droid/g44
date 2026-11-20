@@ -318,7 +318,7 @@ export interface ConfirmField { label: string; hint?: string; required?: boolean
  * `ack` dodaje pole wyboru, bez którego przycisk potwierdzenia jest nieaktywny, a `field` pole tekstowe
  * (np. powód), na którym startuje fokus. Enter w polu potwierdza, gdy przycisk jest aktywny.
  */
-export function Confirm(props: {title: string; text: ComponentChildren; confirm: string; kind?: 'primary' | 'danger'; cancel?: string; focus?: 'cancel' | 'confirm' | 'title' | 'field'; ack?: ComponentChildren; field?: ConfirmField; details?: ComponentChildren; onConfirm: (value: string) => void; onClose: () => void}) {
+export function Confirm(props: {title: string; text: ComponentChildren; confirm: string; kind?: 'primary' | 'danger'; cancel?: string; focus?: 'cancel' | 'confirm' | 'title' | 'field'; ack?: ComponentChildren; field?: ConfirmField; details?: ComponentChildren; onConfirm: (value: string) => void; onClose: () => void; onCancel?: () => void}) {
   const [acked, setAcked] = useState(false);
   const [value, setValue] = useState(props.field?.initial ?? '');
   const kind = props.kind ?? 'primary';
@@ -338,19 +338,46 @@ export function Confirm(props: {title: string; text: ComponentChildren; confirm:
     {needsAck && <Check checked={acked} onChange={setAcked}>{props.ack}</Check>}
     <div class="actions confirm-actions">
       <Button kind={kind} class="confirm-ok" disabled={!!reason} reason={props.field?.required || needsAck ? reason ?? '' : undefined} onClick={confirm}>{props.confirm}</Button>
-      <Button class="confirm-cancel" onClick={props.onClose}>{props.cancel ?? 'Anuluj'}</Button>
+      <Button class="confirm-cancel" onClick={() => { props.onCancel?.(); props.onClose(); }}>{props.cancel ?? 'Anuluj'}</Button>
     </div>
   </Modal>;
 }
 
-/** Przyciski wyboru `oi-seg` z etykietą grupy (np. tryb posiedzenia). */
-export function Segments<T extends string>(props: {label: string; value: T; options: [T, string][]; onChange: (value: T) => void; hint?: ComponentChildren}) {
+/**
+ * Przyciski wyboru `oi-seg` z etykietą grupy (np. tryb posiedzenia). Z `column` przyciski stoją jeden pod drugim
+ * (`oi-opts`), np. przy dłuższych napisach w wyborze rodzaju zmiany składu albo wzoru posiedzenia.
+ */
+export function Segments<T extends string>(props: {label: string; value: T; options: [T, string][]; onChange: (value: T) => void; hint?: ComponentChildren; column?: boolean}) {
   const id = useId();
   return <div class="oi-field">
     <span class="oi-field__label" id={id + '-e'}>{props.label}</span>
-    <div class="oi-seg seg-field" role="group" aria-labelledby={id + '-e'} aria-describedby={props.hint ? id + '-p' : undefined}>
+    <div class={props.column ? 'oi-opts seg-field' : 'oi-seg seg-field'} role="group" aria-labelledby={id + '-e'} aria-describedby={props.hint ? id + '-p' : undefined}>
       {props.options.map(([value, label]) => <button key={value} type="button" class="oi-opt" aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{label}</button>)}
     </div>
     {props.hint && <span class="oi-field__hint" id={id + '-p'}>{props.hint}</span>}
   </div>;
 }
+
+/**
+ * Dopasowanie do szerokości ekranu (np. układ przygotowania na telefonie). W ramce bez matchMedia i przy błędzie
+ * zwraca `fallback`.
+ */
+export function useMedia(query: string, fallback = false) {
+  const read = () => { try { return window.matchMedia(query).matches; } catch { return fallback; } };
+  const [matches, setMatches] = useState(read);
+  useEffect(() => {
+    let list: MediaQueryList | null = null;
+    try { list = window.matchMedia(query); } catch { return; }
+    const update = () => setMatches(list!.matches);
+    update();
+    list.addEventListener?.('change', update);
+    return () => list?.removeEventListener?.('change', update);
+  }, [query]);
+  return matches;
+}
+
+/** Pamięć karty przeglądarki (np. wybrana zakładka); bez niej (ramka, tryb prywatny) wartość domyślna. */
+export const tabMemory = {
+  get: (key: string) => { try { return sessionStorage.getItem(key); } catch { return null; } },
+  set: (key: string, value: string) => { try { sessionStorage.setItem(key, value); } catch { /* bez pamięci karty */ } },
+};

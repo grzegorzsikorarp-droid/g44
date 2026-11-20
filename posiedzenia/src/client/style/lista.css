@@ -47,7 +47,7 @@
   .account-table tr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
   .account-table tbody tr:first-child { border-top: 0; }
   .account-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; }
-  .account-table tr > :is(:nth-child(1), :nth-child(4)) { flex: 1 0 100%; }
+  .account-table tr > :is(:nth-child(1), :nth-child(5)) { flex: 1 0 100%; }
   .account-table th[scope="row"] { min-width: 0; }
   .account-table .account-act { width: auto; text-align: left; }
 }
@@ -68,7 +68,7 @@
 @media (max-width: 760px) {
   .doctype-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .doctype-table, .doctype-table tbody { display: block; }
-  .doctype-table tr { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+  .doctype-table tr { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
   .doctype-table tbody tr:first-child { border-top: 0; }
   .doctype-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; }
   .doctype-table tr > :first-child, .doctype-table .doctype-act { flex: 1 0 100%; width: auto; white-space: normal; }

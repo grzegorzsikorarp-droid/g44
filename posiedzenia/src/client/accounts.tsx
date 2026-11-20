@@ -4,9 +4,10 @@ import type {Account} from '../shared/types.ts';
 import {organOf} from '../shared/roster.ts';
 import {request} from './api.ts';
 import {useSession} from './session.ts';
-import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, Fold, Modal, StateChip, Tag, useAction, type ErrorKind} from './ui.tsx';
+import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, Fold, Modal, Notice, StateChip, useAction, type ErrorKind} from './ui.tsx';
 import {accountChip} from './stany.ts';
 import {brand} from './brand.ts';
+import {HistoryFold} from './cascade-ui.tsx';
 
 const kinds: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro'};
 const newAccountTitle: Record<Exclude<Account['kind'], 'czlonek'>, string> = {doradczy: 'Nowe konto z głosem doradczym', gosc: 'Nowe konto gościa', biuro: 'Nowe konto biura'};
@@ -19,7 +20,11 @@ function temporaryPassword() {
 }
 const stateWord = (a: Account) => a.disabled ? 'Zablokowane' : a.mustChange ? 'Czeka na pierwsze logowanie' : 'Aktywne';
 
-export function Accounts() {
+/**
+ * Sekcja „Konta i role” ustawień ogólnych (wersja 3, rozdz. 5.2 sekcja 4; dawniej strona #konta). Konta zmienia
+ * wyłącznie administrator, czyli rola techniczna bez uprawnień w posiedzeniach (DA-2).
+ */
+export function AccountsPanel() {
   const s = useSession();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const {busy, error, errorKind, run} = useAction();
@@ -42,29 +47,25 @@ export function Accounts() {
     return <AccountRow key={personId} name={name} sub={label} a={byPerson(personId)} onCreate={() => setCreating({kind: 'czlonek', personId})} onManage={a => setManaging({id: a.id, name})}/>;
   };
   return <>
-    <header class="oi-hero page-head page-head--niski">
-      <div class="page page--kolumna oi-hero__in">
-        <Tag>Administracja</Tag>
-        <h1>Konta <b>użytkowników</b></h1>
-        <p class="oi-hero__lead">Każda osoba ma własne, imienne konto i nie przekazuje go innym. Przekaż login i hasło tymczasowe, a osoba ustawi własne hasło przy pierwszym logowaniu. Po zablokowaniu konta albo nadaniu nowego hasła tymczasowego osoba zostanie wylogowana na wszystkich urządzeniach.</p>
-      </div>
-    </header>
-    <div class="page page--kolumna stack">
+    <p class="settings-lead">Każda osoba ma własne, imienne konto i nie przekazuje go innym. Przekaż login i hasło tymczasowe, a osoba ustawi własne hasło przy pierwszym logowaniu. Po zablokowaniu konta albo nadaniu nowego hasła tymczasowego osoba zostanie wylogowana na wszystkich urządzeniach.</p>
+    <div class="stack">
       {error && !managed && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       {!accounts && <p class="muted">Wczytywanie…</p>}
       {accounts && <>
         <section class="oi-card"><CardTitle level={2}>{brand.organ || 'Prezydium'}</CardTitle><AccountTable label={brand.organ || 'Prezydium'}>{presidium.map(m => personRow(m.personId, m.label))}</AccountTable></section>
         <section class="oi-card">
           <CardTitle level={2}>Biuro, głos doradczy i goście</CardTitle>
-          <p class="muted small">{`Głos doradczy mają przewodniczący Okręgowej Komisji Rewizyjnej, przewodniczący Okręgowego Sądu Pielęgniarek i Położnych oraz Okręgowy Rzecznik Odpowiedzialności Zawodowej (§ 7 ust. 2). ${brand.office} przygotowuje posiedzenia i prowadzi listę obecności, ale nie głosuje.`}</p>
+          <p class="muted small">Głos doradczy mają przewodniczący Okręgowej Komisji Rewizyjnej, przewodniczący Okręgowego Sądu Pielęgniarek i Położnych oraz Okręgowy Rzecznik Odpowiedzialności Zawodowej (§ 7 ust. 2). Gość widzi posiedzenia, na które go zaproszono, i czyta kanał wiadomości.</p>
+          <p class="muted small">Biuro obsługuje posiedzenia. Przygotowuje je, prowadzi listę obecności, materiały i dane do protokołu. Nie wykonuje czynności organu, np. nie wyznacza zastępcy przewodniczącego i nie ogłasza wyników (§ 23).</p>
           <div class="actions"><Button small haspopup onClick={() => setCreating({kind: 'doradczy'})}>Dodaj konto z głosem doradczym</Button><Button small haspopup onClick={() => setCreating({kind: 'gosc'})}>Dodaj konto gościa</Button><Button small haspopup onClick={() => setCreating({kind: 'biuro'})}>Dodaj konto biura</Button></div>
           {others.length > 0 && <AccountTable label="Biuro, głos doradczy i goście">{others.map(a => <AccountRow key={a.id} name={a.displayName}
-            sub={`${kinds[a.kind]}${a.label && ![a.displayName, kinds[a.kind]].includes(a.label) ? `, ${a.label}` : ''}`} a={a} onManage={x => setManaging({id: x.id, name: x.displayName})}/>)}</AccountTable>}
+            sub={a.label && ![a.displayName, kinds[a.kind]].includes(a.label) ? a.label : ''} role={kinds[a.kind]} a={a} onManage={x => setManaging({id: x.id, name: x.displayName})}/>)}</AccountTable>}
         </section>
         {council.length > 0 && <Fold title={`Pozostali członkowie ${councilName}`}>
           <p class="muted small">{`Konta będą potrzebne do posiedzeń ${councilName}. Posiedzenia Prezydium ich nie wymagają.`}</p>
           <AccountTable label={`Pozostali członkowie ${councilName}`}>{council.map(m => personRow(m.personId, m.label))}</AccountTable>
         </Fold>}
+        <HistoryFold area="konta"/>
       </>}
     </div>
     {managed && managing && <ManageAccount a={managed} name={managing.name} self={managed.id === s.account.id} busy={busy} error={error} errorKind={errorKind}
@@ -85,18 +86,20 @@ export function Accounts() {
 function AccountTable(props: {label: string; children: ComponentChildren}) {
   // Role ARIA powtarzają znaczenie tabeli, bo do 560 px wiersze mają układ bloków (lista.css).
   return <div class="oi-table-wrap"><table class="oi-table account-table" role="table" aria-label={props.label}>
-    <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Osoba</th><th scope="col" role="columnheader">Login</th><th scope="col" role="columnheader">Stan</th><th scope="col" role="columnheader" class="account-act">Działanie</th></tr></thead>
+    <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Osoba</th><th scope="col" role="columnheader">Rola w aplikacji</th><th scope="col" role="columnheader">Login</th><th scope="col" role="columnheader">Stan</th><th scope="col" role="columnheader" class="account-act">Działanie</th></tr></thead>
     <tbody role="rowgroup">{props.children}</tbody>
   </table></div>;
 }
 
 // Wiersz konta: stan słowem (znacznik tylko przy wyjątku), uprawnienia jako tekst i jeden przycisk w kolumnie „Działanie”.
-function AccountRow(props: {name: string; sub: string; a?: Account; onManage: (a: Account) => void; onCreate?: () => void}) {
+function AccountRow(props: {name: string; sub: string; role?: string; a?: Account; onManage: (a: Account) => void; onCreate?: () => void}) {
   const {a} = props;
+  const role = props.role ?? kinds[a?.kind ?? 'czlonek'];
   return <tr role="row">
     <th scope="row" role="rowheader"><span class="account-name">{props.name}</span>{props.sub && <span class="account-sub">{props.sub}</span>}</th>
+    <td role="cell" data-label="Rola w aplikacji"><span class="account-state"><span>{role}</span>{a?.admin && <span class="account-sub">Administrator</span>}</span></td>
     <td role="cell">{a ? <code>{a.username}</code> : <span class="muted">–</span>}</td>
-    <td role="cell">{a ? <span class="account-state">{accountChip(a) ? <StateChip state={accountChip(a)}/> : <span>Aktywne</span>}{a.admin && <span class="account-sub">Administrator</span>}</span> : <span class="muted">Brak konta</span>}</td>
+    <td role="cell">{a ? <span class="account-state">{accountChip(a) ? <StateChip state={accountChip(a)}/> : <span>Aktywne</span>}</span> : <span class="muted">Brak konta</span>}</td>
     <td role="cell" class="account-act">{a
       ? <Button small haspopup label={`Zarządzaj kontem, ${props.name}`} onClick={() => props.onManage(a)}>Zarządzaj kontem</Button>
       : props.onCreate && <Button small haspopup label={`Utwórz konto, ${props.name}`} onClick={props.onCreate}>Utwórz konto</Button>}</td>
@@ -108,7 +111,8 @@ function ManageAccount(props: {a: Account; name: string; self: boolean; busy: bo
   const {a} = props;
   const [asking, setAsking] = useState<'blokada' | 'admin' | null>(null);
   return <Modal title="Zarządzanie kontem" onClose={props.onClose}>
-    <dl class="facts"><Fact label="Imię i nazwisko">{props.name}</Fact><Fact label="Login"><code>{a.username}</code></Fact><Fact label="Stan">{stateWord(a)}</Fact><Fact label="Uprawnienia">{a.admin ? 'Administrator' : 'Bez uprawnień administratora'}</Fact></dl>
+    <dl class="facts"><Fact label="Imię i nazwisko">{props.name}</Fact><Fact label="Rola w aplikacji">{kinds[a.kind]}</Fact><Fact label="Login"><code>{a.username}</code></Fact><Fact label="Stan">{stateWord(a)}</Fact><Fact label="Uprawnienia">{a.admin ? 'Administrator' : 'Bez uprawnień administratora'}</Fact></dl>
+    {a.kind === 'gosc' && <p class="small">Gość widzi posiedzenia, na które go zaproszono, i czyta kanał wiadomości.</p>}
     {props.error && <ErrorNotice kind={props.errorKind}>{props.error}</ErrorNotice>}
     <ul class="manage-list">
       <li><Button small haspopup onClick={props.onReset}>Nadaj nowe hasło tymczasowe</Button><p class="muted small">Osoba zostanie wylogowana na wszystkich urządzeniach. Przy następnym logowaniu ustawi własne hasło.</p></li>
@@ -117,14 +121,15 @@ function ManageAccount(props: {a: Account; name: string; self: boolean; busy: bo
           ? <><Button small busy={props.busy} onClick={() => props.onPatch({id: a.id, disabled: false})}>Odblokuj konto</Button><p class="muted small">Osoba znowu będzie mogła się zalogować.</p></>
           : <><Button small haspopup busy={props.busy} onClick={() => setAsking('blokada')}>Zablokuj konto</Button><p class="muted small">Zablokowana osoba zostanie wylogowana i nie zaloguje się, dopóki konto nie zostanie odblokowane.</p></>}</li>
         <li>{a.admin
-          ? <><Button small busy={props.busy} onClick={() => props.onPatch({id: a.id, admin: false})}>Odbierz uprawnienia administratora</Button><p class="muted small">Osoba straci dostęp do części Konta.</p></>
-          : <><Button small haspopup busy={props.busy} onClick={() => setAsking('admin')}>Nadaj uprawnienia administratora</Button><p class="muted small">Administrator zarządza kontami wszystkich osób, w tym hasłami.</p></>}</li>
+          ? <><Button small busy={props.busy} onClick={() => props.onPatch({id: a.id, admin: false})}>Odbierz uprawnienia administratora</Button><p class="muted small">Osoba straci dostęp do sekcji „Konta i role”.</p></>
+          : <><Button small haspopup busy={props.busy} onClick={() => setAsking('admin')}>Nadaj uprawnienia administratora</Button><p class="muted small">Administrator, czyli osoba, która zarządza kontami i hasłami. Ta rola nie daje uprawnień w posiedzeniach ani w ustawieniach.</p></>}</li>
       </>}
     </ul>
     {asking === 'blokada' && <Confirm title="Zablokować konto?" confirm="Zablokuj konto" focus="cancel" onClose={() => setAsking(null)} onConfirm={() => props.onPatch({id: a.id, disabled: true})}
       text={<p>{`Konto ${a.username} (${props.name}) zostanie wylogowane na wszystkich urządzeniach. Logowanie będzie możliwe dopiero po odblokowaniu. W trwającym posiedzeniu ta osoba nie będzie mogła głosować.`}</p>}/>}
     {asking === 'admin' && <Confirm title="Nadać uprawnienia administratora?" confirm="Nadaj uprawnienia" focus="cancel" onClose={() => setAsking(null)} onConfirm={() => props.onPatch({id: a.id, admin: true})}
-      text={<p>{`Konto ${a.username} (${props.name}) będzie mogło zarządzać kontami wszystkich osób, w tym hasłami.`}</p>}/>}
+      text={<><p>{`Konto ${a.username} (${props.name}) będzie mogło zarządzać kontami wszystkich osób, w tym hasłami. Ta rola nie daje uprawnień w posiedzeniach ani w ustawieniach.`}</p>
+        {a.kind === 'czlonek' && <Notice tone="warn">Ta osoba jest członkiem organu. Administrator może nadać każdemu kontu nowe hasło, więc zwykle tę rolę ma biuro.</Notice>}</>}/>}
   </Modal>;
 }
 
@@ -133,6 +138,7 @@ function CreateAccount(props: {kind: Account['kind']; personId?: string; council
   const {busy, error, errorKind, run} = useAction();
   const name = props.personId ? s.personName(props.personId) : '';
   const [password] = useState(temporaryPassword);
+  const [admin, setAdmin] = useState(false);
   const title = props.personId ? (s.roster.memberships.some(m => m.organ === 'prezydium' && m.personId === props.personId) ? 'Nowe konto członka Prezydium' : `Nowe konto członka ${props.councilName}`)
     : newAccountTitle[props.kind as Exclude<Account['kind'], 'czlonek'>];
   return <Modal title={title} onClose={props.onClose}>
@@ -141,7 +147,7 @@ function CreateAccount(props: {kind: Account['kind']; personId?: string; council
       const f = new FormData(e.currentTarget);
       const displayName = props.personId ? name : String(f.get('displayName'));
       run(async () => {
-        const r = await request<{accounts: Account[]}>('/api/accounts', {body: {kind: props.kind, personId: props.personId, displayName, label: f.get('label'), username: f.get('username'), password: f.get('password'), admin: f.get('admin') === 'on'}});
+        const r = await request<{accounts: Account[]}>('/api/accounts', {body: {kind: props.kind, personId: props.personId, displayName, label: f.get('label'), username: f.get('username'), password: f.get('password'), admin}});
         props.onCreated(r.accounts, {name: displayName, username: String(f.get('username')), password: String(f.get('password'))});
       });
     }}>
@@ -151,7 +157,9 @@ function CreateAccount(props: {kind: Account['kind']; personId?: string; council
       </>}
       <Field label="Login" hint="Małe litery bez polskich znaków, cyfry, kropka lub myślnik."><input name="username" required minLength={3} maxLength={64} pattern="[a-z0-9._\-]{3,64}" defaultValue={name ? ascii(name) : ''} autocapitalize="none" spellcheck={false}/></Field>
       <Field label="Hasło tymczasowe" hint="Osoba zmieni je przy pierwszym logowaniu."><input name="password" required minLength={12} maxLength={200} defaultValue={password}/></Field>
-      <Check name="admin">Administrator, czyli osoba, która zarządza kontami</Check>
+      {props.kind === 'gosc' && <p class="small">Gość widzi posiedzenia, na które go zaproszono, i czyta kanał wiadomości.</p>}
+      <Check name="admin" checked={admin} onChange={setAdmin}>Administrator, czyli osoba, która zarządza kontami i hasłami. Ta rola nie daje uprawnień w posiedzeniach ani w ustawieniach.</Check>
+      {admin && props.kind === 'czlonek' && <Notice tone="warn">Ta osoba jest członkiem organu. Administrator może nadać każdemu kontu nowe hasło, więc zwykle tę rolę ma biuro.</Notice>}
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions"><Button kind="primary" type="submit" busy={busy}>Utwórz konto</Button><Button onClick={props.onClose}>Anuluj</Button></div>
     </form>

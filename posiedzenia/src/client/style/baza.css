@@ -43,6 +43,7 @@ button { font-family: inherit; }
 .stack-tight { display: flex; flex-direction: column; gap: var(--odstep-2); }
 .row { display: flex; flex-wrap: wrap; gap: var(--odstep-3); align-items: flex-end; }
 .row > * { flex: 1 1 150px; }
+.row.row-top { align-items: flex-start; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--odstep-2); align-items: center; }
 .btn-wide { display: block; width: calc(100% - 10px); margin-inline: 5px; text-align: center; }
 .btn-wide > span { justify-content: center; }
@@ -263,13 +264,13 @@ dialog.modal-backdrop::backdrop { background: transparent; }
   .oi-opt:is([aria-pressed="true"], [aria-selected="true"]):not(:focus-visible) { outline: var(--kreska-mocna) solid Highlight; outline-offset: calc(-1 * var(--kreska-mocna)); }
 }
 
-/* Górny pasek administratora (trzy pozycje nawigacji, F11): do 560 px nawigacja schodzi do drugiego wiersza pod całym
-   paskiem, czyli pod białe pole znaku Izby razem z jego wolnym polem, a nie obok znaku. W pierwszym wierszu zostaje
-   znak i konto. Pozostałe osoby mają jeden wiersz jak dotąd. */
-@media (max-width: 560px) {
-  .topbar:has(.topbar-nav > a:nth-child(3)) { flex-wrap: wrap; row-gap: 0; }
-  .topbar:has(.topbar-nav > a:nth-child(3)) .topbar-brand { margin-right: auto; }
-  .topbar-side:has(.topbar-nav > a:nth-child(3)) { display: contents; }
-  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav { order: 3; flex: 1 0 100%; justify-content: flex-start; padding-top: var(--odstep-1); border-top: var(--kreska) solid var(--linia-jasna); }
-  .topbar-side:has(.topbar-nav > a:nth-child(3)) .topbar-nav a { min-width: 44px; }
+/* Górny pasek z nawigacją „Posiedzenia” i „Ustawienia” (wersja 3, rozdz. 5.1): do 380 px nawigacja schodzi do drugiego
+   wiersza pod całym paskiem, czyli pod białe pole znaku Izby razem z jego wolnym polem, a nie obok znaku. W pierwszym
+   wierszu zostaje znak i konto. Osoby bez nawigacji i szersze ekrany mają jeden wiersz jak dotąd. */
+@media (max-width: 380px) {
+  .topbar:has(.topbar-nav > a:nth-child(2)) { flex-wrap: wrap; row-gap: 0; }
+  .topbar:has(.topbar-nav > a:nth-child(2)) .topbar-brand { margin-right: auto; }
+  .topbar-side:has(.topbar-nav > a:nth-child(2)) { display: contents; }
+  .topbar-side:has(.topbar-nav > a:nth-child(2)) .topbar-nav { order: 3; flex: 1 0 100%; justify-content: flex-start; padding-top: var(--odstep-1); border-top: var(--kreska) solid var(--linia-jasna); }
+  .topbar-side:has(.topbar-nav > a:nth-child(2)) .topbar-nav a { min-width: 44px; }
 }

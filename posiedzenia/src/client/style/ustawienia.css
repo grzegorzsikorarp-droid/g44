@@ -1,0 +1,121 @@
+/* Ustawienia ogólne i wzorce kaskady K1–K7 (wersja 3, specyfikacja rozdz. 5.1–5.2). Wyłącznie tokeny identyfikacji.
+   Stan wiersza zawsze mówi słowo (linia źródła), pasek tylko go wzmacnia. Wiersz zablokowany nie ma pola ani działania. */
+
+/* Strona ustawień: od 961 px nawigacja sekcji (280 px) i treść; do 960 px lista kart albo jedna sekcja */
+.settings-page { display: flex; flex-direction: column; gap: var(--odstep-6); }
+.settings-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--odstep-8); align-items: start; }
+.settings-nav { position: sticky; top: var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-5); }
+.settings-nav ul { list-style: none; padding: 0; margin: var(--odstep-2) 0 0; display: flex; flex-direction: column; }
+.settings-nav a { display: flex; align-items: center; min-height: 44px; padding: var(--odstep-1) var(--odstep-3); border-left: var(--pasek-akcentu) solid transparent; color: var(--tekst-mocny); text-decoration: none; font-size: var(--t-lista); line-height: 1.35; }
+.settings-nav a[aria-current="page"] { border-left-color: var(--czerwien); font-weight: 700; background: var(--powierzchnia); }
+.settings-nav a:focus-visible { color: var(--akcent-tekst); }
+@media (hover: hover) and (pointer: fine) { .settings-nav a:hover { color: var(--akcent-tekst); text-decoration: underline; text-underline-offset: 3px; } }
+.settings-content { display: flex; flex-direction: column; gap: var(--odstep-6); min-width: 0; }
+.settings-section { display: flex; flex-direction: column; gap: var(--odstep-5); min-width: 0; }
+.settings-section > .oi-section-head { margin: 0; }
+.settings-lead { max-width: 62ch; font-size: var(--t-tekst); line-height: 1.55; color: var(--tekst); }
+.settings-back { align-self: flex-start; font-size: var(--t-maly); }
+.settings-cards { display: flex; flex-direction: column; gap: var(--odstep-8); }
+.settings-group { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.settings-group .oi-section-head { margin: 0; }
+ul.cards { list-style: none; padding: 0; margin: 0; }
+ul.cards > li { display: flex; }
+.settings-card { flex: 1; text-decoration: none; color: inherit; }
+.settings-card .oi-card__meta { color: var(--tekst); }
+.settings-facts { padding: var(--odstep-4) var(--odstep-5); background: var(--powierzchnia); border: var(--kreska) solid var(--linia); }
+.fact-note { display: block; margin-top: var(--odstep-1); font-weight: 400; font-size: var(--t-maly); color: var(--tekst); }
+.organ-fact { margin: 0; }
+@media (max-width: 960px) { .settings-cards { gap: var(--odstep-6); } }
+
+/* K1. Wiersz ustawienia: etykieta, wartość, linia źródła i jedno działanie (na komputerze w prawej kolumnie) */
+dl.settings { display: flex; flex-direction: column; margin: 0; background: var(--powierzchnia); border: var(--kreska) solid var(--linia); container-type: inline-size; }
+.setting { display: flex; flex-direction: column; gap: var(--odstep-1); padding: var(--odstep-4) var(--odstep-5) var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); border-left: var(--pasek-akcentu) solid transparent; scroll-margin-top: var(--odstep-11); }
+.setting:first-child { border-top: 0; }
+.setting:focus { outline: none; }
+.setting:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: -3px; }
+.setting.is-zmieniona { border-left-color: var(--tekst-mocny); }
+.setting:is(.is-regulamin, .is-zasada, .is-aplikacja, .is-niedostepne) { background: var(--powierzchnia-miekka); border-left-color: var(--linia-aktywna); }
+.setting-label { font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+.setting:is(.is-regulamin, .is-zasada, .is-aplikacja, .is-niedostepne) .setting-label { color: var(--tekst); }
+.setting-value { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--odstep-4); align-items: start; }
+.setting-main { grid-column: 1; display: flex; flex-direction: column; gap: var(--odstep-1); min-width: 0; }
+.setting-text { font-weight: 600; color: var(--tekst-mocny); line-height: 1.45; overflow-wrap: anywhere; }
+.setting-hint { margin: 0; }
+.setting-src { margin: 0; font-size: var(--t-maly); line-height: 1.45; color: var(--tekst-drugorzedny); }
+.setting:is(.is-regulamin, .is-zasada, .is-aplikacja, .is-niedostepne) .setting-src { color: var(--tekst); }
+.setting-stamp { display: block; }
+.setting-actions { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; gap: var(--odstep-1); text-align: right; }
+.setting-editor { grid-column: 1 / -1; margin-top: var(--odstep-3); min-width: 0; }
+.setting-value > .save-status { grid-column: 1 / -1; }
+.setting-value > .save-status:not(:empty) { padding-top: var(--odstep-1); }
+.setting-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-maly); color: var(--tekst-mocny); }
+@media (max-width: 560px) { .setting { padding-inline: var(--odstep-4); } }
+/* W wąskiej kolumnie (do 520 px szerokości listy, np. kolumna boczna przygotowania) działanie stoi pod linią źródła */
+@container (max-width: 520px) {
+  .setting-value { grid-template-columns: minmax(0, 1fr); }
+  .setting-actions { grid-column: 1; grid-row: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 var(--odstep-4); text-align: left; }
+}
+/* Zwinięte wyjaśnienie przy wartości zablokowanej („Dlaczego tego nie można zmienić?”) */
+.setting-why { font-size: var(--t-maly); line-height: 1.45; }
+.setting-why summary { display: inline-flex; align-items: center; min-height: 32px; cursor: pointer; font-weight: 700; font-style: italic; color: var(--tekst); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.setting-why[open] summary { color: var(--tekst-mocny); }
+.setting-why__a { padding: var(--odstep-1) 0 var(--odstep-1) var(--odstep-3); border-left: var(--kreska-mocna) solid var(--linia-aktywna); color: var(--tekst); }
+@media (pointer: coarse) { .setting-why summary { min-height: 44px; } }
+
+/* K2. Edycja w miejscu: pola, „Zapisz” i „Anuluj” pod wartością */
+.row-editor { display: flex; flex-direction: column; gap: var(--odstep-3); padding: var(--odstep-3) var(--odstep-4) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--kreska-mocna) solid var(--linia-aktywna); }
+.row-editor > .actions { align-items: flex-start; }
+.row-editor .oi-input { background: var(--powierzchnia); }
+
+/* E. Pola podstawy zmiany */
+.basis-fields { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.plain-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+
+/* K4. Lista różnic i „Trafi do protokołu” */
+.diff-list { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.diff-list ul { list-style: none; padding: 0; margin: 0; }
+.diff-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--odstep-1) var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-maly); line-height: 1.45; color: var(--tekst-mocny); }
+.diff-list li > span { flex: 1 1 16em; min-width: 0; }
+
+/* K5. Historia zmian: tabela, a do 560 px bloki z etykietami */
+.history { display: flex; flex-direction: column; gap: var(--odstep-3); }
+.history-table td { vertical-align: top; font-size: var(--t-maly); line-height: 1.45; }
+@media (max-width: 560px) {
+  .history-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .history-table, .history-table tbody { display: block; }
+  .history-table tr { display: flex; flex-direction: column; gap: var(--odstep-1); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+  .history-table tbody tr:first-child { border-top: 0; }
+  .history-table tr > td { display: block; padding: 0; border: 0; }
+  .history-table td[data-label]::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+}
+
+/* Tabela składu: do 760 px wiersz jest blokiem z etykietami */
+.settings-table th[scope="row"] { font-weight: 600; color: var(--tekst-mocny); }
+.settings-table td, .settings-table th[scope="row"] { vertical-align: top; }
+@media (max-width: 760px) {
+  .settings-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .settings-table, .settings-table tbody { display: block; }
+  .settings-table tr { display: flex; flex-wrap: wrap; gap: var(--odstep-2) var(--odstep-5); padding: var(--odstep-3) var(--odstep-4); border-top: var(--kreska) solid var(--linia-jasna); }
+  .settings-table tbody tr:first-child { border-top: 0; }
+  .settings-table tr > :is(th, td) { display: block; padding: 0; border: 0; min-width: 0; }
+  .settings-table tr > th, .settings-table td[data-label="Podstawa"] { flex: 1 0 100%; }
+  .settings-table td[data-label]::before { content: attr(data-label); content: attr(data-label) / ""; display: block; font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .08em; line-height: 1.3; color: var(--tekst-drugorzedny); }
+}
+
+/* Zasady przyjęte (lista w zwiniętej sekcji) */
+.rule-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.rule-list li { display: flex; flex-direction: column; gap: 2px; padding: var(--odstep-3) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.rule-list li:first-child { border-top: 0; padding-top: 0; }
+.rule-list strong { color: var(--tekst-mocny); }
+
+/* Wzory posiedzeń: punkty wzoru (obowiązkowe na miękkim tle) */
+.template-card { gap: var(--odstep-4); }
+.template-items .template-row.is-regulamin { background: var(--powierzchnia-miekka); }
+.template-items .template-src { color: var(--tekst); }
+
+/* Rodzaje spraw: lista kart */
+.case-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.case-item { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-4) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.case-item:first-child { border-top: 0; padding-top: 0; }
+.case-name { margin: 0; font-size: var(--t-karta); font-weight: 600; color: var(--tekst-mocny); }
+.doctype-table th[scope="row"] .oi-status { margin-top: var(--odstep-1); }

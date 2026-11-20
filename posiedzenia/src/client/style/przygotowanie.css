@@ -1,8 +1,10 @@
 /* Edytor porządku obrad i spraw do głosowania. Narzędzia wiersza to szare odnośniki: na urządzeniach z kursorem
    pojawiają się przy najechaniu i przy fokusie (ukryte przycięciem, więc zajmują swoje miejsce i dalej można do nich
-   przejść klawiszem Tab), a do 760 px stoją w drugim wierszu pod tytułem. */
+   przejść klawiszem Tab), a do 760 px stoją w drugim wierszu pod tytułem. Przycisk „Ustawienia” stoi zawsze na końcu
+   wiersza, więc w każdym wierszu jest w tym samym miejscu. */
 .edit-list { list-style: none; padding: 0; margin: 0; }
-.edit-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; grid-template-areas: 'no main tools'; column-gap: var(--odstep-2); align-items: center; padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.edit-row { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto auto; grid-template-areas: 'no main tools settings'; column-gap: var(--odstep-2); align-items: center; padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.edit-settings { grid-area: settings; }
 .edit-row.is-sub { padding-left: var(--odstep-6); }
 .edit-row > .agenda-no { grid-area: no; align-self: start; padding-top: var(--odstep-1); }
 .edit-main { grid-area: main; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-block: var(--odstep-1); }
@@ -18,7 +20,7 @@
   .edit-row:hover > .edit-tools, .edit-row:focus-within > .edit-tools { clip-path: none; }
 }
 @media (max-width: 760px) {
-  .edit-row { grid-template-columns: 2.6em minmax(0, 1fr); grid-template-areas: 'no main' '. tools'; }
+  .edit-row { grid-template-columns: 2.6em minmax(0, 1fr); grid-template-areas: 'no main' '. tools' '. settings'; }
   .edit-tools { justify-content: flex-start; }
 }
 /* Dodawanie punktu, podpunktu albo sprawy: etykieta nad polem, przycisk w wierszu pola, podpowiedź pod polem.
@@ -99,3 +101,47 @@
 .prep-note { grid-column: 1 / -1; }
 .prep-end { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--odstep-4) var(--odstep-8); }
 .duplicate > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+
+/* Wersja 3: przygotowanie z ustawieniami punktu, przeglądem przed otwarciem i zakładkami na telefonie (rozdz. 5.4) */
+.prep-tabs { grid-column: 1 / -1; flex-wrap: wrap; }
+.prep-tabs .oi-opt { flex: 1 1 auto; }
+.edit-row.is-open { background: var(--powierzchnia); }
+.edit-row.is-open > .edit-main .edit-title { font-weight: 600; }
+/* Ustawienia punktu: panel pod wierszem z paskiem linia-aktywna */
+.item-settings { display: flex; flex-direction: column; gap: var(--odstep-3); margin-top: var(--odstep-2); padding-left: var(--odstep-3); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.item-settings__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--odstep-1) var(--odstep-4); }
+.item-settings__head h3 { font-size: var(--t-karta); font-weight: 600; }
+.item-settings__head h3:focus { outline: none; }
+.item-settings__head h3:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+@media (max-width: 480px) { .edit-row > .edit-extra { grid-column: 1 / -1; } .item-settings { padding-left: var(--odstep-2); } }
+.guess-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--odstep-3); }
+.guess-line .setting-src { flex: 1 1 16em; }
+.attach-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--odstep-2) var(--odstep-3); }
+.attach-row > .oi-field { flex: 1 1 14em; }
+/* Przegląd przed otwarciem: zdanie, znacznik słowny i działanie w jednym wierszu */
+.review { gap: var(--odstep-4); }
+.review-group { display: flex; flex-direction: column; gap: var(--odstep-2); }
+.review-list { list-style: none; padding: 0; margin: 0; }
+.review-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--odstep-1) var(--odstep-3); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); font-size: var(--t-maly); line-height: 1.45; color: var(--tekst-mocny); }
+.review-list li:first-child { border-top: 0; }
+.review-text { flex: 1 1 14em; min-width: 0; }
+.review-side { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-1) var(--odstep-3); }
+.review-side .oi-status { flex: none; }
+.review-side .actions { gap: 0 var(--odstep-3); }
+/* Okno otwarcia: listy z myślnikiem jako znakiem listy */
+.dash-list { padding-left: 1.2em; margin: 0; list-style-type: "– "; display: flex; flex-direction: column; gap: 2px; }
+/* Ustawienia całego posiedzenia: grupy w zwijanych sekcjach */
+.meeting-settings { gap: var(--odstep-3); }
+.meeting-settings .oi-faq__a { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.meeting-settings dl.settings { border-inline: 0; }
+.meeting-settings .setting { padding-inline: var(--odstep-3); }
+.deputy-card, .guests { display: flex; flex-direction: column; gap: var(--odstep-2); scroll-margin-top: var(--odstep-11); }
+.deputy-card:focus, .guests:focus, .meeting-settings .facts:focus { outline: none; }
+.deputy-card > :is(.oi-btn, .btn-wrap) { align-self: flex-start; }
+.deputy-last { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--odstep-3); }
+.guest-list li { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.guest-info { padding-left: 2.4em; }
+.invite-form { display: flex; flex-direction: column; gap: var(--odstep-3); margin-left: var(--odstep-4); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--kreska-mocna) solid var(--linia-aktywna); }
+.invite-form .oi-input { background: var(--powierzchnia); }
+.previous-guests { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.previous-guests li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--odstep-3); }

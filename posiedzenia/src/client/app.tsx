@@ -7,8 +7,9 @@ import {Button, Check, Chip, Confirm, ErrorNotice, errorKindOf, Fact, Field, Liv
 import {Home} from './home.tsx';
 import {MeetingPage} from './meeting.tsx';
 import {RoomScreen} from './screen.tsx';
-import {Accounts} from './accounts.tsx';
-import {DocTypesPage} from './rodzaje.tsx';
+import {isSectionId, SettingsPage, sectionName, visibleSections, type SectionId} from './settings.tsx';
+import {settingsAccess} from '../shared/role.ts';
+import {personName} from '../shared/roster.ts';
 import {brand} from './brand.ts';
 import {currentRoute, go, onRoute} from './route.ts';
 import {Plate} from './plate.tsx';
@@ -52,7 +53,11 @@ export function App() {
       load();
     };
     window.addEventListener('posiedzenia:wyloguj', onExpired);
-    return () => { offRoute(); window.removeEventListener('posiedzenia:wyloguj', onExpired); };
+    // Po zmianie składu (ustawienia ogólne) i gdy przygotowanie posiedzenia trafi na rodzaj sprawy albo dokumentu, którego
+    // karta jeszcze nie zna (prep.tsx), sesja wczytuje się ponownie.
+    const onRoster = () => { load(); };
+    window.addEventListener('posiedzenia:sesja', onRoster);
+    return () => { offRoute(); window.removeEventListener('posiedzenia:wyloguj', onExpired); window.removeEventListener('posiedzenia:sesja', onRoster); };
   }, []);
   const logout = async () => {
     leaving.current = true;
@@ -65,12 +70,20 @@ export function App() {
 
   const screen = hash.match(/^#ekran-([\w-]+)$/);
   const meeting = hash.match(/^#p-([\w-]+)$/);
-  const accounts = hash === '#konta' && !!info?.account?.admin;
-  const kinds = hash === '#rodzaje' && !!info?.account?.admin;
+  // Wersja 3: ustawienia ogólne pod #ustawienia i #ustawienia-{sekcja}; dawne trasy #konta i #rodzaje prowadzą do sekcji.
+  const legacy = hash === '#konta' ? '#ustawienia-konta' : hash === '#rodzaje' ? '#ustawienia-rodzaje' : null;
+  useEffect(() => { if (legacy) go(legacy); }, [legacy]);
+  const route = legacy ?? hash;
+  const settingsMatch = route.match(/^#ustawienia(?:-([a-z]+))?$/);
+  const actor = info?.account && info.roster ? {account: info.account, personId: info.account.personId, name: info.account.personId ? personName(info.roster, info.account.personId) : info.account.displayName} : null;
+  const sections = actor ? visibleSections(settingsAccess(info!.roster!, actor)) : [];
+  const settings = !!settingsMatch && sections.length > 0;
+  const section: SectionId | null = settings && settingsMatch![1] && isSectionId(settingsMatch![1]) && sections.includes(settingsMatch![1]) ? settingsMatch![1] : null;
   const signedIn = !!info?.account && !info.account.mustChange;
-  const title = !info ? null : !info.account ? 'Logowanie' : info.account.mustChange ? 'Ustaw własne hasło' : screen || meeting ? null : accounts ? 'Konta użytkowników' : kinds ? 'Rodzaje dokumentów' : 'Lista posiedzeń';
+  const title = !info ? null : !info.account ? `Logowanie – ${APP}` : info.account.mustChange ? `Ustaw własne hasło – ${APP}` : screen || meeting ? null
+    : settings ? (section ? `${sectionName(section)} – Ustawienia ogólne` : `Ustawienia ogólne – ${APP}`) : `Lista posiedzeń – ${APP}`;
   // Tytuł karty ustawia się przed efektami ekranów, więc tytuł posiedzenia ustawiony niżej przez usePageTitle ma pierwszeństwo.
-  useLayoutEffect(() => { document.title = title ? `${title} – ${APP}` : APP; }, [title]);
+  useLayoutEffect(() => { document.title = title ?? APP; }, [title]);
 
   // Po zmianie trasy fokus przechodzi na pierwszy nagłówek h1 w treści (czeka do 3 s, aż ekran się wczyta).
   const firstRoute = useRef(true);
@@ -99,7 +112,7 @@ export function App() {
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : accounts ? 'konta' : kinds ? 'rodzaje' : 'lista'} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : accounts ? <Accounts/> : kinds ? <DocTypesPage/> : <Home/>}</main></>}
+        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : <Home/>}</main></>}
     </SessionContext.Provider>;
   }
   return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;
@@ -111,7 +124,9 @@ function SkipLink() {
 }
 
 // Na liście posiedzeń tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza.
-function TopBar(props: {current: 'lista' | 'konta' | 'rodzaje' | null; onLogout: () => Promise<void>}) {
+// Nawigacja ma dwie pozycje: „Posiedzenia” i „Ustawienia” (wersja 3). „Ustawienia” widzą biuro, administrator,
+// przewodniczący i wiceprzewodniczący (settingsAccess z role.ts).
+function TopBar(props: {current: 'lista' | 'ustawienia' | null; settings: boolean; onLogout: () => Promise<void>}) {
   const {account, name, membership} = useSession();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -126,8 +141,7 @@ function TopBar(props: {current: 'lista' | 'konta' | 'rodzaje' | null; onLogout:
     <div class="topbar-side">
       <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">
         <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>
-        {account.admin && <a href="#konta" aria-current={props.current === 'konta' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Konta</a>}
-        {account.admin && <a href="#rodzaje" aria-current={props.current === 'rodzaje' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Rodzaje dokumentów</a>}
+        {props.settings && <a href="#ustawienia" aria-current={props.current === 'ustawienia' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Ustawienia</a>}
       </nav>
       {brand.demo
         ? <>{who}<span class="topbar-demo"><Chip>Wersja próbna</Chip></span><Button kind="ghost" onClick={() => { props.onLogout(); }}>{brand.switchLabel}</Button></>
