@@ -58,6 +58,33 @@ Wartości z regulaminu nie są ustawieniami. Siedzą w kodzie jako profil prawny
 
 Zasady przyjęte przez Izbę (`HOUSE_RULES`, poziom 0a): K18 (18.11.2026), F2, F3, F4, F5, F9 (19.11.2026), D1 i D2 (20.11.2026). Zasady aplikacji do czasu odpowiedzi zleceniodawcy (`APP_RULES`, poziom 0b): kanał wiadomości przy obradach na odległość (pytanie 9) i najkrótszy czas głosowania między posiedzeniami 24 godziny, krócej tylko z powodem (pytanie 7). Rekomendacje do pytań 1–9 specyfikacji wersji 3 są w jednym miejscu każda: `role.ts` (pytania 2, 4, 6, 8), `cascade.ts` (pytanie 5, `quorumTotal`), `law.ts` (pytania 6, 7, 9).
 
+## Postanowienia Regulaminu Rady w nowych częściach aplikacji (wersja 4)
+
+Brzmienie postanowień według `regulamin-orpip-2025.txt` (załącznik do uchwały nr 9 Okręgowego Zjazdu IX kadencji z 22.03.2025). Prezydium stosuje § 8, § 9, § 11, § 12 i § 13 odpowiednio (§ 14 ust. 4).
+
+| § | Treść | Gdzie w aplikacji (wersja 4) |
+|---|---|---|
+| § 7 ust. 1 | Zawiadomienie o terminie, miejscu i porządku obrad przesyła zwołujący co najmniej 7 dni przed posiedzeniem. | zgłoszenia spraw w przygotowaniu, wpisanie po dacie zawiadomienia jako odstępstwo „poza zawiadomieniem”; zdanie „To nie jest zawiadomienie o posiedzeniu (§ 7 ust. 1).” w informacji o postępie (`mail-templates.ts`); odrzucenie i odłożenie zgłoszenia przez zwołującego (`canRejectProposal`) |
+| § 11 ust. 2, § 12 ust. 2 | Organ może uchwalić tajność albo głosowanie imienne; wniosek o reasumpcję zgłasza się tylko na posiedzeniu, na którym odbyło się głosowanie (wersja 3). | podstawa trybu głosowania w dzienniku i protokole oraz reasumpcja tylko na tym samym posiedzeniu (`cascade.ts`, `meeting.ts`), bez zmian w wersji 4 |
+| § 11 ust. 3 | Głosowanie elektroniczne musi zachować charakter głosowania tajnego albo imiennego. | gwarancje T-1–T-9: ETag w trakcie obrad w formacie wersji 3, bez wysyłek poczty w trakcie obrad, pliki, statystyki, pokaz i zdjęcia bez śladu tajnego głosu (`app.ts`, `mail/outbox.ts`, `show.ts`, `stats.ts`) |
+| § 13 ust. 1 | Protokół podpisuje przewodniczący obrad i sekretarz lub zastępujący go członek prezydium oraz protokolant. | fakt „Protokół sporządzony” z osobą sporządzającą ze składu (`minutes_ready`), dokument „Protokół podpisany” w dokumentach po posiedzeniu (`addFiled`) |
+| § 13 ust. 2 | Protokół sporządza się w 21 dni od zakończenia obrad i jest do wglądu dla członków w biurze. | termin w „Dokumenty po posiedzeniu” i w katalogu, wiadomość „Protokół do wglądu” dopiero po fakcie „Protokół sporządzony” (`minutesMail`, `canSendMail`) |
+| § 13 ust. 3 | Protokół przyjmuje organ na następnym posiedzeniu. | „Dotyczy protokołu” w głosowaniu o przyjęciu protokołu (`protocolOf`, zgadywanie z daty w nazwie), poprawka po zamknięciu tylko przewodniczącego z powodem (`ballot_protocol_fix`, G-38), stan protokołu w katalogu |
+| § 13 ust. 4 | Protokół z kopiami uchwał udostępnia się Naczelnej Radzie na jej wniosek w 7 dni. | teczka posiedzenia (`teczka.zip` z `SPIS.txt` i sumami SHA-256, `export.ts`) |
+| § 14 ust. 3 | Posiedzenia prezydium zwołuje przewodniczący okręgowej rady. | zwołujący (`isConvener`): decyzje w sprawie zgłoszeń, wysyłka informacji o postępie przez osoby przygotowujące posiedzenie (`canSendProgress`) |
+| § 14 ust. 5 | Posiedzenie zdalne z dwustronną komunikacją; tak samo uchwały między posiedzeniami. | pokaz plików na telefonach i ekranie sali, kanał wiadomości od otwarcia (`kanal_od_otwarcia`), pliki pokazu z zakresami bajtów |
+| § 15 pkt 3 | Przewodniczący kieruje pracami okręgowej rady i odpowiada za jej prawidłowe funkcjonowanie. | poprawka „Dotyczy protokołu” po zamknięciu, dzień startu statystyk wyłączający policzone posiedzenia (z powodem, G-40), dokumenty po posiedzeniu |
+| § 15 pkt 4 | Przewodniczący przedstawia zjazdowi sprawozdania z działalności rady. | zestawienie za okres i katalog odbytych posiedzeń (`/api/zestawienie`, `/api/katalog`), dzień startu statystyk (G-40) |
+| § 16 ust. 2 | Na czas nieobecności przewodniczący wyznacza wiceprzewodniczącego, który go zastępuje. | zastępca, który zwołuje posiedzenie, decyduje o zgłoszeniach jak przewodniczący; zastępca, który nie zwołuje, ma uprawnienia wiceprzewodniczącego (4.3.1 przypis 3) |
+| § 17 ust. 2 pkt 1 | Sekretarz sporządza protokoły posiedzeń. | „Protokół sporządzony” i dokumenty po posiedzeniu wpisuje także sekretarz (`canFile`); sekretarz jako domyślna osoba sporządzająca |
+| § 17 ust. 2 pkt 2 | Sekretarz nadzoruje sprawozdawczość rady i prezydium. | zestawienie za okres dla sekretarza (`canReport`) |
+| § 17 ust. 2 pkt 3 | Sekretarz przygotowuje projekty uchwał, z wyłączeniem finansowych. | gotowość punktu „Brak projektu uchwały. Projekt przygotowuje sekretarz, a w sprawach finansowych skarbnik (§ 17 ust. 2 pkt 3, § 18 ust. 2 pkt 1).” (`workspace.ts`, `itemReadiness`) i ten sam brak w przeglądzie przed otwarciem (`cascade.ts`) |
+| § 18 ust. 2 pkt 1 | Skarbnik przygotowuje projekty uchwał związanych z gospodarką finansową. | jak wyżej (gotowość punktu i przegląd) |
+| § 19 ust. 1 pkt 1 | Członek ma obowiązek uczestniczyć w posiedzeniach. | „Moje statystyki” z obecnością i udziałem w głosowaniach (`stats.ts`), linia źródła statystyk |
+| § 23 | Obsługa kancelaryjna, finansowa i księgowa rady należy do biura izby. | biuro wpisuje jako obsługa (P w macierzach 4.3): wpisanie zgłoszenia do projektu, pliki do pokazania, informacja o postępie i dokumenty po posiedzeniu (`canSendMail`, podstawa „§ 23”), ustawienia poczty i dziennik wysyłek |
+
+Zasady aplikacji wersji 4 (`APP_RULES` w `src/shared/law.ts`, poziom 0b, linia źródła „Ustalone w aplikacji.”): `przestrzen_robocza` (przygotowanie posiedzenia), `kanal_od_otwarcia`, `poczta`, `pliki_bez_wynikow`, `material_komunikacja`, `material_udostepnienie` (pytanie 12), `pokaz_prowadzacy`, `pokaz_glosowanie`, `zdjecia` (pytanie 13), `obecnosc_czesciowa`, `statystyki_glosy`. Odpowiedzi na pytania 10–13 są w jednym miejscu (`ANSWERS` w `law.ts`): pytanie 10 (a, bez zawiadomień e-mailem, dodatek D-8 pominięty), 11 (b, `canSeeRosterStats`), 12 (b, udostępnienie), 13 (a, krąg zdjęć, dodatek D-19 pominięty).
+
 ## Na kolejne etapy
 
 - **Rada (etap 2):** wybory prezydium według Rozdziałów I i III Regulaminu wyborów:

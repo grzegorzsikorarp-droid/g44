@@ -3,11 +3,13 @@ import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import type {Account, DocType, Meeting, Membership, Organ, OrganCode, Roster} from '../shared/types.ts';
 import {defaultDocTypes} from '../shared/doctypes.ts';
-import {migrateDocTypesV3, migrateMeeting, migrateMeetingV3, migrationNotesV3} from '../shared/migrate.ts';
+import {migrateDocTypesV3, migrateDocTypesV4, migrateMeeting, migrateMeetingV3, migrateMeetingV4, migrationNotesV3, migrationNotesV4} from '../shared/migrate.ts';
+import {defaultMailSettings, mailSettingsOf, prefsOf, type AccountContact, type EmailState, type MailPrefs, type MailSettings} from '../shared/mail.ts';
+import type {PrepSpace} from '../shared/workspace.ts';
 import {defaultGeneral, defaultOrganSettings, type AuditEntry, type CaseType, type GeneralBundle, type GeneralSettings, type OrganSettings, type SettingsArea, type SiteSettings} from '../shared/settings.ts';
 import {LAW} from '../shared/law.ts';
 import {cascadeEnv} from '../shared/cascade.ts';
-import {councilMemberLabel, presidiumBasis, presidiumSince, seedOrganForms, seedRoster, seedSite} from './seed.ts';
+import {councilMemberLabel, mailController, presidiumBasis, presidiumSince, seedOrganForms, seedRoster, seedSite} from './seed.ts';
 
 const schema = `
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -36,6 +38,21 @@ CREATE TABLE IF NOT EXISTS doc_types(id TEXT PRIMARY KEY, name TEXT NOT NULL, ad
 CREATE TABLE IF NOT EXISTS settings(scope TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, account_id TEXT NOT NULL, actor TEXT NOT NULL,
   area TEXT NOT NULL, organ TEXT, key TEXT NOT NULL, label TEXT NOT NULL, before TEXT NOT NULL, after TEXT NOT NULL, basis TEXT);
+-- Wersja 4 (SPEC-4 2.2): przestrzeń robocza, wizyty (dodatek D-10), poczta i okresy członkostwa (dodatek D-14).
+CREATE TABLE IF NOT EXISTS prep_spaces(meeting_id TEXT PRIMARY KEY, organ TEXT NOT NULL, data TEXT NOT NULL, revision INTEGER NOT NULL, updated INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS prep_visits(account_id TEXT NOT NULL, meeting_id TEXT NOT NULL, last_at INTEGER NOT NULL, prev_at INTEGER, PRIMARY KEY(account_id, meeting_id));
+CREATE TABLE IF NOT EXISTS mail_batches(id TEXT PRIMARY KEY, kind TEXT NOT NULL, meeting_id TEXT, created INTEGER NOT NULL,
+  created_by TEXT NOT NULL, actor TEXT NOT NULL, subject TEXT NOT NULL, intro TEXT NOT NULL DEFAULT '', recipients INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS mail_outbox(id TEXT PRIMARY KEY, batch_id TEXT NOT NULL REFERENCES mail_batches(id), account_id TEXT NOT NULL,
+  to_address TEXT NOT NULL, to_name TEXT NOT NULL, subject TEXT NOT NULL, body_text TEXT NOT NULL, body_html TEXT NOT NULL,
+  message_id TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('czeka','wysylanie','wyslana','blad','anulowana')),
+  attempts INTEGER NOT NULL DEFAULT 0, next_at INTEGER NOT NULL, last_error TEXT NOT NULL DEFAULT '',
+  created INTEGER NOT NULL, sent_at INTEGER, purged INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS mail_outbox_due ON mail_outbox(status, next_at);
+CREATE TABLE IF NOT EXISTS email_codes(account_id TEXT PRIMARY KEY, address TEXT NOT NULL, code_hash TEXT NOT NULL, salt TEXT NOT NULL,
+  expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, sent_log TEXT NOT NULL DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS membership_periods(id INTEGER PRIMARY KEY AUTOINCREMENT, organ TEXT NOT NULL, person_id TEXT NOT NULL,
+  from_day TEXT NOT NULL, to_day TEXT, basis TEXT NOT NULL, end_basis TEXT, approx INTEGER NOT NULL DEFAULT 0);
 `;
 // Wersja 3: kolumny dodawane do tabel ze starszych wersji tylko wtedy, gdy ich brak (PRAGMA table_info).
 const columnsV3: [string, string, string][] = [
@@ -43,6 +60,20 @@ const columnsV3: [string, string, string][] = [
   ['memberships', 'since', "TEXT NOT NULL DEFAULT ''"],
   ['memberships', 'basis', "TEXT NOT NULL DEFAULT ''"],
   ['organs', 'forms', "TEXT NOT NULL DEFAULT '{}'"],
+  // Wersja 4 (SPEC-4 2.2, columnsV4).
+  ['doc_types', 'comms', "TEXT NOT NULL DEFAULT ''"],
+  ['audit', 'since', 'TEXT'],
+  ['files', 'purpose', "TEXT NOT NULL DEFAULT 'material'"],
+  ['files', 'checked', "TEXT NOT NULL DEFAULT ''"],
+  ['files', 'sha256', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'email', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'email_state', "TEXT NOT NULL DEFAULT 'brak'"],
+  ['users', 'email_confirmed_at', 'INTEGER'],
+  ['users', 'email_confirmed_by', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'prefs', "TEXT NOT NULL DEFAULT '{}'"],
+  ['users', 'avatar', 'INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'avatar_screen', 'INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'avatar_removed', "TEXT NOT NULL DEFAULT ''"],
 ];
 /** Filtr historii zmian ustawień: obszar albo lista obszarów, konto, kursor (identyfikator) i liczba wpisów. */
 export interface HistoryFilter { areas?: SettingsArea[]; area?: SettingsArea; accountId?: string; before?: number; limit?: number }
@@ -51,11 +82,26 @@ const organCodes: OrganCode[] = ['prezydium', 'rada', 'zjazd'];
 export interface UserRow {
   id: string; username: string; password: string; kind: Account['kind']; person_id: string | null;
   display_name: string; label: string; admin: number; must_change: number; disabled: number; created: number;
+  /** Wersja 4: adres i preferencje (tylko serwer, DB-19) oraz zdjęcie profilowe. */
+  email?: string; email_state?: EmailState; email_confirmed_at?: number | null; email_confirmed_by?: string; prefs?: string;
+  avatar?: number; avatar_screen?: number; avatar_removed?: string;
 }
 
-export const accountView = (row: UserRow): Account => ({
-  id: row.id, username: row.username, kind: row.kind, personId: row.person_id, displayName: row.display_name,
-  label: row.label, admin: !!row.admin, mustChange: !!row.must_change, disabled: !!row.disabled,
+/** Konto bez adresu e-mail (DB-19): adres nie trafia do sesji innych osób, `/api/people`, widoków ani kontekstu domeny. */
+export const accountView = (row: UserRow): Account => {
+  const a: Account = {
+    id: row.id, username: row.username, kind: row.kind, personId: row.person_id, displayName: row.display_name,
+    label: row.label, admin: !!row.admin, mustChange: !!row.must_change, disabled: !!row.disabled,
+  };
+  if (row.avatar) a.avatar = Number(row.avatar);
+  if (row.avatar_screen) a.avatarScreen = true;
+  if (row.avatar_removed) { try { a.avatarRemoved = JSON.parse(row.avatar_removed); } catch { /* pusty wpis */ } }
+  return a;
+};
+/** Kontakt konta do poczty (tylko serwer). */
+export const contactOf = (row: UserRow, name: string): AccountContact => ({
+  accountId: row.id, personId: row.person_id, name, kind: row.kind, email: row.email || null,
+  emailState: (row.email ? row.email_state ?? 'niepotwierdzony' : 'brak') as EmailState, prefs: prefsOf(row.prefs), disabled: !!row.disabled,
 });
 
 export class Store {
@@ -69,6 +115,8 @@ export class Store {
   constructor(dir: string) {
     this.dir = dir;
     mkdirSync(join(dir, 'files'), {recursive: true});
+    // Wersja 4 (2.2): zdjęcia profilowe poza bazą, katalog 0700, pliki 0600.
+    mkdirSync(join(dir, 'avatars'), {recursive: true, mode: 0o700});
     this.db = new DatabaseSync(join(dir, 'posiedzenia.sqlite'));
     // secure_delete: usunięte dane (np. klucze tajnych głosowań) są nadpisywane zerami.
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;');
@@ -130,11 +178,11 @@ export class Store {
   docTypes(): DocType[] {
     if (this.docTypeCache) return this.docTypeCache;
     const rows = this.db.prepare('SELECT * FROM doc_types ORDER BY ord, name').all() as any[];
-    return this.docTypeCache = rows.map(r => ({id: r.id, name: r.name, adopted: r.adopted, rejected: r.rejected, voted: !!r.voted, order: Number(r.ord), active: !!r.active, inActs: !!r.in_acts}));
+    return this.docTypeCache = rows.map(r => ({id: r.id, name: r.name, adopted: r.adopted, rejected: r.rejected, voted: !!r.voted, order: Number(r.ord), active: !!r.active, inActs: !!r.in_acts, ...(r.comms ? {comms: r.comms} : {})}));
   }
   saveDocType(t: DocType) {
-    this.db.prepare(`INSERT INTO doc_types(id,name,adopted,rejected,voted,ord,active,in_acts) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, adopted=excluded.adopted,
-      rejected=excluded.rejected, voted=excluded.voted, ord=excluded.ord, active=excluded.active, in_acts=excluded.in_acts`).run(t.id, t.name, t.adopted, t.rejected, t.voted ? 1 : 0, t.order, t.active ? 1 : 0, t.inActs ? 1 : 0);
+    this.db.prepare(`INSERT INTO doc_types(id,name,adopted,rejected,voted,ord,active,in_acts,comms) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, adopted=excluded.adopted,
+      rejected=excluded.rejected, voted=excluded.voted, ord=excluded.ord, active=excluded.active, in_acts=excluded.in_acts, comms=excluded.comms`).run(t.id, t.name, t.adopted, t.rejected, t.voted ? 1 : 0, t.order, t.active ? 1 : 0, t.inActs ? 1 : 0, t.comms ?? '');
     this.docTypeCache = null;
     this.generalCache = null;
   }
@@ -160,6 +208,8 @@ export class Store {
       if (saved) organs[code] = saved; else if (base.organs[code]) organs[code] = base.organs[code];
     }
     const general: GeneralSettings = {site: base.site, organs, caseTypes: this.setting<CaseType[]>('rodzaje-spraw') ?? []};
+    const mail = this.setting<MailSettings>('poczta');
+    if (mail) general.mail = mailSettingsOf(mail);
     return this.generalCache = {general, docTypes: this.docTypes(), revision: this.revision()};
   }
   saveSettings(scope: string, data: unknown) {
@@ -172,6 +222,7 @@ export class Store {
     this.saveSettings('siedziba', general.site);
     for (const code of organCodes) if (general.organs[code]) this.saveSettings(`organ:${code}`, general.organs[code]);
     this.saveSettings('rodzaje-spraw', general.caseTypes);
+    if (general.mail) this.saveSettings('poczta', general.mail);
   }
   revision(): number {
     const row = this.db.prepare("SELECT value FROM meta WHERE key='settings-revision'").get() as {value: string} | undefined;
@@ -280,6 +331,9 @@ export class Store {
       ON CONFLICT(id) DO UPDATE SET status=excluded.status, date=excluded.date, data=excluded.data, revision=excluded.revision, updated=excluded.updated`)
       .run(m.id, m.organ, m.kind, m.status, m.date, JSON.stringify(m), m.revision, now);
     this.cache.set(m.id, m);
+    // DB-5, T-8: licznik katalogu rośnie przy zapisie posiedzenia zakończonego (także przy zapisie, który ten stan nadaje);
+    // zapisy posiedzeń trwających go nie zmieniają.
+    if (m.status === 'zakonczone') this.bumpMeta('archiwum-revision');
   }
 
   deleteMeeting(id: string) {
@@ -302,6 +356,84 @@ export class Store {
   hasUsers() { return !!this.db.prepare('SELECT 1 FROM users LIMIT 1').get(); }
 
   close() { this.db.close(); }
+
+  // Wersja 4 (SPEC-4 2.2, 2.3): meta, licznik katalogu, kontakty, kody, przestrzeń robocza, pliki i migracja.
+  meta(key: string): string | null {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key=?').get(key) as {value: string} | undefined;
+    return row ? row.value : null;
+  }
+  setMeta(key: string, value: string | null) {
+    if (value === null) this.db.prepare('DELETE FROM meta WHERE key=?').run(key);
+    else this.db.prepare('INSERT INTO meta(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, value);
+  }
+  private bumpMeta(key: string) {
+    this.db.prepare("INSERT INTO meta(key, value) VALUES (?, '1') ON CONFLICT(key) DO UPDATE SET value=CAST(CAST(value AS INTEGER) + 1 AS TEXT)").run(key);
+  }
+  /** Licznik katalogu `archiwum-revision` (DB-5) do ETag widoku posiedzenia w przygotowaniu i po zamknięciu oraz katalogu. */
+  archiveRevision(): number { return Number(this.meta('archiwum-revision') ?? 0) || 0; }
+  /** Kontakty kont do poczty: adres, stan i preferencje (tylko serwer, DB-19). */
+  contacts(name: (row: UserRow) => string): AccountContact[] { return this.users().map(u => contactOf(u, name(u))); }
+  setEmail(accountId: string, email: string, state: EmailState, confirmed?: {at: number; by: string}) {
+    this.db.prepare('UPDATE users SET email=?, email_state=?, email_confirmed_at=?, email_confirmed_by=? WHERE id=?')
+      .run(email, email ? state : 'brak', confirmed?.at ?? null, confirmed?.by ?? '', accountId);
+  }
+  setPrefs(accountId: string, prefs: MailPrefs) { this.db.prepare('UPDATE users SET prefs=? WHERE id=?').run(JSON.stringify(prefs), accountId); }
+  setAvatar(accountId: string, version: number, removed: Account['avatarRemoved'] | null = null) {
+    this.db.prepare('UPDATE users SET avatar=?, avatar_removed=? WHERE id=?').run(version, removed ? JSON.stringify(removed) : '', accountId);
+  }
+  setAvatarScreen(accountId: string, on: boolean) { this.db.prepare('UPDATE users SET avatar_screen=? WHERE id=?').run(on ? 1 : 0, accountId); }
+  emailCode(accountId: string) {
+    return this.db.prepare('SELECT * FROM email_codes WHERE account_id=?').get(accountId) as {account_id: string; address: string; code_hash: string; salt: string; expires: number; attempts: number; sent_log: string} | undefined;
+  }
+  saveEmailCode(c: {accountId: string; address: string; hash: string; salt: string; expires: number; attempts: number; sentLog: number[]}) {
+    this.db.prepare(`INSERT INTO email_codes(account_id,address,code_hash,salt,expires,attempts,sent_log) VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(account_id) DO UPDATE SET address=excluded.address, code_hash=excluded.code_hash, salt=excluded.salt, expires=excluded.expires, attempts=excluded.attempts, sent_log=excluded.sent_log`)
+      .run(c.accountId, c.address, c.hash, c.salt, c.expires, c.attempts, JSON.stringify(c.sentLog));
+  }
+  deleteEmailCode(accountId: string) { this.db.prepare('DELETE FROM email_codes WHERE account_id=?').run(accountId); }
+
+  prepSpace(meetingId: string): PrepSpace | null {
+    const row = this.db.prepare('SELECT data FROM prep_spaces WHERE meeting_id=?').get(meetingId) as {data: string} | undefined;
+    if (!row) return null;
+    try { return JSON.parse(row.data) as PrepSpace; } catch { return null; }
+  }
+  savePrep(ws: PrepSpace, now: number) {
+    this.db.prepare(`INSERT INTO prep_spaces(meeting_id,organ,data,revision,updated) VALUES (?,?,?,?,?)
+      ON CONFLICT(meeting_id) DO UPDATE SET data=excluded.data, revision=excluded.revision, updated=excluded.updated`).run(ws.meetingId, ws.organ, JSON.stringify(ws), ws.revision, now);
+  }
+  deletePrep(meetingId: string) { this.db.prepare('DELETE FROM prep_spaces WHERE meeting_id=?').run(meetingId); this.db.prepare('DELETE FROM prep_visits WHERE meeting_id=?').run(meetingId); }
+  prepSpaces(): PrepSpace[] {
+    return (this.db.prepare('SELECT data FROM prep_spaces').all() as {data: string}[]).flatMap(r => { try { return [JSON.parse(r.data) as PrepSpace]; } catch { return []; } });
+  }
+  fileRow(id: string, meetingId: string) {
+    return this.db.prepare('SELECT * FROM files WHERE id=? AND meeting_id=?').get(id, meetingId) as {id: string; meeting_id: string; name: string; size: number; mime: string; created: number; purpose: string; checked: string; sha256: string} | undefined;
+  }
+
+  /**
+   * Jednorazowa migracja do wersji 4 (SPEC-4 2.3, DB-28) pod kluczem meta 'wersja-4', w jednej transakcji: poziomy
+   * w materiale dla komunikacji przy rodzajach dokumentów, kadencja posiedzeń z `frozen`, poziomy utrwalone zakończonych
+   * posiedzeń, poczta wyłączona z administratorem danych z danych startowych, licznik katalogu i wpisy historii raz.
+   * Znacznika `v4` nie dostaje żadne istniejące posiedzenie (DB-4). Zwraca true przy migracji.
+   */
+  migrateV4(now: number): boolean {
+    if (this.meta('wersja-4')) return false;
+    this.transaction(() => {
+      const {docTypes} = migrateDocTypesV4(this.docTypes());
+      for (const t of docTypes) this.saveDocType(t);
+      if (!this.setting('poczta')) this.saveSettings('poczta', {...defaultMailSettings, controller: mailController});
+      this.generalCache = null;
+      const bundle = this.general();
+      for (const id of this.meetingIds()) {
+        const m = structuredClone(this.meeting(id)!);
+        if (migrateMeetingV4(m, {general: bundle.general, docTypes: bundle.docTypes})) { m.revision++; this.saveMeeting(m, now); }
+      }
+      // Nowa instalacja (bez kont i posiedzeń) nie potrzebuje wpisów o przejściu.
+      if (this.hasUsers() || this.meetingIds().length) this.audit(migrationNotesV4(now));
+      if (!this.meta('archiwum-revision')) this.setMeta('archiwum-revision', '1');
+      this.setMeta('wersja-4', String(now));
+    });
+    return true;
+  }
 
   /**
    * F7, dane sprzed poprawki: głosowanie przerwane bez rozstrzygnięcia nie zachowuje wyborów. Usuwa karty tajnych

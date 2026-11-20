@@ -548,3 +548,34 @@ test('wersja 4: statystyki — własne, składu (pytanie 11) i dzień startu (G-
   assert.equal(canSetStatsSince(roster, ag, null, '2026-01-01', '2026-03-12'), 'nie');
   assert.equal(canSetStatsSince(roster, office, '2026-03-01', null, '2026-03-12'), 'tak', 'wyczyszczenie to przesunięcie wstecz');
 });
+
+// Etap D.2: macierze 4.3.1–4.3.6 w jednym zestawieniu kolumn (Adm, Biuro, Przew., Prow., Zast., Wicep., Sekr., Czł., Ref., Dor., G., Kom.).
+test('wersja 4: macierze 4.3.1–4.3.6 według kolumn SPEC-4 4.3', async () => {
+  const {applyPrep, emptySpace, PREP_REFUSALS} = await import('../src/shared/workspace.ts');
+  const {context: ctxOf} = await import('./helpers.ts');
+  const prep = state('przygotowanie', {deputy: 'ag', convener: 'si'});
+  const withRef = {...prep, agenda: prep.agenda.map((i, n) => n === 0 ? {...i, presenters: [{name: roster.persons.find(p => p.id === 'ak')!.name, role: '', kind: 'referuje' as const}]} : i)};
+  const cols: [string, Actor][] = [['Adm', adminOnly], ['Biuro', office], ['Przew.', chair], ['Zast.', ag], ['Wicep.', jw], ['Sekr.', kn], ['Czł.', eo], ['Ref.', actor('ak')], ['Dor.', adv], ['G.', guest], ['Kom.', comms]];
+  const row = (f: (a: Actor) => unknown) => Object.fromEntries(cols.map(([k, a]) => [k, f(a)]));
+  // 4.3.1: widok przestrzeni, zgłoszenie, wpisanie do projektu, odrzucenie, uwaga.
+  assert.deepEqual(row(a => canSeeWorkspace(roster, withRef, a)), {'Adm': null, 'Biuro': 'pelny', 'Przew.': 'pelny', 'Zast.': 'pelny', 'Wicep.': 'pelny', 'Sekr.': 'pelny', 'Czł.': 'pelny', 'Ref.': 'pelny', 'Dor.': 'wlasne', 'G.': null, 'Kom.': null});
+  assert.deepEqual(row(a => canPropose(roster, withRef, a)), {'Adm': false, 'Biuro': false, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': true, 'Czł.': true, 'Ref.': true, 'Dor.': true, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => canAcceptProposal(roster, withRef, a)), {'Adm': false, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => canRejectProposal(roster, withRef, a)), {'Adm': false, 'Biuro': false, 'Przew.': true, 'Zast.': false, 'Wicep.': false, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false}, 'zastępca, który nie zwołuje, jak wiceprzewodniczący (przypis 3)');
+  const ctx = ctxOf();
+  const comment = (a: Actor) => { try { applyPrep(emptySpace(withRef.id, withRef.organ), withRef, {type: 'comment_add', target: {kind: 'posiedzenie'}, text: 'Uwaga'}, a, Object.assign(ctx, {})); return true; } catch (e) { assert.equal((e as Error).message, PREP_REFUSALS.see); return false; } };
+  assert.deepEqual(row(comment), {'Adm': false, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': true, 'Czł.': true, 'Ref.': true, 'Dor.': false, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => canAddDisplay(roster, withRef, a)), {'Adm': false, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => canEditComms(roster, withRef, a)), {'Adm': false, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  // 4.3.2: informacja o postępie; ustawienia poczty (biuro zmienia, przewodniczący i wiceprzewodniczący oglądają).
+  assert.deepEqual(row(a => canSendProgress(roster, withRef, a)), {'Adm': false, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => settingsAccess(roster, a).general), {'Adm': null, 'Biuro': 'zmienia', 'Przew.': 'czyta', 'Zast.': 'czyta', 'Wicep.': 'czyta', 'Sekr.': null, 'Czł.': null, 'Ref.': null, 'Dor.': null, 'G.': null, 'Kom.': null});
+  // 4.3.4: pokaz w trakcie obrad tylko osoba prowadząca, plik dodaje też biuro.
+  const live = state('trwa', {current: 'ag', deputy: 'ag'});
+  assert.deepEqual(row(a => canShow(live, a)), {'Adm': false, 'Biuro': false, 'Przew.': false, 'Zast.': true, 'Wicep.': false, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  assert.deepEqual(row(a => canAddDisplay(roster, live, a)), {'Adm': false, 'Biuro': true, 'Przew.': false, 'Zast.': true, 'Wicep.': false, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  // 4.3.5: cudze zdjęcie ogląda krąg z pytania 13 (a).
+  assert.deepEqual(row(a => seesPhotos(roster, a)), {'Adm': true, 'Biuro': true, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': false, 'Czł.': false, 'Ref.': false, 'Dor.': false, 'G.': false, 'Kom.': false});
+  // 4.3.6: „Moje statystyki” tylko osoby ze składu.
+  assert.deepEqual(row(a => canSeeOwnStats(roster, a)), {'Adm': false, 'Biuro': false, 'Przew.': true, 'Zast.': true, 'Wicep.': true, 'Sekr.': true, 'Czł.': true, 'Ref.': true, 'Dor.': false, 'G.': false, 'Kom.': false});
+});

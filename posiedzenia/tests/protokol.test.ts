@@ -160,7 +160,11 @@ test('protokół głosowania między posiedzeniami: zmiany terminu, przerwanie z
   // Wersja 3 (DA-12): wynik ogłasza osoba, która rozpoczęła głosowanie, albo przewodniczący (brzmienie przekazane zespołowi C).
   assert.match(hidden, /Głosowanie zakończone\. Wynik ogłosi osoba, która rozpoczęła głosowanie, albo przewodniczący\./);
   assert.doesNotMatch(hidden, /Uchwała podjęta|Uchwała nie została podjęta|Wstrzymało się/);
-  const shown = doc(counted);
+  // Wersja 4 (DB-4, B1-03, T-7): głosowanie rozpoczęte w wersji 4 (`frozen.v4`) w projekcie protokołu nie podaje wyniku
+  // przed ogłoszeniem także osobie, która je rozpoczęła; po ogłoszeniu wynik jest w dokumencie.
+  assert.ok(counted.frozen?.v4);
+  assert.match(doc(counted), /Wynik ogłosi osoba, która rozpoczęła głosowanie, albo przewodniczący\./);
+  const shown = doc(apply(counted, {type: 'announce', ballotId: counted.ballots[0].id}, chair, ctx.tick()));
   assert.match(shown, /zakończone przed terminem z policzeniem głosów/);
   assert.doesNotMatch(shown, /Wynik ogłosi/);
 });

@@ -1,6 +1,6 @@
 import type {
-  Account, Actor, AgendaChange, AgendaItem, Ballot, BallotPurpose, ChairBasis, Choice, DocType, ItemKind, MaterialRef, MaterialType, Meeting, MeetingMode,
-  MeetingSettingKey, ModeDecision, OrganCode, Presentation, PresenceEvent, Presenter, Roster, Stamp, VoteMode, ClosedRef} from './types.ts';
+  Account, Actor, AgendaChange, AgendaItem, Ballot, BallotPurpose, ChairBasis, Choice, CommsLevel, DisplayFile, DisplayKind, DisplayRef, DocType, FiledDocument, FiledKind,
+  ItemKind, MaterialRef, MaterialType, Meeting, MeetingMode, MeetingSettingKey, ModeDecision, OrganCode, Presentation, PresenceEvent, Presenter, Roster, Stamp, VoteMode, ClosedRef} from './types.ts';
 import {organMembers, organOfCode, personName} from './roster.ts';
 import {
   announceFirst, computeResult, docTypeFor, everyoneVoted, hasVoted, itemNumber, memberIdsOf, openTally, pendingBefore,
@@ -16,10 +16,19 @@ import {
   canSkipListed, canStartProcedure, canView as roleCanView, deputyOf, funcOf, insteadOfDeputyText, isChairmanOf, isOfficeAccount,
   isPresiding, openOption, organRoster, takeChairOption,
 } from './role.ts';
-import {dateDots, dateTimeText, hoursText, minutesText, plural} from './text.ts';
+import {dateDots, dateTimeText, hoursText, isoDayOf, minutesText, plural} from './text.ts';
+import {
+  canAddDisplay, canEditComms, canEditProtocolOf, canFile, canFixProtocolOf, canReleaseComms, canRemoveDisplay, canSetPhotos, canShow, isCommsAccount, wasShown,
+} from './role.ts';
+import {commsChoices, commsCeiling, commsLevelOfItem, commsLevels} from './comms.ts';
+import {photosHost, photosUrlCheck, proposeProtocolOf, protocolCandidates, protocolOfIssue} from './catalog.ts';
+import {canShowNow, blockingBallot, pageNoun} from './show.ts';
+import {COMMS_LEVELS, commsLevelLabel, isCommsLevel} from './settings.ts';
 
 export class DomainError extends Error {
   status: number;
+  /** Wersja 4 (G-23): ostrzeżenie, po którym zapis wymaga potwierdzenia (`confirm: true`); serwer odpowiada 409 z polem `warning`. */
+  warning?: string;
   constructor(message: string, status = 400) { super(message); this.status = status; }
 }
 const fail = (message: string, status = 400): never => { throw new DomainError(message, status); };
@@ -63,7 +72,13 @@ export type Command =
    * (pominięcie punktu z regulaminu albo zmiana „Co jest głosowane” w trakcie obrad).
    */
   | {type: 'item_edit'; itemId: string; title?: string; note?: string; presenters?: Presenter[]; docType?: string | null;
-    kind?: ItemKind; caseType?: string | null; caseTypeGuess?: null; voteMinutes?: number | null; reason?: string}
+    kind?: ItemKind; caseType?: string | null; caseTypeGuess?: null; voteMinutes?: number | null; reason?: string;
+    /** Wersja 4: poziom i zdanie dla komunikacji (U-26, U-27, G-22; `level: null` przywraca poziom dziedziczony). */
+    comms?: {level?: CommsLevel | null; sentence?: string};
+    /** Wersja 4: „Dotyczy protokołu” (U-28, G-33); `null` usuwa, `protocolOfGuess: null` odrzuca propozycję. */
+    protocolOf?: string | null; protocolOfGuess?: null;
+    /** Wersja 4 (G-31, B2-W14): nazwa punktu, którą widziała osoba zmieniająca; inna nazwa daje 409. */
+    expect?: {title?: string}}
   | {type: 'item_move'; itemId: string; direction: -1 | 1}
   /** F8: przeniesienie punktu w projekcie porządku. `parentId` null to punkt główny, `beforeId` null to koniec grupy. */
   | {type: 'item_place'; itemId: string; parentId: string | null; beforeId: string | null}
@@ -115,7 +130,25 @@ export type Command =
   | {type: 'procedure_end'; how: 'policz' | 'przerwij'; reason?: string}
   /** F7: nowy termin co najmniej 5 minut od teraz; wersja 3: termin krótszy niż 24 godziny od rozpoczęcia wymaga `reason`. */
   | {type: 'procedure_deadline'; endsAt: number; reason?: string}
-  | {type: 'message'; text: string};
+  | {type: 'message'; text: string}
+  // Wersja 4 (SPEC-4 5.1).
+  /** Opis dla komunikacji po zamknięciu (U-49, G-39); pusty tekst usuwa opis. */
+  | {type: 'comms_note'; text: string}
+  /** „Udostępnij komunikacji” (U-48, DB-42, G-39). */
+  | {type: 'comms_release'}
+  /** Poprawka „Dotyczy protokołu” w głosowaniu po zamknięciu (G-38, K4-4). */
+  | {type: 'ballot_protocol_fix'; ballotId: string; protocolOf: string; reason: string}
+  /** Odnośnik do albumu zdjęć (U-32, G-23); pusty adres usuwa, `confirm` zapisuje mimo ostrzeżenia. */
+  | {type: 'photos_set'; url: string; confirm?: boolean}
+  /** „Protokół sporządzony” z osobą sporządzającą i datą wpisaną ręcznie (U-34, G-27); `date: null` usuwa fakt. */
+  | {type: 'minutes_ready'; date: string | null; authorPersonId?: string}
+  /** Plik do pokazania: nazwa, punkt, kolejność slajdów i opis (G-25, B3-15). */
+  | {type: 'display_edit'; id: string; title?: string; itemId?: string | null; order?: string[]; description?: string}
+  | {type: 'display_remove'; id: string}
+  /** Pokaz (U-31, G-24): rozpoczęcie albo przełączenie, strona, zakończenie. Powrót do pokazu: `present {kind: 'pokaz', id}`. */
+  | {type: 'show'; source: 'plik' | 'material'; id: string; page?: number}
+  | {type: 'show_page'; page: number}
+  | {type: 'show_end'};
 
 /** Nazwa rodzaju materiału ze słownika (F11), np. „Stanowisko”; nieznany rodzaj to „Materiał”. */
 export const materialTypeLabel = (t: MaterialType, types: DocType[] = defaultDocTypes) => docTypeName(t, types);
@@ -218,6 +251,7 @@ function templateItem(m: Meeting, ctx: Context, t: MeetingTemplate['items'][numb
     if (ms) it.presenters = [{name: personName(ctx.roster, ms.personId), role: ms.label, kind: 'referuje'}];
   }
   m.agenda.push(it);
+  guessProtocolOf(m, ctx, it);
   return it;
 }
 
@@ -236,7 +270,7 @@ export const isOrganizer = (roster: Roster, m: Pick<Meeting, 'organ'>, actor: Ac
 /** Kto widzi posiedzenie: biuro, członek organu, zaproszony (role.ts). */
 export const canView = (roster: Roster, m: Meeting, actor: Actor) => roleCanView(roster, m, actor);
 
-type LogExtra = {tag?: 'projekt' | 'ustawienia' | 'odstepstwo'; ballotId?: string; itemId?: string};
+type LogExtra = {tag?: 'projekt' | 'ustawienia' | 'odstepstwo' | 'pokaz'; ballotId?: string; itemId?: string; displayId?: string};
 function log(m: Meeting, ctx: Context, actor: Actor | null, text: string, extra: LogExtra = {}) {
   m.log.push({at: ctx.now, text, by: actor?.name ?? 'system', ...(actor ? {accountId: actor.account.id} : {}), ...extra});
 }
@@ -676,6 +710,176 @@ function modeDecisionOf(raw: unknown): ModeDecision | null {
   return null;
 }
 
+// Wersja 4 (SPEC-4 5.1): pokaz, pliki do pokazania, dokumenty po posiedzeniu, materiał dla komunikacji.
+
+const SHOW_REFUSALS = {
+  who: 'Pokazuje osoba prowadząca obrady.',
+  page: 'Tej strony nie ma w pliku.',
+  closed: 'Posiedzenie zostało zamknięte.',
+  item: 'Plik dodasz do bieżącego punktu albo do punktu, który jeszcze czeka.',
+  shown: 'Ten plik pokazano na posiedzeniu, więc zostaje w dokumentacji.',
+} as const;
+/** „Trwa głosowanie nr {n}. Pokaz wróci po jego zakończeniu.” (G-24); przy głosowaniu próbnym bez numeru. */
+const showBlocked = (m: Meeting) => {
+  const b = blockingBallot(m);
+  return b ? `Trwa ${b.purpose === 'proba' ? 'głosowanie próbne' : `głosowanie nr ${b.number}`}. Pokaz wróci po jego zakończeniu.` : 'Posiedzenie nie trwa.';
+};
+/** Liczba stron pokazu: PDF ze sprawdzenia (bez niej 999), seria obrazów, obraz 1, materiał tekstowy do 999 (B3-21). */
+function showPages(m: Meeting, source: 'plik' | 'material', id: string): number {
+  if (source === 'material') return 999;
+  const d = m.displays?.find(x => x.id === id);
+  if (!d) return 0;
+  if (d.kind === 'obrazy') return d.files.length;
+  if (d.kind === 'obraz' || d.kind === 'wideo') return 1;
+  return d.pages ?? 999;
+}
+/** Opis pliku we wpisie dziennika (B3-13): „PDF, 12 stron”, „obrazy, 8 slajdów”, „obraz”, „wideo”. */
+function displayKindText(d: DisplayRef) {
+  if (d.kind === 'pdf') return d.pages ? `PDF, ${d.pages} ${plural(d.pages, 'strona', 'strony', 'stron')}` : 'PDF';
+  if (d.kind === 'obrazy') return `obrazy, ${d.files.length} ${plural(d.files.length, 'slajd', 'slajdy', 'slajdów')}`;
+  return d.kind === 'obraz' ? 'obraz' : 'wideo';
+}
+const showTitle = (m: Meeting, s: NonNullable<Meeting['show']>) => s.source === 'plik' ? m.displays?.find(d => d.id === s.id)?.title ?? '' : m.materials.find(x => x.id === s.id)?.title ?? '';
+/** Zakończenie pokazu z wpisem (B3-13): „Zakończono pokaz „{tytuł}” na stronie {k} z {n}.”, przy obrazach „na slajdzie”, przy wideo bez strony. */
+function endShow(m: Meeting, ctx: Context, actor: Actor | null) {
+  const s = m.show;
+  if (!s) return;
+  const d = s.source === 'plik' ? m.displays?.find(x => x.id === s.id) : undefined;
+  const title = quoted(showTitle(m, s));
+  const where = d?.kind === 'wideo' || d?.kind === 'obraz' ? '' : ` na ${d?.kind === 'obrazy' ? 'slajdzie' : 'stronie'} ${s.page}${d && d.pages ? ` z ${d.kind === 'obrazy' ? d.files.length : d.pages}` : ''}`;
+  log(m, ctx, actor, `Zakończono pokaz ${title}${where}.`, {tag: 'pokaz', itemId: s.itemId ?? undefined, ...(d ? {displayId: d.id} : {})});
+  m.show = null;
+  if (m.presentation?.kind === 'pokaz') m.presentation = null;
+}
+/** Punkt, do którego w trakcie obrad można dodać plik do pokazania (G-25): bieżący albo jeszcze nierozpatrzony. */
+const liveItemOk = (m: Meeting, itemId: string | null) => {
+  if (!itemId) return false;
+  const it = m.agenda.find(i => i.id === itemId);
+  return !!it && (it.id === m.currentItemId || it.status === 'oczekuje' || it.status === 'w_toku');
+};
+const displayRefusal = (m: Meeting) => m.status === 'przygotowanie' ? 'Pliki do pokazania dodaje biuro, przewodniczący albo wiceprzewodniczący.' : 'W trakcie obrad plik do pokazania dodaje osoba prowadząca obrady albo biuro.';
+
+export interface DisplayInput { title: string; itemId: string | null; kind: DisplayKind; files: DisplayFile[]; pages: number | null; description?: string; pdf?: DisplayFile }
+/**
+ * Plik do pokazania (B3-03, B3-17, G-25): funkcja woła serwer albo wersja próbna po sprawdzeniu i zapisie pliku (jak
+ * `addMaterial`). W trakcie obrad plik trafia do bieżącego albo nierozpatrzonego punktu i dostaje znacznik „dodany
+ * w trakcie obrad” z wpisem w dzienniku; po zamknięciu nic nie dochodzi.
+ */
+export function addDisplay(meeting: Meeting, input: DisplayInput, actor: Actor, ctx: Context): {meeting: Meeting; display: DisplayRef} {
+  const m = structuredClone(meeting);
+  ensure(m.status !== 'zakonczone', SHOW_REFUSALS.closed, 409);
+  ensure(canAddDisplay(ctx.roster, m, actor), displayRefusal(m), 403);
+  const live_ = live(m);
+  if (input.itemId) ensure(m.agenda.some(i => i.id === input.itemId), 'Nie znaleziono punktu.', 404);
+  if (live_) ensure(liveItemOk(m, input.itemId), SHOW_REFUSALS.item);
+  ensure(input.files.length >= 1, 'Wybierz plik.');
+  const title = (input.title ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) || input.files[0].name;
+  const d: DisplayRef = {
+    id: ctx.newId(), title, kind: input.kind, files: input.files, pages: input.pages, itemId: input.itemId ?? null,
+    addedAt: ctx.now, addedBy: actor.name, accountId: actor.account.id,
+  };
+  const description = (input.description ?? '').replace(/\r\n?/g, '\n').trim().slice(0, 2000);
+  if (description) d.description = description;
+  if (input.pdf) d.pdf = input.pdf;
+  if (live_) {
+    d.live = true;
+    log(m, ctx, actor, `Dodano w trakcie obrad plik do pokazania ${quoted(title)} w punkcie ${itemNumber(m.agenda, d.itemId!)}.`, {tag: 'pokaz', itemId: d.itemId ?? undefined, displayId: d.id});
+  }
+  (m.displays ??= []).push(d);
+  m.revision++;
+  return {meeting: m, display: d};
+}
+
+const FILED_NAMES: Record<FiledKind, string> = {
+  protokol_sporzadzony: 'protokół sporządzony', protokol_podpisany: 'protokół podpisany (skan)', zawiadomienie: 'zawiadomienie',
+  akt_podpisany: 'akt podpisany (skan)', inny: 'dokument',
+};
+const filedRefusal = (m: Pick<Meeting, 'status'>, kind?: FiledKind) => m.status !== 'zakonczone' && kind !== 'zawiadomienie'
+  ? {text: 'Ten dokument dołącza się po zamknięciu posiedzenia.', status: 409}
+  : {text: 'Dokumenty po posiedzeniu dołącza biuro, przewodniczący albo sekretarz.', status: 403};
+export interface FiledInput { kind: FiledKind; title?: string; fileId: string; fileName: string; mime: FiledDocument['mime']; size: number; sha256: string; ballotId?: string }
+/**
+ * Dokument dołączony po posiedzeniu (U-33, G-26, K4-7): plik niczego nie ustawia, a bez faktu „Protokół sporządzony”
+ * karta pokazuje wiersz „Do sprawdzenia”. Nowy plik tego samego rodzaju zastępuje poprzedni (poza „Inny dokument”;
+ * akt podpisany zastępuje tylko akt tego samego głosowania).
+ */
+export function addFiled(meeting: Meeting, input: FiledInput, actor: Actor, ctx: Context): Meeting {
+  const m = structuredClone(meeting);
+  ensure(['protokol_sporzadzony', 'protokol_podpisany', 'zawiadomienie', 'akt_podpisany', 'inny'].includes(input.kind), 'Wybierz rodzaj dokumentu.');
+  if (m.status !== 'zakonczone' && input.kind !== 'zawiadomienie') fail(filedRefusal(m, input.kind).text, 409);
+  if (!canFile(ctx.roster, m, actor, input.kind)) { const r = filedRefusal(m, input.kind); fail(r.text, r.status === 409 ? 409 : 403); }
+  if (input.kind === 'akt_podpisany') ensure(input.ballotId && m.ballots.some(b => b.id === input.ballotId), 'Wybierz głosowanie, którego dotyczy akt.');
+  const doc: FiledDocument = {
+    id: ctx.newId(), kind: input.kind, title: (input.title ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) || input.fileName,
+    fileId: input.fileId, fileName: input.fileName.slice(0, 255), mime: input.mime, size: input.size, sha256: input.sha256,
+    ...(input.ballotId ? {ballotId: input.ballotId} : {}), at: ctx.now, by: actor.name, accountId: actor.account.id,
+  };
+  if (input.kind !== 'inny') {
+    for (const f of m.filed ?? []) {
+      if (f.kind !== input.kind || f.replacedAt) continue;
+      if (input.kind === 'akt_podpisany' && f.ballotId !== input.ballotId) continue;
+      f.replacedAt = ctx.now;
+    }
+  }
+  (m.filed ??= []).push(doc);
+  settingLog(m, ctx, actor, `Dołączono ${FILED_NAMES[input.kind]} ${quoted(doc.fileName)}.`);
+  m.revision++;
+  return m;
+}
+export function removeFiled(meeting: Meeting, id: string, actor: Actor, ctx: Context): Meeting {
+  const m = structuredClone(meeting);
+  const doc = (m.filed ?? []).find(f => f.id === id) ?? fail('Nie znaleziono pliku.', 404);
+  if (!canFile(ctx.roster, m, actor, doc.kind)) { const r = filedRefusal(m, doc.kind); fail(r.text, r.status); }
+  m.filed = (m.filed ?? []).filter(f => f.id !== id);
+  settingLog(m, ctx, actor, `Usunięto ${FILED_NAMES[doc.kind]} ${quoted(doc.fileName)}.`);
+  m.revision++;
+  return m;
+}
+
+/** Odnośnik do albumu zdjęć (G-23, DB-38): wspólna część polecenia `photos_set` i funkcji `setPhotos`. */
+function photosChange(m: Meeting, ctx: Context, actor: Actor, url: string, confirm: boolean) {
+  ensure(m.status !== 'przygotowanie', 'Odnośnik do zdjęć wpisuje się od otwarcia posiedzenia.', 409);
+  ensure(canSetPhotos(ctx.roster, m, actor), 'Odnośnik do zdjęć wpisuje biuro, przewodniczący albo osoba prowadząca obrady.', 403);
+  const check = photosUrlCheck(url);
+  if (!check.ok) return fail(check.error);
+  if (check.warning && !confirm) { const e = new DomainError(check.warning, 409); e.warning = check.warning; throw e; }
+  const had = m.photos;
+  if (!check.url) {
+    if (!had) return false;
+    delete m.photos;
+    settingLog(m, ctx, actor, 'Usunięto odnośnik do zdjęć.');
+    return true;
+  }
+  if (had?.url === check.url) return false;
+  m.photos = {url: check.url, at: ctx.now, by: actor.name, accountId: actor.account.id};
+  settingLog(m, ctx, actor, `${had ? 'Zmieniono' : 'Ustawiono'} odnośnik do zdjęć (${photosHost(check.url)}).`);
+  return true;
+}
+/** Odnośnik do zdjęć od konta „Komunikacja” (po zamknięciu), które nie widzi posiedzenia przez `apply` (4.4). */
+export function setPhotos(meeting: Meeting, url: string, actor: Actor, ctx: Context, confirm = false): Meeting {
+  const m = structuredClone(meeting);
+  if (photosChange(m, ctx, actor, url, confirm)) m.revision++;
+  return m;
+}
+/** Propozycja „Dotyczy protokołu” dla punktu „Przyjęcie protokołu” i jego podpunktów (U-28, `proposeProtocolOf`). */
+function guessProtocolOf(m: Meeting, ctx: Context, it: AgendaItem) {
+  const parent = it.parentId ? m.agenda.find(i => i.id === it.parentId) : undefined;
+  if (it.kind !== 'protokol' && parent?.kind !== 'protokol') return;
+  if (it.protocolOf || !ctx.closedMeetings) return;
+  const guess = proposeProtocolOf(ctx.closedMeetings, m, it.title);
+  if (guess) it.protocolOfGuess = guess; else delete it.protocolOfGuess;
+}
+/** Dzień zamkniętego posiedzenia do wpisów „Dotyczy protokołu”. */
+const closedLabel = (ctx: Context, id: string | null | undefined) => {
+  const c = id ? ctx.closedMeetings?.find(x => x.id === id) : undefined;
+  return c ? `${c.kind === 'procedura' ? 'głosowanie między posiedzeniami' : 'posiedzenie'} z dnia ${dateDots(c.day)}` : '';
+};
+/** Poziomy materiału dla komunikacji utrwalone przy zamknięciu (DB-41), liczone przed zmianą stanu posiedzenia. */
+const fixComms = (m: Meeting, ctx: Context) => {
+  m.closedComms = commsLevels({...m, status: 'trwa', closedComms: undefined}, envOf(ctx, m.organ));
+  m.commsInputs = 0;
+};
+
 export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context): Meeting {
   const m = structuredClone(meeting);
   const roster = ctx.roster;
@@ -848,6 +1052,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       requireDraftAnnounced(m);
       const added = applyAgendaChange(m, ctx, {op: 'dodaj', title: cmd.title, parentId: cmd.parentId ?? null, afterId: cmd.afterId ?? null}, false);
       guessCaseType(m, ctx, added);
+      guessProtocolOf(m, ctx, added);
       draftLog(m, ctx, actor, `Dodano ${added.parentId ? 'podpunkt' : 'punkt'} ${itemNumber(m.agenda, added.id)} ${quoted(added.title)}.`, added.id);
       break;
     }
@@ -855,6 +1060,65 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       const nr = () => itemNumber(m.agenda, it.id);
       const types = docTypesOf(ctx, m);
+      // G-31 (B2-W14): zmiana nazwy punktu, którą ktoś zmienił w międzyczasie, nie nadpisuje cudzej zmiany.
+      if (cmd.expect?.title !== undefined && cmd.expect.title !== it.title) fail('Ktoś zmienił nazwę punktu w międzyczasie. Sprawdź nową nazwę i zapisz ponownie.', 409);
+      if (cmd.comms !== undefined) {
+        // U-26, U-27, G-22: w przygotowaniu osoby przygotowujące, po zamknięciu biuro, przewodniczący i osoba, która
+        // zamknęła obrady; poziom tylko zaostrza (wobec poziomu 1, a po zamknięciu wobec poziomu utrwalonego).
+        ensure(prep || closed, 'Poziom w materiale dla komunikacji zmienia się w przygotowaniu albo po zamknięciu posiedzenia.', 409);
+        ensure(canEditComms(roster, m, actor), closed ? 'Po zamknięciu poziom i zdanie dla komunikacji zmienia biuro, przewodniczący albo osoba, która zamknęła obrady.' : 'Ustawienia punktu zmienia biuro, przewodniczący albo wiceprzewodniczący.', 403);
+        const env = envOf(ctx, m.organ);
+        const before = commsLevelOfItem(m, it, env);
+        const beforeSentence = it.comms?.sentence ?? '';
+        const next: NonNullable<AgendaItem['comms']> = {...(it.comms ?? {}), stamp: stampOf(ctx, actor)};
+        if (cmd.comms.level !== undefined) {
+          if (cmd.comms.level === null) delete next.level;
+          else {
+            ensure(isCommsLevel(cmd.comms.level), 'Wybierz poziom z listy.');
+            if (!commsChoices(m, it, env).includes(cmd.comms.level)) {
+              fail(closed ? 'Po zamknięciu poziom przy punkcie można tylko ograniczyć.' : `Przy tym rodzaju sprawy materiał może zawierać najwyżej „${commsLevelLabel[commsCeiling(m, it, env).level]}”.`);
+            }
+            next.level = cmd.comms.level;
+          }
+        }
+        if (cmd.comms.sentence !== undefined) {
+          const sentence = String(cmd.comms.sentence ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
+          ensure(sentence.length <= 300, 'Zdanie dla komunikacji może mieć najwyżej 300 znaków.');
+          if (sentence) next.sentence = sentence; else delete next.sentence;
+        }
+        const after = commsLevelOfItem(m, {...it, comms: next}, env);
+        const changedLevel = before !== after || (next.level ?? null) !== (it.comms?.level ?? null);
+        const changedSentence = (next.sentence ?? '') !== beforeSentence;
+        if (changedLevel || changedSentence) {
+          it.comms = next;
+          if (changedSentence) settingLog(m, ctx, actor, next.sentence ? `Ustawiono zdanie dla komunikacji w punkcie ${nr()}.` : `Usunięto zdanie dla komunikacji w punkcie ${nr()}.`, it.id);
+          if (before !== after) settingLog(m, ctx, actor, `Zmieniono poziom w materiale dla komunikacji w punkcie ${nr()} z ${quoted(commsLevelLabel[before])} na ${quoted(commsLevelLabel[after])}.`, it.id);
+          // DB-42: każda zmiana treści wpisywanej przez ludzi po zamknięciu wymaga ponownego udostępnienia.
+          if (closed) m.commsInputs = (m.commsInputs ?? 0) + 1;
+        }
+      }
+      if (cmd.protocolOf !== undefined || cmd.protocolOfGuess === null) {
+        // U-28, G-33: w przygotowaniu osoby przygotowujące, w trakcie obrad osoba prowadząca przed głosowaniem w punkcie.
+        ensure(!closed, 'Po zamknięciu poprawkę wpisuje się w głosowaniu (przewodniczący).', 409);
+        if (!canEditProtocolOf(roster, m, actor, it.id)) fail(prep ? 'Ustawienia punktu zmienia biuro, przewodniczący albo wiceprzewodniczący.' : 'W trakcie obrad zmienia to osoba prowadząca obrady, przed głosowaniem w tym punkcie.', 403);
+        if (cmd.protocolOf !== undefined) {
+          if (cmd.protocolOf) {
+            ensure(protocolCandidates(ctx.closedMeetings ?? [], m).some(c => c.id === cmd.protocolOf), 'Wybierz zamknięte posiedzenie, którego protokół czeka na przyjęcie.');
+            if (it.protocolOf !== cmd.protocolOf) {
+              it.protocolOf = cmd.protocolOf;
+              settingLog(m, ctx, actor, `Ustawiono, że punkt ${nr()} dotyczy protokołu ${closedLabel(ctx, cmd.protocolOf).replace(/^posiedzenie/, 'posiedzenia').replace(/^głosowanie/, 'głosowania')}.`, it.id);
+            }
+            delete it.protocolOfGuess;
+          } else if (it.protocolOf) {
+            delete it.protocolOf;
+            settingLog(m, ctx, actor, `Usunięto, którego protokołu dotyczy punkt ${nr()}.`, it.id);
+          }
+        }
+        if (cmd.protocolOfGuess === null && it.protocolOfGuess) {
+          delete it.protocolOfGuess;
+          settingLog(m, ctx, actor, `Odrzucono propozycję, którego protokołu dotyczy punkt ${nr()}.`, it.id);
+        }
+      }
       if (cmd.title !== undefined) {
         ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
         ensure(cmd.title.trim(), 'Podaj nazwę punktu.');
@@ -962,7 +1226,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         if (cmd.presenters !== undefined) {
           ensure(!closed, 'Posiedzenie zostało zamknięte.');
           const was = JSON.stringify(it.presenters);
-          it.presenters = cleanPresenters(cmd.presenters);
+          it.presenters = cleanPresenters(cmd.presenters, roster, m);
           if (JSON.stringify(it.presenters) !== was) settingLog(m, ctx, actor, `Zmieniono osoby przy punkcie ${nr()}.`, it.id);
         }
         if (cmd.note !== undefined) it.note = cmd.note.slice(0, 20000);
@@ -1034,6 +1298,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         ids.push(it.id);
         m.agenda.push(it);
         guessCaseType(m, ctx, it);
+        guessProtocolOf(m, ctx, it);
       }
       const count = `${parsed.items.length} ${plural(parsed.items.length, 'pozycja', 'pozycje', 'pozycji')}`;
       if (prep) log(m, ctx, actor, `Wczytano porządek obrad (${count}).`, {tag: 'projekt'});
@@ -1228,6 +1493,8 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         if (parent.status === 'oczekuje' || parent.status === 'odroczony') { parent.status = 'w_toku'; parent.startedAt ??= ctx.now; }
       }
       it.status = 'w_toku'; it.startedAt ??= ctx.now;
+      // Wersja 4 (5.1, B3-13): przejście do innego punktu kończy pokaz z wpisem.
+      if (m.show && m.show.itemId !== it.id) endShow(m, ctx, actor);
       m.currentItemId = it.id;
       m.presentation = {kind: 'punkt', id: it.id, at: ctx.now};
       log(m, ctx, actor, skipped.length
@@ -1254,6 +1521,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     case 'present': {
       requireLive(m); requireChair(m, actor);
       if (!cmd.kind) { m.presentation = null; break; }
+      if (cmd.kind === 'pokaz') {
+        // G-24: powrót do pokazu (B3-11) tylko poza głosowaniem i tylko do trwającego pokazu.
+        ensure(canShowNow(m), showBlocked(m), 409);
+        ensure(m.show && cmd.id === m.show.id, 'Pokaz nie trwa.', 409);
+        m.presentation = {kind: 'pokaz', id: m.show.id, at: ctx.now};
+        break;
+      }
       ensure(['punkt', 'material', 'glosowanie', 'wynik', 'projekt'].includes(cmd.kind) && cmd.id, 'Nieprawidłowa prezentacja.');
       if (cmd.kind === 'punkt') ensure(item(m, cmd.id), 'Nie znaleziono punktu.', 404);
       if (cmd.kind === 'material') ensure(m.materials.some(x => x.id === cmd.id), 'Nie znaleziono materiału.', 404);
@@ -1285,7 +1559,13 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       }
       const env = envOf(ctx, m.organ);
       const setting = it || cmd.purpose === 'porzadek' ? {minutes: itemVoteMinutes(env, m, it), of: 'punkt' as const} : undefined;
-      openBallot(m, ctx, actor, {itemId: cmd.itemId, purpose: cmd.purpose, subject: cmd.subject, mode: cmd.mode, minutes: cmd.minutes, materialId: cmd.materialId, docType: cmd.docType, setting});
+      const opened = openBallot(m, ctx, actor, {itemId: cmd.itemId, purpose: cmd.purpose, subject: cmd.subject, mode: cmd.mode, minutes: cmd.minutes, materialId: cmd.materialId, docType: cmd.docType, setting});
+      // DB-5, K4-4: „Dotyczy protokołu” utrwala się w głosowaniu przy jego otwarciu (punkt albo jego punkt główny).
+      if (cmd.purpose === 'protokol') {
+        const parent = it?.parentId ? item(m, it.parentId) : undefined;
+        const of = it?.protocolOf ?? parent?.protocolOf;
+        if (of) opened.protocolOf = of;
+      }
       break;
     }
     case 'vote': {
@@ -1477,7 +1757,10 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         for (const it of left) it.statusReason = reason;
       }
       for (const b of openBallots(m)) closeBallot(m, ctx, b, 'prowadzacy');
+      // Wersja 4: zamknięcie kończy pokaz z wpisem (B3-13) i utrwala poziomy materiału dla komunikacji (DB-41).
+      endShow(m, ctx, actor);
       for (const it of m.agenda) if (it.status === 'w_toku') { it.status = 'zakonczony'; it.endedAt = ctx.now; }
+      fixComms(m, ctx);
       m.status = 'zakonczone';
       m.closedAt = ctx.now;
       m.presentation = null;
@@ -1518,12 +1801,158 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
     }
     case 'message': {
       ensure(m.status !== 'zakonczone', 'Posiedzenie zostało zamknięte.');
+      // G-28 (B2-W20): kanał wiadomości działa od otwarcia posiedzenia albo rozpoczęcia głosowania między posiedzeniami.
+      ensure(m.status !== 'przygotowanie', 'Przed rozpoczęciem pisz w uwagach przygotowania. Kanał wiadomości działa od otwarcia posiedzenia.', 409);
       // DA-20, G-17: gość czyta kanał wiadomości, ale w nim nie pisze.
       ensure(canMessage(m, actor), 'Goście czytają wiadomości, ale ich nie piszą.', 403);
       const text = cmd.text.trim();
       ensure(text.length >= 1 && text.length <= 1000, 'Wiadomość może mieć od 1 do 1000 znaków.');
       m.messages.push({id: ctx.newId(), author: actor.account.id, authorName: actor.name, text, at: ctx.now});
       if (m.messages.length > 2000) m.messages.splice(0, m.messages.length - 2000);
+      break;
+    }
+    case 'comms_note': {
+      // U-49, G-39, DB-43: fakt po zamknięciu, zwykły tekst do 1500 znaków, z podpisem.
+      ensure(closed, 'Opis dla komunikacji wpisuje się po zamknięciu posiedzenia.', 409);
+      ensure(canEditComms(roster, m, actor), 'Opis dla komunikacji wpisuje biuro, przewodniczący albo osoba, która zamknęła obrady.', 403);
+      const text = String(cmd.text ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f]+/g, ' ').trim();
+      ensure(text.length <= 1500, 'Opis może mieć najwyżej 1500 znaków.');
+      if (text === (m.commsNote?.text ?? '')) break;
+      if (text) { m.commsNote = {text, at: ctx.now, by: actor.name, accountId: actor.account.id}; settingLog(m, ctx, actor, 'Zapisano opis dla komunikacji.'); }
+      else { delete m.commsNote; settingLog(m, ctx, actor, 'Usunięto opis dla komunikacji.'); }
+      m.commsInputs = (m.commsInputs ?? 0) + 1;
+      break;
+    }
+    case 'comms_release': {
+      // U-48, DB-42, G-39: udostępnienie kontu „Komunikacja”; nieważne po zmianie treści wpisywanej przez ludzi.
+      ensure(closed, 'Materiał dla komunikacji udostępnia się po zamknięciu posiedzenia.', 409);
+      ensure(canReleaseComms(roster, m, actor), 'Materiał udostępnia biuro, przewodniczący albo osoba, która zamknęła obrady.', 403);
+      const again = !!m.commsReleased;
+      m.commsReleased = {at: ctx.now, by: actor.name, accountId: actor.account.id, inputs: m.commsInputs ?? 0};
+      settingLog(m, ctx, actor, again ? 'Ponownie udostępniono materiał dla komunikacji.' : 'Udostępniono materiał dla komunikacji.');
+      break;
+    }
+    case 'ballot_protocol_fix': {
+      // G-38, K4-4: po zamknięciu tylko przewodniczący i tylko przy pustym albo sprzecznym polu, z powodem do dziennika.
+      ensure(closed, 'Poprawkę wpisuje się po zamknięciu posiedzenia.', 409);
+      ensure(canFixProtocolOf(roster, m, actor), 'Poprawkę wpisuje przewodniczący (§ 13 ust. 3, § 15 pkt 3).', 403);
+      const b = ballot(m, cmd.ballotId);
+      ensure(b.purpose === 'protokol' && protocolOfIssue(m, b, ctx.closedMeetings ?? []), 'To głosowanie ma poprawnie wskazany protokół. Skutku głosowania nie zmienia się po zamknięciu.', 409);
+      const target = (ctx.closedMeetings ?? []).find(c => c.id === cmd.protocolOf && c.organ === m.organ && c.id !== m.id && !c.working);
+      ensure(target, 'Wybierz zamknięte posiedzenie, którego protokół czeka na przyjęcie.');
+      const reason = reasonOf(cmd.reason);
+      ensure(reason, 'Podaj powód poprawki. Trafi do dziennika.');
+      const was = b.protocolOf ?? null;
+      b.protocolOfFix = {from: was, to: target.id, reason, at: ctx.now, by: actor.name, accountId: actor.account.id};
+      b.protocolOf = target.id;
+      settingLog(m, ctx, actor, `Poprawiono, którego protokołu dotyczy głosowanie nr ${b.number}, z ${quoted(was ? closedLabel(ctx, was) || 'brak' : 'brak')} na ${quoted(closedLabel(ctx, target.id))}. Powód ${quoted(reason.replace(/\.$/, ''))}.`);
+      break;
+    }
+    case 'photos_set': {
+      if (!photosChange(m, ctx, actor, String(cmd.url ?? ''), !!cmd.confirm)) return meeting;
+      break;
+    }
+    case 'minutes_ready': {
+      // U-34, G-27, DB-6, K4-7: fakt po zamknięciu z osobą sporządzającą i datą wpisaną ręcznie.
+      ensure(closed, 'Protokół sporządza się po zamknięciu posiedzenia.', 409);
+      ensure(canFile(roster, m, actor), 'Dokumenty po posiedzeniu dołącza biuro, przewodniczący albo sekretarz.', 403);
+      if (cmd.date === null) {
+        if (!m.minutesReady) return meeting;
+        delete m.minutesReady;
+        settingLog(m, ctx, actor, 'Usunięto datę sporządzenia protokołu.');
+        break;
+      }
+      const date = typeof cmd.date === 'string' ? cmd.date.trim() : '';
+      ensure(/^\d{4}-\d{2}-\d{2}$/.test(date), 'Wpisz datę sporządzenia protokołu.');
+      ensure(date <= isoDayOf(ctx.now), 'Data sporządzenia nie może być późniejsza niż dziś.');
+      ensure(!m.closedAt || date >= isoDayOf(m.closedAt), 'Data sporządzenia nie może być wcześniejsza niż zakończenie obrad.');
+      ensure(cmd.authorPersonId, 'Wybierz osobę, która sporządziła protokół.');
+      const ms = organRoster(roster, m).find(x => x.personId === cmd.authorPersonId);
+      ensure(ms, 'Protokół sporządza sekretarz albo członek Prezydium, który go zastępuje (§ 13 ust. 1, § 17 ust. 2 pkt 1).');
+      const author = {personId: ms.personId, name: name(ctx, ms.personId), func: ms.label};
+      m.minutesReady = {date, author, at: ctx.now, by: actor.name, accountId: actor.account.id};
+      settingLog(m, ctx, actor, `Protokół sporządzono ${dateDots(date)}. Sporządza ${author.name}, ${author.func}.`);
+      break;
+    }
+    case 'display_edit': {
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      ensure(canAddDisplay(roster, m, actor), displayRefusal(m), 403);
+      const d = (m.displays ?? []).find(x => x.id === cmd.id) ?? fail('Nie znaleziono pliku do pokazania.', 404);
+      const changes: string[] = [];
+      if (cmd.title !== undefined) {
+        const title = String(cmd.title).replace(/\s+/g, ' ').trim().slice(0, 200);
+        ensure(title, 'Podaj tytuł pliku do pokazania.');
+        if (title !== d.title) { changes.push(`nazwę na ${quoted(title)}`); d.title = title; }
+      }
+      if (cmd.itemId !== undefined && (cmd.itemId ?? null) !== d.itemId) {
+        if (cmd.itemId) ensure(m.agenda.some(i => i.id === cmd.itemId), 'Nie znaleziono punktu.', 404);
+        if (live(m)) ensure(liveItemOk(m, cmd.itemId ?? null), SHOW_REFUSALS.item);
+        d.itemId = cmd.itemId ?? null;
+        changes.push(d.itemId ? `punkt na ${itemNumber(m.agenda, d.itemId)}` : 'punkt na brak punktu');
+      }
+      if (cmd.order !== undefined) {
+        const ids = d.files.map(f => f.fileId);
+        ensure(Array.isArray(cmd.order) && cmd.order.length === ids.length && ids.every(id => cmd.order!.includes(id)), 'Nieprawidłowa kolejność slajdów.');
+        if (cmd.order.join() !== ids.join()) { d.files = cmd.order.map(id => d.files.find(f => f.fileId === id)!); changes.push('kolejność slajdów'); }
+      }
+      if (cmd.description !== undefined) {
+        const description = String(cmd.description).replace(/\r\n?/g, '\n').trim().slice(0, 2000);
+        if (description !== (d.description ?? '')) { if (description) d.description = description; else delete d.description; changes.push('opis'); }
+      }
+      if (!changes.length) return meeting;
+      settingLog(m, ctx, actor, `Zmieniono plik do pokazania ${quoted(d.title)}: ${changes.join(', ')}.`.replace(': ', ', '), d.itemId ?? undefined);
+      break;
+    }
+    case 'display_remove': {
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      const d = (m.displays ?? []).find(x => x.id === cmd.id) ?? fail('Nie znaleziono pliku do pokazania.', 404);
+      ensure(canAddDisplay(roster, m, actor), displayRefusal(m), 403);
+      ensure(canRemoveDisplay(roster, m, actor, d), SHOW_REFUSALS.shown, 409);
+      m.displays = (m.displays ?? []).filter(x => x.id !== d.id);
+      log(m, ctx, actor, `Usunięto plik do pokazania ${quoted(d.title)}.`, {tag: 'pokaz', ...(d.itemId ? {itemId: d.itemId} : {}), displayId: d.id});
+      break;
+    }
+    case 'show': {
+      // G-24, B3-11, B3-13: rozpoczęcie albo przełączenie pokazu przez osobę prowadzącą, poza głosowaniem.
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      ensure(canShow(m, actor), SHOW_REFUSALS.who, 403);
+      ensure(canShowNow(m), showBlocked(m), 409);
+      ensure(cmd.source === 'plik' || cmd.source === 'material', 'Nieprawidłowy pokaz.');
+      const page = cmd.page === undefined ? 1 : Math.round(Number(cmd.page));
+      let title = '', kindText = '', version: number | undefined, displayId: string | undefined;
+      if (cmd.source === 'plik') {
+        const d = (m.displays ?? []).find(x => x.id === cmd.id) ?? fail('Nie znaleziono pliku do pokazania.', 404);
+        title = d.title; kindText = displayKindText(d); displayId = d.id;
+      } else {
+        const ref = m.materials.find(x => x.id === cmd.id) ?? fail('Nie znaleziono materiału.', 404);
+        title = ref.title; version = ref.version;
+      }
+      ensure(Number.isInteger(page) && page >= 1 && page <= showPages(m, cmd.source, cmd.id), SHOW_REFUSALS.page);
+      if (m.show) endShow(m, ctx, actor);
+      m.show = {source: cmd.source, id: cmd.id, ...(version ? {version} : {}), page, itemId: m.currentItemId, startedAt: ctx.now, by: actor.name, accountId: actor.account.id};
+      m.presentation = {kind: 'pokaz', id: cmd.id, at: ctx.now};
+      const nr = m.currentItemId ? ` w punkcie ${itemNumber(m.agenda, m.currentItemId)}` : '';
+      log(m, ctx, actor, cmd.source === 'plik' ? `Pokazano plik ${quoted(title)} (${kindText})${nr}.` : `Pokazano materiał ${quoted(title)}${nr}.`,
+        {tag: 'pokaz', ...(m.currentItemId ? {itemId: m.currentItemId} : {}), ...(displayId ? {displayId} : {})});
+      break;
+    }
+    case 'show_page': {
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      ensure(canShow(m, actor), SHOW_REFUSALS.who, 403);
+      ensure(canShowNow(m), showBlocked(m), 409);
+      ensure(m.show && m.presentation?.kind === 'pokaz', 'Pokaz nie trwa.', 409);
+      const page = Math.round(Number(cmd.page));
+      ensure(Number.isInteger(page) && page >= 1 && page <= showPages(m, m.show.source, m.show.id), SHOW_REFUSALS.page);
+      if (page === m.show.page) return meeting;
+      m.show.page = page;
+      break;
+    }
+    case 'show_end': {
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      ensure(live(m), 'Posiedzenie nie trwa.', 409);
+      ensure(canShow(m, actor), SHOW_REFUSALS.who, 403);
+      if (!m.show) return meeting;
+      endShow(m, ctx, actor);
       break;
     }
     default:
@@ -1540,7 +1969,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
 }
 
 // F12: najwyżej 6 osób; wiersz bez imienia i nazwiska i bez funkcji znika, a z samą funkcją jest błędem.
-function cleanPresenters(list: unknown): Presenter[] {
+function cleanPresenters(list: unknown, roster?: Roster, m?: Pick<Meeting, 'organ' | 'frozen'>): Presenter[] {
   ensure(Array.isArray(list), 'Nieprawidłowa lista osób przy punkcie.');
   const clean = (v: unknown, max: number) => typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '';
   const out: Presenter[] = [];
@@ -1549,7 +1978,13 @@ function cleanPresenters(list: unknown): Presenter[] {
     if (!name && !role) continue;
     ensure(name, 'Wpisz imię i nazwisko osoby albo usuń ten wiersz.');
     ensure(raw.kind === 'referuje' || raw.kind === 'prowadzi', 'Wybierz, czy osoba referuje, czy prowadzi punkt.');
-    out.push({name, role, kind: raw.kind});
+    const p: Presenter = {name, role, kind: raw.kind};
+    // B2-W11: osoba ze składu rozpoznana po imieniu i nazwisku (dokładnie jedna), bez wpisu w dzienniku.
+    if (roster && m) {
+      const same = organRoster(roster, m).filter(ms => personName(roster, ms.personId) === name);
+      if (same.length === 1) p.personId = same[0].personId;
+    }
+    out.push(p);
   }
   ensure(out.length <= 6, 'Przy punkcie można wpisać najwyżej 6 osób.');
   return out;
@@ -1594,6 +2029,7 @@ function endProcedure(m: Meeting, ctx: Context, actor: Actor, how: 'policz' | 'p
     else abortBallot(m, ctx, actor, b, reason);
   }
   for (const it of m.agenda) if (it.status === 'w_toku') { it.status = 'zakonczony'; it.endedAt = ctx.now; }
+  fixComms(m, ctx);
   m.status = 'zakonczone';
   m.closedAt = ctx.now;
   m.presentation = null;
@@ -1653,6 +2089,13 @@ export function duplicateMeeting(src: Meeting, input: {id: string; now: number; 
     return copy;
   });
   m.materials = materials;
+  // Wersja 4 (5.1): pliki do pokazania przechodzą razem z punktami, bez znacznika „dodany w trakcie obrad”. Pliki na dysku
+  // kopiuje wywołujący (identyfikatory plików zostają ze źródła, dopóki ich nie zamieni).
+  const displays = (src.displays ?? []).filter(d => !d.itemId || ids.has(d.itemId)).map(d => {
+    const {live: _live, ...rest} = structuredClone(d);
+    return {...rest, id: input.newId(), itemId: d.itemId ? ids.get(d.itemId)! : null, addedAt: input.now, addedBy: input.createdBy, accountId: input.accountId ?? ''};
+  });
+  if (displays.length) m.displays = displays;
   const day = src.date ? src.date.split('-').reverse().join('.') : '';
   m.log = [{at: input.now, text: `Utworzono przez powielenie ${src.kind === 'procedura' ? 'głosowania między posiedzeniami' : 'posiedzenia'} z dnia ${day}.`, by: input.createdBy, ...(input.accountId ? {accountId: input.accountId} : {})}];
   // Pominięte punkty z § 9 ust. 2 wracają na zwykłe miejsca (rozdz. 2.9, tabela powielenia).

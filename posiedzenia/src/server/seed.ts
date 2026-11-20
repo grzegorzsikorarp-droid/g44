@@ -85,3 +85,8 @@ export const seedMemberships: Membership[] = [
 
 export const seedRoster: Roster = {organs: seedOrgans, persons: seedPersons, memberships: seedMemberships};
 
+
+/** Administrator danych w stopce wiadomości e-mail (SPEC-4 2.3, B2 3.3); wersja próbna ma własną nazwę fikcyjną. */
+export const mailController = 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku';
+/** Biuro w wiadomościach e-mail („Wiadomość wysyła …”, 6.7.2); wersja próbna ma własną nazwę bez nazwy Izby. */
+export const mailOffice = 'biuro Okręgowej Izby Pielęgniarek i Położnych w Słupsku';

@@ -1,11 +1,12 @@
 import type {Actor, Ballot, ClosedRef, Meeting, Roster} from './types.ts';
-import {canSeeCatalog, isCommsAccount, seesPhotosLink} from './role.ts';
+import {canReleaseComms, canSeeCatalog, isCommsAccount, isService, organRoster, seesPhotosLink} from './role.ts';
 import {lawOf} from './law.ts';
 import {ballotDocType} from './rules.ts';
 import {meetingTurnout, periodTurnout} from './turnout.ts';
 import {actBallots, actNumber, paperDay, t} from './papers.ts';
 import type {CascadeEnv} from './cascade.ts';
-import {commsLevelOfItem} from './comms.ts';
+import {commsChangedAt, commsLevelOfItem, commsRelease} from './comms.ts';
+import type {ArchiveInfo} from './view.ts';
 import {dateDots, isoDayOf, timeOf} from './text.ts';
 import {csv} from './csv.ts';
 
@@ -300,4 +301,27 @@ export function periodReportCsv(r: PeriodReport, part: 'posiedzenia' | 'akty'): 
     r.meetings.map(m => [m.day, m.kind, m.mode, m.protocolNumber, m.protocol, m.turnout, m.acts, m.photos ? 'jest' : 'brak']));
   return csv(['Rodzaj sprawy', 'Liczba', 'Numer', 'W sprawie', 'Data posiedzenia'],
     r.actsByCase.flatMap(g => g.level === 'lista' ? g.items.map(i => [g.group, '', i.number, i.subject, i.day]) : [[g.group, g.count, g.numbers.join(', '), '', '']]));
+}
+
+/**
+ * Dane zakończonego posiedzenia do widoku (`ArchiveInfo`, SPEC-4 2.1): przyjęcie i stan protokołu, chwila zmiany materiału
+ * dla komunikacji, uwaga o wiadomościach sprzed rozpoczęcia starego głosowania między posiedzeniami (DB-15, biuro
+ * i przewodniczący), stan udostępnienia (osoby z `canReleaseComms` i konto „Komunikacja”) i wiersze „Do sprawdzenia”
+ * (biuro i przewodniczący). Serwer i wersja próbna liczą to z tej samej listy posiedzeń.
+ */
+export function archiveInfo(m: Meeting, all: Meeting[], actor: Actor, roster: Roster, today: string, o: {adoptions?: Map<string, Adoption>; closed?: ClosedRef[]} = {}): ArchiveInfo | undefined {
+  if (m.status !== 'zakonczone') return undefined;
+  const adoptions = o.adoptions ?? protocolAdoptions(all);
+  const adoption = adoptions.get(m.id) ?? null;
+  const out: ArchiveInfo = {adoption, protocol: protocolState(m, adoption, today), commsChangedAt: commsChangedAt(m, adoption)};
+  const chairman = !!actor.personId && organRoster(roster, m).some(x => x.personId === actor.personId && x.func === 'przewodniczacy')
+    || !!actor.personId && roster.memberships.some(x => x.organ === m.organ && x.personId === actor.personId && x.func === 'przewodniczacy');
+  const office = isService(actor);
+  if ((office || chairman) && m.kind === 'procedura' && !m.frozen?.v4 && m.messages.some(x => x.at < (m.openedAt ?? 0))) out.legacyPrepMessages = true;
+  if (canReleaseComms(roster, m, actor) || isCommsAccount(actor)) out.commsRelease = commsRelease(m);
+  if (office || chairman) {
+    const checks = protocolChecks(m, o.closed ?? closedRefs(all, adoptions));
+    if (checks.length) out.checks = checks;
+  }
+  return out;
 }

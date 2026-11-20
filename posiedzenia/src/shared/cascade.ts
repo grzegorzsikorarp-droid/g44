@@ -5,6 +5,9 @@ import {itemNumber, needsVote, orderedAgenda, quorumOf, unannounced} from './rul
 import {organOfCode, personName} from './roster.ts';
 import {deputyOf, organRoster} from './role.ts';
 import {dateDots, dateDotsOf, dateTimeText, minutesText, plural, timeOf} from './text.ts';
+import {itemReadiness} from './workspace.ts';
+import {commsCeiling} from './comms.ts';
+import type {ClosedRef} from './types.ts';
 
 export type {Effective, SettingSource} from './types.ts';
 
@@ -22,14 +25,21 @@ export interface CascadeEnv {
   previousOpenedAt?: number | null;
   /** Dodatek U-03: numery protokołów innych posiedzeń tego organu z datami (do propozycji numeru). */
   protocols?: {date: string; number: string}[];
+  /** Wersja 4: zamknięte posiedzenia do propozycji „Dotyczy protokołu” w przeglądzie (U-28) i liczba zgłoszeń czekających na decyzję zwołującego (6.5). */
+  closedMeetings?: ClosedRef[];
+  proposalsWaiting?: number;
 }
 /** Środowisko kaskady dla organu z pakietu ustawień (serwer, wersja próbna i domena). */
-export function cascadeEnv(input: {roster: Roster; bundle: GeneralBundle; organ: OrganCode; accounts?: CascadeEnv['accounts']; law?: Partial<Record<OrganCode, LegalProfile>>; composition?: CascadeEnv['composition']; previousOpenedAt?: number | null; protocols?: CascadeEnv['protocols']}): CascadeEnv {
-  return {
+export function cascadeEnv(input: {roster: Roster; bundle: GeneralBundle; organ: OrganCode; accounts?: CascadeEnv['accounts']; law?: Partial<Record<OrganCode, LegalProfile>>; composition?: CascadeEnv['composition']; previousOpenedAt?: number | null; protocols?: CascadeEnv['protocols'];
+  closedMeetings?: ClosedRef[]; proposalsWaiting?: number}): CascadeEnv {
+  const env: CascadeEnv = {
     law: input.law?.[input.organ] ?? lawOf(input.organ), general: input.bundle.general, docTypes: input.bundle.docTypes, roster: input.roster,
     organ: organOfCode(input.roster, input.organ), accounts: input.accounts, revision: input.bundle.revision,
     composition: input.composition, previousOpenedAt: input.previousOpenedAt, protocols: input.protocols,
   };
+  if (input.closedMeetings) env.closedMeetings = input.closedMeetings;
+  if (input.proposalsWaiting) env.proposalsWaiting = input.proposalsWaiting;
+  return env;
 }
 /**
  * Dane z innych posiedzeń do środowiska kaskady (serwer i wersja próbna liczą to samo): ostatnie otwarcie wcześniejszego
@@ -124,12 +134,18 @@ export function freeze(env: CascadeEnv, m: Meeting, now: number): FrozenSettings
       voteMinutes: mark(liveSetting(env, m, 'voteMinutes')), motionMinutes: mark(liveSetting(env, m, 'motionMinutes')),
       messagesFromStart: mark(liveSetting(env, m, 'messagesFromStart')),
     } as Record<MeetingSettingKey, Effective<unknown>>,
+    // Wersja 4 (DB-4, DB-37): posiedzenie otwarte w wersji 4 i kadencja z ustawień ogólnych (U-02, U-35).
+    v4: true,
+    term: {name: env.general.site.term, number: env.general.site.termNumber},
   };
 }
 /** Zamrożenie przy przejściu na wersję 3 (rozdz. 2.10): wartości domyślne, skład i słownik z chwili migracji. */
 export function freezeLegacy(env: CascadeEnv, m: Meeting, now: number): FrozenSettings {
   const f = freeze(env, {...m, settings: undefined, template: undefined}, now);
   f.legacy = true;
+  // Posiedzenie sprzed wersji 4 nigdy nie dostaje znacznika `v4` (DB-4); kadencję uzupełnia migracja wersji 4.
+  delete f.v4;
+  delete f.term;
   // Posiedzenia sprzed wersji 3 mają kanał wiadomości jak w wersji 2 (gdy ktoś napisze), niezależnie od ustawień ogólnych.
   f.meeting.messagesFromStart = {value: false, source: 'ogolne', level: 1, frozen: true};
   for (const key of Object.keys(f.meeting) as MeetingSettingKey[]) f.meeting[key] = {...f.meeting[key], legacy: true};
@@ -365,9 +381,16 @@ function review(env: CascadeEnv, m: Meeting, items: MeetingEffective['items'], n
   const posiedzenie = m.kind === 'posiedzenie';
   // W głosowaniu między posiedzeniami pozycje to sprawy, a nie punkty porządku obrad.
   const unit = (it: AgendaItem) => !posiedzenie ? 'Sprawa' : it.parentId ? 'Podpunkt' : 'Punkt';
+  // Wersja 4 (6.5, B2-W12): braki z gotowości punktów (jedna funkcja `itemReadiness` z workspace.ts), więc karta
+  // „Przygotowanie posiedzenia” i przegląd mają te same braki. Brzmienie braku materiału zostaje z wersji 3.
+  const genitive: Record<string, string> = {uchwala: 'uchwały', stanowisko: 'stanowiska', oswiadczenie: 'oświadczenia', rezolucja: 'rezolucji', deklaracja: 'deklaracji', apel: 'apelu'};
   for (const it of m.agenda) {
-    if (it.kind === 'sprawa' && items[it.id].voted.value && !it.materialIds.length) {
-      rows.push({group: 'uzupelnic', text: `${unit(it)} ${itemNumber(m.agenda, it.id)} bez materiału.`, itemId: it.id, target: `punkt:${it.id}`});
+    const nr = itemNumber(m.agenda, it.id);
+    for (const c of itemReadiness(env, m, it, {items})) {
+      if (c.ok || c.key === 'rodzaj_sprawy') continue;
+      const what = c.key === 'material' ? 'materiału' : c.key === 'referent' ? 'osoby referującej'
+        : `projektu ${genitive[items[it.id].docType.value ?? ''] ?? 'aktu'}`;
+      rows.push({group: 'uzupelnic', text: `${unit(it)} ${nr} bez ${what}.`, itemId: it.id, target: `punkt:${it.id}`});
     }
   }
   if (posiedzenie) {
@@ -383,6 +406,18 @@ function review(env: CascadeEnv, m: Meeting, items: MeetingEffective['items'], n
     if (!guess || it.caseType) continue;
     rows.push({group: 'sprawdzic', text: `Propozycja rodzaju sprawy w ${posiedzenie ? 'punkcie' : 'sprawie'} ${itemNumber(m.agenda, it.id)} »${guess.name}«.`, itemId: it.id, target: `punkt:${it.id}`, actions: ['przyjmij', 'odrzuc']});
   }
+  // Wersja 4 (6.5): propozycja „Dotyczy protokołu”, sprawy tylko w liczbie w materiale dla komunikacji (U-24a) i zgłoszenia.
+  for (const it of m.agenda) {
+    if (!it.protocolOfGuess || it.protocolOf) continue;
+    const c = env.closedMeetings?.find(x => x.id === it.protocolOfGuess);
+    const what = c ? `protokół ${c.kind === 'procedura' ? 'głosowania między posiedzeniami' : 'posiedzenia'} z dnia ${dateDots(c.day)}` : 'protokół poprzedniego posiedzenia';
+    rows.push({group: 'sprawdzic', text: `Propozycja w punkcie ${itemNumber(m.agenda, it.id)} »${what}«.`, itemId: it.id, target: `punkt:${it.id}`, actions: ['przyjmij', 'odrzuc']});
+  }
+  const counted = m.agenda.filter(it => commsCeiling(m, it, env).source === 'aplikacja').length;
+  if (counted) {
+    rows.push({group: 'sprawdzic', text: `W materiale dla komunikacji ${counted} ${plural(counted, 'sprawa bez rodzaju sprawy będzie', 'sprawy bez rodzaju sprawy będą', 'spraw bez rodzaju sprawy będzie')} tylko w liczbie.`});
+  }
+  if (env.proposalsWaiting) rows.push({group: 'sprawdzic', text: `Zgłoszenia czekające na decyzję zwołującego ${env.proposalsWaiting}.`});
   const members = organRoster(env.roster, m).length;
   if (env.composition && (env.previousOpenedAt == null || env.composition.at > env.previousOpenedAt)) {
     rows.push({group: 'sprawdzic', text: `Skład ${env.organ.forms.genitive} zmieniono ${dateDotsOf(env.composition.at)}, ${env.composition.text}. Wymagane kworum ${quorumOf(law, members)} z ${members}.`, target: 'sklad'});

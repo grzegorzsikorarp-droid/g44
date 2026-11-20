@@ -18,8 +18,9 @@ import {canDownloadPaper} from '../src/shared/role.ts';
 import {seesUnannounced, viewFor} from '../src/shared/view.ts';
 import {WZORCE_NOW, actorOf} from './wzorce.ts';
 import {chair, closedMeeting, envWith, last, NOW, openedMeeting} from './scenariusz-v4.ts';
+import {startServer, people} from './serwer-v4.ts';
 
-// Tajność w wersji 4 (SPEC-4 0.3; etap D.1: T-1, T-6, T-7). T-5 i T-8 sprawdza etap D.2 (trasy, ETag, poczta).
+// Tajność w wersji 4 (SPEC-4 0.3; etap D.1: T-1, T-6, T-7; etap D.2: T-5, T-8 i K4-13 przez API, poczta w mail-api.test.ts).
 
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/[ ⁠]/g, ' ').replace(/\s+/g, ' ');
 
@@ -150,4 +151,58 @@ test('T-7: dane-wzor 131cd279 (głosowanie nr 2 bez ogłoszenia, wpis bez ballot
     }
     assert.ok(checked >= 8, `sprawdzono dziennik ${checked} kont`);
   } finally { store.close(); rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('T-5, 2.4: w statusie „trwa” ETag w formacie wersji 3, bez przestrzeni roboczej, archiwum i dnia; widok bez pól przygotowania', async () => {
+  const {origin, stop, app} = await startServer();
+  try {
+    const p = await people(origin);
+    const eo = p.members.get('eo')!, ak = p.members.get('ak')!;
+    const m = (await p.admin.ok('/api/meetings', {kind: 'posiedzenie', date: '2026-12-03', time: '10:00', place: 'Sala posiedzeń'})).meeting;
+    const day = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Warsaw'}).format(Date.now());
+    await eo.ok(`/api/meetings/${m.id}/przygotowanie`, {cmd: {type: 'proposal_add', title: 'Sprawa do wpisania', justification: 'Uzasadnienie zgłoszenia.'}});
+    const prepRes = await eo.raw(`/api/meetings/${m.id}`);
+    const prepView = (await prepRes.json()).meeting;
+    const ws = app.store.prepSpace(m.id)!;
+    assert.equal(prepRes.headers.get('etag'), `"0.4.0-${prepView.revision}-${app.store.revision()}-${app.store.archiveRevision()}-${ws.revision}-${day}-${p.idOf('eo.test')}"`);
+    assert.equal(prepView.prep.proposals.length, 1);
+    await p.si.ok(`/api/meetings/${m.id}/command`, {type: 'open'});
+    const etags: string[] = [];
+    for (const [c, u] of [[eo, 'eo.test'], [ak, 'ak.test']] as const) {
+      const r = await c.raw(`/api/meetings/${m.id}`);
+      const v = (await r.json()).meeting;
+      const etag = r.headers.get('etag')!;
+      assert.equal(etag, `"0.4.0-${v.revision}-${app.store.revision()}-${p.idOf(u)}"`, 'format wersji 3 (T-5)');
+      etags.push(etag.replace(p.idOf(u), ''));
+      for (const k of ['prep', 'archive']) assert.equal(v[k], undefined, k);
+    }
+    assert.equal(etags[0], etags[1], 'ETag różni się tylko kontem');
+    const live = await eo.call(`/api/meetings/${m.id}/przygotowanie`);
+    assert.deepEqual([live.status, live.body.error], [409, 'Przygotowanie będzie można przeczytać po zamknięciu posiedzenia.']);
+    const proposal = await eo.call(`/api/meetings/${m.id}/przygotowanie`, {cmd: {type: 'comment_add', target: {kind: 'posiedzenie'}, text: 'Uwaga w trakcie.'}});
+    assert.equal(proposal.status, 409);
+    assert.equal(Number((app.store.db.prepare('SELECT COUNT(*) AS n FROM mail_batches').get() as {n: number}).n), 0, 'w trakcie obrad bez wysyłek');
+  } finally { await stop(); }
+});
+
+test('T-8, DB-5: zapisy trwającego posiedzenia nie zmieniają licznika katalogu; zamknięcie go podnosi', async () => {
+  const {origin, stop, app} = await startServer();
+  try {
+    const p = await people(origin);
+    const m = (await p.admin.ok('/api/meetings', {kind: 'posiedzenie', date: '2026-12-03', time: '10:00', place: 'Sala posiedzeń'})).meeting;
+    const before = app.store.archiveRevision();
+    await p.si.ok(`/api/meetings/${m.id}/command`, {type: 'open'});
+    for (const [pid, c] of p.members) if (pid !== 'si') await c.ok(`/api/meetings/${m.id}/command`, {type: 'presence', who: pid, present: true});
+    await p.si.ok(`/api/meetings/${m.id}/command`, {type: 'presence_confirm_all'});
+    await p.si.ok(`/api/meetings/${m.id}/command`, {type: 'quorum'});
+    await p.members.get('eo')!.ok(`/api/meetings/${m.id}/command`, {type: 'message', text: 'Pytanie w trakcie obrad.'});
+    assert.equal(app.store.archiveRevision(), before, 'T-8: licznik katalogu bez zmian w trakcie obrad');
+    const catalog1 = await p.members.get('eo')!.raw('/api/katalog');
+    const etag1 = catalog1.headers.get('etag');
+    const {m: closed} = closedMeeting({v4: true});
+    app.store.saveMeeting({...closed, id: 'm-zamkniete'}, Date.now());
+    assert.equal(app.store.archiveRevision(), before + 1);
+    const catalog2 = await p.members.get('eo')!.raw('/api/katalog');
+    if (etag1) assert.notEqual(catalog2.headers.get('etag'), etag1);
+  } finally { await stop(); }
 });

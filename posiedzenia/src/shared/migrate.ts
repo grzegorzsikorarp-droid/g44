@@ -2,7 +2,8 @@ import type {Account, AgendaItem, DocType, ItemKind, LogEntry, Meeting, Roster} 
 import {agendaBasis, isLockedDocType, type LegalProfile} from './law.ts';
 import {completeAgenda} from './agenda.ts';
 import {freezeLegacy, type CascadeEnv} from './cascade.ts';
-import type {AuditEntry} from './settings.ts';
+import {defaultCommsLevel, type AuditEntry} from './settings.ts';
+import {commsLevels} from './comms.ts';
 
 // Wczytanie posiedzenia zapisanego przed wersją 2 (decyzje zleceniodawcy z 19.11.2026). Zmiana jest idempotentna
 // i działa w miejscu: serwer stosuje ją przy każdym odczycie z bazy, a wersja próbna przy odczycie z localStorage.
@@ -97,4 +98,48 @@ export function migrationNotesV3(accounts: Pick<Account, 'kind' | 'admin' | 'dis
     out.push(entry(`Uprawnienia administratora konta ${name} nie dają już uprawnień biura w posiedzeniach (wersja 3).`));
   }
   return out;
+}
+
+// Wersja 4 (SPEC-4 2.3, DB-28): jedna migracja jednorazowa pod kluczem meta 'wersja-4' (wersja próbna: `state.v4`).
+// Znacznik `frozen.v4` NIE trafia do żadnego istniejącego posiedzenia (dopisuje go dopiero `freeze()` przy otwarciu),
+// więc projekty protokołów posiedzeń sprzed wersji 4 zostają bez zmian (DB-4). Migracja przy odczycie (migrateMeeting)
+// pól wersji 4 nie dotyka.
+
+/** Rodzaje dokumentów z poziomem w materiale dla komunikacji (U-24) tam, gdzie kolumna jest pusta. */
+export function migrateDocTypesV4(types: DocType[]): {docTypes: DocType[]; changed: boolean} {
+  let changed = false;
+  const docTypes = types.map(t => {
+    if (t.comms) return t;
+    changed = true;
+    return {...t, comms: defaultCommsLevel(t)};
+  });
+  return {docTypes, changed};
+}
+/**
+ * Posiedzenie po przejściu na wersję 4: kadencja przy otwarciu (`frozen.term`, DB-37) z bieżących ustawień ogólnych dla
+ * posiedzeń z `frozen` bez kadencji oraz poziomy materiału dla komunikacji utrwalone (`closedComms`, DB-41) dla posiedzeń
+ * zakończonych bez tego pola, według wartości domyślnych. Zwraca true, gdy coś zmieniono (wtedy trzeba zapisać posiedzenie
+ * z `revision + 1`). Drugi przebieg niczego nie zmienia.
+ */
+export function migrateMeetingV4(m: Meeting, env: Pick<CascadeEnv, 'general' | 'docTypes'>): boolean {
+  let changed = false;
+  if (m.frozen && !m.frozen.term) {
+    m.frozen.term = {name: env.general.site.term, number: env.general.site.termNumber};
+    changed = true;
+  }
+  if (m.status === 'zakonczone' && !m.closedComms) {
+    m.closedComms = commsLevels({...m, status: 'trwa'}, env);
+    changed = true;
+  }
+  return changed;
+}
+/** Wpisy historii zmian migracji wersji 4 (rozdz. 2.3), każdy raz. */
+export function migrationNotesV4(now: number): Omit<AuditEntry, 'id'>[] {
+  const entry = (area: AuditEntry['area'], text: string): Omit<AuditEntry, 'id'> => ({at: now, accountId: '', actor: 'Aplikacja', area, key: 'wersja-4', label: 'Przejście na wersję 4', before: '', after: text});
+  return [
+    entry('rodzaje_dokumentow', 'Rodzaje dokumentów mają poziom w materiale dla komunikacji (wersja 4).'),
+    entry('posiedzenia', 'Posiedzenia mają zapisaną kadencję (wersja 4).'),
+    entry('posiedzenia', 'Zakończone posiedzenia mają utrwalone poziomy materiału dla komunikacji (wersja 4).'),
+    entry('poczta', 'Poczta e-mail jest wyłączona do czasu ustawienia przez biuro (wersja 4).'),
+  ];
 }

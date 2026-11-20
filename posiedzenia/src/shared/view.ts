@@ -1,8 +1,10 @@
 import type {Actor, Ballot, Choice, Meeting, Roster} from './types.ts';
 import {hideTally, itemNumber, unannounced} from './rules.ts';
 import {cleanTitle} from './agenda.ts';
-import {canAnnounce, canPrepare, isPresiding, procedureStarter, seesLog} from './role.ts';
+import {canAnnounce, canDownloadComms, canEditComms, canPrepare, canSeeWorkspace, isPresiding, procedureStarter, seesLog, seesPhotosLink} from './role.ts';
 import {effectiveMeeting, type CascadeEnv, type MeetingEffective} from './cascade.ts';
+import type {Adoption, ProtocolState} from './catalog.ts';
+import type {PrepView} from './workspace.ts';
 
 /**
  * Kto widzi wynik zamkniętego głosowania przed jego ogłoszeniem (Z5, DA-3): tylko osoba, która go ogłasza. Na posiedzeniu
@@ -16,15 +18,30 @@ export function seesUnannounced(m: Meeting, actor: Actor, roster?: Roster) {
 }
 
 export type ViewBallotFields = {voted: string[]; myVote?: Choice; resultHidden?: boolean};
+/**
+ * Wersja 4 (SPEC-4 2.1): dane zakończonego posiedzenia liczone z listy posiedzeń (serwer i wersja próbna): przyjęcie
+ * protokołu, stan protokołu, chwila zmiany materiału dla komunikacji, uwaga o starych wiadomościach (DB-15), stan
+ * udostępnienia (DB-42) i wiersze „Do sprawdzenia” (G-38, K4-7).
+ */
+export interface ArchiveInfo {
+  adoption: Adoption | null; protocol: ProtocolState;
+  commsChangedAt: number | null; legacyPrepMessages?: true;
+  commsRelease?: 'brak' | 'udostepniony' | 'zmieniony';
+  checks?: string[];
+}
 /** Posiedzenie w widoku osoby: głosowania z polami widoku (lista głosujących, własny głos, ukryty wynik). */
-export type MeetingView = Omit<Meeting, 'ballots'> & {ballots: (Ballot & ViewBallotFields)[]; effective?: MeetingEffective};
+export type MeetingView = Omit<Meeting, 'ballots'> & {ballots: (Ballot & ViewBallotFields)[]; effective?: MeetingEffective;
+  /** Wersja 4: przestrzeń robocza tylko w przygotowaniu i tylko dla `canSeeWorkspace` (T-5, S-25). */
+  prep?: PrepView | null;
+  /** Wersja 4: tylko posiedzenie zakończone (DB-5). */
+  archive?: ArchiveInfo};
 
 // Widok dla osoby: w trakcie głosowania nikt nie widzi cudzych głosów; po zamknięciu nazwiska z wyborami są jawne
 // tylko w głosowaniu imiennym. Do ogłoszenia wyniku (F2) wynik, wykaz imienny i liczby we wpisie dziennika widzi
 // tylko osoba, która go ogłasza (seesUnannounced); pozostali dostają `resultHidden: true` bez `result`.
 // Wersja 3: z `env` widok dołącza wartości skuteczne (`effective`); przegląd przed otwarciem tylko dla canPrepare.
 // `effective` nie zawiera głosów ani wyników, więc nie ujawnia niczego przed ogłoszeniem.
-export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: CascadeEnv): MeetingView {
+export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: CascadeEnv, extra?: {prep?: PrepView | null; archive?: ArchiveInfo}): MeetingView {
   const v = structuredClone(m) as MeetingView;
   const hidden = seesUnannounced(m, actor, roster) ? new Set<string>() : new Set(unannounced(m).map(b => b.id));
   for (const b of v.ballots) {
@@ -49,6 +66,19 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: Cascade
     v.effective = effectiveMeeting(env, m, {review: m.status === 'przygotowanie' && canPrepare(env.roster, m, actor)});
     if (!seesLog(actor)) v.effective.deviations = [];
   }
+  // Wersja 4 (SPEC-4 2.1, tabela „Co viewFor usuwa”). Odnośnik do albumu: bez gości i osób z głosem doradczym (DB-38).
+  const r = roster ?? env?.roster;
+  if (v.photos && !(r && seesPhotosLink(r, m, actor))) delete v.photos;
+  // Dokumenty protokołu (B1-04): bez osób z głosem doradczym i gości.
+  if (actor.account.kind === 'doradczy' || actor.account.kind === 'gosc') { delete v.filed; delete v.minutesReady; }
+  // Materiał dla komunikacji (B1-28, DB-41–DB-43): tylko osoby, które go edytują albo pobierają.
+  if (!(r && (canEditComms(r, m, actor) || canDownloadComms(r, m, actor)))) {
+    for (const it of v.agenda) delete it.comms;
+    delete v.closedComms; delete v.commsNote; delete v.commsInputs; delete v.commsReleased;
+  }
+  // Przestrzeń robocza tylko w przygotowaniu (T-5: w „trwa” i „przerwa” odpowiedź bez niej), dane zamkniętego posiedzenia tylko po zamknięciu.
+  if (extra?.prep !== undefined && m.status === 'przygotowanie' && r && canSeeWorkspace(r, m, actor)) v.prep = extra.prep;
+  if (extra?.archive && m.status === 'zakonczone') v.archive = extra.archive;
   return v;
 }
 

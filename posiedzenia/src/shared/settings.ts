@@ -1,5 +1,5 @@
 import type {Actor, ActRef, CommsLevel, CompositionBasis, DocType, Func, ItemKind, MeetingMode, MeetingSettings, Membership, OrganCode, Roster} from './types.ts';
-import type {MailIntroKind, MailSettings} from './mail.ts';
+import {DEFAULT_INTROS, mailSettingsOf, validateMail, validAddress, ADDRESS_REFUSAL, type MailEnv, type MailIntroKind, type MailSettings} from './mail.ts';
 import {lawOf, agendaBasis, type LegalProfile} from './law.ts';
 import {presidiumTemplate, itemKindLabel} from './agenda.ts';
 import {organMembers, organOfCode} from './roster.ts';
@@ -70,7 +70,7 @@ export interface AuditEntry {
 }
 export type SettingsChange =
   | {area: 'siedziba'; key: keyof SiteSettings; value: string}
-  | {area: 'organ'; organ: OrganCode; key: Exclude<keyof OrganSettings, 'templates' | 'seats'>; value: number | boolean | string}
+  | {area: 'organ'; organ: OrganCode; key: Exclude<keyof OrganSettings, 'templates' | 'seats'>; value: number | boolean | string; reason?: string}
   | {area: 'wzory'; organ: OrganCode; template: MeetingTemplate}
   | {area: 'wzory'; organ: OrganCode; remove: string}
   | {area: 'rodzaje_spraw'; caseType: Partial<CaseType>}
@@ -146,9 +146,16 @@ export function slug(name: string, taken: string[], fallback: string) {
 }
 
 const siteLabels: Record<keyof SiteSettings, string> = {place: 'Domyślne miejsce posiedzeń', term: 'Nazwa kadencji', termNumber: 'Numer kadencji', protocolNumberPattern: 'Wzór numeru protokołu'};
+/** Etykiety ustawień poczty w historii zmian, w bierniku (6.11). */
+const mailLabels: Record<string, string> = {
+  enabled: 'wysyłkę', host: 'serwer poczty', port: 'port i szyfrowanie', security: 'port i szyfrowanie', user: 'login', fromAddress: 'adres nadawcy',
+  fromName: 'nazwę nadawcy', replyTo: 'adres do odpowiedzi', privacyUrl: 'adres informacji o przetwarzaniu danych', controller: 'administratora danych',
+};
+const isoDay = (ts: number) => new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit'}).format(ts);
 const organLabels: Record<string, string> = {
   voteMinutes: 'Czas głosowania w sprawie', motionMinutes: 'Czas głosowań nad wnioskami', procedureHours: 'Czas trwania głosowania między posiedzeniami',
   recorder: 'Protokolant domyślny', messagesFromStart: 'Kanał wiadomości na posiedzeniu stacjonarnym', noticeTemplate: 'Wzór zawiadomienia',
+  statsSince: 'dzień startu statystyk',
 };
 /** Ustawienia z dodatków (D), których wersja 3 jeszcze nie zmienia (wszystkie dodatki ustawień są już wdrożone). */
 const addOns = new Set<string>([]);
@@ -338,6 +345,10 @@ function caseTypeInput(raw: Partial<CaseType>, b: GeneralBundle): CaseType {
   };
   if (presenterFunc) out.presenterFunc = presenterFunc;
   if (basis) out.basis = basis;
+  // Wersja 4 (U-25): poziom w materiale dla komunikacji; pusta wartość to „Jak rodzaj dokumentu”.
+  const comms = has('comms') ? raw.comms || undefined : current?.comms;
+  if (comms !== undefined && !isCommsLevel(comms)) bad('Wybierz poziom z listy.');
+  if (comms) out.comms = comms;
   return out;
 }
 
@@ -352,6 +363,7 @@ const caseTypeLabel = (c: CaseType) => `Rodzaj sprawy „${c.name}”`;
 const caseTypeFields: [keyof CaseType, string, (c: CaseType, b: GeneralBundle) => string][] = [
   ['name', 'nazwa', c => shown(c.name)],
   ['docType', 'co jest głosowane', (c, b) => shown(b.docTypes.find(t => t.id === c.docType)?.name ?? c.docType)],
+  ['comms', 'poziom w materiale dla komunikacji', c => c.comms ? commsLevelLabel[c.comms] : 'jak rodzaj dokumentu'],
   ['financial', 'sprawa finansowa', c => c.financial ? 'tak' : 'nie'],
   ['keywords', 'słowa w tytule punktu', c => c.keywords.length ? c.keywords.join(', ') : 'brak'],
   ['titlePattern', 'wzór tytułu punktu', c => shown(c.titlePattern)],
@@ -365,7 +377,16 @@ const caseTypeFields: [keyof CaseType, string, (c: CaseType, b: GeneralBundle) =
  * Zmiana ustawień ogólnych przez biuro. Zwraca nowy pakiet (rewizja +1, gdy coś się zmieniło) i wpisy historii zmian
  * z wartością przed i po w języku interfejsu. Błędy mają `status` (400 dane, 404 brak, 409 konflikt).
  */
-export function applySettingsChange(b: GeneralBundle, change: SettingsChange, env: {actor: Actor; now: number; roster: Roster}): {bundle: GeneralBundle; audit: Omit<AuditEntry, 'id'>[]} {
+/**
+ * Wersja 4: `mail` to środowisko serwera dla strażnika poczty (G-19), `firstCounted` dzień najwcześniejszego zakończonego
+ * posiedzenia, które dziś liczy się w statystykach (G-40), a `canSetStatsSince` decyzja z role.ts dla tej osoby.
+ */
+export interface SettingsEnv {
+  actor: Actor; now: number; roster: Roster;
+  mail?: MailEnv;
+  statsSince?: (from: string | null, to: string | null) => 'tak' | 'z_powodem' | 'nie';
+}
+export function applySettingsChange(b: GeneralBundle, change: SettingsChange, env: SettingsEnv): {bundle: GeneralBundle; audit: Omit<AuditEntry, 'id'>[]} {
   const next: GeneralBundle = structuredClone(b);
   const audit: Omit<AuditEntry, 'id'>[] = [];
   const entry = (e: Pick<AuditEntry, 'area' | 'key' | 'label' | 'before' | 'after'> & {organ?: OrganCode; basis?: string}) => {
@@ -427,6 +448,22 @@ export function applySettingsChange(b: GeneralBundle, change: SettingsChange, en
         before = words(organ.noticeTemplate); after = words(value);
         if (!value || value === DEFAULT_NOTICE_TEMPLATE) delete organ.noticeTemplate; else organ.noticeTemplate = value;
         if (before === after && (organ.noticeTemplate ?? '') !== (b.general.organs[change.organ]?.noticeTemplate ?? '')) after += ' (zmieniony tekst)';
+      } else if (change.key === 'statsSince') {
+        // U-41, G-40, K4-37: biuro ustawia dzień, który nie wyłącza policzonych posiedzeń, albo przesuwa go wstecz;
+        // dzień późniejszy wpisuje tylko przewodniczący z powodem.
+        const value = typeof change.value === 'string' ? change.value.trim() : '';
+        if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) bad('Wpisz datę w zapisie RRRR-MM-DD.');
+        if (value && value > isoDay(env.now)) bad('Dzień startu nie może być późniejszy niż dziś.');
+        const from = organ.statsSince ?? null, to = value || null;
+        const decision = env.statsSince ? env.statsSince(from, to) : 'nie';
+        if (decision === 'nie') bad('Ten dzień wyłączy ze statystyk zakończone posiedzenia. Taką zmianę wpisuje przewodniczący, podając powód.', 403);
+        const reason = typeof change.reason === 'string' ? change.reason.replace(/\s+/g, ' ').trim().slice(0, 500) : '';
+        if (decision === 'z_powodem' && !reason) bad('Podaj powód. Trafi do historii zmian.');
+        const words = (v: string | null) => v ? dateDots(v) : 'od pierwszego posiedzenia';
+        before = words(from); after = words(to);
+        if (to) organ.statsSince = to; else delete organ.statsSince;
+        if (before !== after) entry({area: 'organ', organ: change.organ, key: change.key, label: organLabels[change.key], before, after, ...(reason ? {basis: reason} : {})});
+        break;
       }
       entry({area: 'organ', organ: change.organ, key: change.key, label: organLabels[change.key], before, after});
       break;
@@ -461,6 +498,56 @@ export function applySettingsChange(b: GeneralBundle, change: SettingsChange, en
       else for (const [key, label, show] of caseTypeFields) {
         entry({area: 'rodzaje_spraw', key: `rodzaj:${c.id}:${key}`, label: `${caseTypeLabel(c)}, ${label}`, before: show(before, b), after: show(c, next)});
       }
+      break;
+    }
+    case 'poczta': {
+      // Wersja 4 (U-36, U-37, G-19–G-21): sekcja „Poczta e-mail”. Hasło nie jest ustawieniem (tylko środowisko serwera).
+      const mail = next.general.mail = mailSettingsOf(next.general.mail);
+      const prev = mailSettingsOf(b.general.mail);
+      if ('intro' in change) {
+        if (!(change.intro in DEFAULT_INTROS)) bad('Nieznany rodzaj wiadomości.');
+        const value = multiline(change.text);
+        if (value.length > 1500) bad('Wstęp może mieć najwyżej 1500 znaków.');
+        if (!value.trim()) bad('Wpisz wstęp tej wiadomości.');
+        mail.intros[change.intro] = value;
+        const name = change.intro === 'postep' ? '„Informacja o postępie”' : '„Dokumenty po posiedzeniu”';
+        const words = (v: string) => v.length > 200 ? `„${v.slice(0, 200).replace(/\n/g, ' ')}…”` : `„${v.replace(/\n/g, ' ')}”`;
+        entry({area: 'poczta', key: `wstep:${change.intro}`, label: `wstęp wiadomości ${name}`, before: words(prev.intros[change.intro] ?? DEFAULT_INTROS[change.intro]), after: words(value)});
+        break;
+      }
+      const key = change.key;
+      if (!(key in mailLabels)) bad('Nieznane ustawienie.');
+      const v = change.value;
+      let before = '', after = '';
+      if (key === 'enabled') {
+        if (typeof v !== 'boolean') bad('Nieprawidłowa zmiana ustawień.');
+        mail.enabled = v as boolean;
+        before = prev.enabled ? 'włączona' : 'wyłączona'; after = mail.enabled ? 'włączona' : 'wyłączona';
+      } else if (key === 'port') {
+        const port = Number(v);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) bad('Port musi być liczbą od 1 do 65535.');
+        mail.port = port;
+        before = `${prev.port}, ${prev.security === 'tls' ? 'TLS' : 'STARTTLS'}`; after = `${mail.port}, ${mail.security === 'tls' ? 'TLS' : 'STARTTLS'}`;
+      } else if (key === 'security') {
+        if (v !== 'tls' && v !== 'starttls') bad('Wybierz szyfrowanie TLS albo STARTTLS.');
+        mail.security = v as MailSettings['security'];
+        before = `${prev.port}, ${prev.security === 'tls' ? 'TLS' : 'STARTTLS'}`; after = `${mail.port}, ${mail.security === 'tls' ? 'TLS' : 'STARTTLS'}`;
+      } else {
+        if (typeof v !== 'string' || /[\r\n\0]/.test(v)) bad('Nieprawidłowa zmiana ustawień.');
+        const value = (v as string).trim();
+        if ((key === 'fromAddress' || key === 'replyTo') && value && !validAddress(value)) bad(ADDRESS_REFUSAL);
+        if (key === 'fromName' && value.length > 80) bad('Nazwa nadawcy może mieć najwyżej 80 znaków.');
+        if (key === 'privacyUrl' && value && !/^https:\/\/\S+$/.test(value)) bad('Wpisz adres zaczynający się od https://.');
+        if (value.length > 300) bad('Wpis może mieć najwyżej 300 znaków.');
+        (mail as unknown as Record<string, string>)[key] = value;
+        before = shown(String((prev as unknown as Record<string, unknown>)[key] ?? '')); after = shown(value);
+      }
+      // G-19: włączona poczta musi mieć komplet ustawień i zgodę serwera aplikacji także po każdej zmianie.
+      if (mail.enabled) {
+        const problems = validateMail(mail, env.mail ?? {passwordSet: false, hostAllowed: null, appUrl: ''});
+        if (problems.length) bad(problems.at(-1)!);
+      }
+      entry({area: 'poczta', key, label: mailLabels[key], before, after});
       break;
     }
     default: bad('Nieznany obszar ustawień.');
@@ -620,7 +707,7 @@ export const proposeCaseType = (caseTypes: CaseType[], organ: OrganCode, title: 
 
 /** Wpis historii zmian rodzaju dokumentu (dodanie, zmiana, usunięcie) dla serwera i wersji próbnej. */
 export function docTypeAudit(actor: Actor, now: number, before: DocType | undefined, after: DocType | undefined): Omit<AuditEntry, 'id'> {
-  const describe = (t?: DocType) => t ? `${t.name}; ${t.adopted}; ${t.rejected}; ${t.voted ? 'wymaga głosowania' : 'bez głosowania'}; ${t.inActs ? 'w wykazie aktów' : 'poza wykazem aktów'}; ${t.active ? 'włączony' : 'wyłączony'}; kolejność ${t.order}` : 'brak';
+  const describe = (t?: DocType) => t ? `${t.name}; ${t.adopted}; ${t.rejected}; ${t.voted ? 'wymaga głosowania' : 'bez głosowania'}; ${t.inActs ? 'w wykazie aktów' : 'poza wykazem aktów'}; ${t.active ? 'włączony' : 'wyłączony'}; kolejność ${t.order}${t.comms ? `; w materiale dla komunikacji ${commsLevelLabel[t.comms]}` : ''}` : 'brak';
   const t = (after ?? before)!;
   return {at: now, accountId: actor.account.id, actor: actor.name, area: 'rodzaje_dokumentow', key: `rodzaj:${t.id}`, label: `Rodzaj dokumentu „${t.name}”`, before: describe(before), after: after ? describe(after) : 'usunięty'};
 }

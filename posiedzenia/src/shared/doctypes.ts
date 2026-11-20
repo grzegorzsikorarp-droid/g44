@@ -62,7 +62,14 @@ export function docTypeInput(input: Record<string, unknown>, types: DocType[], c
     order: has('order') ? input.order as number : current?.order ?? last + 10,
     active: has('active') ? input.active as boolean : current?.active ?? true,
     inActs: has('inActs') ? input.inActs as boolean : current?.inActs ?? false,
+    // Wersja 4 (U-24): poziom w materiale dla komunikacji; bez wartości poziom domyślny z tabeli U-24 przy odczycie.
+    ...((has('comms') ? input.comms : current?.comms) ? {comms: commsInput(has('comms') ? input.comms : current?.comms)} : {}),
   };
+}
+const COMMS = ['pelna', 'tytul', 'liczba', 'pomin'];
+function commsInput(v: unknown): DocType['comms'] {
+  if (typeof v !== 'string' || !COMMS.includes(v)) bad('Wybierz poziom z listy.');
+  return v as DocType['comms'];
 }
 
 // Identyfikator z nazwy: małe litery bez polskich znaków, cyfry i podkreślenia, np. „Opinia prawna” daje „opinia_prawna”.
