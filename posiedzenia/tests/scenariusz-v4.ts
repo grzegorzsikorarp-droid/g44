@@ -45,7 +45,7 @@ export function openedMeeting(o: {v4?: boolean} = {}) {
   for (const title of ['Uchwała nr 108/IX/2026 w sprawie patronatu nad konferencją', 'Uchwała nr 109/IX/2026 w sprawie zapomogi', 'Uchwała nr 110/IX/2026 w sprawie wpisu', 'Uchwała nr 111/IX/2026 w sprawie wpisu']) {
     m = apply(m, {type: 'item_add', title, parentId: resolutions.id}, office, ctx.tick());
   }
-  const current = item(m, 'wolne_wnioski');
+  const current = item(m, 'sprawozdania');
   m = apply(m, {type: 'item_add', title: 'Wniosek Anny Testowej o zapomogę', parentId: current.id}, office, ctx.tick());
   m = apply(m, {type: 'open'}, chair, ctx.tick());
   if (o.v4) m = {...m, frozen: {...m.frozen!, v4: true, term: {name: 'IX kadencja 2024–2028', number: 'IX'}}};

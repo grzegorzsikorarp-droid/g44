@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {commsCeiling, commsChangedAt, commsChoices, commsLevelOfItem, commsMarkdown, commsRelease, commsSourceText} from '../src/shared/comms.ts';
+import {commsCeiling, commsChangedAt, commsChoices, commsLevelOfItem, commsLevels, commsMarkdown, commsRelease, commsSourceText} from '../src/shared/comms.ts';
 import {defaultDocTypes} from '../src/shared/doctypes.ts';
 import type {Meeting} from '../src/shared/types.ts';
 import {closedMeeting, envWith, NOW, openedMeeting} from './scenariusz-v4.ts';
@@ -39,6 +39,19 @@ test('K4-5: poziomy utrwalone przy zamknięciu; zmiana rodzaju dokumentu „Uchw
   const before = commsMarkdown(m, env, {at: NOW});
   const looser = envWith(defaultDocTypes.map(t => t.id === 'uchwala' ? {...t, comms: 'pelna' as const} : t), env.general.caseTypes.map(c => ({...c, comms: c.id === 'pomoc' ? 'pelna' as const : c.comms})));
   assert.equal(commsMarkdown(m, looser, {at: NOW}), before);
+  // Poprawka D1K-04: punkt z rodzajem sprawy bez własnego poziomu bierze poziom z rodzaju dokumentu „Uchwała”. Po
+  // zamknięciu zmiana „Uchwała” na „Tytuł” nie zmienia pliku, a bez poziomów utrwalonych (`closedComms`) by go zmieniła.
+  const general = {id: 'ogolne', name: 'Sprawy ogólne', docType: 'uchwala', organs: ['prezydium' as const], financial: false, keywords: [], titlePattern: '', order: 40, active: true};
+  const withGeneral = envWith(defaultDocTypes, [...env.general.caseTypes, general]);
+  const it110 = item(m, 'Uchwała nr 110');
+  const live110 = {...m, status: 'trwa' as const, agenda: m.agenda.map(i => i.id === it110.id ? {...i, caseType: 'ogolne'} : i)};
+  const fixed: Meeting = {...live110, status: 'zakonczone', closedComms: commsLevels(live110, withGeneral)};
+  assert.equal(fixed.closedComms![it110.id], 'liczba', 'rodzaj sprawy bez poziomu: „Uchwała” daje „Tylko liczba”');
+  const titleDoc = envWith(defaultDocTypes.map(t => t.id === 'uchwala' ? {...t, comms: 'tytul' as const} : t), withGeneral.general.caseTypes);
+  const fixedBefore = commsMarkdown(fixed, withGeneral, {at: NOW});
+  assert.equal(commsMarkdown(fixed, titleDoc, {at: NOW}), fixedBefore, 'po zamknięciu bez zmian');
+  const unfixed: Meeting = {...fixed, closedComms: undefined};
+  assert.notEqual(commsMarkdown(unfixed, titleDoc, {at: NOW}), commsMarkdown(unfixed, withGeneral, {at: NOW}), 'bez poziomów utrwalonych zmiana działałaby wstecz');
   // Przed zamknięciem poziom 1 działa od razu; sprawa bez rodzaju sprawy ma sufit „Tylko liczba” (U-24a).
   const {m: live} = openedMeeting({v4: true});
   const noCase = item(live, 'Uchwała nr 110');

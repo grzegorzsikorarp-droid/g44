@@ -80,10 +80,15 @@ test('B1-03, T-7: pliki bez liczb nieogłoszonego głosowania także u osoby pro
   assert.equal(minutesHideUnannounced(m, true), true);
   const minutes = plain(minutesBody(m, roster, [], NOW, {}, {hideUnannounced: false}));
   assert.ok(minutes.includes(`Głosowanie nr ${hiddenNumber}`) && minutes.includes('Wynik ogłosi osoba prowadząca obrady.'));
-  // Posiedzenie sprzed wersji 4 zachowuje widoczność wersji 3 u osoby prowadzącej (DB-4, odstępstwo D.1-1).
+  // Posiedzenie sprzed wersji 4: widoczność wersji 3 u osoby prowadzącej tylko po zamknięciu (DB-4, T-7, K4-8;
+  // poprawka D1K-02). Niezamknięte stare posiedzenie ukrywa wynik u każdego.
   const old = {...m, frozen: {...m.frozen!, v4: undefined}} as Meeting;
-  assert.equal(minutesHideUnannounced(old, true), false);
-  assert.ok(plain(minutesBody(old, roster, [], NOW, {}, {hideUnannounced: false})).includes('Uchwała nie została podjęta'));
+  assert.equal(minutesHideUnannounced(old, true), true);
+  assert.ok(!plain(minutesBody(old, roster, [], NOW, {}, {hideUnannounced: false})).includes('Uchwała nie została podjęta'));
+  const oldClosed = {...old, status: 'zakonczone'} as Meeting;
+  assert.equal(minutesHideUnannounced(oldClosed, true), false);
+  assert.equal(minutesHideUnannounced(oldClosed, false), true);
+  assert.ok(plain(minutesBody(oldClosed, roster, [], NOW, {}, {hideUnannounced: false})).includes('Uchwała nie została podjęta'));
 });
 
 test('B1-17, T-7: wyniki i wykaz imienny w kolejności składu, tajne tylko liczby, bez godzin kart', () => {

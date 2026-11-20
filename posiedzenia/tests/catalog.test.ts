@@ -105,6 +105,9 @@ test('B1-24–B1-28: katalog, filtry, konto „Komunikacja” i CSV ze zdjęciam
   assert.deepEqual(catalogRows([withPhotos, b], env, office, {rodzaj: 'glosowania'}, {today: '2026-12-12'}), []);
   const commsRows = catalogRows([withPhotos, b, live], env, comms, {}, {today: '2026-12-12'});
   assert.deepEqual(commsRows.map(r => [r.id, r.scope]), [['mB', 'wiersz'], [a.id, 'wiersz']]);
+  // Poprawka D1K-05: wiersz konta „Komunikacja” bez frekwencji, kompletu dokumentów, numeru protokołu i kadencji (4.4, przypis 10).
+  for (const r of commsRows) for (const key of ['turnout', 'complete', 'protocolNumber', 'term']) assert.ok(!(key in r), `wiersz bez pola ${key}`);
+  assert.ok(rows.every(r => r.turnout && r.complete && typeof r.protocolNumber === 'string'), 'pełny wiersz z tymi polami');
   const guest: Actor = {account: {...office.account, id: 'u-g', kind: 'gosc'}, personId: null, name: 'Gość'};
   assert.deepEqual(catalogRows([{...withPhotos, invited: ['u-g']}], env, guest, {}, {today: '2026-12-12'})[0].photos, 'jest', 'gość widzi tylko „jest”');
   const file = catalogCsv(rows, office);

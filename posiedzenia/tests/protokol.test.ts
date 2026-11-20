@@ -174,7 +174,10 @@ test('protokół: przed ogłoszeniem wyniku osoba bez wglądu nie dostaje zdania
   assert.doesNotMatch(member, /Porządek obrad przyjęto/);
   assert.doesNotMatch(member, /Porządek obrad nie został przyjęty/);
   assert.match(member, /Głosowanie zakończone\. Wynik ogłosi osoba prowadząca obrady\./);
-  assert.match(doc(m), /Porządek obrad przyjęto w głosowaniu nr 1\./, 'osoba prowadząca obrady widzi wynik od razu');
+  // Wersja 4 (DB-4, T-7, poprawka D1K-02): w posiedzeniu niezamkniętym projekt protokołu nie podaje wyniku przed
+  // ogłoszeniem także osobie prowadzącej obrady (w wersji 3 widziała go od razu).
+  assert.doesNotMatch(doc(m), /Porządek obrad przyjęto/, 'osoba prowadząca obrady też nie dostaje wyniku w pliku');
+  assert.match(doc(m), /Głosowanie zakończone\. Wynik ogłosi osoba prowadząca obrady\./);
   m = announce(m, ctx);
   assert.match(doc(m, {hideUnannounced: true}), /Porządek obrad przyjęto w głosowaniu nr 1\./);
   // F9: przy kilku kontach biura protokół podaje nazwę konta, które potwierdziło obecność.

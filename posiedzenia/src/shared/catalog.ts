@@ -146,13 +146,16 @@ export const photosLinkText = (url: string) => `Album zdjęć z posiedzenia (${p
 export interface CatalogFilter { rok?: string; kadencja?: string; rodzaj?: 'wszystkie' | 'posiedzenia' | 'glosowania'; stan?: ProtocolState['state'] | 'wszystkie'; brak?: boolean; q?: string }
 export interface CatalogRow {
   id: string; scope: 'pelny' | 'wiersz'; kind: Meeting['kind']; working: boolean; mode: Meeting['mode']; day: string; title: string; place: string;
-  term: string | null; protocolNumber: string; protocol: ProtocolState;
+  protocol: ProtocolState;
   /** „Uchwała 3, stanowisko 1” (podjęte akty według rodzajów dokumentów). */
   acts: string;
-  turnout: {present: number; members: number};
   /** Adres albumu dla osób z `seesPhotosLink`, inaczej tylko „jest” albo „brak” (DB-38). */
   photos: {url: string} | 'jest' | 'brak';
-  complete: {have: number; of: number; items: {label: string; ok: boolean}[]};
+  // Pola tylko w zakresie 'pelny'. Wiersz konta „Komunikacja” (zakres 'wiersz') ich nie ma: rozdz. 4.4 wylicza zakres
+  // wiersza bez nich, a przypis 10 do 4.3.3 mówi „bez dokumentów organu” (poprawka D1K-05).
+  term?: string | null; protocolNumber?: string;
+  turnout?: {present: number; members: number};
+  complete?: {have: number; of: number; items: {label: string; ok: boolean}[]};
 }
 /** Komplet dokumentów posiedzenia (6.9): przy notatce projekt notatki i odnośnik. */
 export function completeness(m: Meeting, adoption: Adoption | null) {
@@ -197,13 +200,13 @@ export function catalogRows(meetings: Meeting[], env: Pick<CascadeEnv, 'roster' 
       const hay = [m.title, m.protocolNumber ?? '', ...actBallots(m, env).flatMap(b => [actNumber(m, b), b.material?.title ?? b.subject])].join(' ').toLocaleLowerCase('pl');
       if (!hay.includes(q)) continue;
     }
-    rows.push({
+    const row: CatalogRow = {
       id: m.id, scope, kind: m.kind, working: m.kind === 'posiedzenie' && !!m.working, mode: m.mode, day, title: m.title, place: m.place,
-      term, protocolNumber: m.protocolNumber?.trim() ?? '', protocol,
-      acts: actsSummary(m, env), turnout: meetingTurnout(m, env.roster),
+      protocol, acts: actsSummary(m, env),
       photos: m.photos ? (seesPhotosLink(env.roster, m, actor) ? {url: m.photos.url} : 'jest') : 'brak',
-      complete,
-    });
+    };
+    if (scope === 'pelny') Object.assign(row, {term, protocolNumber: m.protocolNumber?.trim() ?? '', turnout: meetingTurnout(m, env.roster), complete});
+    rows.push(row);
   }
   return rows.sort((a, b) => b.day.localeCompare(a.day) || a.title.localeCompare(b.title, 'pl'));
 }
@@ -211,8 +214,8 @@ export function catalogRows(meetings: Meeting[], env: Pick<CascadeEnv, 'roster' 
 export function catalogCsv(rows: CatalogRow[], actor: Actor): string {
   if (isCommsAccount(actor)) throw Object.assign(new Error('To konto widzi tylko odbyte posiedzenia i materiały dla komunikacji.'), {status: 403});
   return csv(['Dzień', 'Rodzaj', 'Tryb', 'Tytuł', 'Numer protokołu', 'Stan protokołu', 'Podjęte akty', 'Obecnych', 'Zdjęcia', 'Komplet dokumentów'],
-    rows.map(r => [r.day, r.kind === 'procedura' ? 'głosowanie między posiedzeniami' : r.working ? 'spotkanie robocze' : 'posiedzenie', r.mode, r.title, r.protocolNumber, r.protocol.label,
-      r.acts, `${r.turnout.present} z ${r.turnout.members}`, r.photos === 'brak' ? 'brak' : 'jest', `${r.complete.have} z ${r.complete.of}`]));
+    rows.map(r => [r.day, r.kind === 'procedura' ? 'głosowanie między posiedzeniami' : r.working ? 'spotkanie robocze' : 'posiedzenie', r.mode, r.title, r.protocolNumber ?? '', r.protocol.label,
+      r.acts, r.turnout ? `${r.turnout.present} z ${r.turnout.members}` : '', r.photos === 'brak' ? 'brak' : 'jest', r.complete ? `${r.complete.have} z ${r.complete.of}` : '']));
 }
 
 // Zestawienie za okres (B1-30, DB-25): bez danych o osobach.

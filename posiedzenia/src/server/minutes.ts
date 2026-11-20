@@ -9,7 +9,7 @@ import {lawOf, type LegalProfile} from '../shared/law.ts';
 import {deputyOf, organRoster} from '../shared/role.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
-import {channelMessages, confirmedBy as confirmedByShared, fileBase, generatedLine, openBallotText, paperPage, presenceText} from '../shared/papers.ts';
+import {channelMessages, confirmedBy as confirmedByShared, fileBase, generatedLine, minutesHideUnannounced, openBallotText, paperPage, presenceText} from '../shared/papers.ts';
 import {shownFileText, shownInItem} from '../shared/show.ts';
 import {docxFromHtml, type DocxOptions} from '../shared/docx.ts';
 
@@ -626,8 +626,9 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
   const env = cascadeEnv({roster, bundle: {general: defaultGeneral(defaultSite), docTypes: types, revision: 0}, organ: m.organ, accounts});
   const d: Doc = {
     m, roster, accounts, procedure, office: names.office ?? 'biuro', regulation: names.regulation ?? `Regulaminu ${council}`, placed: new Map(), loose: [], trials: [],
-    // Wersja 4 (B1-03, DB-4): przy `frozen.v4` wyniki nieogłoszone są ukryte u każdego, także u osoby prowadzącej.
-    note, types: v3 ? types : options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced || v4 ? unannounced(m).map(b => b.id) : []), word,
+    // Wersja 4 (B1-03, DB-4, T-7): przy `frozen.v4` i w posiedzeniu niezamkniętym wyniki nieogłoszone są ukryte
+    // u każdego, także u osoby prowadzącej; widoczność wersji 3 zostaje tylko w zamkniętym posiedzeniu sprzed wersji 4.
+    note, types: v3 ? types : options.docTypes ?? defaultDocTypes, hidden: new Set(minutesHideUnannounced(m, !options.hideUnannounced) ? unannounced(m).map(b => b.id) : []), word,
     v3, law: lawOf(m.organ), members: organRoster(roster, m), deviations: v3 ? effectiveMeeting(env, m).deviations : [], v4,
   };
   const known = new Set(m.agenda.map(i => i.id));

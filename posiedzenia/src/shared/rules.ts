@@ -127,6 +127,20 @@ export const ballotTitle = (b: Pick<Ballot, 'purpose' | 'number'>) => b.purpose 
 export function unannounced(m: Pick<Meeting, 'ballots'>) {
   return m.ballots.filter(b => b.status === 'zamkniete' && b.purpose !== 'proba' && !b.aborted && !b.announcedAt).sort((a, b) => a.number - b.number);
 }
+const TALLY = / Za \d+, przeciw \d+, wstrzymało się \d+\.$/;
+/**
+ * Wpis dziennika bez liczb nieogłoszonego głosowania (F2, T-7). Wpis z `ballotId` rozpoznaje się po głosowaniu, a wpis
+ * bez niego (dane sprzed wersji 3) po numerze głosowania w treści („głosowanie nr 2”). Wpis z liczbami bez `ballotId`
+ * i bez numeru (poza głosowaniem próbnym) traci liczby, gdy jakikolwiek wynik czeka na ogłoszenie: tajność ponad wygodą.
+ */
+export function hideTally(entry: {text: string; ballotId?: string}, hidden: ReadonlySet<string>, ballots: Pick<Ballot, 'id' | 'number' | 'purpose'>[]): string {
+  if (!hidden.size || !TALLY.test(entry.text)) return entry.text;
+  const strip = () => entry.text.replace(TALLY, '');
+  if (entry.ballotId) return hidden.has(entry.ballotId) ? strip() : entry.text;
+  const n = /głosowani[ea] nr (\d+)\b/i.exec(entry.text);
+  if (n) return ballots.some(b => b.purpose !== 'proba' && b.number === Number(n[1]) && hidden.has(b.id)) ? strip() : entry.text;
+  return /głosowanie próbne/i.test(entry.text) ? entry.text : strip();
+}
 /** Komunikat domeny przy nieogłoszonym wyniku albo null, gdy wszystkie wyniki są ogłoszone. */
 export function announceFirst(m: Pick<Meeting, 'ballots'>) {
   const first = unannounced(m)[0];

@@ -1,6 +1,6 @@
 import type {Account, Actor, AgendaItem, Ballot, Meeting, PaperFormat, PaperId, PaperState, Roster} from './types.ts';
 import {membership, organOf, personName} from './roster.ts';
-import {ballotDocType, choiceLabel, itemNumber, materialTypeOf, orderedAgenda, presenceOf, presenterGroups, quorumOf, resultLabel, resultPendingProcedureText, resultPendingText, unannounced} from './rules.ts';
+import {ballotDocType, choiceLabel, hideTally, itemNumber, materialTypeOf, orderedAgenda, presenceOf, presenterGroups, quorumOf, resultLabel, resultPendingProcedureText, resultPendingText, unannounced} from './rules.ts';
 import {canDownloadPaper, organRoster} from './role.ts';
 import {lawOf} from './law.ts';
 import {noticeDays} from './meeting.ts';
@@ -38,10 +38,11 @@ export const openBallotText = (n: number) => `Głosowanie nr ${n} trwa.`;
 /** Głosowania, których wynik ten plik ukrywa (B1-03): każde zamknięte bez ogłoszenia, niezależnie od osoby. */
 export const hiddenForFiles = (m: Pick<Meeting, 'ballots'>) => new Set(unannounced(m).map(b => b.id));
 /**
- * Projekt protokołu ukrywa nieogłoszone wyniki u osoby, która ich nie widzi (wersja 3), a przy posiedzeniu otwartym
- * w wersji 4 u każdego (DB-4, B1-03). Stare posiedzenia zachowują widoczność wersji 3 (odstępstwo D.1-1 w raporcie).
+ * Projekt protokołu ukrywa nieogłoszone wyniki u osoby, która ich nie widzi (wersja 3), a u każdego, także u osoby
+ * prowadzącej, przy posiedzeniu otwartym w wersji 4 i w każdym posiedzeniu niezamkniętym (DB-4, T-7, B1-03, K4-8).
+ * Widoczność z wersji 3 zostaje tylko w projekcie protokołu zamkniętego posiedzenia sprzed wersji 4.
  */
-export const minutesHideUnannounced = (m: Pick<Meeting, 'frozen'>, seesUnannounced: boolean) => !seesUnannounced || !!m.frozen?.v4;
+export const minutesHideUnannounced = (m: Pick<Meeting, 'frozen' | 'status'>, seesUnannounced: boolean) => !seesUnannounced || !!m.frozen?.v4 || m.status !== 'zakonczone';
 
 // Lista obecności: brzmienie wspólne z projektem protokołu (B1-16).
 
@@ -496,7 +497,7 @@ const seconds = (ts: number) => new Intl.DateTimeFormat('pl-PL', {timeZone: 'Eur
 function logRows(m: Meeting, ctx: PaperContext) {
   const hidden = hiddenForFiles(m);
   const rows = m.log.map(l => ({at: l.at, by: l.by, tag: l.tag ? TAG_LABEL[l.tag] ?? '' : '',
-    text: l.ballotId && hidden.has(l.ballotId) ? l.text.replace(/ Za \d+, przeciw \d+, wstrzymało się \d+\.$/, '') : l.text}));
+    text: hideTally(l, hidden, m.ballots)}));
   const name = (who: string, guest: boolean) => guest ? accountsOf(ctx).find(a => a.id === who)?.displayName ?? '' : personName(ctx.env.roster, who);
   const what = {przybycie: 'Zapisano obecność', wyjscie: 'Zapisano wyjście', zgloszenie: 'Zgłoszono obecność', odrzucenie: 'Odrzucono albo wycofano zgłoszenie obecności'} as const;
   for (const e of m.presenceLog) rows.push({at: e.at, by: e.by, tag: 'Obecność', text: `${what[e.type]}, ${name(e.who, e.guest)}.`});

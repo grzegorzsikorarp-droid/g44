@@ -1,5 +1,5 @@
 import type {Actor, Ballot, Choice, Meeting, Roster} from './types.ts';
-import {itemNumber, unannounced} from './rules.ts';
+import {hideTally, itemNumber, unannounced} from './rules.ts';
 import {cleanTitle} from './agenda.ts';
 import {canAnnounce, canPrepare, isPresiding, procedureStarter, seesLog} from './role.ts';
 import {effectiveMeeting, type CascadeEnv, type MeetingEffective} from './cascade.ts';
@@ -39,7 +39,7 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: Cascade
   }
   if (hidden.size) {
     for (const entry of v.log) {
-      if (entry.ballotId && hidden.has(entry.ballotId)) entry.text = entry.text.replace(/ Za \d+, przeciw \d+, wstrzymało się \d+\.$/, '');
+      entry.text = hideTally(entry, hidden, m.ballots);
     }
   }
   // DA-10 (macierz 4.3): jawny przebieg obrad widzą biuro i członkowie. Osoby z głosem doradczym i goście dostają tylko
