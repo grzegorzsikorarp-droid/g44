@@ -18,12 +18,12 @@ html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posi
 .meeting-bar__facts { gap: var(--odstep-1) var(--odstep-6); }
 .meeting-bar__facts .fact dd { font-size: var(--t-lista); line-height: 1.3; white-space: nowrap; }
 /* Dopasowanie do szerokości (fitBar w meeting.tsx): krótki tytuł zamiast uciętego pełnego, potem bez znaczników
-   rodzaju i trwającego głosowania, na końcu tytuł w dwóch wierszach. W faktach najpierw znika miejsce, potem data. */
+   rodzaju i trwającego głosowania, na końcu tytuł w dwóch wierszach. W faktach najpierw znika wzór, potem miejsce, potem data. */
 .meeting-bar.is-krotki .bar-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .meeting-bar.is-krotki .bar-short { display: inline; }
 .meeting-bar.bez-rodzaju .bar-kind, .meeting-bar.bez-znacznika .bar-voting { display: none; }
 .meeting-bar.is-zawijany .meeting-bar__title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.meeting-bar__facts.bez-miejsca .fact--miejsce, .meeting-bar__facts.bez-daty .fact--data { display: none; }
+.meeting-bar__facts.bez-wzoru .fact--wzor, .meeting-bar__facts.bez-miejsca .fact--miejsce, .meeting-bar__facts.bez-daty .fact--data { display: none; }
 .meeting-offline { background: var(--tlo); border-bottom: var(--kreska) solid var(--linia); }
 .meeting-offline .meeting-bar__in { padding-block: var(--odstep-2); }
 .meeting--live .sticky-error { top: calc(env(safe-area-inset-top, 0px) + var(--pasek-posiedzenia, 0px) + var(--odstep-2)); }

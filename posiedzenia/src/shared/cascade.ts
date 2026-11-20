@@ -111,6 +111,21 @@ export function freezeLegacy(env: CascadeEnv, m: Meeting, now: number): FrozenSe
 export function meetingSetting(env: CascadeEnv, m: Meeting, key: 'voteMinutes' | 'motionMinutes'): Effective<number> {
   return m.frozen ? m.frozen.meeting[key] as Effective<number> : liveSetting(env, m, key);
 }
+/**
+ * Koniec głosowania między posiedzeniami (DA-21: „trwa domyślnie 24 godziny i co najmniej 24 godziny od rozpoczęcia”).
+ * W przygotowaniu termin wpisany ręcznie (`endsAtSet`) obowiązuje bez zmian, a bez niego głosowanie trwa czas z ustawień
+ * ogólnych liczony od rozpoczęcia, czyli od `now` przy poleceniu `open` (`fromStart`). Termin zapisany przy utworzeniu przed
+ * tą zasadą (utworzenie + czas z ustawień, bez śladu) liczy się jak wartość domyślna. Po rozpoczęciu obowiązuje zapisany termin.
+ * Domena, serwer, wersja próbna i klient wołają tę funkcję, więc reguła jest w jednym miejscu.
+ */
+export function procedureEndAt(m: Pick<Meeting, 'status' | 'endsAt' | 'endsAtSet' | 'createdAt' | 'organ'>, general: GeneralSettings, now: number): {endsAt: number; fromStart: boolean; hours: number} {
+  const hours = organSettingsOf(general, m.organ).procedureHours;
+  if (m.status !== 'przygotowanie') return {endsAt: m.endsAt ?? now, fromStart: false, hours};
+  const createdDefault = !m.endsAtSet && m.endsAt !== undefined && Math.abs(m.endsAt - (m.createdAt + hours * 3600000)) < 60000;
+  if (m.endsAt !== undefined && !createdDefault) return {endsAt: m.endsAt, fromStart: false, hours};
+  return {endsAt: now + hours * 3600000, fromStart: true, hours};
+}
+
 /** Czas głosowania w punkcie: własny albo posiedzenia. */
 export const itemVoteMinutes = (env: CascadeEnv, m: Meeting, it: Pick<AgendaItem, 'voteMinutes'> | undefined) => it?.voteMinutes ?? meetingSetting(env, m, 'voteMinutes').value;
 
@@ -136,9 +151,15 @@ const caseTypeOf = (env: CascadeEnv, id: string | null | undefined): CaseType | 
 
 function itemEffective(env: CascadeEnv, m: Meeting, it: AgendaItem, types: DocType[], meetingVote: Effective<number>, template?: MeetingTemplate) {
   const stamps = it.stamps ?? {};
+  // Źródło „wzór posiedzenia” ma tylko punkt, który we wzorze jest (ten sam rodzaj i tytuł). Punkt dodany ręcznie albo
+  // wczytany z tekstu ma rodzaj ustalony w tym posiedzeniu, bez odwołania do wzoru (zasada 4 z rozdz. 0).
+  const norm = (t: string) => t.replace(/\s+/g, ' ').replace(/[.;:,\s]+$/, '').toLocaleLowerCase('pl');
+  const inTemplate = (list: MeetingTemplate['items']): boolean => list.some(t => (t.kind === it.kind && norm(t.title) === norm(it.title)) || inTemplate(t.children ?? []));
   const kind: Effective<ItemKind> = stamps.kind
     ? {value: it.kind, source: 'punkt', level: 2, stamp: stamps.kind}
-    : {value: it.kind, source: 'szablon', level: 1, ...(template ? {via: {kind: 'wzor' as const, name: template.name}} : {})};
+    : template && !inTemplate(template.items)
+      ? {value: it.kind, source: 'posiedzenie', level: 2}
+      : {value: it.kind, source: 'szablon', level: 1, ...(template ? {via: {kind: 'wzor' as const, name: template.name}} : {})};
   const caseType = caseTypeOf(env, it.caseType);
   const material = m.materials.find(x => it.materialIds.includes(x.id));
   let lower: Effective<string | null> = {value: null, source: 'punkt', level: 2};
@@ -300,9 +321,11 @@ function review(env: CascadeEnv, m: Meeting, items: MeetingEffective['items'], n
   const law = env.law;
   const rows: ReviewRow[] = [];
   const posiedzenie = m.kind === 'posiedzenie';
+  // W głosowaniu między posiedzeniami pozycje to sprawy, a nie punkty porządku obrad.
+  const unit = (it: AgendaItem) => !posiedzenie ? 'Sprawa' : it.parentId ? 'Podpunkt' : 'Punkt';
   for (const it of m.agenda) {
     if (it.kind === 'sprawa' && items[it.id].voted.value && !it.materialIds.length) {
-      rows.push({group: 'uzupelnic', text: `${it.parentId ? 'Podpunkt' : 'Punkt'} ${itemNumber(m.agenda, it.id)} bez materiału.`, itemId: it.id, target: `punkt:${it.id}`});
+      rows.push({group: 'uzupelnic', text: `${unit(it)} ${itemNumber(m.agenda, it.id)} bez materiału.`, itemId: it.id, target: `punkt:${it.id}`});
     }
   }
   if (posiedzenie) {
@@ -316,7 +339,7 @@ function review(env: CascadeEnv, m: Meeting, items: MeetingEffective['items'], n
   for (const it of m.agenda) {
     const guess = caseTypeOf(env, it.caseTypeGuess);
     if (!guess || it.caseType) continue;
-    rows.push({group: 'sprawdzic', text: `Propozycja rodzaju sprawy w punkcie ${itemNumber(m.agenda, it.id)} »${guess.name}«.`, itemId: it.id, target: `punkt:${it.id}`, actions: ['przyjmij', 'odrzuc']});
+    rows.push({group: 'sprawdzic', text: `Propozycja rodzaju sprawy w ${posiedzenie ? 'punkcie' : 'sprawie'} ${itemNumber(m.agenda, it.id)} »${guess.name}«.`, itemId: it.id, target: `punkt:${it.id}`, actions: ['przyjmij', 'odrzuc']});
   }
   const members = organRoster(env.roster, m).length;
   if (env.composition && (env.previousOpenedAt == null || env.composition.at > env.previousOpenedAt)) {
@@ -339,7 +362,9 @@ function review(env: CascadeEnv, m: Meeting, items: MeetingEffective['items'], n
     if (s.kind === 'protokol') rows.push({group: 'sprawdzic', text: `Pominięto punkt ${quote(s.title)}. Protokół poprzedniego posiedzenia przyjmuje się na następnym posiedzeniu (${law.minutes.adoptionBasis}).`});
   }
   if (m.template && !templateOf(env, m)) rows.push({group: 'sprawdzic', text: `Wzoru »${m.template.name}« już nie ma. Obowiązują ustawienia ogólne.`, target: 'wzor'});
-  if (m.kind === 'procedura' && m.endsAt && m.endsAt - now < PROCEDURE_MIN_HOURS * 3600000) {
+  // DA-21: domyślny termin liczy się od rozpoczęcia, więc ostrzeżenie dotyczy tylko terminu wpisanego ręcznie.
+  const term = m.kind === 'procedura' ? procedureEndAt(m, env.general, now) : null;
+  if (term && !term.fromStart && term.endsAt - now < PROCEDURE_MIN_HOURS * 3600000) {
     rows.push({group: 'sprawdzic', text: `Głosowanie potrwa krócej niż ${PROCEDURE_MIN_HOURS} godziny. Przy rozpoczęciu trzeba będzie podać powód.`, target: 'termin'});
   }
   const top = m.agenda.filter(i => !i.parentId).length, sub = m.agenda.length - top;
@@ -435,5 +460,5 @@ export function guessText(env: Pick<CascadeEnv, 'general'>, organ: OrganCode, it
   const match = matchCaseType(env.general.caseTypes, organ, it.title);
   const c = env.general.caseTypes.find(x => x.id === it.caseTypeGuess);
   if (!c) return null;
-  return match?.id === c.id ? `Propozycja »${c.name}«, bo tytuł zawiera słowo „${match.keyword}”.` : `Propozycja »${c.name}«.`;
+  return match?.id === c.id ? `Propozycja »${c.name}«, bo tytuł zawiera ${match.keyword.includes(' ') ? 'słowa' : 'słowo'} „${match.keyword}”.` : `Propozycja »${c.name}«.`;
 }

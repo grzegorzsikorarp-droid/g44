@@ -4,6 +4,7 @@
 /* Strona ustawień: od 961 px nawigacja sekcji (280 px) i treść; do 960 px lista kart albo jedna sekcja */
 .settings-page { display: flex; flex-direction: column; gap: var(--odstep-6); }
 .settings-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--odstep-8); align-items: start; }
+.settings-narrow { display: flex; flex-direction: column; min-width: 0; }
 .settings-nav { position: sticky; top: var(--odstep-4); display: flex; flex-direction: column; gap: var(--odstep-5); }
 .settings-nav ul { list-style: none; padding: 0; margin: var(--odstep-2) 0 0; display: flex; flex-direction: column; }
 .settings-nav a { display: flex; align-items: center; min-height: 44px; padding: var(--odstep-1) var(--odstep-3); border-left: var(--pasek-akcentu) solid transparent; color: var(--tekst-mocny); text-decoration: none; font-size: var(--t-lista); line-height: 1.35; }

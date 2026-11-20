@@ -3,7 +3,9 @@ import {PROCEDURE_MIN_HOURS} from '../shared/law.ts';
 import {awaitingVote, itemNumber, materialTypeOf, unannounced} from '../shared/rules.ts';
 import {organMembers} from '../shared/roster.ts';
 import {canManageProcedure, canStartProcedure, organRoster, procedureStarter} from '../shared/role.ts';
-import {compositionBasisText, organSettingsOf} from '../shared/settings.ts';
+import {compositionBasisText, defaultGeneral, type GeneralBundle} from '../shared/settings.ts';
+import {defaultSite} from '../shared/meeting.ts';
+import {procedureEndAt} from '../shared/cascade.ts';
 import {dateDots, dateDotsOf, hoursText, timeOf} from '../shared/text.ts';
 import type {AgendaItem, Meeting, ModeDecision, VoteMode} from '../shared/types.ts';
 import {useNow} from './api.ts';
@@ -30,15 +32,18 @@ const sameTitle = (a: string, b: string) => {
   const norm = (s: string) => s.replace(/\s+/g, ' ').replace(/[.\s]+$/, '').toLowerCase();
   return norm(a) === norm(b);
 };
-/** Czas trwania w bierniku: „3 godziny”, „1 godzinę”, „40 minut”. */
+/** Czas trwania w bierniku z godzinami i minutami, żeby 23 godziny i 59 minut nie czytały się jak „23 godziny”: „3 godziny”, „1 godzinę i 5 minut”, „40 minut”. */
 function durationText(ms: number) {
-  const hours = Math.floor(ms / 3600000);
-  if (hours >= 1) return `${hours} ${plural(hours, 'godzinę', 'godziny', 'godzin')}`;
-  const minutes = Math.max(1, Math.round(ms / 60000));
-  return `${minutes} ${plural(minutes, 'minutę', 'minuty', 'minut')}`;
+  const total = Math.max(1, Math.floor(ms / 60000));
+  const hours = Math.floor(total / 60), minutes = total % 60;
+  const min = `${minutes} ${plural(minutes, 'minutę', 'minuty', 'minut')}`;
+  if (!hours) return min;
+  return `${hours} ${plural(hours, 'godzinę', 'godziny', 'godzin')}${minutes ? ` i ${min}` : ''}`;
 }
-const shortTermText = (ms: number) => `Głosowanie potrwa ${durationText(ms)}. Najkrótszy czas to ${PROCEDURE_MIN_HOURS} godziny, żeby każdy członek mógł spokojnie oddać głos (§ 14 ust. 5). Powód trafi do dokumentu z przebiegu głosowania.`;
+const shortTermText = (ms: number) => `Głosowanie potrwa ${durationText(ms)}. Najkrótszy czas to ${hoursText(PROCEDURE_MIN_HOURS)}, żeby każdy członek mógł spokojnie oddać głos (§ 14 ust. 5). Powód trafi do dokumentu z przebiegu głosowania.`;
 const minimum = PROCEDURE_MIN_HOURS * 3600000;
+/** Ustawienia ogólne z sesji, a bez nich wartości domyślne (koniec głosowania, DA-21). */
+const generalOf = (bundle: GeneralBundle | null) => bundle?.general ?? defaultGeneral(defaultSite);
 
 export function ProcedureView() {
   const {m} = useMeeting();
@@ -49,11 +54,11 @@ export function ProcedureView() {
     return <PrepLayout
       main={<>
         <section class="oi-card"><CardTitle level={2}>Sprawy do głosowania</CardTitle><p class="muted small">Każda sprawa (np. uchwała) to osobne głosowanie. Dołącz do niej materiał, aby członkowie mogli go przeczytać przed oddaniem głosu.</p><AgendaEditor panel={(it, close) => <ActSettings it={it} close={close}/>}/></section>
-        <section class="oi-card"><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
+        <section class="oi-card" id="ust-materialy" tabIndex={-1}><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
         <MeetingHistory/>
       </>}
       review={<><ReviewCard/><Start/></>}
-      settings={<><ProcedureSettings/><Messages/></>}
+      settings={<><ProcedureSettings/><Messages secondary/></>}
       end={<><DuplicateButton/><DeleteMeeting/></>}/>;
   }
   const manager = canManageProcedure(s.roster, m as Meeting, actor);
@@ -260,8 +265,8 @@ function ActSettings(props: {it: AgendaItem; close: () => void}) {
     <SettingsList label={`Ustawienia sprawy ${no}`}>
       <SettingRow label="Nazwa sprawy" value={it.title} at="punkt" source="" genitive="nazwy sprawy" actionLabel={`Zmień nazwę sprawy ${no}`}
         editor={(close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Nazwa sprawy" initial={it.title} max={400} required onSave={title => cmd({type: 'item_edit', itemId: it.id, title})}/>}/>
-      <SettingRow label="Co jest głosowane" value={docValue ? types.find(t => t.id === docValue)?.name ?? docValue : 'Wynika z materiału'} at="punkt" genitive="tego, co jest głosowane" actionLabel={`Zmień, co jest głosowane w sprawie ${no}`}
-        {...(e && (it.docType || e.docType.via) ? {effective: e.docType} : {source: ''})}
+      <SettingRow label="Co jest głosowane" value={docValue ? types.find(t => t.id === docValue)?.name ?? docValue : 'Nie ustalono'} at="punkt" genitive="tego, co jest głosowane" actionLabel={`Zmień, co jest głosowane w sprawie ${no}`}
+        {...(e && (it.docType || e.docType.via) ? {effective: e.docType} : {source: docValue ? '' : 'Ustali się z materiału, chyba że wybierzesz rodzaj dokumentu.'})}
         editor={(close, ctl) => <DocTypeEditor close={close} ctl={ctl} initial={it.docType ?? ''} empty="Wynika z materiału" onSave={v => cmd({type: 'item_edit', itemId: it.id, docType: v || null})}/>}/>
       <SettingRow label="Materiał" at="punkt" source="" value={<ItemMaterials it={it} missing={null}/>}/>
       <SettingRow label="Tryb głosowania" at="punkt" source={decisionText} genitive="trybu głosowania" actionLabel={`Zmień tryb głosowania w sprawie ${no}`}
@@ -292,7 +297,7 @@ function ModeEditor(props: {close: (s?: string) => void; ctl: EditorCtl; it: Age
     {special && <div class="basis-fields">
       <Notice tone="warn" label="Ważne">Tajność albo głosowanie imienne uchwala Prezydium (§ 11 ust. 2). Wpisz, kiedy to postanowiło.</Notice>
       <Segments label="Podstawa" value={kind} options={[['uchwala', 'Uchwała Prezydium'], ['glosowanie', 'Głosowanie na posiedzeniu']]} onChange={setKind}/>
-      <div class="row">
+      <div class="row row-top">
         <Field label={kind === 'uchwala' ? 'Numer uchwały' : 'Numer głosowania'} hint={kind === 'uchwala' ? 'Np. 98/IX/2026.' : 'Np. 3.'}>
           <input value={number} maxLength={60} inputMode={kind === 'glosowanie' ? 'numeric' : undefined} onInput={e => setNumber((e.target as HTMLInputElement).value)}/>
         </Field>
@@ -313,12 +318,12 @@ function ProcedureSettings() {
   const bundle = useGeneral();
   const prep = m.status === 'przygotowanie';
   const editable = prep && s.isOrganizer(m.organ);
-  const hours = bundle ? organSettingsOf(bundle.general, m.organ).procedureHours : 24;
+  // DA-21: bez terminu wpisanego ręcznie głosowanie trwa czas z ustawień ogólnych liczony od rozpoczęcia (procedureEndAt).
+  const term = procedureEndAt(m, generalOf(bundle), Date.now());
+  const hours = term.hours;
   const starter = procedureStarter(m);
   const members = organRoster(s.roster, m);
   const starterLabel = starter ? `${s.personName(starter)}, ${members.find(x => x.personId === starter)?.label ?? ''}.` : '';
-  const ends = m.endsAt ?? 0;
-  const asDefault = Math.abs(ends - (m.createdAt + hours * 3600000)) < 60000;
   const messages = m.effective?.meeting.messages;
   const details = (patch: Record<string, unknown>) => cmd({type: 'details', ...patch});
   return <section class="oi-card meeting-settings" aria-labelledby="ustawienia-glosowania">
@@ -328,11 +333,13 @@ function ProcedureSettings() {
       <SettingRow label="Zarządza głosowaniem" at="posiedzenie" source="" value={prep || !starter
         ? 'Rozpoczyna przewodniczący albo zastępca, którego przewodniczący wyznaczył na to głosowanie. Ta osoba i przewodniczący kończą głosowanie i ogłaszają wyniki.'
         : starterLabel}/>
-      <SettingRow id="ust-termin" label="Koniec głosowania" at="posiedzenie" state={asDefault || !prep ? 'odziedziczona' : 'zmieniona'} genitive="końca głosowania" actionLabel="Zmień koniec głosowania"
-        value={m.endsAt ? fmtDateTime(m.endsAt) : 'Nie ustalono'}
-        source={!prep ? '' : asDefault ? `Jak w ustawieniach ogólnych, ${hoursText(hours)} od utworzenia.` : `Zmienione dla tego głosowania. W ustawieniach ogólnych ${hoursText(hours)} od utworzenia.`}
-        hint={prep && m.endsAt && m.endsAt - Date.now() < minimum ? 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.' : undefined}
-        editor={editable ? (close, ctl) => <EndsEditor close={close} ctl={ctl} initial={m.endsAt} onSave={v => details({endsAt: v})}/> : undefined}/>
+      <SettingRow id="ust-termin" label="Koniec głosowania" at="posiedzenie" state={term.fromStart || !prep ? 'odziedziczona' : 'zmieniona'} genitive="końca głosowania" actionLabel="Zmień koniec głosowania"
+        value={prep && term.fromStart ? `${hoursText(hours)} od rozpoczęcia` : m.endsAt ? fmtDateTime(m.endsAt) : 'Nie ustalono'}
+        source={!prep ? '' : term.fromStart ? 'Jak w ustawieniach ogólnych.' : `Zmienione dla tego głosowania. W ustawieniach ogólnych ${hoursText(hours)} od rozpoczęcia.`}
+        hint={prep && !term.fromStart && term.endsAt - Date.now() < minimum ? 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.' : undefined}
+        editor={editable ? (close, ctl) => <EndsEditor close={close} ctl={ctl} initial={term.fromStart ? undefined : m.endsAt} suggested={term.endsAt} onSave={v => details({endsAt: v})}/> : undefined}
+        resetLabel="Przywróć ustawienie ogólne"
+        onReset={editable ? async () => { await details({endsAt: null}); return `Przywrócono ${hoursText(hours)} od rozpoczęcia z ustawień ogólnych.`; } : undefined}/>
       <SettingRow label="Reasumpcja" at="posiedzenie" state="niedostepne" value="Niedostępna" source="Wniosek o reasumpcję zgłasza się wyłącznie na posiedzeniu, na którym odbyło się głosowanie (§ 12 ust. 2)."/>
       {messages && <SettingRow label="Kanał wiadomości" at="posiedzenie" state="aplikacja" value="Widoczny zawsze." effective={messages} why={appRuleWhy}/>}
       <SettingRow label="Tytuł" at="posiedzenie" source="" value={m.title} genitive="tytułu" actionLabel="Zmień tytuł"
@@ -349,8 +356,8 @@ function ProcedureSettings() {
   </section>;
 }
 
-function EndsEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial?: number; onSave: (v: number) => Promise<unknown>}) {
-  const [value, setValue] = useState(localInput(props.initial));
+function EndsEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial?: number; suggested: number; onSave: (v: number) => Promise<unknown>}) {
+  const [value, setValue] = useState(localInput(props.initial ?? props.suggested));
   const chosen = value ? new Date(value).getTime() : NaN;
   return <RowEditor close={props.close} ctl={props.ctl} dirty={chosen !== props.initial} reason={Number.isFinite(chosen) ? undefined : 'Ustaw koniec głosowania.'} onSave={() => props.onSave(chosen)}>
     <Field label="Koniec głosowania" hint={Number.isFinite(chosen) && chosen - Date.now() < minimum ? 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.' : 'Członkowie widzą licznik pozostałego czasu.'}>
@@ -380,16 +387,20 @@ function Start() {
   const blocked = !acts.length ? 'Dodaj co najmniej jedną sprawę do głosowania.'
     : subs.length === 1 ? `Sprawa ${subs[0]} jest podpunktem i nie zostałaby poddana pod głosowanie. Usuń ją i dodaj jako osobną sprawę.`
     : subs.length > 1 ? `Sprawy ${joinNumbers(subs)} są podpunktami i nie zostałyby poddane pod głosowanie. Usuń je i dodaj jako osobne sprawy.` : '';
-  const short = !!m.endsAt && m.endsAt - now < minimum;
+  const bundle = useGeneral();
+  const term = procedureEndAt(m, generalOf(bundle), now);
+  const short = !term.fromStart && term.endsAt - now < minimum;
   const note = warnings.length > 0 && <Notice tone="warn">{warnings.map(w => <p key={w}>{w}</p>)}</Notice>;
   return <section class="oi-card is-teraz">
     <CardTitle level={2}>Rozpoczęcie głosowania</CardTitle>
-    <p class="small">{`Wszystkie sprawy (${acts.length}) zostaną otwarte jednocześnie do ${m.endsAt ? fmtDateTime(m.endsAt) : 'ustalonego terminu'}.`}</p>
+    <p class="small">{term.fromStart
+      ? `Wszystkie sprawy (${acts.length}) zostaną otwarte jednocześnie na ${hoursText(term.hours)} od rozpoczęcia.`
+      : `Wszystkie sprawy (${acts.length}) zostaną otwarte jednocześnie do ${fmtDateTime(term.endsAt)}.`}</p>
     {note}
     <Button kind="primary" wide haspopup busy={busy} disabled={!!blocked} reason={blocked} onClick={() => setConfirm(true)}>Rozpocznij głosowanie</Button>
     {confirm && <Confirm title="Rozpocząć głosowanie?" confirm="Rozpocznij głosowanie" onClose={() => setConfirm(false)} onConfirm={reason => send({type: 'open', ...(short ? {reason} : {})})}
       field={short ? {label: 'Powód krótszego terminu', required: true} : undefined}
       text={<><p>Po rozpoczęciu nie można zmieniać spraw ani materiałów, nad którymi się głosuje. Członkowie zagłosują na swoich telefonach, a w kanale wiadomości pojawi się informacja o głosowaniu i terminie.</p>{note}
-        {short && m.endsAt && <p>{shortTermText(m.endsAt - now)}</p>}</>}/>}
+        {short && <p>{shortTermText(term.endsAt - now)}</p>}</>}/>}
   </section>;
 }

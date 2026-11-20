@@ -22,7 +22,12 @@
 @media (max-width: 760px) {
   .edit-row { grid-template-columns: 2.6em minmax(0, 1fr); grid-template-areas: 'no main' '. tools' '. settings'; }
   .edit-tools { justify-content: flex-start; }
+  /* Formularz podpunktu i panel ustawień stoją zawsze pod przyciskiem „Ustawienia”, także gdy w wierszu nie ma narzędzi. */
+  .edit-row > .sub-form { grid-row: 4; }
+  .edit-row > .edit-extra { grid-row: 5; }
 }
+/* Do 760 px w przygotowaniu narzędzia punktu stoją w rozwiniętym panelu ustawień punktu (zawsze widoczne). */
+.edit-extra > .edit-tools { clip-path: none; justify-content: flex-start; margin-bottom: var(--odstep-2); }
 /* Dodawanie punktu, podpunktu albo sprawy: etykieta nad polem, przycisk w wierszu pola, podpowiedź pod polem.
    Pole formularza rozkłada się w siatce formularza (display: contents), dlatego przycisk stoi obok samego pola.
    Na telefonie pole zajmuje całą szerokość, a przycisk stoi pod nim. */
@@ -42,8 +47,12 @@
 .import { display: grid; grid-template-columns: 1fr 1fr; gap: var(--odstep-5); }
 .import-actions { align-items: flex-start; }
 .import-preview { background: var(--powierzchnia-miekka); padding: var(--odstep-3) var(--odstep-4); max-height: 440px; overflow: auto; display: flex; flex-direction: column; gap: var(--odstep-3); }
-.preview-list { padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--odstep-1); }
-.preview-list li.is-sub { margin-left: 1.4em; list-style-type: "– "; }
+.import-preview:focus-visible { outline: var(--pierscien-fokusu) solid var(--fokus); outline-offset: 3px; }
+.preview-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-1); }
+.preview-list li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); column-gap: var(--odstep-2); }
+.preview-list li.is-sub { padding-left: var(--odstep-5); }
+.preview-no { font-variant-numeric: tabular-nums; }
+.preview-added { display: block; font-size: var(--t-maly); color: var(--tekst-drugorzedny); }
 @media (max-width: 760px) { .import { grid-template-columns: 1fr; } }
 
 /* Przygotowanie: treść i kolumna boczna 370 px, do 960 px jedna kolumna z boczną pod treścią.

@@ -9,7 +9,8 @@ import {canMessage} from '../shared/role.ts';
 // `bare`: bez własnej karty i tytułu, gdy wiadomości stoją w zwijanej sekcji (panel prowadzenia obrad). Tam „Wyślij”
 // ma obrys, bo w kolumnie panelu jest najwyżej jeden przycisk główny (np. „Wznów obrady”).
 // Wersja 3 (DA-20): gość czyta kanał wiadomości bez pola do pisania; osoby z głosem doradczym piszą.
-export function Messages(props: {bare?: boolean}) {
+// `secondary`: karta z „Wyślij” z obrysem, gdy w tej samej kolumnie stoi przycisk główny (np. „Rozpocznij głosowanie”).
+export function Messages(props: {bare?: boolean; secondary?: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const [text, setText] = useState('');
@@ -43,7 +44,7 @@ export function Messages(props: {bare?: boolean}) {
             aria-invalid={empty ? 'true' : undefined} aria-describedby={empty ? `${id}-b` : undefined}
             onInput={e => { setText((e.target as HTMLInputElement).value); if (empty) setEmpty(false); }}/>
           {empty && <span class="oi-field__error message-error" id={`${id}-b`}>Wpisz treść wiadomości.</span>}
-          <Button type="submit" kind={props.bare ? 'secondary' : 'primary'} busy={busy}>Wyślij</Button>
+          <Button type="submit" kind={props.bare || props.secondary ? 'secondary' : 'primary'} busy={busy}>Wyślij</Button>
         </div>
       </div>
     </form>}

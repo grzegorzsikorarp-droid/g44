@@ -456,12 +456,38 @@ export function applyCompositionChange(roster: Roster, settings: OrganSettings, 
   return {roster: next, settings: nextSettings, audit};
 }
 
-/** Rodzaj sprawy z tytułu punktu i słowo, które go wskazało; bez trafienia null (I-13). */
+// Rozpoznawanie słów w tytule punktu niezależnie od przypadka: słowa porównuje się bez polskich znaków (zapomóg, zapomoga),
+// a słowo frazy dłuższe niż 4 litery skraca się do pierwszych max(4, długość − 2) liter, czyli do tematu
+// („zapomoga” i „zapomogi” dają „zapomo”, „zdarzenie” i „zdarzeniu” dają „zdarzen”). Fraza trafia, gdy każde jej słowo
+// ma w tytule słowo zaczynające się od tego tematu.
+const plain = (t: string) => t.toLocaleLowerCase('pl').replace(/[ąćęłńóśźż]/g, c => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]);
+const wordsOf = (t: string) => t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+const stemOf = (w: string) => w.length <= 4 ? w : w.slice(0, Math.max(4, w.length - 2));
+/** Słowa tytułu, które odpowiadają frazie, albo null, gdy któreś słowo frazy nie ma odpowiednika. */
+function phraseHit(titleWords: string[], titleWordsPlain: string[], phrase: string): string | null {
+  const hit: string[] = [];
+  for (const w of wordsOf(plain(phrase))) {
+    const stem = stemOf(w);
+    const i = titleWordsPlain.findIndex(t => t.startsWith(stem));
+    if (i < 0) return null;
+    hit.push(titleWords[i]);
+  }
+  return hit.length ? hit.join(' ') : null;
+}
+/**
+ * Rodzaj sprawy z tytułu punktu i słowa tytułu, które go wskazały; bez trafienia null (I-13). Fraza pasuje dosłownie albo
+ * tematem słów, więc „zapomoga, zdarzenie losowe” rozpoznaje też „przyznania zapomogi po zdarzeniu losowym”.
+ */
 export function matchCaseType(caseTypes: CaseType[], organ: OrganCode, title: string): {id: string; keyword: string} | null {
   const t = title.toLocaleLowerCase('pl');
+  const titleWords = wordsOf(t), titleWordsPlain = titleWords.map(plain);
   for (const c of [...caseTypes].filter(c => c.active && c.organs.includes(organ)).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'pl'))) {
-    const keyword = c.keywords.find(k => k && t.includes(k.toLocaleLowerCase('pl')));
-    if (keyword) return {id: c.id, keyword};
+    for (const k of c.keywords) {
+      if (!k) continue;
+      if (t.includes(k.toLocaleLowerCase('pl'))) return {id: c.id, keyword: k};
+      const hit = phraseHit(titleWords, titleWordsPlain, k);
+      if (hit) return {id: c.id, keyword: hit};
+    }
   }
   return null;
 }

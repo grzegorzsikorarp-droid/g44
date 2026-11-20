@@ -89,19 +89,19 @@ export function SettingsPage(props: {section: SectionId | null}) {
       <div class="page page--kolumna oi-hero__in">
         <Tag>Ustawienia</Tag>
         <h1>Ustawienia <b>ogólne</b></h1>
-        <p class="oi-hero__lead">{`Tu ${brand.officeLower} ustala, jak aplikacja przygotowuje posiedzenia. Każde nowe posiedzenie zaczyna od tych ustawień i od wybranego wzoru posiedzenia, a w przygotowaniu można je zmienić dla jednego posiedzenia. Wartości ustalone regulaminem są widoczne, ale nie można ich zmienić.`}</p>
+        {(wide || !current) && <p class="oi-hero__lead">{`Tu ${brand.officeLower} ustala, jak aplikacja przygotowuje posiedzenia. Każde nowe posiedzenie zaczyna od tych ustawień i od wybranego wzoru posiedzenia, a w przygotowaniu można je zmienić dla jednego posiedzenia. Wartości ustalone regulaminem są widoczne, ale nie można ich zmienić.`}</p>}
       </div>
     </header>
     <div class="page page--kolumna settings-page">
       {reader && <Notice>Ustawienia zmienia biuro. Ten widok pokazuje, od czego zaczyna się każde posiedzenie.</Notice>}
-      {wide
-        ? <div class="settings-layout">
-          <SectionNav sections={sections} current={shown}/>
-          <div class="settings-content">{shown && <Section id={shown} bundle={bundle} canEdit={access.general === 'zmienia'}/>}</div>
-        </div>
-        : shown
-          ? <div class="settings-content"><a class="oi-link settings-back" href="#ustawienia">Wszystkie ustawienia</a><Section id={shown} bundle={bundle} canEdit={access.general === 'zmienia'}/></div>
+      {/* Sekcja stoi w tym samym miejscu drzewa na komputerze i na telefonie, więc przy zmianie szerokości okna
+          (np. przez próg 961 px) nie montuje się od nowa, a rozwinięte wyjaśnienia zostają rozwinięte (W-W-18). */}
+      <div class={wide ? 'settings-layout' : 'settings-narrow'}>
+        {wide ? <SectionNav sections={sections} current={shown}/> : null}
+        {shown
+          ? <div class="settings-content">{!wide && <a class="oi-link settings-back" href="#ustawienia">Wszystkie ustawienia</a>}<Section id={shown} bundle={bundle} canEdit={access.general === 'zmienia'}/></div>
           : <SectionCards sections={sections}/>}
+      </div>
     </div>
   </>;
 }
@@ -201,31 +201,37 @@ function RulesSection(props: {bundle: GeneralBundle | null}) {
   const seats = props.bundle ? organSettingsOf(props.bundle.general, ORGAN).seats?.count ?? null : null;
   const advisory = people.filter(a => a.kind === 'doradczy');
   const act = organ.forms.regulationAct;
+  // Nazwa aktu w mianowniku z nazwy w dopełniaczu („Regulaminu Okręgowej Rady …” daje „Regulamin Okręgowej Rady …”).
+  const regulationName = organ.forms.regulation.replace(/^Regulaminu\b/, 'Regulamin');
   const rule = (id: HouseRuleId) => houseRule(id).text;
   const houseTitle = `Zasady przyjęte${brand.houseBy ? ` ${brand.houseBy}` : ''}`;
   return <>
     <dl class="facts settings-facts">
       <Fact label="Organ">{organ.name}</Fact>
       <Fact label="W aplikacji">Tak</Fact>
-      <Fact label="Regulamin">{act ? act.charAt(0).toLocaleUpperCase('pl') + act.slice(1) : organ.forms.regulation}{law.appliedVia && <span class="fact-note">{`Do Prezydium stosowany przez ${law.appliedVia}.`}</span>}</Fact>
+      <Fact label="Regulamin">{regulationName}{act && <span class="fact-note">{act.charAt(0).toLocaleUpperCase('pl') + act.slice(1)}</span>}{law.appliedVia && <span class="fact-note">{`Do Prezydium stosowany przez ${law.appliedVia}.`}</span>}</Fact>
     </dl>
     <SettingsList label="Regulamin i zasady">
       <SettingRow label="Wymagane kworum" state="regulamin" at="ogolne" effective={prawo(law.quorum.basis)}
         value={<>{`Co najmniej połowa członków, dziś ${required} z ${total}.`}{seats && seats !== total ? ` Liczba miejsc ustalona uchwałą ${seats}. Kworum liczy się z aktualnego składu.` : ''}</>}
         why={`${organ.name} podejmuje uchwały przy obecności co najmniej połowy członków. Ten próg ustala regulamin, a nie aplikacja.`}/>
       <SettingRow label="Kto stwierdza kworum" state="zasada" at="ogolne" effective={zasada('K18')} value="Osoba prowadząca obrady na podstawie listy obecności" why={rule('K18')}/>
-      <SettingRow label="Większość" state="regulamin" at="ogolne" effective={prawo(law.majority.basis)} why={lawWhy}
+      <SettingRow label="Większość" state="regulamin" at="ogolne" effective={prawo(law.majority.basis)}
+        why={`${organ.name} podejmuje uchwały zwykłą większością głosów (${law.majority.basis}). Ten próg ustala regulamin, a nie aplikacja.`}
         value="Zwykła większość głosów. Uchwała jest podjęta, gdy głosów „za” jest więcej niż „przeciw”."/>
-      <SettingRow label="Tryb głosowania" state="regulamin" at="ogolne" effective={prawo(law.modes.basis)} why={lawWhy}
+      <SettingRow label="Tryb głosowania" state="regulamin" at="ogolne" effective={prawo(law.modes.basis)}
+        why={`Głosowanie jest jawne (§ 11 ust. 1). Tajność albo głosowanie imienne uchwala ${organ.name} w danej sprawie (§ 11 ust. 2), a nie ustawienie w aplikacji.`}
         value="Jawne. Tajność albo głosowanie imienne uchwala Prezydium."/>
       <SettingRow label="Głosowanie elektroniczne" state="regulamin" at="ogolne" effective={prawo(law.modes.electronicBasis)} why={lawWhy}
         value="Dopuszczalne, także tajne i imienne, z zachowaniem charakteru głosowania"/>
-      <SettingRow label="Reasumpcja" state="regulamin" at="ogolne" effective={prawo('§ 12 ust. 1–5')} why={lawWhy}
+      <SettingRow label="Reasumpcja" state="regulamin" at="ogolne" effective={prawo('§ 12 ust. 1–5')}
+        why={`O reasumpcji rozstrzyga ${organ.name} na pisemny wniosek co najmniej ${shareText(law.reasumption.share)} członków biorących udział w posiedzeniu (§ 12 ust. 5). Wniosek zgłasza się wyłącznie na posiedzeniu, na którym odbyło się głosowanie (§ 12 ust. 2). Te warunki ustala regulamin, a nie aplikacja.`}
         value={`Gdy wynik głosowania budzi uzasadnione wątpliwości. Tylko głosowanie jawne, tylko na tym samym posiedzeniu, jeden raz, na pisemny wniosek co najmniej ${shareText(law.reasumption.share)} członków biorących udział w posiedzeniu`}/>
       <SettingRow label="Zwołuje" state="regulamin" at="ogolne" why={lawWhy}
         source={`${sourceLineText(prawo('§ 14 ust. 3 i § 16 ust. 2'), 'ogolne')} Zakres zastępstwa ustala ${rada.name} (§ 16 ust. 1).`}
         value={`${organ.forms.chairman}. W zastępstwie wiceprzewodniczący, którego przewodniczący wyznaczył.`}/>
-      <SettingRow label="Zawiadomienie" state="regulamin" at="ogolne" effective={prawo(law.notice.basis)} why={lawWhy}
+      <SettingRow label="Zawiadomienie" state="regulamin" at="ogolne" effective={prawo(law.notice.basis)}
+        why={`Zwołujący przesyła zawiadomienie o terminie, miejscu i porządku obrad co najmniej ${law.notice.minDays} dni przed posiedzeniem (${law.notice.basis}). Krótszy termin trafia do protokołu, ale nie może być ustawieniem.`}
         value={`Termin, miejsce i porządek obrad co najmniej ${law.notice.minDays} dni przed posiedzeniem`}/>
       <SettingRow label="Głos doradczy" state="regulamin" at="ogolne" effective={prawo(law.advisory.basis)} why={lawWhy}
         value="Przewodniczący Okręgowej Komisji Rewizyjnej, przewodniczący Okręgowego Sądu Pielęgniarek i Położnych, Okręgowy Rzecznik Odpowiedzialności Zawodowej"
@@ -242,7 +248,8 @@ function RulesSection(props: {bundle: GeneralBundle | null}) {
         ? <SettingRow label="Głosowanie między posiedzeniami" state="regulamin" at="ogolne" effective={prawo('§ 14 ust. 5 zdanie drugie')} why={lawWhy}
           value="Dopuszczalne. Rozpoczyna przewodniczący albo zastępca, którego przewodniczący wyznaczył na to głosowanie."/>
         : <SettingRow label="Głosowanie między posiedzeniami" state="niedostepne" at="ogolne" value="Niedostępne" source={law.betweenMeetings.reason}/>}
-      <SettingRow label="Protokół" state="regulamin" at="ogolne" effective={prawo('§ 13 ust. 1–3')} why={lawWhy}
+      <SettingRow label="Protokół" state="regulamin" at="ogolne" effective={prawo('§ 13 ust. 1–3')}
+        why={`Protokół sporządza się w terminie ${law.minutes.deadlineDays} dni od zakończenia obrad (${law.minutes.deadlineBasis}), a ${organ.name} przyjmuje go na następnym posiedzeniu (${law.minutes.adoptionBasis}). Te terminy ustala regulamin, a nie aplikacja.`}
         value={`Sporządza się w ${law.minutes.deadlineDays} dni. Podpisują przewodniczący obrad, sekretarz lub zastępujący go członek Prezydium oraz protokolant, jeżeli został wyznaczony. Przyjmuje go następne posiedzenie.`}/>
       <SettingRow label="Kto sporządza protokół" state="regulamin" at="ogolne" effective={prawo(law.minutes.preparedByBasis)} why={lawWhy} value="Sekretarz"/>
       <SettingRow label="Zakres spraw" state="regulamin" at="ogolne" effective={prawo('§ 14 ust. 1')} why={lawWhy}
@@ -350,7 +357,7 @@ function CompositionDialog(props: {onClose: () => void}) {
         <option value="">Wybierz osobę…</option>
         {members.map(ms => <option key={ms.personId} value={ms.personId}>{roster.persons.find(p => p.id === ms.personId)?.name}, {ms.label}</option>)}
       </select></Field>}
-      {(op === 'dodaj' || op === 'funkcja') && <div class="row">
+      {(op === 'dodaj' || op === 'funkcja') && <div class="row row-top">
         <Field label="Funkcja"><select value={func} onChange={e => setFunc((e.target as HTMLSelectElement).value as Func)}>{FUNCS.map(f => <option key={f} value={f}>{funcLabel(f, ORGAN)}</option>)}</select></Field>
         <Field label="Nazwa funkcji" hint="Np. I Wiceprzewodnicząca. Tak funkcja pojawi się na ekranach i w protokole."><input value={label} maxLength={120} onInput={e => setLabel((e.target as HTMLInputElement).value)}/></Field>
       </div>}
@@ -415,12 +422,19 @@ function TemplatesSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
           show={v => minutesText(Number(v))} genitive="czasu głosowań nad wnioskami"
           editor={props.canEdit ? (close, ctl) => <MinutesRowEditor close={close} ctl={ctl} label="Czas głosowań nad wnioskami" initial={t.settings?.motionMinutes ?? organ.motionMinutes} options={MOTION_MINUTES} onSave={v => save(withSettings({motionMinutes: v}))}/> : undefined}
           onReset={props.canEdit ? async () => { await save(withSettings({motionMinutes: undefined})); return restored(minutesText(organ.motionMinutes, 'biernik')); } : undefined}/>
-        <SettingRow label="Godzina posiedzenia" value={t.defaults?.time ?? '10:00'} effective={defaultOf('time', '10:00')} at="wzor" genitive="godziny posiedzenia" actionLabel="Zmień godzinę posiedzenia"
+        {/* Godzina i tryb nie są ustawieniami ogólnymi: bez własnej wartości wzoru nowe posiedzenie zaczyna się o 10:00, stacjonarnie. */}
+        <SettingRow label="Godzina posiedzenia" value={t.defaults?.time ?? '10:00'} at="wzor" genitive="godziny posiedzenia" actionLabel="Zmień godzinę posiedzenia"
+          state={t.defaults?.time ? 'zmieniona' : 'odziedziczona'}
+          source={t.defaults?.time ? 'Zmienione dla tego wzoru. Bez własnej wartości nowe posiedzenie zaczyna się o 10:00.' : 'Bez własnej wartości. Nowe posiedzenie zacznie się o 10:00.'}
           editor={props.canEdit ? (close, ctl) => <TimeEditor close={close} ctl={ctl} initial={t.defaults?.time ?? '10:00'} onSave={v => save(withDefaults({time: v}))}/> : undefined}
-          onReset={props.canEdit ? async () => { await save(withDefaults({time: undefined})); return restored('godzinę 10:00'); } : undefined}/>
-        <SettingRow label="Tryb" value={modeName(t.defaults?.mode)} effective={defaultOf('mode', 'stacjonarne')} at="wzor" show={modeName} genitive="trybu"
+          resetLabel="Przywróć godzinę 10:00"
+          onReset={props.canEdit ? async () => { await save(withDefaults({time: undefined})); return 'Przywrócono godzinę 10:00.'; } : undefined}/>
+        <SettingRow label="Tryb" value={modeName(t.defaults?.mode)} at="wzor" genitive="trybu"
+          state={t.defaults?.mode ? 'zmieniona' : 'odziedziczona'}
+          source={t.defaults?.mode ? 'Zmienione dla tego wzoru. Bez własnej wartości nowe posiedzenie jest stacjonarne.' : 'Bez własnej wartości. Nowe posiedzenie będzie stacjonarne.'}
           editor={props.canEdit ? (close, ctl) => <ModeEditor close={close} ctl={ctl} initial={t.defaults?.mode ?? 'stacjonarne'} onSave={v => save(withDefaults({mode: v}))}/> : undefined}
-          onReset={props.canEdit ? async () => { await save(withDefaults({mode: undefined})); return restored('tryb stacjonarny'); } : undefined}/>
+          resetLabel="Przywróć tryb stacjonarny"
+          onReset={props.canEdit ? async () => { await save(withDefaults({mode: undefined})); return 'Przywrócono tryb stacjonarny.'; } : undefined}/>
         <SettingRow label="Protokolant" value={t.defaults?.recorder || organ.recorder || 'Nie wpisano'} effective={defaultOf('recorder', organ.recorder)} at="wzor"
           show={v => v ? String(v) : 'brak'} genitive="protokolanta" actionLabel="Zmień protokolanta"
           editor={props.canEdit ? (close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Protokolant" initial={t.defaults?.recorder ?? ''} max={120} hint="Puste pole oznacza protokolanta z ustawień ogólnych." onSave={v => save(withDefaults({recorder: v}))}/> : undefined}

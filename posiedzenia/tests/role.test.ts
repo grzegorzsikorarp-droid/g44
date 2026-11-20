@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {apply, newMeetingFromSettings, type Command, type Context} from '../src/shared/meeting.ts';
-import {canCreate, canView, chairRank, openOption, settingsAccess, takeChairOption} from '../src/shared/role.ts';
+import {apply, duplicateMeeting, envOf, newMeetingFromSettings, type Command, type Context} from '../src/shared/meeting.ts';
+import {canCreate, canReadMinutes, canView, chairRank, minutesRefusal, openOption, settingsAccess, takeChairOption} from '../src/shared/role.ts';
+import {effectiveMeeting} from '../src/shared/cascade.ts';
 import {viewFor} from '../src/shared/view.ts';
 import {defaultGeneral} from '../src/shared/settings.ts';
 import {defaultDocTypes} from '../src/shared/doctypes.ts';
@@ -229,7 +230,8 @@ test('DA-21, G-18: termin krótszy niż 24 godziny tylko z powodem; rozpoczęcie
   m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, chair, ctx.tick());
   assert.deepEqual([m.shortTerm!.reason, m.shortTerm!.by, m.shortTerm!.accountId], ['Termin wyznaczony przez Okręgową Radę.', 'Sebastian Irzykowski', 'u-si']);
   assert.equal(m.messages[0].author, 'u-si');
-  assert.match(m.messages[0].text, /^Rozpoczęto głosowanie między posiedzeniami w 2 sprawach\. Głosowanie potrwa do 20 listopada 2026 r\., godz\. 17:00\.$/);
+  // Poprawki po kontroli v3 (D-DZ-V3-04, DA-21): informacja w kanale podaje przedmiot (tytuły spraw w kolejności) i termin.
+  assert.match(m.messages[0].text, /^Rozpoczęto głosowanie między posiedzeniami w 2 sprawach, „Uchwała nr 120\/IX\/2026” i „Uchwała nr 121\/IX\/2026”\. Głosowanie potrwa do 20 listopada 2026 r\., godz\. 17:00\.$/);
   assert.throws(() => apply(m, {type: 'procedure_deadline', endsAt: ctx.now + 8 * 3600000}, chair, ctx), short);
   m = apply(m, {type: 'procedure_deadline', endsAt: ctx.now + 30 * 3600000}, chair, ctx.tick());
   assert.equal(m.status, 'trwa');
@@ -307,4 +309,80 @@ test('macierz uprawnień: polecenie × rola × stan (wybrane czynności organu i
     if (ok) assert.doesNotThrow(() => apply(m, cmd, who, ctx), name);
     else assert.throws(() => apply(m, cmd, who, ctx), (e: Error & {status?: number}) => e.status === 403, name);
   }
+});
+
+// Poprawki po kontroli rdzenia wersji 3 (D-DZ-V3-01, W-W-06): domyślny termin głosowania między posiedzeniami liczy się
+// od rozpoczęcia, więc głosowanie z ustawieniami domyślnymi nie wymaga powodu krótszego terminu (DA-21).
+test('DA-21: domyślne głosowanie między posiedzeniami rozpoczęte bez powodu trwa 24 godziny od rozpoczęcia', () => {
+  const ctx = setup();
+  let m = newMeetingFromSettings({id: 'p1', kind: 'procedura', actor: office}, ctx);
+  assert.equal(m.endsAt, undefined);
+  m = apply(m, {type: 'item_add', title: 'Uchwała w sprawie próby'}, office, ctx.tick(3 * 3600000));
+  const review = viewFor(m, office, roster, envOf(ctx, 'prezydium')).effective!.review!;
+  assert.ok(!review.some(r => r.text.startsWith('Głosowanie potrwa krócej niż 24 godziny')), 'przegląd bez ostrzeżenia o krótszym terminie');
+  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  assert.equal(m.shortTerm, undefined);
+  assert.equal(m.endsAt, ctx.now + 24 * 3600000);
+  assert.equal(m.messages[0].text, 'Rozpoczęto głosowanie między posiedzeniami w sprawie „Uchwała w sprawie próby”. Głosowanie potrwa do 21 listopada 2026 r., godz. 14:00.');
+  assert.deepEqual(effectiveMeeting(envOf(ctx, 'prezydium'), m).deviations.filter(d => d.kind === 'termin_procedury'), []);
+});
+
+test('DA-21: termin wpisany ręcznie obowiązuje, a „Przywróć” wraca do czasu z ustawień ogólnych od rozpoczęcia', () => {
+  const ctx = setup();
+  let m = newMeetingFromSettings({id: 'p1', kind: 'procedura', actor: office}, ctx);
+  m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026'}, office, ctx.tick());
+  m = apply(m, {type: 'details', endsAt: ctx.now + 5 * 3600000}, office, ctx.tick());
+  assert.deepEqual(m.endsAtSet, {at: ctx.now, by: 'Biuro Izby', accountId: 'u-biuro'});
+  assert.equal(m.log.at(-1)!.text, 'Zmieniono koniec głosowania z 24 godziny od rozpoczęcia na 20 listopada 2026 r., godz. 16:00.');
+  const review = viewFor(m, office, roster, envOf(ctx, 'prezydium')).effective!.review!;
+  assert.ok(review.some(r => r.text === 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.'));
+  assert.throws(() => apply(m, {type: 'open'}, chair, ctx), /Głosowanie potrwa krócej niż 24 godziny\. Podaj powód\./);
+  m = apply(m, {type: 'details', endsAt: null}, office, ctx.tick());
+  assert.equal(m.endsAt, undefined);
+  assert.equal(m.log.at(-1)!.text, 'Przywrócono koniec głosowania z ustawień ogólnych (24 godziny od rozpoczęcia).');
+  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  assert.equal(m.shortTerm, undefined);
+});
+
+// D-DZ-V3-02 (macierz 4.3, DA-10): projekt protokołu w trakcie obrad i przebieg obrad według ról.
+test('macierz 4.3: projekt protokołu w trakcie widzą biuro, przewodniczący, zastępca i prowadzący, po zamknięciu także członkowie', () => {
+  const ctx = setup();
+  let m = apply(prepared(ctx), {type: 'deputy', personId: 'ag'}, chair, ctx.tick());
+  m = opened(ctx, presidium, m);
+  m = apply(m, {type: 'invite', accountId: 'u-gosc', on: true, invitedBy: 'przewodniczacy'}, chair, ctx.tick());
+  const adv: Actor = {account: advisory, personId: null, name: advisory.displayName};
+  const reads = (who: Actor, meeting = m) => canReadMinutes(roster, meeting, who);
+  assert.deepEqual([reads(office), reads(chair), reads(ag), reads(jw), reads(kn), reads(guest), reads(adv), reads(actor(null, 'biuro', true))], [true, true, true, false, false, false, false, true]);
+  const viceChairs = apply(m, {type: 'chair_handover', personId: 'jw'}, chair, ctx.tick());
+  assert.equal(reads(jw, viceChairs), true, 'osoba prowadząca obrady widzi projekt protokołu');
+  assert.equal(reads(kn, {...m, status: 'zakonczone'}), true, 'po zamknięciu członek widzi projekt protokołu');
+  assert.equal(reads(guest, {...m, status: 'zakonczone'}), false);
+  assert.equal(minutesRefusal, 'Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady.');
+  // DA-10: przebieg obrad bez gości i osób z głosem doradczym (zostają tylko wpisy o zmianach projektu porządku, D2).
+  m = apply(m, {type: 'quorum'}, chair, ctx.tick());
+  assert.ok(viewFor(m, kn, roster).log.length > 3);
+  for (const who of [guest, adv]) assert.ok(viewFor(m, who, roster).log.every(l => l.tag === 'projekt'), who.name);
+});
+
+// D-DZ-V3-03 (rozdz. 4.5 pkt 6): powielenie nie kopiuje zastępcy ani gości, ale kopia pamięta źródło.
+test('powielenie: kopia bez zastępcy i gości, z danymi źródła do „Wyznacz ponownie” i „Zaproś ponownie”', () => {
+  const ctx = setup();
+  let m = apply(prepared(ctx), {type: 'deputy', personId: 'ag'}, chair, ctx.tick());
+  m = apply(m, {type: 'invite', accountId: 'u-gosc', on: true, invitedBy: 'przewodniczacy'}, office, ctx.tick());
+  const {meeting: copy} = duplicateMeeting(m, {id: 'c1', now: ctx.now, newId: ctx.newId, createdBy: 'Biuro Izby', advisory: ['u-kr']});
+  assert.equal(copy.chair.deputy, null);
+  assert.deepEqual(copy.invited, ['u-kr']);
+  assert.deepEqual(copy.duplicatedFrom, {id: 'm1', date: '2026-11-20', deputy: 'ag', invited: ['u-gosc']});
+  assert.equal(effectiveMeeting(envOf(ctx, 'prezydium'), copy).deviations.length, 0);
+});
+
+// D-DZ-V3-06: po otwarciu odmowa zmiany projektu porządku dla biura mówi, kto go zmienia (D1, DA-9).
+test('D1: po otwarciu projekt porządku obrad zmienia tylko osoba prowadząca, a komunikat nie wskazuje biura', () => {
+  const ctx = setup();
+  const m = opened(ctx);
+  const message = /^Po otwarciu posiedzenia projekt porządku obrad zmienia osoba prowadząca obrady \(§ 9 ust\. 1\)\.$/;
+  refused(() => apply(m, {type: 'item_add', title: 'Patronat'}, office, ctx), message);
+  refused(() => apply(m, {type: 'item_place', itemId: item(m, 'uchwaly').id, parentId: null, beforeId: null}, office, ctx), message);
+  refused(() => apply(m, {type: 'item_add', title: 'Patronat'}, jw, ctx), message);
+  refused(() => apply(prepared(ctx), {type: 'item_add', title: 'Patronat'}, kn, ctx), /^Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady\.$/);
 });

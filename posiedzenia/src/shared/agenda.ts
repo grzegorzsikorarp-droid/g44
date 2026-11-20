@@ -18,10 +18,11 @@ export function newItem(id: string, title: string, kind: ItemKind, parentId: str
   return {id, parentId, title: cleanTitle(title), kind, status: 'oczekuje', materialIds: [], note: '', presenters: []};
 }
 
-// Końcowa kropka, średnik albo dwukropek znika, chyba że kropka kończy skrót (np. „2026 r.”, „ust.”, „pkt.”).
+// Końcowa kropka, średnik, dwukropek albo przecinek (z wyliczenia w Wordzie) znika, chyba że kropka kończy skrót
+// (np. „2026 r.”, „ust.”, „pkt.”).
 export function cleanTitle(title: string) {
   const t = title.replace(/\s+/g, ' ').trim();
-  return (/(?:^|\s)(?:r|ust|pkt|nr|ul|tzw|itp|itd|godz|poz|m\.in)\.$/i.test(t) ? t : t.replace(/[.;:]$/, '')).slice(0, 400);
+  return (/(?:^|\s)(?:r|ust|pkt|nr|ul|tzw|itp|itd|godz|poz|m\.in)\.$/i.test(t) ? t : t.replace(/[.;:,]$/, '')).slice(0, 400);
 }
 
 export function guessKind(title: string, topLevel: boolean): ItemKind {

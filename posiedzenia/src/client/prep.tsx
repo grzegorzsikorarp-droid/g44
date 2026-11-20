@@ -1,7 +1,7 @@
 import type {ComponentChildren} from 'preact';
 import {createContext} from 'preact';
 import {useContext, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
-import {itemKindLabel, parseAgendaText} from '../shared/agenda.ts';
+import {completeAgenda, itemKindLabel, newItem, parseAgendaText} from '../shared/agenda.ts';
 import type {Command} from '../shared/meeting.ts';
 import {materialTypeLabel} from '../shared/meeting.ts';
 import {sortedDocTypes} from '../shared/doctypes.ts';
@@ -94,7 +94,7 @@ export function PrepLayout(props: {main: ComponentChildren; review: ComponentChi
   const setTab = (t: PrepTab) => { setTabState(t); tabMemory.set(TAB_KEY, t); };
   const show = (target: string) => {
     const item = target.startsWith('punkt:') ? target.slice(6) : null;
-    if (phone) setTab(item ? 'porzadek' : 'posiedzenie');
+    if (phone) setTab(item || target === 'materialy' ? 'porzadek' : 'posiedzenie');
     if (item) setOpenItem(item);
     setTimeout(() => {
       const el = document.getElementById(item ? `ustawienia-punktu-${item}` : `ust-${target}`);
@@ -159,7 +159,7 @@ export function PrepEditor() {
         <p class="muted small">Projekt, który Prezydium przyjmuje w głosowaniu. Każdy punkt ma swoje ustawienia.</p>
         <AgendaEditor panel={(it, close) => <ItemSettings it={it} close={close}/>}/>
       </section>
-      <section class="oi-card"><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
+      <section class="oi-card" id="ust-materialy" tabIndex={-1}><CardTitle level={2}>{`Materiały (${m.materials.length})`}</CardTitle><MaterialsEditor/></section>
       <MeetingHistory/>
     </>}
     review={<><ReviewCard/><OpenMeeting/></>}
@@ -170,14 +170,10 @@ export function PrepEditor() {
 // Posiedzenie utworzone przez powielenie (F6): przygotowanie nowego posiedzenia pokazuje raz uwagę o dacie i zawiadomieniu.
 let duplicated: string | null = null;
 /**
- * Dane posiedzenia, z którego powielono (goście i zastępca nie przechodzą do kopii, rozdz. 2.9 i 4.5 pkt 6). Domena ich
- * nie zapisuje w kopii, więc karta przeglądarki pamięta je dla podpowiedzi „Zaproś ponownie” i „Wyznacz ponownie”.
+ * Dane posiedzenia, z którego powielono (goście i zastępca nie przechodzą do kopii, rozdz. 2.9 i 4.5 pkt 6). Domena zapisuje
+ * je w kopii (`duplicatedFrom`), więc podpowiedzi „Zaproś ponownie” i „Wyznacz ponownie” widać na każdym urządzeniu.
  */
-interface DuplicateSource { invited: string[]; deputy: string | null; date: string }
-const SOURCE_KEY = (id: string) => `posiedzenia:powielone:${id}`;
-function duplicateSource(id: string): DuplicateSource | null {
-  try { const raw = tabMemory.get(SOURCE_KEY(id)); return raw ? JSON.parse(raw) as DuplicateSource : null; } catch { return null; }
-}
+const duplicateSource = (m: Pick<ViewMeeting, 'status' | 'duplicatedFrom'>) => m.status === 'przygotowanie' ? m.duplicatedFrom ?? null : null;
 
 /** „Powiel posiedzenie” albo „Powiel głosowanie” (F6): nowe posiedzenie w przygotowaniu i przejście do niego. */
 export function DuplicateButton(props: {primary?: boolean}) {
@@ -190,7 +186,6 @@ export function DuplicateButton(props: {primary?: boolean}) {
     <div><Button kind={props.primary ? 'primary' : 'secondary'} small={!props.primary} busy={busy} onClick={() => run(async () => {
       const r = await request<{meeting: ViewMeeting}>(`/api/meetings/${m.id}/duplicate`, {body: {}});
       duplicated = r.meeting.id;
-      tabMemory.set(SOURCE_KEY(r.meeting.id), JSON.stringify({invited: m.invited, deputy: m.chair.deputy, date: m.date} satisfies DuplicateSource));
       go(`#p-${r.meeting.id}`);
     })}>{label}</Button></div>
     {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
@@ -202,7 +197,7 @@ export function DuplicatedNotice() {
   const [shown] = useState(() => { const hit = duplicated === m.id; if (hit) duplicated = null; return hit; });
   if (!shown) return null;
   return <div class="prep-note"><Notice tone="ok">{m.kind === 'procedura'
-    ? 'Powielono głosowanie między posiedzeniami. Ustaw koniec głosowania i powiadom członków.'
+    ? 'Powielono głosowanie między posiedzeniami. Sprawdź koniec głosowania i powiadom członków.'
     : 'Powielono posiedzenie. Ustaw datę i wyślij zawiadomienie.'}</Notice></div>;
 }
 
@@ -245,6 +240,7 @@ export function AgendaEditor(props: {panel?: (it: AgendaItem, close: () => void)
   const types = useDocTypes();
   const procedure = m.kind === 'procedura';
   const noun = nounOf(m);
+  const phone = useMedia('(max-width: 760px)');
   const [editing, setEditing] = useState<string | null>(null);
   const [localOpen, setLocalOpen] = useState<string | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
@@ -280,6 +276,9 @@ export function AgendaEditor(props: {panel?: (it: AgendaItem, close: () => void)
   };
   const removed = m.agenda.find(i => i.id === removing);
   const inPrep = m.status === 'przygotowanie' && !!props.panel;
+  // Do 760 px wiersz punktu ma tylko „Ustawienia”, a „Wyżej”, „Niżej”, „Dodaj podpunkt” i „Usuń” stoją w rozwiniętym
+  // panelu ustawień punktu, żeby lista punktów na telefonie była krótka.
+  const compact = inPrep && phone;
   return <div class="stack agenda-editor">
     {!items.length && <p class="muted">{procedure ? 'Nie ma jeszcze spraw do głosowania. Dodaj sprawy albo wczytaj je z tekstu.' : 'Porządek jest pusty. Dodaj punkty albo wczytaj gotowy porządek z tekstu.'}</p>}
     {items.length > 0 && <ol class="edit-list" ref={list}>
@@ -292,23 +291,24 @@ export function AgendaEditor(props: {panel?: (it: AgendaItem, close: () => void)
         const listed = !procedure && isListed(m as Meeting, it);
         const removable = procedure || (!mandatory && it.kind !== 'porzadek' && (!listed || skipper || !inPrep));
         const panelOpen = inPrep && openItem === it.id;
+        const tools = <span class="edit-tools">
+          {!inPrep && <Button small quiet kind="ghost" class="tool-zmien" onClick={() => { setSubFor(null); setEditing(it.id); }} label={`Zmień ${noun.acc} ${no}`}>Zmień</Button>}
+          <Button small quiet kind="ghost" class="tool-wyzej" busy={busy} disabled={index === 0} onClick={() => move(it, -1)} label={`Przesuń ${noun.acc} ${no} wyżej`}>Wyżej</Button>
+          <Button small quiet kind="ghost" class="tool-nizej" busy={busy} disabled={index === siblings.length - 1} onClick={() => move(it, 1)} label={`Przesuń ${noun.acc} ${no} niżej`}>Niżej</Button>
+          {!procedure && !it.parentId && <Button small quiet kind="ghost" class="tool-podpunkt" onClick={() => setSubFor(subFor === it.id ? null : it.id)} label={`Dodaj podpunkt w punkcie ${no}`}>Dodaj podpunkt</Button>}
+          {removable && <Button small quiet kind="ghost" class="tool-usun" haspopup busy={busy} onClick={() => setRemoving(it.id)} label={`Usuń ${noun.acc} ${no}`}>Usuń</Button>}
+        </span>;
         return <li key={it.id} class={'edit-row' + (it.parentId ? ' is-sub' : '') + (panelOpen ? ' is-open' : '')} data-pozycja={it.id}>
           <span class="agenda-no">{no}</span>
           {editing === it.id
             ? <ItemEditForm it={it} onDone={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }} onCancel={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }}/>
             : <>
               <div class="edit-main"><span class="edit-title">{it.title}</span><PeopleFacts it={it} compact/>{meta && <span class="edit-meta">{meta}</span>}</div>
-              <span class="edit-tools">
-                {!inPrep && <Button small quiet kind="ghost" class="tool-zmien" onClick={() => { setSubFor(null); setEditing(it.id); }} label={`Zmień ${noun.acc} ${no}`}>Zmień</Button>}
-                <Button small quiet kind="ghost" class="tool-wyzej" busy={busy} disabled={index === 0} onClick={() => move(it, -1)} label={`Przesuń ${noun.acc} ${no} wyżej`}>Wyżej</Button>
-                <Button small quiet kind="ghost" class="tool-nizej" busy={busy} disabled={index === siblings.length - 1} onClick={() => move(it, 1)} label={`Przesuń ${noun.acc} ${no} niżej`}>Niżej</Button>
-                {!procedure && !it.parentId && <Button small quiet kind="ghost" class="tool-podpunkt" onClick={() => setSubFor(subFor === it.id ? null : it.id)} label={`Dodaj podpunkt w punkcie ${no}`}>Dodaj podpunkt</Button>}
-                {removable && <Button small quiet kind="ghost" class="tool-usun" haspopup busy={busy} onClick={() => setRemoving(it.id)} label={`Usuń ${noun.acc} ${no}`}>Usuń</Button>}
-              </span>
+              {!compact && tools}
               {inPrep && <span class="edit-settings"><Button small quiet kind="ghost" class="tool-ustawienia" label={`Ustawienia ${noun.gen} ${no}`} onClick={() => setOpenItem(panelOpen ? null : it.id)}>Ustawienia</Button></span>}
             </>}
           {subFor === it.id && editing !== it.id && <SubItemForm no={no} busy={busy} onSubmit={e => add(e, it.id)}/>}
-          {panelOpen && <div class="edit-extra">{props.panel!(it, () => { setOpenItem(null); setFocusAfter({id: it.id, tool: 'tool-ustawienia'}); })}</div>}
+          {panelOpen && <div class="edit-extra">{compact && tools}{props.panel!(it, () => { setOpenItem(null); setFocusAfter({id: it.id, tool: 'tool-ustawienia'}); })}</div>}
         </li>;
       })}
     </ol>}
@@ -355,7 +355,26 @@ function AgendaImport(props: {onClose: () => void}) {
   const procedure = m.kind === 'procedura';
   const [text, setText] = useState('');
   const [replace, setReplace] = useState(m.status === 'przygotowanie' && !procedure);
+  const bundle = useGeneral();
   const preview = text.trim() ? parseAgendaText(text, {flat: procedure}) : null;
+  // Podgląd pokazuje pozycje z numerami, jakie dostaną w porządku (podpunkt „5.1”), razem z punktami, które domena
+  // uzupełni przy wczytaniu (G-6, completeAgenda), według tytułów z wzoru posiedzenia.
+  const rows = (() => {
+    if (!preview) return [];
+    const auto = preview.warnings.some(w => w.startsWith('Dodano punkt „Przyjęcie porządku obrad”'));
+    const fresh = preview.items.map((i, n) => ({...newItem(`podglad-${n}`, i.title, i.kind), parentId: i.parent === null ? null : `podglad-${i.parent}`}))
+      // Przy dopisywaniu domena nie powtarza dodanego przez rozpoznawanie punktu „Przyjęcie porządku obrad”.
+      .filter(i => replace || procedure || !(auto && i.kind === 'porzadek' && !i.parentId && i.title === 'Przyjęcie porządku obrad' && m.agenda.some(x => x.kind === 'porzadek')));
+    const draft: Pick<Meeting, 'kind' | 'agenda' | 'skipped'> = {kind: m.kind, skipped: m.skipped, agenda: [...(replace ? [] : m.agenda), ...fresh]};
+    const templates = bundle ? organSettingsOf(bundle.general, m.organ).templates : [];
+    const template = templates.find(t => t.id === m.template?.id) ?? templates[0];
+    const titles: Partial<Record<ItemKind, string>> = {};
+    for (const t of template?.items ?? []) if (t.kind !== 'sprawa') titles[t.kind] ??= t.title;
+    let seq = 0;
+    const added = new Set(completeAgenda(lawOf(m.organ), draft, () => `uzupelnienie-${seq++}`, titles).map(i => i.id));
+    const shown = new Set([...fresh.map(i => i.id), ...added]);
+    return draft.agenda.filter(i => shown.has(i.id)).map(i => ({id: i.id, no: itemNumber(draft.agenda, i.id), title: i.title, sub: !!i.parentId, added: added.has(i.id)}));
+  })();
   const example = procedure
     ? '1. Uchwała nr 130/IX/2026 w sprawie …\n2. Uchwała nr 131/IX/2026 w sprawie …'
     : '1. Otwarcie posiedzenia i stwierdzenie kworum.\n2. Przyjęcie porządku obrad.\n3. Przyjęcie protokołu z poprzedniego posiedzenia.\n4. Rozpatrzenie projektów uchwał w sprawie stwierdzenia prawa wykonywania zawodu\n   - Uchwała nr 117/IX/2026\n   - Uchwała nr 118/IX/2026\n5. Sprawy bieżące i wolne wnioski.\n6. Zamknięcie posiedzenia.';
@@ -368,11 +387,15 @@ function AgendaImport(props: {onClose: () => void}) {
         <Field label="Albo wybierz plik TXT lub MD"><input type="file" accept=".txt,.md,text/plain" onChange={async e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) setText(await f.text()); }}/></Field>
         {m.status === 'przygotowanie' && <Check checked={replace} onChange={setReplace}>{procedure ? 'Zastąp obecne sprawy. Bez zaznaczenia sprawy zostaną dopisane.' : 'Zastąp obecny porządek. Bez zaznaczenia punkty zostaną dopisane.'}</Check>}
       </div>
-      <div class="import-preview">
+      {/* Podgląd przewija się przy długim porządku, więc da się do niego przejść klawiszem Tab (przewijanie strzałkami). */}
+      <div class="import-preview" tabIndex={0} role="region" aria-label="Podgląd porządku obrad">
         <span class="kicker">Podgląd</span>
         {procedure && <p class="small">Każdy wiersz stanie się osobną sprawą do głosowania.</p>}
         {!preview && !procedure && <p class="muted small">Tu pojawi się rozpoznany porządek.</p>}
-        {preview && <ol class="preview-list">{preview.items.map((i, n) => <li key={n} class={i.parent !== null ? 'is-sub' : ''}>{i.title}</li>)}</ol>}
+        {rows.length > 0 && <ul class="preview-list">{rows.map(r => <li key={r.id} class={r.sub ? 'is-sub' : undefined}>
+          <span class="preview-no">{r.no}</span>
+          <span>{r.title}{r.added && <span class="preview-added">Uzupełni się, bo wymaga go regulamin.</span>}</span>
+        </li>)}</ul>}
         {preview?.warnings.map(w => <Notice key={w} tone="warn">{w}</Notice>)}
       </div>
     </div>
@@ -443,8 +466,9 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
           <Button kind="ghost" small quiet label={`Odrzuć propozycję rodzaju sprawy w punkcie ${no}`} onClick={() => cmd({type: 'item_edit', itemId: it.id, caseTypeGuess: null}).catch(() => {})}>Odrzuć</Button>
         </span></div>}
         editor={(close, ctl) => <CaseTypeEditor close={close} ctl={ctl} initial={it.caseType ?? ''} options={caseTypes.map(c => [c.id, c.name] as [string, string])} onSave={v => cmd({type: 'item_edit', itemId: it.id, caseType: v || null})}/>}/>}
-      {!noDocType.has(it.kind) && <SettingRow label="Co jest głosowane" value={docValue ? typeName(docValue) : 'Wynika z materiału'} at="punkt" genitive="tego, co jest głosowane" actionLabel={`Zmień, co jest głosowane w punkcie ${no}`}
-        {...(it.docType || e.docType.via ? {effective: e.docType} : {source: ''})}
+      {/* Bez materiału i bez rodzaju sprawy wartość nie jest ustalona; „Wynika z materiału »…«” stoi tylko przy materiale. */}
+      {!noDocType.has(it.kind) && <SettingRow label="Co jest głosowane" value={docValue ? typeName(docValue) : 'Nie ustalono'} at="punkt" genitive="tego, co jest głosowane" actionLabel={`Zmień, co jest głosowane w punkcie ${no}`}
+        {...(it.docType || e.docType.via ? {effective: e.docType} : {source: docValue ? '' : 'Ustali się z materiału albo z rodzaju sprawy, chyba że wybierzesz rodzaj dokumentu.'})}
         editor={(close, ctl) => <DocTypeEditor close={close} ctl={ctl} initial={it.docType ?? ''} empty={caseType ? 'Wynika z rodzaju sprawy' : 'Wynika z materiału'} onSave={v => cmd({type: 'item_edit', itemId: it.id, docType: v || null})}/>}/>}
       <SettingRow label="Czas głosowania" value={minutesText(e.voteMinutes.value)} effective={e.voteMinutes} at="punkt" show={v => minutesText(Number(v))} genitive="czasu głosowania" actionLabel={`Zmień czas głosowania w punkcie ${no}`}
         editor={(close, ctl) => <MinutesRowEditor close={close} ctl={ctl} label="Czas głosowania" initial={e.voteMinutes.value} options={VOTE_MINUTES} onSave={v => cmd({type: 'item_edit', itemId: it.id, voteMinutes: v})}/>}
@@ -507,6 +531,7 @@ export function PresentersRowEditor(props: {close: (s?: string) => void; ctl: Ed
 /** Materiały punktu i „Dołącz materiał” (item_material). */
 export function ItemMaterials(props: {it: AgendaItem; missing: string | null}) {
   const {m} = useMeeting();
+  const prep = usePrep();
   const cmd = useCommand();
   const {busy, error, errorKind, run} = useAction();
   const [pick, setPick] = useState('');
@@ -515,6 +540,8 @@ export function ItemMaterials(props: {it: AgendaItem; missing: string | null}) {
   return <div class="stack-tight">
     {attached.length ? <div class="material-list">{attached.map(x => <MaterialLink key={x.id} id={x.id} version={x.version} label={x.title}/>)}</div>
       : <span class={props.missing ? 'strong' : ''}>{props.missing ?? 'Brak.'}</span>}
+    {/* Rozdz. 5.4: gdy posiedzenie nie ma jeszcze materiałów, przycisk prowadzi do karty „Materiały”. */}
+    {!attached.length && !others.length && prep && <div><Button kind="ghost" small quiet onClick={() => prep.show('materialy')}>Dodaj materiał</Button></div>}
     {others.length > 0 && <div class="attach-row">
       <Field label="Dołącz materiał"><select value={pick} onChange={e => setPick((e.target as HTMLSelectElement).value)}><option value="">Wybierz materiał…</option>{others.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></Field>
       <Button small busy={busy} disabled={!pick} reason="Wybierz materiał z listy." onClick={() => run(async () => { await cmd({type: 'item_material', itemId: props.it.id, materialId: pick, on: true}); setPick(''); })}>Dołącz materiał</Button>
@@ -612,6 +639,7 @@ export function ReviewCard() {
   const cmd = useCommand();
   const {busy, error, errorKind, run} = useAction();
   const review = m.effective?.review ?? [];
+  const procedure = m.kind === 'procedura';
   const groups: [ReviewRow['group'], string][] = [['uzupelnic', 'Do uzupełnienia'], ['sprawdzic', 'Do sprawdzenia'], ['gotowe', 'Gotowe']];
   const proposals = review.filter(r => r.actions?.length && r.itemId);
   const label = (r: ReviewRow) => r.itemId ? itemNumber(m.agenda, r.itemId) : '';
@@ -622,7 +650,7 @@ export function ReviewCard() {
     announce('Przyjęto propozycje rodzajów spraw.');
   });
   return <section class="oi-card review" id="ust-przeglad" aria-labelledby="przeglad-tytul">
-    <h2 class="oi-card__title" id="przeglad-tytul"><span class="oi-mark" aria-hidden="true"/><span>Przegląd przed otwarciem</span></h2>
+    <h2 class="oi-card__title" id="przeglad-tytul"><span class="oi-mark" aria-hidden="true"/><span>{procedure ? 'Przegląd przed rozpoczęciem' : 'Przegląd przed otwarciem'}</span></h2>
     {!m.effective && <p class="muted small">Przegląd pojawi się po wczytaniu ustawień posiedzenia.</p>}
     {groups.map(([group, title]) => {
       const rows = review.filter(r => r.group === group);
@@ -634,8 +662,8 @@ export function ReviewCard() {
           <span class="review-side"><StateChip state={reviewChip(r.group)}/>
             {r.actions?.length && r.itemId
               ? <span class="actions">
-                <Button kind="ghost" small quiet busy={busy} label={`Przyjmij propozycję rodzaju sprawy w punkcie ${label(r)}`} onClick={() => accept(r)}>Przyjmij</Button>
-                <Button kind="ghost" small quiet busy={busy} label={`Odrzuć propozycję rodzaju sprawy w punkcie ${label(r)}`} onClick={() => reject(r)}>Odrzuć</Button>
+                <Button kind="ghost" small quiet busy={busy} label={`Przyjmij propozycję rodzaju sprawy w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => accept(r)}>Przyjmij</Button>
+                <Button kind="ghost" small quiet busy={busy} label={`Odrzuć propozycję rodzaju sprawy w ${procedure ? 'sprawie' : 'punkcie'} ${label(r)}`} onClick={() => reject(r)}>Odrzuć</Button>
               </span>
               : r.target && prep && <Button kind="ghost" small quiet onClick={() => prep.show(r.target!)}>Pokaż</Button>}
           </span>
@@ -646,8 +674,9 @@ export function ReviewCard() {
     {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
     {m.effective && <>
       <DiffList title="Trafi do protokołu" rows={m.effective.deviations.map(deviationTarget)} onShow={prep ? r => prep.show(r.target!) : undefined}/>
-      <DiffList title="Różnice wobec ustawień ogólnych i wzoru posiedzenia" rows={m.effective.differences.map(differenceTarget)} onShow={prep ? r => prep.show(r.target!) : undefined}
-        empty="To posiedzenie ma ustawienia ogólne i wzór posiedzenia bez zmian."/>
+      {/* Głosowanie między posiedzeniami nie ma wzorów posiedzeń (rozdz. 5.5), więc porównuje się tylko z ustawieniami ogólnymi. */}
+      <DiffList title={procedure ? 'Różnice wobec ustawień ogólnych' : 'Różnice wobec ustawień ogólnych i wzoru posiedzenia'} rows={m.effective.differences.map(differenceTarget)} onShow={prep ? r => prep.show(r.target!) : undefined}
+        empty={procedure ? 'To głosowanie ma ustawienia ogólne bez zmian.' : 'To posiedzenie ma ustawienia ogólne i wzór posiedzenia bez zmian.'}/>
     </>}
   </section>;
 }
@@ -843,7 +872,7 @@ export function DeputyCard() {
   const [person, setPerson] = useState(deputy ?? '');
   const [touched, setTouched] = useState(false);
   useEffect(() => { if (!touched) setPerson(deputy ?? ''); }, [deputy]);
-  const source = m.status === 'przygotowanie' ? duplicateSource(m.id) : null;
+  const source = duplicateSource(m);
   const last = source?.deputy && !deputy && vices.some(v => v.personId === source.deputy) ? source.deputy : null;
   const who = (id: string) => `${s.personName(id)}, ${members.find(x => x.personId === id)?.label ?? ''}`;
   const store = (id: string) => save.track(() => cmd({type: 'deputy', personId: id || null})).then(r => { if (r) setTouched(false); });
@@ -853,7 +882,7 @@ export function DeputyCard() {
     const dirty = person !== (deputy ?? '');
     body = <>
       <p class="small">{`Jeśli nie możesz być na ${procedure ? 'tym głosowaniu' : 'posiedzeniu'}, wskaż osobę, która Cię zastąpi (§ 16 ust. 2). ${procedure ? 'Zastępca rozpocznie to głosowanie i będzie nim zarządzać.' : 'Zastępca otworzy posiedzenie albo przejmie prowadzenie bez dodatkowych potwierdzeń i ma pierwszeństwo przed innym wiceprzewodniczącym.'}`}</p>
-      {last && <p class="small deputy-last">{`Ostatnie zastępstwo ${s.personName(last)}, posiedzenie z dnia ${dateDots(source!.date)}.`} <Button kind="ghost" small quiet onClick={() => { setPerson(last); store(last); }}>Wyznacz ponownie</Button></p>}
+      {last && <p class="small deputy-last">{`Ostatnie zastępstwo ${s.personName(last)}, ${procedure ? 'głosowanie' : 'posiedzenie'} z dnia ${dateDots(source!.date)}.`} <Button kind="ghost" small quiet onClick={() => { setPerson(last); store(last); }}>Wyznacz ponownie</Button></p>}
       <Field label="Zastępca"><select value={person} onChange={e => { setTouched(true); save.reset(); setPerson((e.target as HTMLSelectElement).value); }}>
         <option value="">Bez wyznaczenia</option>{vices.map(v => <option key={v.personId} value={v.personId}>{s.personName(v.personId)}, {v.label}</option>)}
       </select></Field>
@@ -910,7 +939,7 @@ function Guests(props: {editable: boolean}) {
   const [by, setBy] = useState<'przewodniczacy' | 'organ'>('przewodniczacy');
   const [decision, setDecision] = useState('');
   const guests = people.filter(a => a.kind === 'gosc');
-  const source = m.status === 'przygotowanie' ? duplicateSource(m.id) : null;
+  const source = duplicateSource(m);
   const previous = guests.filter(g => source?.invited.includes(g.id) && !m.invited.includes(g.id));
   const name = (g: {displayName: string; label: string}) => `${g.displayName}${g.label && g.label.toLowerCase() !== 'gość' ? `, ${g.label}` : ''}`;
   const ask = (id: string) => { setAsking(id); setBy('przewodniczacy'); setDecision(''); };

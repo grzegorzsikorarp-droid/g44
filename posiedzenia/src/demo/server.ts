@@ -4,7 +4,7 @@ import {advance, advisoryIds, apply, canView, DomainError, duplicateMeeting, new
 import {defaultDocTypes, docTypeInput, lockedDocTypeRefusal, sortedDocTypes} from '../shared/doctypes.ts';
 import {migrateDocTypesV3, migrateMeeting, migrateMeetingV3, migrationNotesV3} from '../shared/migrate.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit, organSettingsOf, type AuditEntry, type GeneralBundle, type GeneralSettings, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
-import {canCreate, canPrepare, isOfficeAccount, isPresiding, settingsAccess} from '../shared/role.ts';
+import {canCreate, canPrepare, canReadMinutes, isOfficeAccount, isPresiding, minutesRefusal, settingsAccess} from '../shared/role.ts';
 import {cascadeEnv} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
 import {isoDayOf} from '../shared/text.ts';
@@ -180,6 +180,7 @@ export class DemoServer {
   minutes(id: string) {
     const actor = this.actor() ?? fail('Wybierz osobę.', 401);
     const m = this.meetingFor(id, actor);
+    if (!canReadMinutes(this.state.roster, m, actor)) fail(minutesRefusal, 403);
     return minutesBody(m, this.state.roster, this.state.accounts, Date.now(), {office: brand.officeLower, regulation: brand.regulation},
       {docTypes: this.state.docTypes, hideUnannounced: !seesUnannounced(m, actor, this.state.roster)});
   }

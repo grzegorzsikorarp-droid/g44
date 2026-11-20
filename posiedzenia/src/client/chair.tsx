@@ -12,7 +12,7 @@ import type {Actor, AgendaChange, AgendaItem, BallotPurpose, DocType, Meeting, M
 import {request, serverNow} from './api.ts';
 import {useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {announce, Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useMedia, useSaveStatus} from './ui.tsx';
+import {Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useMedia, useSaveStatus} from './ui.tsx';
 import {agendaChip, itemChip, modeGenitive, modeName, presenceChip} from './stany.ts';
 import {actorOf, AgendaList, BasisBlock, beforeAdoption, chairingText, DeputyFact, draftEditing, draftLive, emphasize, LogList, personWithFunc, proposerSentence, quorumNow, signaturesFor, VoteCard, workingSentence} from './meeting.tsx';
 import {AgendaEditor} from './prep.tsx';
@@ -541,7 +541,7 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
     </div>
     <h2 class="item-title" id={id} tabIndex={-1}><TitleLead text={it.title}/></h2>
     <PeopleFacts it={it}/>
-    {it.outOfOrder && <p class="muted small">{`Rozpoczęty poza kolejnością przyjętego porządku obrad. Powód „${it.outOfOrder.reason}”.`}</p>}
+    {it.outOfOrder && <p class="muted small">{`Rozpoczęty poza kolejnością przyjętego porządku obrad. Powód „${it.outOfOrder.reason.replace(/\.$/, '')}”.`}</p>}
     {it.statusReason && (it.status === 'odroczony' || it.status === 'wycofany') && <p class="muted small">{`Powód „${it.statusReason}”.`}</p>}
     {locked && <Notice>Ten punkt można rozpocząć po przyjęciu porządku obrad.</Notice>}
     {!readOnly && !current && !locked && it.status !== 'wycofany' && <div><Button kind={it.status === 'zakonczony' ? 'secondary' : main} busy={busy} haspopup={flow.asks(it)}

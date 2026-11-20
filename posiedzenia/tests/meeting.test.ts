@@ -197,6 +197,9 @@ test('procedura między posiedzeniami: okno czasowe, wcześniejsze zakończenie 
   let m = newMeeting(ctx, 'procedura');
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu', parentId: null}, actor(null, 'biuro'), ctx.tick());
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 121/IX/2026 w sprawie delegacji', parentId: null}, actor(null, 'biuro'), ctx.tick());
+  // Poprawki po kontroli v3 (D-DZ-V3-01, DA-21): bez terminu obowiązuje czas z ustawień ogólnych od rozpoczęcia, więc
+  // granicę 5 minut sprawdza termin wpisany ręcznie.
+  m = apply(m, {type: 'details', endsAt: ctx.now + 2 * 60000}, actor(null, 'biuro'), ctx.tick());
   assert.throws(() => apply(m, {type: 'open'}, actor('si'), ctx), /Ustaw koniec głosowania co najmniej 5 minut od teraz/);
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, actor(null, 'biuro'), ctx.tick());
   assert.throws(() => apply(m, {type: 'open'}, actor('kn'), ctx), /Głosowanie między posiedzeniami rozpoczyna/);

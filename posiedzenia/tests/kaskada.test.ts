@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {apply, envOf, newMeetingFromSettings, type Context} from '../src/shared/meeting.ts';
-import {basisSentences, effectiveMeeting, sourceText, stampText, type CascadeEnv} from '../src/shared/cascade.ts';
-import {defaultGeneral, type GeneralSettings} from '../src/shared/settings.ts';
+import {apply, defaultSite, envOf, newMeetingFromSettings, type Context} from '../src/shared/meeting.ts';
+import {basisSentences, effectiveMeeting, procedureEndAt, sourceText, stampText, type CascadeEnv} from '../src/shared/cascade.ts';
+import {defaultGeneral, matchCaseType, proposeCaseType, type GeneralSettings} from '../src/shared/settings.ts';
 import {defaultDocTypes} from '../src/shared/doctypes.ts';
 import {presidiumTemplate} from '../src/shared/agenda.ts';
 import {minutesText} from '../src/shared/text.ts';
@@ -112,7 +112,10 @@ test('kanał wiadomości: stacjonarne „gdy są wiadomości”, zdalne i głoso
   assert.match(src(remote), /^Ustalone w aplikacji\. Na posiedzeniu zdalnym i w głosowaniu między posiedzeniami kanał wiadomości działa zawsze\./);
   const procedure = newMeetingFromSettings({id: 'p1', kind: 'procedura', actor: office}, ctx);
   assert.equal(eff(ctx, procedure).meeting.messages.value, 'zawsze');
-  assert.equal(procedure.endsAt, ctx.now + 24 * 3600000, 'koniec głosowania z ustawień ogólnych');
+  // Poprawki po kontroli v3 (D-DZ-V3-01, DA-21): koniec głosowania z ustawień ogólnych liczy się od rozpoczęcia, nie od utworzenia.
+  assert.equal(procedure.endsAt, undefined);
+  const start = ctx.now + 5 * 3600000;
+  assert.deepEqual(procedureEndAt(procedure, defaultGeneral(defaultSite), start), {endsAt: start + 24 * 3600000, fromStart: true, hours: 24}, 'koniec głosowania z ustawień ogólnych');
 });
 
 test('czas głosowania w punkcie: własny („Zmienione dla tego punktu”) albo z posiedzenia', () => {
@@ -395,4 +398,23 @@ test('ustawienia ogólne: historia zmian z wartościami słowami, rewizja i gran
   const added = applySettingsChange(b, {area: 'rodzaje_spraw', caseType: {name: 'Pomoc w przypadkach losowych', docType: 'uchwala', financial: true, keywords: ['zapomoga', 'Zdarzenie losowe']}}, environment);
   assert.deepEqual(added.bundle.general.caseTypes.at(-1)!.keywords, ['zapomoga', 'zdarzenie losowe']);
   assert.equal(added.audit[0].label, 'Rodzaj sprawy „Pomoc w przypadkach losowych”');
+});
+
+// Poprawki po kontroli rdzenia wersji 3 (W-W-02): słowa rodzaju sprawy rozpoznaje się także w innym przypadku
+// („zapomoga” w „przyznania zapomogi”, „zdarzenie losowe” w „po zdarzeniu losowym”).
+test('rozpoznawanie rodzaju sprawy po tematach słów: tytuły w dopełniaczu i miejscowniku', () => {
+  const ctx = setup(g => g.caseTypes.push({id: 'zapomoga', name: 'Pomoc w przypadkach losowych', docType: 'uchwala', organs: ['prezydium'], financial: true, keywords: ['zapomoga', 'zdarzenie losowe'], titlePattern: '', order: 20, active: true}));
+  const types = ctx.general!.general.caseTypes;
+  assert.deepEqual(matchCaseType(types, 'prezydium', 'Uchwała w sprawie przyznania zapomogi po zdarzeniu losowym'), {id: 'zapomoga', keyword: 'zapomogi'});
+  assert.equal(proposeCaseType(types, 'prezydium', 'Uchwała w sprawie zapomóg dla członków'), 'zapomoga');
+  assert.equal(proposeCaseType(types, 'prezydium', 'Pomoc po zdarzeniu losowym'), 'zapomoga');
+  assert.equal(proposeCaseType(types, 'prezydium', 'Informacja o zdarzeniach'), null, 'fraza trafia tylko wtedy, gdy każde jej słowo ma odpowiednik');
+  assert.equal(proposeCaseType(types, 'prezydium', 'Uchwała w sprawie stwierdzenia prawa wykonywania zawodu'), 'pwz', 'dosłowne trafienie jak wcześniej');
+  let m = create(ctx);
+  m = apply(m, {type: 'item_add', title: 'Uchwała w sprawie przyznania zapomogi po zdarzeniu losowym', parentId: item(m, 'uchwaly').id}, office, ctx.tick());
+  const sub = m.agenda.find(i => i.parentId === item(m, 'uchwaly').id)!;
+  assert.equal(sub.caseTypeGuess, 'zapomoga');
+  // W-W-04: punkt dodany ręcznie ma rodzaj ustalony w posiedzeniu, a punkt ze wzoru odwołuje się do wzoru.
+  assert.deepEqual([eff(ctx, m).items[sub.id].kind.source, eff(ctx, m).items[sub.id].kind.via], ['posiedzenie', undefined]);
+  assert.equal(eff(ctx, m).items[item(m, 'uchwaly').id].kind.via?.kind, 'wzor');
 });

@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
 import type {Meeting, MeetingMode} from '../shared/types.ts';
-import {lawOf, PROCEDURE_MIN_HOURS} from '../shared/law.ts';
+import {lawOf} from '../shared/law.ts';
 import {organSettingsOf, type MeetingTemplate} from '../shared/settings.ts';
 import {organOfCode} from '../shared/roster.ts';
 import {hoursText, isoDayOf} from '../shared/text.ts';
@@ -114,7 +114,7 @@ function MeetingRow({m, organizer}: {m: Summary; organizer: boolean}) {
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
   const iso = procedure && m.endsAt ? warsawDay(m.endsAt) : m.date;
   const day = dateParts(iso);
-  const meta = procedure ? (m.endsAt ? `${m.status === 'trwa' ? 'Trwa do' : 'Głosowanie do'} ${fmtDateTime(m.endsAt)}` : 'Termin do ustalenia') : `godz. ${m.time}${m.place ? `, ${m.place}` : ''}`;
+  const meta = procedure ? (m.endsAt ? `${m.status === 'trwa' ? 'Trwa do' : 'Głosowanie do'} ${fmtDateTime(m.endsAt)}` : m.status === 'przygotowanie' ? 'Termin liczy się od rozpoczęcia' : 'Termin do ustalenia') : `godz. ${m.time}${m.place ? `, ${m.place}` : ''}`;
   const action = m.status === 'zakonczone' ? 'Zobacz wyniki'
     : m.status === 'przygotowanie' ? (organizer ? 'Otwórz przygotowanie' : procedure ? 'Zobacz sprawy i materiały' : 'Zobacz porządek i materiały')
     : procedure ? 'Przejdź do głosowania' : 'Przejdź do obrad';
@@ -144,7 +144,6 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
   const [time, setTime] = useState(template?.defaults?.time ?? '10:00');
   const [date, setDate] = useState(() => isoDayOf(Date.now() + (law.notice.minDays + 1) * 86400000));
   const [place, setPlace] = useState(sitePlace);
-  const [endsAt, setEndsAt] = useState(() => localInput(Date.now() + (settings?.procedureHours ?? 24) * 3600000));
   const [touched, setTouched] = useState({mode: false, time: false});
   const procedure = kind === 'procedura';
   const [title, setTitle] = useState<string | null>(null);
@@ -157,8 +156,6 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
   };
   const noticeDay = date ? isoDayOf(Date.parse(date + 'T12:00:00Z') - law.notice.minDays * 86400000) : '';
   const tooSoon = !procedure && !!date && noticeDay < isoDayOf(Date.now());
-  const ends = endsAt ? new Date(endsAt).getTime() : NaN;
-  const shortTerm = procedure && Number.isFinite(ends) && ends - Date.now() < PROCEDURE_MIN_HOURS * 3600000;
   const count = (t: MeetingTemplate) => t.items.length + t.items.reduce((n, i) => n + (i.children?.length ?? 0), 0);
   const describe = (t: MeetingTemplate) => `${t.name}, ${count(t)} ${plural(count(t), 'punkt', 'punkty', 'punktów')}`;
   const kinds: [Meeting['kind'], string][] = law.betweenMeetings.allowed ? [['posiedzenie', 'Posiedzenie'], ['procedura', 'Głosowanie między posiedzeniami']] : [['posiedzenie', 'Posiedzenie']];
@@ -169,7 +166,7 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
       e.preventDefault();
       run(async () => {
         const body = procedure
-          ? {kind: 'procedura', organ: ORGAN, title: (title ?? defaultTitle).trim() || defaultTitle, endsAt: ends}
+          ? {kind: 'procedura', organ: ORGAN, title: (title ?? defaultTitle).trim() || defaultTitle}
           : {kind: 'posiedzenie', organ: ORGAN, template: template?.id, title: (title ?? defaultTitle).trim() || defaultTitle, date, time, place, mode};
         const {meeting} = await request<{meeting: Meeting}>('/api/meetings', {body});
         go(`#p-${meeting.id}`);
@@ -184,9 +181,9 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
         : <dl class="facts"><Fact label="Wzór posiedzenia">{describe(template)}</Fact></dl>)}
       <Field label="Tytuł"><input name="title" maxLength={200} value={title ?? defaultTitle} onInput={e => setTitle((e.target as HTMLInputElement).value)}/></Field>
       {procedure
-        ? <Field label="Koniec głosowania" hint={shortTerm ? 'Głosowanie potrwa krócej niż 24 godziny. Przy rozpoczęciu trzeba będzie podać powód.' : `Jak w ustawieniach ogólnych, ${hoursText(settings?.procedureHours ?? 24)} od utworzenia. Głosowanie zakończy się wcześniej, gdy zagłosują wszyscy uprawnieni. Termin można zmienić przed rozpoczęciem.`}>
-          <input name="endsAt" type="datetime-local" required value={endsAt} onInput={e => setEndsAt((e.target as HTMLInputElement).value)}/>
-        </Field>
+        // DA-21: domyślny termin liczy się od rozpoczęcia głosowania, więc okno pokazuje go jako fakt. Własny termin
+        // wpisuje się w ustawieniach głosowania w przygotowaniu.
+        ? <dl class="facts"><Fact label="Koniec głosowania">{`${hoursText(settings?.procedureHours ?? 24)} od rozpoczęcia`}<span class="fact-note">Jak w ustawieniach ogólnych. Głosowanie zakończy się wcześniej, gdy zagłosują wszyscy uprawnieni. Inny termin możesz wpisać w ustawieniach głosowania przed rozpoczęciem.</span></Fact></dl>
         : <>
           <div class="row row-top">
             <Field label="Data" hint={[dateHintText(date), tooSoon ? `Do tej daty nie zdążysz wysłać zawiadomienia na ${law.notice.minDays} dni przed posiedzeniem (${law.notice.basis}). Krótszy termin trafi do protokołu.` : ''].filter(Boolean).join(' ') || undefined}>
@@ -205,5 +202,3 @@ function CreateMeeting(props: {kind: Meeting['kind']; onClose: () => void}) {
 }
 
 const ORGAN = 'prezydium' as const;
-// Data i godzina do pola datetime-local w strefie przeglądarki.
-const localInput = (ts: number) => new Date(ts - new Date(ts).getTimezoneOffset() * 60000).toISOString().slice(0, 16);

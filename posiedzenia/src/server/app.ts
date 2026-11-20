@@ -15,7 +15,7 @@ import {newItem} from '../shared/agenda.ts';
 import {docTypeInput, lockedDocTypeRefusal, sortedDocTypes} from '../shared/doctypes.ts';
 import {personName} from '../shared/roster.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
-import {canCreate, canPrepare, isOfficeAccount, isPresiding, settingsAccess} from '../shared/role.ts';
+import {canCreate, canPrepare, canReadMinutes, isOfficeAccount, isPresiding, minutesRefusal, settingsAccess} from '../shared/role.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit as docTypeAuditEntry, organSettingsOf, type AuditEntry, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
 import {cascadeEnv} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
@@ -570,6 +570,8 @@ export async function createApplication(options: AppOptions = {}) {
           }
           if (rest === '/protokol' && method === 'GET') {
             const m = meetingFor(id, a);
+            // Macierz 4.3: w trakcie obrad projekt protokołu widzą biuro i osoby prowadzące obrady, po zamknięciu także członkowie.
+            if (!canReadMinutes(store.roster(), m, a)) fail(minutesRefusal, 403);
             // Plik do edycji w Wordzie: ten sam tekst projektu protokołu jako dokument HTML pobierany z rozszerzeniem .doc.
             // Słownik rodzajów (F11) i wyniki, których ta osoba jeszcze nie widzi (F2), jak w widoku posiedzenia.
             const look = {...minutesLook(), options: {docTypes: store.docTypes(), hideUnannounced: !seesUnannounced(m, a, store.roster())}};

@@ -11,7 +11,7 @@ import {cleanTitle, completeAgenda, itemKindLabel, newItem, parseAgendaText, pre
 import {defaultDocTypes, docTypeById, docTypeName, plainFormulas} from './doctypes.ts';
 import {agendaBasis, LAW, PROCEDURE_MIN_HOURS, shareText, type LegalProfile} from './law.ts';
 import {defaultGeneral, MOTION_MINUTES, organSettingsOf, proposeCaseType, VOTE_MINUTES, type GeneralBundle, type MeetingTemplate, type SiteSettings} from './settings.ts';
-import {cascadeEnv, freeze, itemVoteMinutes, meetingSetting, quorumTotal, type CascadeEnv} from './cascade.ts';
+import {cascadeEnv, freeze, itemVoteMinutes, meetingSetting, procedureEndAt, quorumTotal, type CascadeEnv} from './cascade.ts';
 import {
   attendanceRefusal, canChairPerson, canCreate, canDesignateDeputy, canKeepAttendance, canManageProcedure, canMessage, canPrepare,
   canSkipListed, canStartProcedure, canView as roleCanView, deputyOf, funcOf, insteadOfDeputyText, isChairmanOf, isOfficeAccount,
@@ -48,7 +48,7 @@ export interface Context {
 // Polecenia domeny. Pola oznaczone „wymagane” w opisie są w typie nieobowiązkowe tylko dlatego, że wymóg zależy
 // od stanu posiedzenia; domena sprawdza je przy wykonaniu. Opis warunków jest w /home/user/przeglad/v3-A/KONTRAKT.md.
 export type Command =
-  | {type: 'details'; title?: string; date?: string; time?: string; place?: string; mode?: MeetingMode; link?: string; noticeDate?: string; endsAt?: number;
+  | {type: 'details'; title?: string; date?: string; time?: string; place?: string; mode?: MeetingMode; link?: string; noticeDate?: string; endsAt?: number | null;
     /** F10: dane do protokołu, nieobowiązkowe, także po otwarciu. `convener` to identyfikator osoby ze składu albo pusty napis. */
     protocolNumber?: string; recorder?: string; convener?: string}
   /** Wersja 3: tylko przewodniczący; `basis` jest pomijane (pole zniknie z klienta). */
@@ -155,8 +155,9 @@ const advisoryNote = 'Dodano osoby z głosem doradczym zawiadamiane o każdym po
 
 /**
  * Nowe posiedzenie albo głosowanie między posiedzeniami z ustawień ogólnych (wersja 3, U-04, U-17): punkty i pola
- * z wzoru posiedzenia, protokolant z wzoru albo z ustawień organu, zaproszone osoby z głosem doradczym (DA-5), koniec
- * głosowania domyślnie teraz + czas trwania z ustawień. Strażnik G-12 (organ, tryb, głosowanie między posiedzeniami).
+ * z wzoru posiedzenia, protokolant z wzoru albo z ustawień organu, zaproszone osoby z głosem doradczym (DA-5). Koniec
+ * głosowania między posiedzeniami bez podanego terminu liczy się przy rozpoczęciu z czasu w ustawieniach (DA-21,
+ * `procedureEndAt`); podany termin jest terminem wpisanym ręcznie. Strażnik G-12 (organ, tryb, głosowanie między posiedzeniami).
  * Serwer i wersja próbna wołają tę samą funkcję.
  */
 export function newMeetingFromSettings(input: {
@@ -185,7 +186,7 @@ export function newMeetingFromSettings(input: {
   const time = (v: unknown) => typeof v === 'string' && /^\d{2}:\d{2}$/.test(v) ? v : null;
   // U-17, D-6: bez podanej daty posiedzenie dostaje dziś + najkrótszy termin zawiadomienia + 1 dzień.
   const today = new Date(ctx.now + (procedure ? 0 : (law.notice.minDays + 1) * 86400000)).toISOString().slice(0, 10);
-  const endsAt = procedure ? (Number(input.endsAt) || ctx.now + settings.procedureHours * 3600000) : undefined;
+  const endsAt = procedure && Number(input.endsAt) > 0 ? Number(input.endsAt) : undefined;
   const m = createMeeting({
     id: input.id, organ, kind: input.kind, title,
     date: day(input.date) ?? today, time: time(input.time) ?? template?.defaults?.time ?? '10:00',
@@ -203,6 +204,7 @@ export function newMeetingFromSettings(input: {
     if (recorder) m.recorder = recorder;
   } else if (!procedure && settings.recorder) m.recorder = settings.recorder;
   m.log[0].accountId = input.actor.account.id;
+  if (endsAt) m.endsAtSet = {at: ctx.now, by: input.actor.name, accountId: input.actor.account.id};
   m.invited = advisoryIds(ctx.accounts ?? []);
   return m;
 }
@@ -284,6 +286,14 @@ function requireLive(m: Meeting) {
 function canEditAgenda(roster: Roster, m: Meeting, actor: Actor) {
   if (m.status === 'przygotowanie') return canPrepare(roster, m, actor);
   return m.kind === 'posiedzenie' && !m.agendaAdopted && m.status !== 'zakonczone' && m.chair.current === actor.personId;
+}
+/** Odmowa zmiany projektu porządku zależna od stanu posiedzenia (D1, DA-9: po otwarciu zmienia tylko osoba prowadząca). */
+function agendaRefusal(m: Meeting) {
+  if (m.agendaAdopted) return 'Przyjęty porządek obrad zmienia się w głosowaniu.';
+  if (m.status === 'zakonczone') return 'Posiedzenie zostało zamknięte.';
+  if (m.status === 'przygotowanie') return 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.';
+  if (m.kind === 'procedura') return 'Po rozpoczęciu głosowania nie można zmieniać spraw.';
+  return 'Po otwarciu posiedzenia projekt porządku obrad zmienia osoba prowadząca obrady (§ 9 ust. 1).';
 }
 const procedureManagerRefusal = 'Tę czynność wykonuje osoba, która rozpoczęła głosowanie, albo przewodniczący.';
 
@@ -711,8 +721,24 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         note('datę wysłania zawiadomienia', dateDots(was), dateDots(m.noticeDate));
       }
       if (cmd.endsAt !== undefined) {
-        ensure(m.kind === 'procedura' && cmd.endsAt > ctx.now, 'Ustaw koniec głosowania później niż teraz.');
-        const was = m.endsAt; m.endsAt = cmd.endsAt; note('koniec głosowania', was ? dateTimeText(was) : '', dateTimeText(m.endsAt));
+        ensure(m.kind === 'procedura', 'Koniec głosowania ustawia się w głosowaniu między posiedzeniami.');
+        ensure(prep, 'Po rozpoczęciu termin zmienia osoba, która rozpoczęła głosowanie, albo przewodniczący.', 409);
+        const hours = organSettingsOf(bundleOf(ctx).general, m.organ).procedureHours;
+        const was = procedureEndAt(m, bundleOf(ctx).general, ctx.now);
+        const wasText = was.fromStart ? `${hoursText(hours)} od rozpoczęcia` : dateTimeText(was.endsAt);
+        if (cmd.endsAt === null || cmd.endsAt === 0) {
+          // DA-21: powrót do terminu z ustawień ogólnych, liczonego od rozpoczęcia.
+          if (!was.fromStart) {
+            delete m.endsAt; delete m.endsAtSet;
+            settingLog(m, ctx, actor, `Przywrócono koniec głosowania z ustawień ogólnych (${hoursText(hours)} od rozpoczęcia).`);
+          }
+        } else {
+          const value = Math.round(Number(cmd.endsAt));
+          ensure(Number.isFinite(value) && value > ctx.now, 'Ustaw koniec głosowania później niż teraz.');
+          m.endsAt = value;
+          m.endsAtSet = {at: ctx.now, by: actor.name, accountId: actor.account.id};
+          note('koniec głosowania', wasText, dateTimeText(m.endsAt));
+        }
       }
       if (cmd.protocolNumber !== undefined) { const was = m.protocolNumber ?? ''; m.protocolNumber = String(cmd.protocolNumber).replace(/\s+/g, ' ').trim().slice(0, 60) || undefined; note('numer protokołu', was, m.protocolNumber ?? ''); }
       if (cmd.recorder !== undefined) { const was = m.recorder ?? ''; m.recorder = String(cmd.recorder).replace(/\s+/g, ' ').trim().slice(0, 120) || undefined; note('protokolanta', was, m.recorder ?? ''); }
@@ -801,7 +827,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'item_add': {
-      ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.', 403);
+      ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
       requireDraftAnnounced(m);
       const added = applyAgendaChange(m, ctx, {op: 'dodaj', title: cmd.title, parentId: cmd.parentId ?? null, afterId: cmd.afterId ?? null}, false);
       guessCaseType(m, ctx, added);
@@ -813,7 +839,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       const nr = () => itemNumber(m.agenda, it.id);
       const types = docTypesOf(ctx, m);
       if (cmd.title !== undefined) {
-        ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
+        ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
         ensure(cmd.title.trim(), 'Podaj nazwę punktu.');
         requireDraftAnnounced(m);
         const before = it.title;
@@ -927,7 +953,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'item_move': {
-      ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
+      ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       requireDraftAnnounced(m);
       const siblings = m.agenda.filter(i => i.parentId === it.parentId);
@@ -939,7 +965,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'item_place': {
-      ensure(canEditAgenda(roster, m, actor), m.agendaAdopted ? 'Przyjęty porządek obrad zmienia się w głosowaniu.' : 'Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady.', 403);
+      ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       requireDraftAnnounced(m);
       const from = itemNumber(m.agenda, it.id);
@@ -949,7 +975,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       break;
     }
     case 'item_remove': {
-      ensure(canEditAgenda(roster, m, actor), 'Przyjęty porządek obrad zmienia się w głosowaniu.', 403);
+      ensure(canEditAgenda(roster, m, actor), agendaRefusal(m), 403);
       const it = item(m, cmd.itemId) ?? fail('Nie znaleziono punktu.', 404);
       // G-6: punkt obowiązkowy nie znika z porządku żadną drogą.
       if (posiedzenie && law.agenda.mandatory.includes(it.kind) && m.agenda.filter(i => i.kind === it.kind).length === 1) {
@@ -1065,6 +1091,9 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         ensure(canStartProcedure(roster, m, actor), 'Głosowanie między posiedzeniami rozpoczyna przewodniczący albo zastępca, którego przewodniczący wyznaczył na to głosowanie (§ 16 ust. 2).', 403);
         const acts = m.agenda.filter(i => !i.parentId);
         ensure(acts.length, 'Dodaj co najmniej jedną sprawę do głosowania.');
+        // DA-21: bez terminu wpisanego ręcznie głosowanie trwa czas z ustawień ogólnych liczony od rozpoczęcia.
+        const term = procedureEndAt(m, bundleOf(ctx).general, ctx.now);
+        if (term.fromStart) m.endsAt = term.endsAt;
         ensure(m.endsAt && m.endsAt > ctx.now + 5 * 60000, 'Ustaw koniec głosowania co najmniej 5 minut od teraz.');
         // DA-21: krótszy termin niż 24 godziny tylko z powodem, który trafia do dokumentu z przebiegu.
         if (m.endsAt - ctx.now < PROCEDURE_MIN_HOURS * 3600000) {
@@ -1087,8 +1116,12 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         }
         log(m, ctx, actor, `Rozpoczęto głosowanie między posiedzeniami. Potrwa do ${dateTimeText(m.endsAt)}.`);
         if (m.shortTerm) log(m, ctx, actor, `Głosowanie potrwa krócej niż ${hoursText(PROCEDURE_MIN_HOURS)}. Powód ${quoted(reason.replace(/\.$/, ''))}.`);
+        // DA-21: informacja w kanale z przedmiotem (tytuły spraw w kolejności) i terminem.
+        const titles = acts.map(a => quoted(a.title.replace(/\.$/, '')));
+        const subject = titles.length === 1 ? `w sprawie ${titles[0]}`
+          : `w ${acts.length} sprawach, ${titles.slice(0, -1).join(', ')} i ${titles[titles.length - 1]}`;
         m.messages.push({id: ctx.newId(), author: actor.account.id, authorName: actor.name, at: ctx.now,
-          text: `Rozpoczęto głosowanie między posiedzeniami w ${acts.length} ${plural(acts.length, 'sprawie', 'sprawach', 'sprawach')}. Głosowanie potrwa do ${dateTimeText(m.endsAt)}.`});
+          text: `Rozpoczęto głosowanie między posiedzeniami ${subject}. Głosowanie potrwa do ${dateTimeText(m.endsAt)}.`});
       }
       break;
     }
@@ -1606,6 +1639,11 @@ export function duplicateMeeting(src: Meeting, input: {id: string; now: number; 
   const day = src.date ? src.date.split('-').reverse().join('.') : '';
   m.log = [{at: input.now, text: `Utworzono przez powielenie ${src.kind === 'procedura' ? 'głosowania między posiedzeniami' : 'posiedzenia'} z dnia ${day}.`, by: input.createdBy, ...(input.accountId ? {accountId: input.accountId} : {})}];
   // Pominięte punkty z § 9 ust. 2 wracają na zwykłe miejsca (rozdz. 2.9, tabela powielenia).
+  // Zastępca i goście nie przechodzą do kopii (rozdz. 4.5 pkt 6, tabela powielenia), ale kopia pamięta źródło, żeby
+  // przygotowanie na każdym urządzeniu podpowiadało „Wyznacz ponownie” i „Zaproś ponownie”.
+  const advisory = new Set(input.advisory ?? []);
+  m.duplicatedFrom = {id: src.id, date: src.kind === 'procedura' && src.openedAt ? new Date(src.openedAt).toISOString().slice(0, 10) : src.date,
+    deputy: src.chair.deputy ?? null, invited: src.invited.filter(id => !advisory.has(id))};
   const law = input.law ?? LAW[src.organ];
   for (const it of completeAgenda(law, m, input.newId, input.titles)) {
     if (!(it.kind in law.agenda.listed)) continue;

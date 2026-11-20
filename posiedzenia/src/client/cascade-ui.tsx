@@ -77,7 +77,9 @@ const OpenRow = createContext<RowGroup | null>(null);
  */
 export function SettingsList(props: {label?: string; children: ComponentChildren; onOpenChange?: (open: boolean) => void}) {
   const [open, setOpen] = useState<string | null>(null);
-  const [asking, setAsking] = useState<{next: string; genitive: string} | null>(null);
+  // Pytanie „Zapisać zmianę {…}?” dotyczy wiersza z niezapisaną zmianą, więc lista pamięta dopełniacz otwartego wiersza.
+  const openGenitive = useRef('');
+  const [asking, setAsking] = useState<{next: string; nextGenitive: string; genitive: string} | null>(null);
   const dirty = useRef<{key: string; save?: () => Promise<boolean>} | null>(null);
   const notify = useRef(props.onOpenChange);
   notify.current = props.onOpenChange;
@@ -86,8 +88,9 @@ export function SettingsList(props: {label?: string; children: ComponentChildren
   const group: RowGroup = {
     open,
     request: (key, genitive) => {
-      if (open && open !== key && dirty.current?.key === open) { setAsking({next: key, genitive}); return; }
+      if (open && open !== key && dirty.current?.key === open) { setAsking({next: key, nextGenitive: genitive, genitive: openGenitive.current}); return; }
       dirty.current = null;
+      openGenitive.current = genitive;
       setOpen(key);
     },
     close: () => { dirty.current = null; setOpen(null); },
@@ -96,8 +99,8 @@ export function SettingsList(props: {label?: string; children: ComponentChildren
   return <OpenRow.Provider value={group}>
     <dl class="settings" aria-label={props.label}>{props.children}</dl>
     {asking && <SaveQuestion genitive={asking.genitive} onClose={() => setAsking(null)}
-      onSave={async () => { const ok = await dirty.current?.save?.(); if (ok !== false) { dirty.current = null; setOpen(asking.next); } }}
-      onDiscard={() => { dirty.current = null; setOpen(asking.next); }}/>}
+      onSave={async () => { const ok = await dirty.current?.save?.(); if (ok !== false) { dirty.current = null; openGenitive.current = asking.nextGenitive; setOpen(asking.next); } }}
+      onDiscard={() => { dirty.current = null; openGenitive.current = asking.nextGenitive; setOpen(asking.next); }}/>}
   </OpenRow.Provider>;
 }
 
@@ -259,7 +262,7 @@ export function ActFields(props: {value: ActRef; onChange: (value: ActRef) => vo
   const act = props.value;
   return <>
     <dl class="facts"><Fact label="Organ, który podjął uchwałę">{organOfCode(roster, act.organ).name}</Fact></dl>
-    <div class="row">
+    <div class="row row-top">
       <Field label="Numer uchwały" hint="Np. 41/IX/2026."><input value={act.number} maxLength={60} onInput={e => props.onChange({...act, number: (e.target as HTMLInputElement).value})}/></Field>
       <Field label="Data uchwały" hint={dateHintText(act.date) || undefined}><input type="date" value={act.date} onInput={e => props.onChange({...act, date: (e.target as HTMLInputElement).value})}/></Field>
     </div>
@@ -285,12 +288,12 @@ export function BasisFields(props: {value: CompositionBasis | null; onChange: (v
       ? <Segments label="Podstawa" value={value.kind} options={kinds.map(k => [k, names[k]] as [CompositionBasis['kind'], string])} onChange={kind => set(emptyBasis(kind, organ))} hint={props.hint}/>
       : <>{props.hint && <p class="small muted">{props.hint}</p>}</>}
     {value.kind === 'uchwala' && <ActFields value={value.act} onChange={act => set({...value, act})}/>}
-    {value.kind === 'rezygnacja' && <div class="row">
+    {value.kind === 'rezygnacja' && <div class="row row-top">
       <Field label="Data rezygnacji" hint={dateHintText(value.date) || undefined}><input type="date" value={value.date} onInput={e => set({...value, date: (e.target as HTMLInputElement).value})}/></Field>
       <Field label="Komu złożono rezygnację" hint={`Np. ${organOfCode(roster, 'rada').forms.dative}.`}><input value={value.to} maxLength={200} onInput={e => set({...value, to: (e.target as HTMLInputElement).value})}/></Field>
     </div>}
     {value.kind === 'wygasniecie' && <>
-      <div class="row">
+      <div class="row row-top">
         <Field label="Co się stało"><input value={value.event} maxLength={200} onInput={e => set({...value, event: (e.target as HTMLInputElement).value})}/></Field>
         <Field label="Data" hint={dateHintText(value.date) || undefined}><input type="date" value={value.date} onInput={e => set({...value, date: (e.target as HTMLInputElement).value})}/></Field>
       </div>

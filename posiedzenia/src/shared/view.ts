@@ -1,7 +1,7 @@
 import type {Actor, Ballot, Choice, Meeting, Roster} from './types.ts';
 import {itemNumber, unannounced} from './rules.ts';
 import {cleanTitle} from './agenda.ts';
-import {canAnnounce, canPrepare, isPresiding, procedureStarter} from './role.ts';
+import {canAnnounce, canPrepare, isPresiding, procedureStarter, seesLog} from './role.ts';
 import {effectiveMeeting, type CascadeEnv, type MeetingEffective} from './cascade.ts';
 
 /**
@@ -42,7 +42,13 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: Cascade
       if (entry.ballotId && hidden.has(entry.ballotId)) entry.text = entry.text.replace(/ Za \d+, przeciw \d+, wstrzymało się \d+\.$/, '');
     }
   }
-  if (env) v.effective = effectiveMeeting(env, m, {review: m.status === 'przygotowanie' && canPrepare(env.roster, m, actor)});
+  // DA-10 (macierz 4.3): jawny przebieg obrad widzą biuro i członkowie. Osoby z głosem doradczym i goście dostają tylko
+  // wpisy o zmianach projektu porządku obrad, z których widok liczy „zmieniono o {godz.}” (projekt na żywo, D2).
+  if (!seesLog(actor)) v.log = v.log.filter(l => l.tag === 'projekt');
+  if (env) {
+    v.effective = effectiveMeeting(env, m, {review: m.status === 'przygotowanie' && canPrepare(env.roster, m, actor)});
+    if (!seesLog(actor)) v.effective.deviations = [];
+  }
   return v;
 }
 

@@ -137,7 +137,7 @@ function CaseTypesPanel(props: {bundle: GeneralBundle; canEdit: boolean}) {
       <dl class="facts"><Fact label="Podstawa przekazania Prezydium">{c.basis
         ? compositionBasisText({kind: 'uchwala', act: c.basis}, roster)
         : `Nie wpisano. Prezydium działa w sprawach określonych uchwałą ${rada.forms.genitive} (§ 14 ust. 1).`}</Fact></dl>
-      {props.canEdit && <div><Button kind="ghost" small haspopup label={`Zmień rodzaj sprawy ${c.name}`} onClick={() => setEditing(c)}>Zmień</Button></div>}
+      {props.canEdit && <div><Button kind="ghost" small quiet haspopup label={`Zmień rodzaj sprawy ${c.name}`} onClick={() => setEditing(c)}>Zmień</Button></div>}
     </li>)}</ul>
     {editing && <CaseTypeForm bundle={props.bundle} current={editing === 'nowy' ? undefined : editing} onClose={() => setEditing(null)}/>}
   </section>;

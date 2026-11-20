@@ -73,6 +73,20 @@ export function canView(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen' | 'i
   return m.invited.includes(a.account.id);
 }
 export const isPresiding = (m: Pick<Meeting, 'chair'>, a: Actor) => !!a.personId && m.chair.current === a.personId;
+/**
+ * Projekt protokołu (macierz 4.3): przed zamknięciem biuro, przewodniczący, wyznaczony zastępca i osoba prowadząca obrady
+ * (w głosowaniu między posiedzeniami osoba, która je rozpoczęła); po zamknięciu także członkowie organu. Osoby z głosem
+ * doradczym, goście i administrator bez roli biura projektu nie widzą. Wyniki nieogłoszone i tak są w nim ukryte (F2).
+ */
+export function canReadMinutes(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen' | 'chair' | 'status'>, a: Actor): boolean {
+  if (isOfficeAccount(a)) return true;
+  if (!a.personId) return false;
+  if (isChairmanOf(roster, m, a.personId) || deputyOf(roster, m) === a.personId || isPresiding(m, a)) return true;
+  return m.status === 'zakonczone' && (!!membership(roster, m.organ, a.personId) || !!m.frozen?.members.some(f => f.personId === a.personId));
+}
+export const minutesRefusal = 'Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady.';
+/** Przebieg obrad (jawny dziennik, DA-10): bez osób z głosem doradczym i gości. */
+export const seesLog = (a: Actor) => a.account.kind !== 'gosc' && a.account.kind !== 'doradczy';
 
 /** Osoba jest uprawniona do głosowania w otwartym głosowaniu (także próbnym). */
 const votingNow = (m: Pick<Meeting, 'ballots'>, who: string) => m.ballots.some(b => b.status === 'otwarte' && b.eligible.includes(who));

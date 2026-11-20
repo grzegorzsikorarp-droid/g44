@@ -181,7 +181,8 @@ test('procedura między posiedzeniami zamyka się sama, gdy zagłosują wszyscy'
     assert.equal(state.ballots[0].result.adopted, true);
     // Wersja 3 (DA-21): przy rozpoczęciu aplikacja dopisuje do kanału informację o przedmiocie i terminie.
     assert.equal(state.messages.length, 2);
-    assert.match(state.messages[0].text, /^Rozpoczęto głosowanie między posiedzeniami w 1 sprawie\. Głosowanie potrwa do /);
+    // Poprawki po kontroli v3 (D-DZ-V3-04, DA-21): informacja w kanale podaje przedmiot głosowania.
+    assert.match(state.messages[0].text, /^Rozpoczęto głosowanie między posiedzeniami w sprawie „Uchwała nr 130\/IX\/2026 w sprawie delegowania przedstawicieli”\. Głosowanie potrwa do /);
   } finally { await stop(); }
 });
 

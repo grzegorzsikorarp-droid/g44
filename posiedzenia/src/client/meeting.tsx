@@ -4,9 +4,10 @@ import {defaultSite, noticeDays} from '../shared/meeting.ts';
 import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, memberIdsOf, modeLabel, needsVote, orderedAgenda, presentMembers, quorumOf, resolutionSubject, resultLabel, resultPendingProcedureText, resultPendingText, signaturesNeeded} from '../shared/rules.ts';
 import {personName} from '../shared/roster.ts';
 import {lawOf} from '../shared/law.ts';
-import {basisSentences, cascadeEnv, isDraftLive, type CascadeEnv} from '../shared/cascade.ts';
+import {basisSentences, cascadeEnv, isDraftLive, procedureEndAt, type CascadeEnv} from '../shared/cascade.ts';
+import {hoursText} from '../shared/text.ts';
 import {defaultGeneral} from '../shared/settings.ts';
-import {canDesignateDeputy, canReturn, deputyOf, organRoster, takeChairOption} from '../shared/role.ts';
+import {canDesignateDeputy, canReadMinutes, canReturn, deputyOf, organRoster, takeChairOption} from '../shared/role.ts';
 import type {Actor, AgendaItem, Choice, DocType, LogEntry, MaterialType, Meeting, Roster} from '../shared/types.ts';
 import {generalNow} from './general.ts';
 import {request, serverNow, useLive} from './api.ts';
@@ -177,8 +178,10 @@ function useMeetingFacts() {
   const s = useSession();
   if (m.kind === 'procedura') {
     const due = m.endsAt ? fmtDateTime(m.endsAt) : '–';
+    // DA-21: w przygotowaniu bez terminu wpisanego ręcznie koniec liczy się od rozpoczęcia (procedureEndAt).
+    const term = m.status === 'przygotowanie' ? procedureEndAt(m as Meeting, (generalNow() ?? {general: defaultGeneral(defaultSite)}).general, Date.now()) : null;
     return [
-      <Fact key="termin" label="Termin">{m.status === 'zakonczone' && m.closedAt ? `Zakończone ${fmtDateTime(m.closedAt)} (termin do ${due})` : `do ${due}`}</Fact>,
+      <Fact key="termin" label="Termin">{term?.fromStart ? `${hoursText(term.hours)} od rozpoczęcia` : m.status === 'zakonczone' && m.closedAt ? `Zakończone ${fmtDateTime(m.closedAt)} (termin do ${due})` : `do ${due}`}</Fact>,
       <Fact key="tryb" label="Tryb">Głosowanie zdalne między posiedzeniami (§ 14 ust. 5 {brand.regulation})</Fact>,
     ];
   }
@@ -186,6 +189,8 @@ function useMeetingFacts() {
   return [
     <Fact key="data" label="Data" class="fact--data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
     m.place ? <Fact key="miejsce" label="Miejsce" class="fact--miejsce">{m.place}</Fact> : null,
+    // Rozdz. 5.4: w przygotowaniu pasek mówi, z którego wzoru posiedzenie powstało.
+    m.status === 'przygotowanie' && m.template ? <Fact key="wzor" label="Wzór" class="fact--wzor">{m.template.name}</Fact> : null,
     chair ? <Fact key="prowadzi" label="Prowadzi">{m.status === 'zakonczone' ? s.personName(chair) : chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[chair] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact> : null,
   ];
 }
@@ -208,11 +213,12 @@ function fitBar(bar: HTMLElement) {
   }
   const facts = bar.querySelector<HTMLElement>('.meeting-bar__facts');
   if (!facts) return;
-  facts.classList.remove('bez-miejsca', 'bez-daty');
+  facts.classList.remove('bez-wzoru', 'bez-miejsca', 'bez-daty');
   const wraps = () => {
     const shown = [...facts.children].filter(el => (el as HTMLElement).offsetParent !== null) as HTMLElement[];
     return shown.length > 1 && shown[shown.length - 1].offsetTop > shown[0].offsetTop + 2;
   };
+  if (wraps()) facts.classList.add('bez-wzoru');
   if (wraps()) facts.classList.add('bez-miejsca');
   if (wraps()) facts.classList.add('bez-daty');
 }
@@ -236,9 +242,9 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
   const open = !procedure && liveNow ? m.ballots.find(b => b.status === 'otwarte') : undefined;
   const quorum = quorumNow(m, s.roster), present = presentMembers(m as Meeting, s.roster).length;
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
-  const short = procedure ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : `${m.working ? 'Spotkanie robocze' : 'Posiedzenie Prezydium'}, ${shortDate(m)}`;
+  const short = procedure ? (m.endsAt ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : 'Głosowanie między posiedzeniami') : `${m.working ? 'Spotkanie robocze' : 'Posiedzenie Prezydium'}, ${shortDate(m)}`;
   // Po zamknięciu posiedzenia „Projekt protokołu” jest przyciskiem głównym w podsumowaniu, więc pasek go nie powtarza.
-  const protocol = m.status !== 'przygotowanie' && !(m.status === 'zakonczone' && !procedure) && (organizer || (m.status === 'zakonczone' && s.isMember(m.organ)));
+  const protocol = m.status !== 'przygotowanie' && !(m.status === 'zakonczone' && !procedure) && canReadMinutes(s.roster, m as Meeting, {account: s.account, personId: s.personId, name: s.name});
   const votes = open ? castOf(open) : null;
   return <header class="meeting-bar" ref={ref}>
     <div class={'meeting-bar__in' + (props.wide ? '' : ' is-kolumna')}>
@@ -274,7 +280,7 @@ function MeetingDetails(props: {participantView: boolean; toggleView?: () => voi
   const {m} = useMeeting();
   const s = useSession();
   const facts = useMeetingFacts();
-  const protocol = m.status !== 'przygotowanie' && (s.isOrganizer(m.organ) || (m.status === 'zakonczone' && s.isMember(m.organ)));
+  const protocol = m.status !== 'przygotowanie' && canReadMinutes(s.roster, m as Meeting, {account: s.account, personId: s.personId, name: s.name});
   return <div class="meeting-details">
     <Fold title={m.kind === 'procedura' ? 'Szczegóły głosowania' : 'Szczegóły posiedzenia'}>
       <dl class="facts">{facts}</dl>
@@ -926,7 +932,7 @@ function Summary() {
   const final = m.ballots.filter(b => b.result && !b.supersededBy && b.purpose !== 'proba');
   const named = final.filter(b => b.mode === 'imienne' && Object.keys(b.votes).length > 0);
   const days = noticeDays(m as Meeting);
-  const protocol = s.isOrganizer(m.organ) || s.isMember(m.organ);
+  const protocol = canReadMinutes(s.roster, m as Meeting, {account: s.account, personId: s.personId, name: s.name});
   return <div class="stack summary">
     <div class="oi-note oi-note--wazne summary-note">
       <span class="oi-label">{m.working ? 'Spotkanie robocze zamknięte' : 'Posiedzenie zamknięte'}</span>

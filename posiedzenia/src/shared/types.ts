@@ -231,6 +231,16 @@ export interface Meeting {
   guestInvites?: Record<string, {by: 'przewodniczacy' | 'organ'; decision?: string; at: number; recordedBy: string; accountId: string}>;
   /** Głosowanie między posiedzeniami krótsze niż 24 godziny (DA-21). */
   shortTerm?: Reasoned & {accountId: string};
+  /**
+   * Głosowanie między posiedzeniami: termin wpisany ręcznie w przygotowaniu (DA-21). Bez tego śladu koniec głosowania
+   * liczy się przy rozpoczęciu z ustawień ogólnych (`procedureEndAt` w cascade.ts).
+   */
+  endsAtSet?: {at: number; by: string; accountId: string};
+  /**
+   * Posiedzenie, z którego powielono (rozdz. 4.5 pkt 6, tabela powielenia): zastępca i goście nie przechodzą do kopii,
+   * ale przygotowanie podpowiada „Wyznacz ponownie” i „Zaproś ponownie”. Nie wchodzi do wartości skutecznych ani do protokołu.
+   */
+  duplicatedFrom?: {id: string; date: string; deputy: string | null; invited: string[]};
   /** Dodatek (D), tylko przy wariancie (b) pytania 3. */
   agendaApproved?: {at: number; by: string; accountId: string};
   frozen?: FrozenSettings;

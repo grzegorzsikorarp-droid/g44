@@ -2,7 +2,7 @@ import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import type {AgendaItem} from '../shared/types.ts';
 import {useMeeting} from './context.ts';
-import {announce, Button, CardTitle, Confirm, Field, StateChip} from './ui.tsx';
+import {announce, Button, Confirm, Field, StateChip} from './ui.tsx';
 import {agendaChip} from './stany.ts';
 import {ItemEditForm} from './item-form.tsx';
 import {PeopleFacts} from './people.tsx';

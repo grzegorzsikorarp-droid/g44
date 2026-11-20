@@ -128,7 +128,7 @@ export function RoomScreen({id}: {id: string}) {
     </header>
     <section class="screen-body">{body}</section>
     <footer class="screen-foot">
-      <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{chairingText(s.roster, m)}</Fact>}</dl>
+      <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[m.chair.current] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact>}</dl>
       {m.working && <p class="screen-foot-note">Bez kworum Prezydium nie podejmuje uchwał.</p>}
       {m.working && !editing && latest && m.status !== 'zakonczone' && <p class="screen-foot-note">Projekt porządku obrad zmieniono o {fmtTime(latest.at)}.</p>}
     </footer>
