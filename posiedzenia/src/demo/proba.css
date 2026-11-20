@@ -1,0 +1,17 @@
+/* Wersja próbna (SPEC-4 6.7.5, 7.3): okno dokumentu z drukiem, komunikat o pobieraniu w ramce i „Skrzynka (próba)”.
+   Arkusz tylko budowy wersji próbnej. Tylko tokeny, zero zaokrągleń, bez kółek. */
+.proba-dokument { overflow-x: auto; }
+.proba-druk-strona { display: none; }
+@media print {
+  body.proba-druk > :not(.proba-druk-strona) { display: none !important; }
+  body.proba-druk dialog { display: none !important; }
+  body.proba-druk .proba-druk-strona { display: block; }
+}
+.proba-tresc { box-sizing: border-box; width: 100%; padding: var(--odstep-2); border: var(--kreska) solid var(--obrys-pola); border-radius: 0; font: inherit; font-size: .9em; background: var(--powierzchnia); color: var(--tekst); }
+.demo-hints { list-style: none; margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 4px; }
+.demo-hints > li::before { content: "–"; display: inline-block; width: 1.4em; margin-left: -1.4em; }
+.demo-inbox { text-align: left; }
+.demo-mails { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.demo-mail .facts { margin-bottom: var(--odstep-2); }
+.demo-mail-frame { display: block; box-sizing: border-box; width: 100%; height: 26rem; border: var(--kreska) solid var(--linia); border-radius: 0; background: var(--bialy); }
+.demo-mail-text { margin: 0; padding: var(--odstep-2); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: .9em; background: var(--powierzchnia-miekka); }

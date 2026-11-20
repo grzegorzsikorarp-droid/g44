@@ -1,11 +1,12 @@
 import {render} from 'preact';
 import {App} from '../client/app.tsx';
 import {setBrand} from '../client/brand.ts';
-import {Modal} from '../client/ui.tsx';
 import '../client/typo.ts';
 import '../client/styles.css';
+import './proba.css';
 import {DemoServer} from './server.ts';
 import {DemoPicker} from './picker.tsx';
+import {installPaperLinks} from './papers-window.tsx';
 
 const server = new DemoServer();
 const realFetch = window.fetch.bind(window);
@@ -46,20 +47,8 @@ document.addEventListener('keydown', event => {
   if (submitter?.getAttribute('aria-disabled') !== 'true') submitForm(field.form, submitter);
 });
 
-// Projekt protokołu otwiera się w oknie na tej samej stronie (strona próbna nie otwiera nowych kart ani wydruku).
-const overlay = document.createElement('div');
-document.body.appendChild(overlay);
-const close = () => render(null, overlay);
-document.addEventListener('click', event => {
-  const link = (event.target as Element).closest?.('a[href^="/api/"]') as HTMLAnchorElement | null;
-  if (!link) return;
-  event.preventDefault();
-  const match = link.getAttribute('href')!.match(/^\/api\/meetings\/([\w-]+)\/protokol$/);
-  let body = '<p>Pobieranie plików jest dostępne w pełnej aplikacji.</p>';
-  let title = 'Projekt protokołu';
-  try { if (match) { body = server.minutes(match[1]); title = server.minutesTitle(match[1]); } } catch (e) { body = `<p>${(e as Error).message}</p>`; }
-  // Spotkanie robocze (F5) ma projekt notatki zamiast projektu protokołu.
-  render(<Modal title={title} wide onClose={close}><div class="minutes-view" dangerouslySetInnerHTML={{__html: body}}/></Modal>, overlay);
-}, true);
+// Wersja 4 (7.3): dokumenty, teczka, katalog, zestawienie, statystyki i pliki otwierają się w oknie na tej samej stronie
+// albo pobierają przez `Blob` (strona próbna nie otwiera nowych kart).
+installPaperLinks(server);
 
 render(<App/>, document.getElementById('app')!);

@@ -1,7 +1,7 @@
 import type {Account, Actor, AgendaItem, Ballot, Meeting, PaperFormat, PaperId, PaperState, Roster} from './types.ts';
 import {membership, organOf, personName} from './roster.ts';
 import {ballotDocType, choiceLabel, hideTally, itemNumber, materialTypeOf, orderedAgenda, presenceOf, presenterGroups, quorumOf, resultLabel, resultPendingProcedureText, resultPendingText, unannounced} from './rules.ts';
-import {canDownloadPaper, organRoster} from './role.ts';
+import {canDownloadPaper, minutesRefusal, organRoster} from './role.ts';
 import {lawOf} from './law.ts';
 import {noticeDays} from './meeting.ts';
 import type {CascadeEnv} from './cascade.ts';
@@ -585,3 +585,12 @@ export const STANDALONE_CSS = 'body{font-family:"Titillium Web",Arial,sans-serif
   + 'table.facts th,table.facts td,.signatures td{border:0}.draft{font-weight:700;text-transform:uppercase;font-size:9pt}.muted{font-style:italic}'
   + 'ul.paper-list{list-style:none;padding-left:1.2em}ul.paper-list>li::before{content:"– ";margin-left:-1.2em}'
   + '@media print{body{max-width:none;padding:0}@page{size:A4;margin:16mm 15mm;@bottom-right{content:"Strona " counter(page) " z " counter(pages)}}.ballot,tr,.signatures{break-inside:avoid}}';
+
+/** Odmowa dokumentu (4.5) dla osoby bez prawa do dokumentu: komunikat i kod odpowiedzi, wspólne dla serwera i wersji próbnej. */
+export function paperRefusalOf(m: Pick<Meeting, 'status'>, a: Actor, id: PaperId): {message: string; status: number} {
+  if (id === 'komunikacja') return m.status !== 'zakonczone' ? {message: 'Materiał dla komunikacji powstaje po zamknięciu posiedzenia.', status: 409}
+    : {message: 'Materiał dla komunikacji pobierają biuro, przewodniczący, wiceprzewodniczący, osoba, która zamknęła obrady, i konto komunikacji.', status: 403};
+  if (id === 'teczka' && m.status !== 'zakonczone') return {message: 'Teczkę posiedzenia można pobrać po zamknięciu posiedzenia.', status: 409};
+  if (a.account.kind === 'doradczy' || a.account.kind === 'gosc') return {message: 'Ten dokument mają członkowie Prezydium i biuro.', status: 403};
+  return {message: minutesRefusal, status: 403};
+}

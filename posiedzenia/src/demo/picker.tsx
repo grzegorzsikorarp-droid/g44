@@ -1,10 +1,12 @@
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {organMembers} from '../shared/roster.ts';
 import type {Choice} from '../shared/types.ts';
 import {request} from '../client/api.ts';
 import {afterLogin} from '../client/app.tsx';
 import {Button, Fold, Notice, Tag} from '../client/ui.tsx';
+import {currentRoute, go, onRoute} from '../client/route.ts';
 import type {DemoServer} from './server.ts';
+import {DemoInbox} from './inbox.tsx';
 
 const othersLabel: Record<Choice, string> = {za: 'Pozostali głosują za', przeciw: 'Pozostali głosują przeciw', wstrzymuje: 'Pozostali wstrzymują się'};
 
@@ -13,6 +15,9 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
   const {server} = props;
   const [note, setNote] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
+  // Wersja 4 (6.7.5, 7.2): „Skrzynka (próba)” pod adresem #skrzynka, także przed wyborem osoby.
+  const [route, setRoute] = useState(currentRoute);
+  useEffect(() => onRoute(setRoute), []);
   const state = server.state;
   const live = Object.values(state.meetings).find(m => m.status === 'trwa' || m.status === 'przerwa');
   const open = live?.ballots.find(b => b.status === 'otwarte');
@@ -20,6 +25,9 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
   const members = organMembers(state.roster, 'prezydium');
   const others = state.accounts.filter(a => !a.personId && !a.disabled);
   const shortcut = (message: string) => setNote(message || 'Zrobione.');
+  if (route === '#skrzynka') return <main class="center-page" id="tresc" tabIndex={-1}><section class="oi-card login demo-picker"><DemoInbox onBack={() => go('')}/></section></main>;
+  const otherLabel = (a: (typeof others)[number]) => a.kind === 'biuro' ? 'Przygotowuje posiedzenia i nie ma prawa głosu'
+    : a.kind === 'komunikacja' ? 'Widzi tylko odbyte posiedzenia, odnośniki do zdjęć i materiały dla komunikacji.' : a.label;
   return <main class="center-page" id="tresc" tabIndex={-1}>
     <section class="oi-card login demo-picker">
       <Tag dark>Wersja próbna</Tag>
@@ -32,7 +40,7 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
           const presence = attended === 'obecny' ? ', obecność potwierdzona' : attended === 'zgloszony' ? ', obecność zgłoszona, czeka na potwierdzenie' : ', bez potwierdzonej obecności';
           return <button type="button" class="oi-opt demo-person" onClick={() => choose(account.username)}><strong>{account.displayName}</strong><small>{ms.label}{live ? presence : ''}</small></button>;
         })}
-        {others.map(a => <button type="button" class="oi-opt demo-person is-other" onClick={() => choose(a.username)}><strong>{a.displayName}</strong><small>{a.kind === 'biuro' ? 'Przygotowuje posiedzenia i nie ma prawa głosu' : a.label}</small></button>)}
+        {others.map(a => <button type="button" class="oi-opt demo-person is-other" onClick={() => choose(a.username)}><strong>{a.displayName}</strong><small>{otherLabel(a)}</small></button>)}
       </div>
       {live && <div class="demo-shortcuts">
         <span class="kicker">Skróty próby</span>
@@ -43,6 +51,11 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
         </div>
         {note && <Notice tone="ok">{note}</Notice>}
       </div>}
+      <ul class="demo-hints">
+        <li>Zaloguj się jako członek i otwórz Moje konto, żeby zobaczyć Moje statystyki.</li>
+        <li>Wysłane wiadomości zobaczysz w Skrzynce (próba).</li>
+      </ul>
+      <p><a href="#skrzynka">Skrzynka (próba)</a></p>
       <Fold title="Jak przeprowadzić próbne posiedzenie?">
         <ol class="demo-help">
           <li>Wybierz Przewodniczącą <strong>Barbarę Wiśniewską</strong>, otwórz „Posiedzenie Prezydium (próbne)” i kliknij <strong>Otwórz posiedzenie</strong>.</li>

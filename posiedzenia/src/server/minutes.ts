@@ -696,13 +696,14 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
   return parts.join('\n');
 }
 
-export interface MinutesLook { css?: string | null; logo?: string | null; nameplate?: [string, string] | null; org?: string; names?: MinutesNames; options?: MinutesOptions }
+/** `logoAlt`: tekst alternatywny znaku na stronie druku (etap D.3: podaje go serwer, więc wersja próbna nie zawiera nazwy). */
+export interface MinutesLook { css?: string | null; logo?: string | null; logoAlt?: string; nameplate?: [string, string] | null; org?: string; names?: MinutesNames; options?: MinutesOptions }
 
 // Strona do druku i zapisu jako PDF (B1-05, B1-08, K4-9): ten sam arkusz stylów co aplikacja (krój, kolory i nagłówki Izby),
 // znak Izby na górze pierwszej strony, wiersz „Projekt” powtarzany na każdej drukowanej stronie (tabela układu), nagłówek
 // od drugiej strony, stopka „Wygenerowano …” i „Strona X z Y” (Chrome i Edge). Treść (`minutesBody`) bez zmian.
 export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, look: MinutesLook = {}) {
-  const plate = look.logo && look.nameplate ? `<div class="oi-nameplate"><img src="${esc(look.logo)}" alt="Znak ${esc((look.org ?? '').replace(/^Okręgowa Izba/, 'Okręgowej Izby'))}"><p class="oi-nameplate__name">${t(look.nameplate[0])} <b>${t(look.nameplate[1])}</b></p></div>` : '';
+  const plate = look.logo && look.nameplate ? `<div class="oi-nameplate"><img src="${esc(look.logo)}" alt="${esc(look.logoAlt ?? 'Znak')}"><p class="oi-nameplate__name">${t(look.nameplate[0])} <b>${t(look.nameplate[1])}</b></p></div>` : '';
   const doc = `/api/meetings/${encodeURIComponent(m.id)}/protokol?format=doc`;
   const name = minutesTitle(m);
   return paperPage(minutesBody(m, roster, accounts, generatedAt, look.names, look.options), {

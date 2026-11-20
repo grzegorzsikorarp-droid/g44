@@ -214,6 +214,10 @@ type MV4 = M & Pick<Meeting, 'agenda' | 'log' | 'commsReleased' | 'commsInputs'>
 
 /** Konto „Komunikacja” (DB-9): bez osoby ze składu, widzi tylko odbyte posiedzenia i materiały dla komunikacji. */
 export const isCommsAccount = (a: Actor) => a.account.kind === 'komunikacja';
+/** Odmowa konta „Komunikacja” na trasach spoza jego zakresu (4.4, 4.5). */
+export const COMMS_REFUSAL = 'To konto widzi tylko odbyte posiedzenia i materiały dla komunikacji.';
+/** Trasy API konta „Komunikacja” (4.4): „Moje konto”, katalog, odnośniki do zdjęć, materiały dla komunikacji i zdjęcia; serwer i wersja próbna. */
+export const commsPathAllowed = (path: string) => /^\/api\/(me(\/.*)?|katalog|katalog\/[\w-]+\/(komunikacja\.md|komunikacja\.json|zdjecia)|avatars\/[\w-]+)$/.test(path);
 /** Funkcja w bieżącym składzie któregokolwiek działającego organu. */
 const holds = (roster: Roster, a: Actor, funcs: Func[]) => !!a.personId
   && roster.memberships.some(ms => ms.personId === a.personId && lawOf(ms.organ).available && funcs.includes(ms.func));

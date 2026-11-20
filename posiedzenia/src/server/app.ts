@@ -21,7 +21,8 @@ import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, hostMatches, mail
 import {afterMail, addressChangedMail, codeMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
 import {applyPrep, applyWaiting, carryOver, deferredOnOpen, emptySpace, onOpen, prepView, progress, purgeOld, toWaiting, waitingId, PREP_REFUSALS, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
 import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
-import {actBallots, meetingPapers, paperPage, type PaperEntry} from '../shared/papers.ts';
+import {actBallots, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} from '../shared/papers.ts';
+import {statsPageBody} from '../shared/stats-page.ts';
 import {acceptAvatar, acceptDisplayFile, acceptFiled, checkPdf, naturalOrder, refusalByName, seriesProblem, SHOW_LIMITS} from '../shared/files.ts';
 import {memberStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
 import {organOfCode} from '../shared/roster.ts';
@@ -32,14 +33,12 @@ import {personName} from '../shared/roster.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import {
   canAddDisplay, canCreate, canDownloadComms, canDownloadPaper, canPrepare, canPropose, canReadMinutes, canReport, canSeeCatalog, canSeeOwnStats, canSeeRosterStats, canSeeWorkspace,
-  canSetPhotos, canSetStatsSince, canView as roleCanView, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, organRoster, photoCircleText, seesPhotos, settingsAccess,
+  canSetPhotos, canSetStatsSince, canView as roleCanView, COMMS_REFUSAL, commsPathAllowed, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, organRoster, photoCircleText, seesPhotos, settingsAccess,
 } from '../shared/role.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit as docTypeAuditEntry, organSettingsOf, type AuditEntry, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
 import {cascadeEnv, othersOf} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
 import {dateDots, isoDayOf, plural, timeOf} from '../shared/text.ts';
-import {t as tx} from '../shared/papers.ts';
-import type {StatsResult} from '../shared/stats.ts';
 import type {Account, Actor, DisplayFile, DocType, ItemKind, MaterialRef, MaterialType, Meeting, OrganCode, PaperFormat, PaperId} from '../shared/types.ts';
 
 export const VERSION = '0.4.0';
@@ -75,7 +74,6 @@ export interface MailOptions { password?: string; hostAllowed?: string | null; c
 export interface AppOptions { dataDir?: string; appUrl?: string; setupToken?: string; clientDir?: string; now?: () => number; tickMs?: number; mail?: MailOptions; workerMs?: number; purgeMs?: number; pdfCheckMs?: number }
 /** CSP stron aplikacji (5.3, B3-27): `blob:` w `img-src`, jawne `frame-src` i `media-src`; `script-src` bez zmian. */
 export const PAGE_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
-const COMMS_REFUSAL = 'To konto widzi tylko odbyte posiedzenia i materiały dla komunikacji.';
 const inflate = promisify(inflateCb);
 const inflateAsync = async (b: Uint8Array) => new Uint8Array(await inflate(b));
 const sha256 = (b: Uint8Array) => createHash('sha256').update(b).digest('hex');
@@ -90,7 +88,7 @@ export async function createApplication(options: AppOptions = {}) {
     if (cssHref === undefined) {
       try { cssHref = /<link[^>]+rel="stylesheet"[^>]+href="(\/assets\/[^"]+\.css)"/.exec(readFileSync(join(clientDir, 'index.html'), 'utf8'))?.[1] ?? null; } catch { cssHref = null; }
     }
-    return {css: cssHref, logo: '/brand/logo/znak-oipip-slupsk.svg', nameplate: ['Okręgowa Izba Pielęgniarek i Położnych', 'w Słupsku'], org: 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku', names: {office: 'biuro Izby'}};
+    return {css: cssHref, logo: '/brand/logo/znak-oipip-slupsk.svg', logoAlt: 'Znak Okręgowej Izby Pielęgniarek i Położnych w Słupsku', nameplate: ['Okręgowa Izba Pielęgniarek i Położnych', 'w Słupsku'], org: 'Okręgowa Izba Pielęgniarek i Położnych w Słupsku', names: {office: 'biuro Izby'}};
   };
   const now = options.now ?? Date.now;
   const local = (host: string) => ['localhost', '127.0.0.1', '[::1]'].includes(host);
@@ -387,23 +385,11 @@ export async function createApplication(options: AppOptions = {}) {
     const row = store.fileRow(id, meetingId);
     return row && row.purpose === 'zgloszenie' ? {id: row.id, name: row.name, size: row.size} : null;
   };
-  /** Wydruk „Moich statystyk” (6.3): linia źródła, liczby i posiedzenia po kolei z tych samych danych co ekran. */
-  function statsBody(r: StatsResult): string {
-    const p = r.persons[0];
-    const lines = statsSourceLines(r, now()).map(l => `<p class="muted">${tx(l)}</p>`).join('');
-    if (!p) return `<h1>${tx('Moje')} <b>${tx('statystyki')}</b></h1><p>${tx('W tym okresie nie zakończyło się żadne posiedzenie Prezydium.')}</p>${lines}`;
-    const row = (label: string, value: string | number) => `<tr><th scope="row">${tx(label)}</th><td>${tx(String(value))}</td></tr>`;
-    const facts = `<table class="facts">${row('Okres', `${dateDots(r.range.from)}–${dateDots(r.range.to)}`)}${row('Posiedzenia', p.meetings.held)}${row('Obecność przez całe obrady', p.meetings.cala)}${row('Obecność częściowa', p.meetings.czesciowa)}${row('Nieobecność', p.meetings.nieobecnosc)}${row('Głosowania na posiedzeniach, prawo głosu', p.sessionVotes.eligible)}${row('Głos oddany albo karta pobrana', p.sessionVotes.cast)}</table>`;
-    const list = p.rows.map(x => `<tr><th scope="row">${tx(dateDots(x.day))}</th><td>${tx(x.title)}</td><td>${tx(x.attendance ? ({cala: 'obecność przez całe obrady', czesciowa: 'obecność częściowa', nieobecnosc: 'nieobecność'} as const)[x.attendance.kind] : '')}</td><td>${tx(String(x.ballots.filter(b => b.cast).length))} ${tx('z')} ${tx(String(x.ballots.filter(b => b.eligible).length))}</td></tr>`).join('');
-    return `<h1>${tx('Moje')} <b>${tx('statystyki')}</b></h1><p>${tx(p.name)}</p>${facts}<div class="table-wrap" role="region" tabindex="0" aria-label="${tx('Posiedzenia po kolei')}"><table><thead><tr><th scope="col">${tx('Dzień')}</th><th scope="col">${tx('Posiedzenie')}</th><th scope="col">${tx('Obecność')}</th><th scope="col">${tx('Udział w głosowaniach')}</th></tr></thead><tbody>${list}</tbody></table></div>${lines}`;
-  }
   let folderBusy = false;
-  /** Odmowy dokumentów (4.5) dla osoby bez prawa do dokumentu. */
+  /** Odmowy dokumentów (4.5) dla osoby bez prawa do dokumentu (`paperRefusal` z papers.ts, także w wersji próbnej). */
   function paperRefusal(m: Meeting, a: Actor, id: PaperId): never {
-    if (id === 'komunikacja') return fail(m.status !== 'zakonczone' ? 'Materiał dla komunikacji powstaje po zamknięciu posiedzenia.' : 'Materiał dla komunikacji pobierają biuro, przewodniczący, wiceprzewodniczący, osoba, która zamknęła obrady, i konto komunikacji.', m.status !== 'zakonczone' ? 409 : 403);
-    if (id === 'teczka' && m.status !== 'zakonczone') return fail('Teczkę posiedzenia można pobrać po zamknięciu posiedzenia.', 409);
-    if (a.account.kind === 'doradczy' || a.account.kind === 'gosc') return fail('Ten dokument mają członkowie Prezydium i biuro.', 403);
-    return fail(minutesRefusal, 403);
+    const r = paperRefusalOf(m, a, id);
+    return fail(r.message, r.status);
   }
   const roleCanAddDisplay = (m: Meeting, a: Actor) => canAddDisplay(store.roster(), m, a);
   /** Plik do pobrania (5.3): typ z białej listy według zapisanego rodzaju, `attachment` z `filename*`, bez pamięci podręcznej. */
@@ -541,7 +527,7 @@ export async function createApplication(options: AppOptions = {}) {
         }
         if (a.account.mustChange) fail('Przed rozpoczęciem pracy ustaw własne hasło.', 403);
         // Wersja 4 (4.4): konto „Komunikacja” ma tylko katalog, odnośniki do zdjęć, materiały dla komunikacji i „Moje konto”.
-        if (isCommsAccount(a) && !/^\/api\/(me(\/.*)?|katalog|katalog\/[\w-]+\/(komunikacja\.md|komunikacja\.json|zdjecia)|avatars\/[\w-]+)$/.test(path)) fail(COMMS_REFUSAL, 403);
+        if (isCommsAccount(a) && !commsPathAllowed(path)) fail(COMMS_REFUSAL, 403);
 
         // ---------------------------------------------------------------------------------------------------------------
         // Wersja 4 (SPEC-4 5.2): „Moje konto” (DB-19), poczta (5.4), katalog i zestawienie (B1), statystyki (B4), zdjęcia (B3).
@@ -806,7 +792,7 @@ export async function createApplication(options: AppOptions = {}) {
           }
           if (format === 'html') {
             res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': disposition(`${isoDayOf(now())}-moje-statystyki.html`, true), ...noStore});
-            return res.end(paperPage(statsBody(r), {title: 'Moje statystyki', header: 'Moje statystyki', draft: false, generatedAt: now(), css: minutesLook().css ?? null}));
+            return res.end(paperPage(statsPageBody(r, now()), {title: 'Moje statystyki', header: 'Moje statystyki', draft: false, generatedAt: now(), css: minutesLook().css ?? null}));
           }
           return json(res, {stats: r, source: statsSourceLines(r, now()), generatedAt: now()}, 200, noStore);
         }
