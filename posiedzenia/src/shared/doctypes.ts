@@ -1,8 +1,10 @@
 import type {DocType} from './types.ts';
+import {isLockedDocType, LAW, type LegalProfile} from './law.ts';
 
-// Słownik rodzajów dokumentów (F11). Administrator dodaje rodzaje, zmienia nazwy, formuły wyniku, kolejność
-// i to, czy sprawa danego rodzaju wymaga głosowania. Rodzaju użytego w materiale albo głosowaniu nie da się usunąć,
-// można go tylko wyłączyć. Identyfikatory domyślnych rodzajów są zgodne z dawną stałą listą rodzajów materiałów.
+// Słownik rodzajów dokumentów (F11). Biuro (od wersji 3; wcześniej administrator) dodaje rodzaje, zmienia nazwy, formuły
+// wyniku, kolejność, wykaz aktów i to, czy sprawa danego rodzaju wymaga głosowania. Rodzaju użytego w materiale albo
+// głosowaniu nie da się usunąć, można go tylko wyłączyć. Formy aktów z regulaminu (law.acts.voted) zawsze wymagają
+// głosowania, są włączone i nie da się ich usunąć (G-1). Identyfikatory domyślnych rodzajów są zgodne z dawną stałą listą.
 export const defaultDocTypes: DocType[] = ([
   ['uchwala', 'Uchwała', 'Uchwała podjęta', 'Uchwała nie została podjęta', true],
   ['stanowisko', 'Stanowisko', 'Stanowisko przyjęte', 'Stanowisko nie zostało przyjęte', true],
@@ -14,7 +16,7 @@ export const defaultDocTypes: DocType[] = ([
   ['protokol', 'Protokół', 'Protokół przyjęty', 'Protokół nie został przyjęty', true],
   ['informacja', 'Informacja', 'Przyjęto', 'Nie przyjęto', false],
   ['inny', 'Inny materiał', 'Przyjęto', 'Nie przyjęto', false],
-] as [string, string, string, string, boolean][]).map(([id, name, adopted, rejected, voted], i) => ({id, name, adopted, rejected, voted, order: (i + 1) * 10, active: true}));
+] as [string, string, string, string, boolean][]).map(([id, name, adopted, rejected, voted], i) => ({id, name, adopted, rejected, voted, order: (i + 1) * 10, active: true, inActs: id === 'uchwala'}));
 
 /** Formuły wyniku sprawy bez rodzaju dokumentu. */
 export const plainFormulas = {adopted: 'Przyjęto', rejected: 'Nie przyjęto'};
@@ -33,11 +35,15 @@ const text = (value: unknown, missing: string, tooLong: string, max: number) => 
   return v;
 };
 
+/** Odmowa zmiany formy aktu z regulaminu (G-1) z podstawą właściwą dla rodzaju. */
+export const lockedDocTypeRefusal = (id: string, law: LegalProfile = LAW.prezydium) => `Ten rodzaj zawsze wymaga głosowania (${law.acts.voted[id]}). Możesz zmienić tylko nazwę i formuły wyniku.`;
+
 /**
- * Sprawdza dane rodzaju dokumentu z formularza administratora (POST albo PUT). Przy zmianie (`current`) pola,
- * których nie podano, zostają bez zmian. Zwraca kompletny rodzaj.
+ * Sprawdza dane rodzaju dokumentu z formularza biura (POST albo PUT). Przy zmianie (`current`) pola,
+ * których nie podano, zostają bez zmian. Zwraca kompletny rodzaj. Forma aktu z regulaminu nie traci wymogu głosowania
+ * i nie może być wyłączona (G-1); nowy rodzaj z identyfikatorem formy aktu dostaje te same zasady.
  */
-export function docTypeInput(input: Record<string, unknown>, types: DocType[], current?: DocType): DocType {
+export function docTypeInput(input: Record<string, unknown>, types: DocType[], current?: DocType, law: LegalProfile = LAW.prezydium): DocType {
   const has = (k: string) => input[k] !== undefined;
   const name = has('name') || !current ? text(input.name, 'Wpisz nazwę rodzaju.', 'Nazwa rodzaju może mieć najwyżej 60 znaków.', 60) : current.name;
   if (types.some(t => t.id !== current?.id && t.name.toLocaleLowerCase('pl') === name.toLocaleLowerCase('pl'))) bad('Rodzaj o tej nazwie już istnieje. Wpisz inną nazwę.', 409);
@@ -46,12 +52,16 @@ export function docTypeInput(input: Record<string, unknown>, types: DocType[], c
   if (has('voted') && typeof input.voted !== 'boolean') bad('Zaznacz, czy sprawa tego rodzaju wymaga głosowania.');
   if (has('active') && typeof input.active !== 'boolean') bad('Nieprawidłowy stan rodzaju.');
   if (has('order') && !(Number.isInteger(input.order) && (input.order as number) >= 0 && (input.order as number) <= 9999)) bad('Kolejność musi być liczbą całkowitą od 0 do 9999.');
+  if (has('inActs') && typeof input.inActs !== 'boolean') bad('Zaznacz, czy rodzaj stoi w wykazie aktów protokołu.');
   const last = types.reduce((max, t) => Math.max(max, t.order), 0);
+  const id = current?.id ?? newDocTypeId(name, types);
+  if (isLockedDocType(id, law) && ((has('voted') && input.voted !== true) || (has('active') && input.active !== true))) bad(lockedDocTypeRefusal(id, law));
   return {
-    id: current?.id ?? newDocTypeId(name, types), name, adopted, rejected,
+    id, name, adopted, rejected,
     voted: has('voted') ? input.voted as boolean : current?.voted ?? true,
     order: has('order') ? input.order as number : current?.order ?? last + 10,
     active: has('active') ? input.active as boolean : current?.active ?? true,
+    inActs: has('inActs') ? input.inActs as boolean : current?.inActs ?? false,
   };
 }
 

@@ -73,7 +73,8 @@ test('protokół: powody przy kolejności, odroczeniu i zamknięciu, osoby przy 
   m = apply(m, {type: 'item_add', title: 'Stanowisko w sprawie kształcenia', parentId: resolutions.id}, chair, ctx.tick());
   const position = m.agenda.find(i => i.title === 'Stanowisko w sprawie kształcenia')!;
   // F11, F12: „Co jest głosowane” i osoby przy punkcie.
-  m = apply(m, {type: 'item_edit', itemId: position.id, docType: 'stanowisko', presenters: [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje'}, {name: 'Jan Gość', role: '', kind: 'referuje'}, {name: 'Sebastian Irzykowski', role: 'Przewodniczący', kind: 'prowadzi'}]}, chair, ctx.tick());
+  // Wersja 3 (G-10): w trakcie obrad „Co jest głosowane” zmienia osoba prowadząca z powodem.
+  m = apply(m, {type: 'item_edit', itemId: position.id, docType: 'stanowisko', reason: 'Projekt zawiera stanowisko.', presenters: [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje'}, {name: 'Jan Gość', role: '', kind: 'referuje'}, {name: 'Sebastian Irzykowski', role: 'Przewodniczący', kind: 'prowadzi'}]}, chair, ctx.tick());
   m = apply(m, {type: 'item_start', itemId: item(m, 'porzadek').id}, chair, ctx.tick());
   m = apply(m, {type: 'ballot_open', itemId: item(m, 'porzadek').id, purpose: 'porzadek', subject: 'Przyjęcie porządku obrad', mode: 'jawne', minutes: 2}, chair, ctx.tick());
   m = announce(voteAll(m, ctx), ctx);
@@ -136,16 +137,18 @@ test('protokół głosowania między posiedzeniami: zmiany terminu, przerwanie z
   let m = newMeeting(ctx, 'procedura');
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu'}, office, ctx.tick());
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000, noticeDate: '2026-11-19', recorder: 'Anna Protokolantka'}, office, ctx.tick());
-  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  // Wersja 3 (DA-21): termin krótszy niż 24 godziny wymaga powodu przy rozpoczęciu.
+  m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, chair, ctx.tick());
   m = apply(m, {type: 'vote', ballotId: m.ballots[0].id, choice: 'za'}, actor('ag'), ctx.tick());
   m = apply(m, {type: 'procedure_deadline', endsAt: Date.parse('2026-11-21T17:00:00Z')}, chair, ctx.tick());
   const counted = apply(m, {type: 'procedure_end', how: 'policz'}, chair, ctx.tick());
-  const aborted = apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały.'}, actor('jw'), ctx.tick());
+  // Wersja 3 (DA-12): przerywa osoba, która rozpoczęła głosowanie, albo przewodniczący.
+  const aborted = apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały.'}, chair, ctx.tick());
   const body = doc(aborted);
   assert.match(body, /Protokół nr …… z głosowania między posiedzeniami/);
   assert.match(body, /Powiadomienie członków 19 listopada 2026 r\./);
   assert.match(body, /Protokołuje Anna Protokolantka/);
-  assert.match(body, /Zakończenie przerwano, powód „błąd w projekcie uchwały”, rozstrzygnięcie nie zapadło \(Jolanta Woźniak\)/);
+  assert.match(body, /Zakończenie przerwano, powód „błąd w projekcie uchwały”, rozstrzygnięcie nie zapadło \(Sebastian Irzykowski\)/);
   assert.match(body, /Zmiany terminu głosowania .*21\.11\.2026, godz\. 18:00 \(przedłużenie\) Sebastian Irzykowski/);
   assert.match(body, /i zostało przerwane\. Powód „błąd w projekcie uchwały”\. Głosów nie policzono, rozstrzygnięcie nie zapadło\./);
   assert.match(body, /Głos oddała 1 osoba \(Anna Grzegorczyk\)\./);

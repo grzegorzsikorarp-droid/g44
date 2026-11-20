@@ -1,30 +1,30 @@
 import type {Actor, Ballot, Choice, Meeting, Roster} from './types.ts';
 import {itemNumber, unannounced} from './rules.ts';
-import {membership} from './roster.ts';
 import {cleanTitle} from './agenda.ts';
+import {canAnnounce, canPrepare, isPresiding, procedureStarter} from './role.ts';
+import {effectiveMeeting, type CascadeEnv, type MeetingEffective} from './cascade.ts';
 
 /**
- * Kto widzi wynik zamkniętego głosowania przed jego ogłoszeniem (F2): na posiedzeniu osoba prowadząca obrady i konto
- * biura, a w głosowaniu między posiedzeniami osoby, które mogą ogłosić wynik (przewodniczący, wiceprzewodniczący, biuro,
- * administrator). Bez składu (`roster`) w głosowaniu między posiedzeniami liczy się osoba, która je rozpoczęła.
+ * Kto widzi wynik zamkniętego głosowania przed jego ogłoszeniem (Z5, DA-3): tylko osoba, która go ogłasza. Na posiedzeniu
+ * osoba prowadząca obrady, a w głosowaniu między posiedzeniami osoba, która je rozpoczęła, i przewodniczący. Biuro
+ * i administrator nie widzą wyniku przed ogłoszeniem. Bez składu (`roster`) w głosowaniu między posiedzeniami liczy się
+ * tylko osoba, która je rozpoczęła.
  */
 export function seesUnannounced(m: Meeting, actor: Actor, roster?: Roster) {
-  if (actor.account.kind === 'biuro') return true;
-  if (m.kind === 'procedura') {
-    if (actor.account.admin) return true;
-    if (roster) return !!membership(roster, m.organ, actor.personId)?.canChair;
-  }
-  return !!actor.personId && m.chair.current === actor.personId;
+  if (roster) return canAnnounce(roster, m, actor);
+  return m.kind === 'procedura' ? !!actor.personId && procedureStarter(m) === actor.personId : isPresiding(m, actor);
 }
 
 export type ViewBallotFields = {voted: string[]; myVote?: Choice; resultHidden?: boolean};
 /** Posiedzenie w widoku osoby: głosowania z polami widoku (lista głosujących, własny głos, ukryty wynik). */
-export type MeetingView = Omit<Meeting, 'ballots'> & {ballots: (Ballot & ViewBallotFields)[]};
+export type MeetingView = Omit<Meeting, 'ballots'> & {ballots: (Ballot & ViewBallotFields)[]; effective?: MeetingEffective};
 
 // Widok dla osoby: w trakcie głosowania nikt nie widzi cudzych głosów; po zamknięciu nazwiska z wyborami są jawne
 // tylko w głosowaniu imiennym. Do ogłoszenia wyniku (F2) wynik, wykaz imienny i liczby we wpisie dziennika widzi
-// tylko osoba prowadząca obrady i biuro (seesUnannounced); pozostali dostają `resultHidden: true` bez `result`.
-export function viewFor(m: Meeting, actor: Actor, roster?: Roster): MeetingView {
+// tylko osoba, która go ogłasza (seesUnannounced); pozostali dostają `resultHidden: true` bez `result`.
+// Wersja 3: z `env` widok dołącza wartości skuteczne (`effective`); przegląd przed otwarciem tylko dla canPrepare.
+// `effective` nie zawiera głosów ani wyników, więc nie ujawnia niczego przed ogłoszeniem.
+export function viewFor(m: Meeting, actor: Actor, roster?: Roster, env?: CascadeEnv): MeetingView {
   const v = structuredClone(m) as MeetingView;
   const hidden = seesUnannounced(m, actor, roster) ? new Set<string>() : new Set(unannounced(m).map(b => b.id));
   for (const b of v.ballots) {
@@ -42,6 +42,7 @@ export function viewFor(m: Meeting, actor: Actor, roster?: Roster): MeetingView 
       if (entry.ballotId && hidden.has(entry.ballotId)) entry.text = entry.text.replace(/ Za \d+, przeciw \d+, wstrzymało się \d+\.$/, '');
     }
   }
+  if (env) v.effective = effectiveMeeting(env, m, {review: m.status === 'przygotowanie' && canPrepare(env.roster, m, actor)});
   return v;
 }
 
@@ -86,6 +87,6 @@ export function summary(m: Meeting) {
     id: m.id, organ: m.organ, kind: m.kind, title: m.title, date: m.date, time: m.time, place: m.place, mode: m.mode,
     status: m.status, endsAt: m.endsAt ?? null, openBallots: open.length, ballots: m.ballots.filter(b => b.purpose !== 'proba').length,
     current: current?.title ?? null, currentNumber: current ? itemNumber(m.agenda, current.id) : null, revision: m.revision,
-    working: !!m.working,
+    working: !!m.working, protocolNumber: m.protocolNumber ?? null,
   };
 }

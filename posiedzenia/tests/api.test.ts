@@ -168,7 +168,8 @@ test('procedura między posiedzeniami zamyka się sama, gdy zagłosują wszyscy'
     const {meeting} = await admin.ok('/api/meetings', {kind: 'procedura', endsAt: Date.now() + 3 * 3600000});
     const cmd = (c: ReturnType<typeof client>, body: object) => c.ok(`/api/meetings/${meeting.id}/command`, body);
     await cmd(admin, {type: 'item_add', title: 'Uchwała nr 130/IX/2026 w sprawie delegowania przedstawicieli'});
-    let state = (await cmd(members.get('si')!, {type: 'open'})).meeting;
+    // Wersja 3 (DA-21): termin krótszy niż 24 godziny wymaga powodu przy rozpoczęciu.
+    let state = (await cmd(members.get('si')!, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'})).meeting;
     const ballot = state.ballots[0];
     assert.equal(ballot.remote, true);
     await cmd(members.get('kn')!, {type: 'message', text: 'Czy delegacja obejmuje dwie osoby?'});
@@ -178,7 +179,9 @@ test('procedura między posiedzeniami zamyka się sama, gdy zagłosują wszyscy'
     state = (await members.get('ak')!.ok(`/api/meetings/${meeting.id}`)).meeting;
     assert.equal(state.status, 'zakonczone');
     assert.equal(state.ballots[0].result.adopted, true);
-    assert.equal(state.messages.length, 1);
+    // Wersja 3 (DA-21): przy rozpoczęciu aplikacja dopisuje do kanału informację o przedmiocie i terminie.
+    assert.equal(state.messages.length, 2);
+    assert.match(state.messages[0].text, /^Rozpoczęto głosowanie między posiedzeniami w 1 sprawie\. Głosowanie potrwa do /);
   } finally { await stop(); }
 });
 
@@ -232,7 +235,7 @@ test('F13: sesja przedłuża się przy korzystaniu najwyżej co 15 minut i wygas
   }
 });
 
-test('F11: słownik rodzajów dokumentów przez API: odczyt dla zalogowanych, zmiany dla administratora', async () => {
+test('F11: słownik rodzajów dokumentów przez API: odczyt dla zalogowanych, zmiany dla biura', async () => {
   const {origin, stop} = await start();
   try {
     const {admin, members} = await accounts(origin, ['si']);
@@ -288,5 +291,53 @@ test('F6: powielenie posiedzenia przez API kopiuje porządek i treść materiał
     await admin.ok(`/api/meetings/${meeting.id}`, undefined, 'DELETE');
     assert.match((await admin.ok(`/api/meetings/${copy.id}/materials/${ref.id}`)).material.html, /Udziela się patronatu/);
     assert.deepEqual(copy.log.map((e: {text: string}) => e.text), ['Utworzono przez powielenie posiedzenia z dnia 20.11.2026.']);
+  } finally { await stop(); }
+});
+
+test('wersja 3: administrator bez roli biura nie zmienia rodzajów dokumentów ani ustawień; ETag zmienia się po zmianie ustawień ogólnych', async () => {
+  const {origin, stop} = await start();
+  try {
+    const {admin, members} = await accounts(origin, ['si', 'kn']);
+    // Członek z flagą administratora: konta tak, ustawienia ogólne i rodzaje dokumentów nie (DA-2).
+    const list = (await admin.ok('/api/accounts')).accounts;
+    const kn = list.find((x: {personId: string}) => x.personId === 'kn');
+    await admin.ok('/api/accounts', {id: kn.id, admin: true}, 'PATCH');
+    const knClient = members.get('kn')!;
+    assert.equal((await knClient.call('/api/doc-types', {name: 'Opinia', adopted: 'Opinia przyjęta', rejected: 'Opinia nie została przyjęta'})).status, 403);
+    assert.equal((await knClient.call('/api/settings', {change: {area: 'organ', organ: 'prezydium', key: 'voteMinutes', value: 3}})).status, 403);
+    const session = (await knClient.ok('/api/session'));
+    assert.equal(session.general, null);
+    assert.ok(session.docTypes.length >= 10, 'słownik rodzajów dla każdego zalogowanego');
+    assert.equal((await knClient.call('/api/settings/history?area=organ')).status, 403);
+    assert.ok(Array.isArray((await knClient.ok('/api/settings/history?area=konta')).entries), 'administrator widzi historię kont');
+    // Biuro zmienia ustawienia; ETag posiedzenia w przygotowaniu się zmienia, a widok ma nową wartość skuteczną.
+    const si = members.get('si')!;
+    const {meeting} = await admin.ok('/api/meetings', {kind: 'posiedzenie', date: '2026-12-03', time: '10:00'});
+    const first = await fetch(`${origin}/api/meetings/${meeting.id}`, {headers: {Cookie: si.cookie()}});
+    const etag = first.headers.get('etag')!;
+    assert.equal((await first.json()).meeting.effective.meeting.voteMinutes.value, 2);
+    assert.equal((await fetch(`${origin}/api/meetings/${meeting.id}`, {headers: {Cookie: si.cookie(), 'If-None-Match': etag}})).status, 304);
+    const changed = await admin.ok('/api/settings', {change: {area: 'organ', organ: 'prezydium', key: 'voteMinutes', value: 3}});
+    assert.deepEqual(changed.entries.map((e: {before: string; after: string}) => [e.before, e.after]), [['2 minuty', '3 minuty']]);
+    const second = await fetch(`${origin}/api/meetings/${meeting.id}`, {headers: {Cookie: si.cookie(), 'If-None-Match': etag}});
+    assert.equal(second.status, 200);
+    assert.notEqual(second.headers.get('etag'), etag);
+    assert.equal((await second.json()).meeting.effective.meeting.voteMinutes.value, 3);
+    // Historia zmian: przewodniczący czyta bez kont, biuro widzi wpis z kontem.
+    const history = (await si.ok('/api/settings/history')).entries;
+    assert.ok(history.some((e: {label: string; actor: string}) => e.label === 'Czas głosowania w sprawie' && e.actor === 'Biuro Izby'));
+    assert.ok(!history.some((e: {area: string}) => e.area === 'konta'));
+    // Skład z podstawą: rezygnacja bez uchwały.
+    const composition = await admin.ok('/api/composition', {organ: 'prezydium', op: 'koniec', personId: 'ak', since: new Date().toISOString().slice(0, 10), basis: {kind: 'rezygnacja', date: '2026-11-12', to: 'Przewodniczącemu Okręgowej Rady Pielęgniarek i Położnych w Słupsku'}});
+    assert.ok(!composition.roster.memberships.some((x: {organ: string; personId: string}) => x.organ === 'prezydium' && x.personId === 'ak'));
+    assert.equal(composition.entries[0].area, 'sklad');
+    // Rodzaje dokumentów zmienia biuro; formy aktów z regulaminu są zablokowane (G-1).
+    const locked = await admin.call('/api/doc-types/apel', {active: false}, 'PUT');
+    assert.equal(locked.status, 400);
+    assert.match(locked.body.error, /Ten rodzaj zawsze wymaga głosowania \(§ 8 ust\. 9 pkt 4\)/);
+    assert.equal((await admin.call('/api/doc-types/uchwala', undefined, 'DELETE')).status, 400);
+    // Usunięcie posiedzenia w przygotowaniu trafia do historii.
+    await admin.ok(`/api/meetings/${meeting.id}`, undefined, 'DELETE');
+    assert.ok((await admin.ok('/api/settings/history?area=posiedzenia')).entries.length === 1);
   } finally { await stop(); }
 });

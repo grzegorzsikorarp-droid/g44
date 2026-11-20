@@ -2,6 +2,7 @@ import {createMeeting} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
 import {textToHtml} from '../shared/text.ts';
 import type {Account, MaterialRef, MaterialType, Meeting, Presenter, Roster} from '../shared/types.ts';
+import {defaultGeneral, type GeneralSettings, type SiteSettings} from '../shared/settings.ts';
 
 // Dane fikcyjne wersji próbnej — żadna z tych osób nie istnieje.
 const people: [string, string, string, string, boolean][] = [
@@ -15,14 +16,39 @@ const people: [string, string, string, string, boolean][] = [
 ];
 const login = (name: string) => name.toLowerCase().replace(/[ąćęłńóśźż]/g, c => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]).replace(/\s+/g, '.');
 
+/** Nazwy organów w wersji próbnej: fikcyjne, bez nazwy miejscowości. */
+const demoForms = {
+  prezydium: {genitive: 'Prezydium Okręgowej Rady (dane fikcyjne)', dative: 'Prezydium Okręgowej Rady (dane fikcyjne)', gender: 'n' as const,
+    members: 'członków Prezydium', member: 'członek Prezydium', chairman: 'Przewodniczący Okręgowej Rady (dane fikcyjne)',
+    regulation: 'Regulaminu Okręgowej Rady (dane fikcyjne)', regulationAct: 'załącznik do uchwały zjazdu (dane fikcyjne)'},
+  rada: {genitive: 'Okręgowej Rady (dane fikcyjne)', dative: 'Okręgowej Radzie (dane fikcyjne)', gender: 'f' as const,
+    members: 'członków Okręgowej Rady (dane fikcyjne)', member: 'członek Okręgowej Rady (dane fikcyjne)', chairman: 'Przewodniczący Okręgowej Rady (dane fikcyjne)',
+    regulation: 'Regulaminu Okręgowej Rady (dane fikcyjne)', regulationAct: 'załącznik do uchwały zjazdu (dane fikcyjne)'},
+};
+/** Skład fikcyjny od początku kadencji fikcyjnej, z podstawą (wersja 3). */
+const demoBasis = {kind: 'uchwala' as const, act: {organ: 'rada' as const, number: '12/I/2025', date: '2025-04-10'}};
+
 export const demoRoster: Roster = {
   organs: [
-    {code: 'prezydium', name: 'Prezydium Okręgowej Rady (dane fikcyjne)', shortName: 'Prezydium', active: true},
-    {code: 'rada', name: 'Okręgowa Rada (dane fikcyjne)', shortName: 'Rada', active: false},
+    {code: 'prezydium', name: 'Prezydium Okręgowej Rady (dane fikcyjne)', shortName: 'Prezydium', active: true, forms: demoForms.prezydium},
+    {code: 'rada', name: 'Okręgowa Rada (dane fikcyjne)', shortName: 'Rada', active: false, forms: demoForms.rada},
   ],
   persons: people.map(([id, name]) => ({id, name, sortName: name.split(' ').reverse().join(' ')})),
-  memberships: people.map(([personId, , func, label, canChair], order) => ({organ: 'prezydium', personId, func: func as never, label, order, canChair})),
+  memberships: people.map(([personId, , func, label, canChair], order) => ({organ: 'prezydium', personId, func: func as never, label, order, canChair, since: '2025-04-10', basis: demoBasis})),
 };
+
+/** Ustawienia ogólne wersji próbnej: miejsce i kadencja fikcyjne, dwa przykładowe rodzaje spraw, wzór „Posiedzenie zwykłe”. */
+export const demoSite: SiteSettings = {place: 'Sala posiedzeń (przykład)', term: 'I kadencja 2025–2029', termNumber: 'I', protocolNumberPattern: ''};
+export function demoGeneral(): GeneralSettings {
+  const general = defaultGeneral(demoSite);
+  general.caseTypes = [
+    {id: 'prawo_wykonywania_zawodu', name: 'Stwierdzenie prawa wykonywania zawodu', docType: 'uchwala', organs: ['prezydium'], financial: false,
+      keywords: ['prawa wykonywania zawodu', 'pwz'], titlePattern: 'Uchwała nr … w sprawie stwierdzenia prawa wykonywania zawodu', presenterFunc: 'sekretarz', order: 10, active: true},
+    {id: 'pomoc_losowa', name: 'Pomoc w przypadkach losowych', docType: 'uchwala', organs: ['prezydium'], financial: true,
+      keywords: ['zapomoga', 'zdarzenie losowe'], titlePattern: 'Uchwała nr … w sprawie przyznania zapomogi', presenterFunc: 'skarbnik', order: 20, active: true},
+  ];
+  return general;
+}
 
 export const demoAccounts: Account[] = [
   ...people.map(([personId, name]) => ({id: 'a-' + personId, username: login(name), kind: 'czlonek' as const, personId, displayName: name, label: '', admin: false, mustChange: false, disabled: false})),
@@ -57,6 +83,9 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   };
   const meeting: Meeting = createMeeting({id: newId(), organ: 'prezydium', kind: 'posiedzenie', title: 'Posiedzenie Prezydium (próbne)', date: today, time: '10:00', place: 'Sala posiedzeń (przykład)', mode: 'stacjonarne', createdBy: 'Biuro', now, newId});
   meeting.noticeDate = notice;
+  // Wersja 3: wzór posiedzenia i osoba z głosem doradczym zaproszona z urzędu (DA-5).
+  meeting.template = {id: 'zwykle', name: 'Posiedzenie zwykłe'};
+  meeting.invited = ['a-kr'];
   // Osoby przy punktach (F12): funkcje ze składu fikcyjnego, a sprawozdanie referuje osoba z głosem doradczym.
   const secretary: Presenter = {name: 'Marta Kaczmarek', role: 'Sekretarz', kind: 'referuje'};
   meeting.agenda.find(i => i.kind === 'protokol')!.presenters = [secretary];
@@ -104,5 +133,6 @@ export function demoMeetings(now: number, newId: () => string, hash: (html: stri
   procedure.materials.push(ref);
   act.materialIds = [ref.id];
   procedure.agenda.push(act);
+  procedure.invited = ['a-kr'];
   return {meetings: [meeting, procedure], materials};
 }

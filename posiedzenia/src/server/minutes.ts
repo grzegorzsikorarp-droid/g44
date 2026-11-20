@@ -502,7 +502,8 @@ function chapterThree(d: Doc) {
 function draftChanges(d: Doc, adoption: Ballot | undefined, adopted: boolean) {
   const {m} = d;
   const until = adopted && adoption?.closedAt ? adoption.closedAt : Infinity;
-  const entries = m.log.filter(l => l.tag === 'projekt' && l.at <= until);
+  // Wersja 3: dziennik ma zmiany projektu także sprzed otwarcia; protokół wymienia tylko te od otwarcia (rozdz. 2.8 pkt 2).
+  const entries = m.log.filter(l => l.tag === 'projekt' && l.at >= (m.openedAt ?? Infinity) && l.at <= until);
   if (!entries.length) return '';
   const text = (l: {at: number; text: string}) => {
     const change = l.text.replace(/^Zmieniono projekt porządku obrad\.\s*/, '').replace(' ma nową nazwę ', ' otrzymał nową nazwę ');

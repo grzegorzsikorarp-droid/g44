@@ -1,4 +1,4 @@
-import type {Roster} from './types.ts';
+import type {Organ, OrganCode, Roster} from './types.ts';
 
 // Pomocnicze funkcje składu. Dane IX kadencji są w src/server/seed.ts (tylko serwer).
 export const organMembers = (roster: Roster, organ: string) =>
@@ -8,3 +8,15 @@ export const membership = (roster: Roster, organ: string, personId: string | nul
 export const personName = (roster: Roster, personId: string | null | undefined) =>
   roster.persons.find(p => p.id === personId)?.name ?? (personId || '–');
 export const organOf = (roster: Roster, code: string) => roster.organs.find(o => o.code === code);
+/**
+ * Organ do tekstów (wersja 3), także inny niż organ posiedzenia, np. „uchwała Okręgowej Rady…” w sprawach Prezydium.
+ * Bez organu w danych zwraca nazwę zastępczą z kodu, żeby tekst nie wypadł.
+ */
+export function organOfCode(roster: Roster, code: OrganCode): Organ {
+  const found = organOf(roster, code);
+  if (found) return found;
+  const name = code === 'prezydium' ? 'Prezydium' : code === 'rada' ? 'Okręgowa Rada' : 'Okręgowy Zjazd';
+  return {code, name, shortName: name, active: false, forms: {genitive: name, dative: name, gender: code === 'rada' ? 'f' : code === 'zjazd' ? 'm' : 'n', members: `członków ${name}`, member: `członek ${name}`, chairman: 'Przewodniczący', regulation: 'Regulaminu', regulationAct: ''}};
+}
+/** Czasownik w rodzaju organu: organVerb(o, {m: 'uchwalił', f: 'uchwaliła', n: 'uchwaliło'}). */
+export const organVerb = (o: Pick<Organ, 'forms'>, v: {m: string; f: string; n: string}) => v[o.forms?.gender ?? 'n'];

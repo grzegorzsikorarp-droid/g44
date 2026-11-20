@@ -1,4 +1,5 @@
-import type {AgendaItem, ItemKind} from './types.ts';
+import type {AgendaItem, ItemKind, Meeting} from './types.ts';
+import {agendaBasis, type LegalProfile} from './law.ts';
 
 // Uproszczony porządek obrad Prezydium — decyzja z 18.11.2026: § 9 ust. 2 Regulaminu Rady
 // stosowany „odpowiednio” (§ 14 ust. 4), bez wyboru osób liczących głosy i komisji mandatowej.
@@ -81,4 +82,85 @@ export function parseAgendaText(text: string, options: {flat?: boolean} = {}) {
     warnings.push('Dodano punkt „Przyjęcie porządku obrad”. Dalsze sprawy można rozpatrywać dopiero po przyjęciu porządku.');
   }
   return {items, warnings};
+}
+
+/** Nazwy rodzajów punktu do list wyboru, historii i komunikatów (wersja 3). */
+export const itemKindLabel: Record<ItemKind, string> = {
+  otwarcie: 'Otwarcie posiedzenia i stwierdzenie kworum', porzadek: 'Przyjęcie porządku obrad', protokol: 'Przyjęcie protokołu',
+  sprawozdania: 'Sprawy bieżące i sprawozdania', uchwaly: 'Podjęcie uchwał', wolne_wnioski: 'Informacje bieżące i wolne wnioski',
+  zamkniecie: 'Zamknięcie posiedzenia', sprawa: 'Sprawa',
+};
+/** Zwykła kolejność rodzajów w porządku obrad (§ 9 ust. 2), według której uzupełnia się brakujące punkty. */
+const standardOrder: ItemKind[] = ['otwarcie', 'porzadek', 'protokol', 'sprawozdania', 'uchwaly', 'wolne_wnioski', 'zamkniecie'];
+
+export interface AgendaProblem { kind: ItemKind; type: 'brak' | 'powtorzenie' | 'podpunkt' | 'pominiecie' }
+/**
+ * Niezmiennik porządku obrad (G-6, wersja 3): każdy rodzaj obowiązkowy występuje dokładnie raz jako punkt główny,
+ * a każdy rodzaj wymieniony w regulaminie występuje albo jest w `m.skipped` z powodem. Dotyczy tylko posiedzeń.
+ */
+export function agendaProblems(law: LegalProfile, m: Pick<Meeting, 'kind' | 'agenda' | 'skipped'>): AgendaProblem[] {
+  if (m.kind !== 'posiedzenie') return [];
+  const out: AgendaProblem[] = [];
+  for (const kind of law.agenda.mandatory) {
+    const found = m.agenda.filter(i => i.kind === kind);
+    if (!found.length) out.push({kind, type: 'brak'});
+    else if (found.length > 1) out.push({kind, type: 'powtorzenie'});
+    else if (found[0].parentId) out.push({kind, type: 'podpunkt'});
+  }
+  for (const kind of Object.keys(law.agenda.listed) as ItemKind[]) {
+    if (law.agenda.mandatory.includes(kind)) continue;
+    if (!m.agenda.some(i => i.kind === kind) && !(m.skipped ?? []).some(x => x.kind === kind && x.reason.trim())) out.push({kind, type: 'pominiecie'});
+  }
+  return out;
+}
+
+/**
+ * Komunikat odmowy, gdy po poleceniu porządek łamie niezmiennik, a przed poleceniem go nie łamał w ten sposób
+ * (dane ze starszych wersji z wadą nie blokują innych zmian). `before` podaje tytuł usuniętego punktu.
+ */
+export function validateAgenda(law: LegalProfile, m: Pick<Meeting, 'kind' | 'agenda' | 'skipped'>, before?: Pick<Meeting, 'kind' | 'agenda' | 'skipped'>): string | null {
+  const old = before ? agendaProblems(law, before).map(p => `${p.kind}:${p.type}`) : [];
+  const problem = agendaProblems(law, m).find(p => !old.includes(`${p.kind}:${p.type}`));
+  if (!problem) return null;
+  const title = before?.agenda.find(i => i.kind === problem.kind)?.title ?? itemKindLabel[problem.kind];
+  const basis = agendaBasis(law, problem.kind) ?? law.agenda.listedBasis;
+  if (problem.type === 'brak') return `Punktu „${title}” nie można usunąć. To punkt obowiązkowy (${basis}).`;
+  if (problem.type === 'pominiecie') return `Podaj powód pominięcia punktu „${title}”. Trafi do protokołu (${basis}).`;
+  if (problem.type === 'podpunkt') return `Punkt „${itemKindLabel[problem.kind]}” musi być punktem głównym porządku obrad.`;
+  return `Punkt „${itemKindLabel[problem.kind]}” może wystąpić w porządku tylko raz.`;
+}
+
+/**
+ * Uzupełnia porządek o brakujące punkty obowiązkowe i wymienione w regulaminie (bez pominiętych z powodem) na ich
+ * zwykłych miejscach: otwarcie na początku, zamknięcie na końcu, pozostałe za ostatnim wcześniejszym rodzajem z § 9 ust. 2.
+ * Zwraca dodane punkty. `titles` podaje tytuły z wzoru posiedzenia albo ze standardowego szablonu.
+ */
+export function completeAgenda(law: LegalProfile, m: Pick<Meeting, 'kind' | 'agenda' | 'skipped'>, newId: () => string, titles: Partial<Record<ItemKind, string>> = {}): AgendaItem[] {
+  if (m.kind !== 'posiedzenie') return [];
+  const added: AgendaItem[] = [];
+  const wanted = standardOrder.filter(kind => law.agenda.mandatory.includes(kind) || (kind in law.agenda.listed && !(m.skipped ?? []).some(x => x.kind === kind)));
+  for (const kind of wanted) {
+    if (m.agenda.some(i => i.kind === kind)) continue;
+    const title = titles[kind] ?? presidiumTemplate.find(([, k]) => k === kind)?.[0] ?? itemKindLabel[kind];
+    const item = newItem(newId(), title, kind);
+    let at: number;
+    const rank = standardOrder.indexOf(kind);
+    const top = m.agenda.filter(i => !i.parentId);
+    const rankOf = (i: AgendaItem) => standardOrder.indexOf(i.kind);
+    if (kind === 'otwarcie') at = 0;
+    else if (kind === 'zamkniecie') at = m.agenda.length;
+    else if (kind === 'porzadek' || kind === 'protokol') {
+      // Przyjęcie porządku i protokołu stoją zaraz po wcześniejszym punkcie z § 9 ust. 2.
+      const previous = [...top].reverse().find(i => rankOf(i) >= 0 && rankOf(i) < rank);
+      at = previous ? m.agenda.indexOf(previous) + 1 : 0;
+      while (at < m.agenda.length && m.agenda[at].parentId) at++;
+    } else {
+      // Sprawy bieżące, uchwały i wolne wnioski stoją przed następnym punktem z § 9 ust. 2 (zwykle przed zamknięciem).
+      const following = top.find(i => rankOf(i) > rank);
+      at = following ? m.agenda.indexOf(following) : m.agenda.length;
+    }
+    m.agenda.splice(at, 0, item);
+    added.push(item);
+  }
+  return added;
 }

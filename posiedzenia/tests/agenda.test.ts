@@ -44,7 +44,9 @@ test('wczytanie spraw w głosowaniu między posiedzeniami tworzy trzy sprawy gł
 test('wczytanie porządku posiedzenia bez zmian: podpunkt i dodane „Przyjęcie porządku obrad”', () => {
   const ctx = context();
   const m = apply(newMeeting(ctx), {type: 'agenda_import', text, replace: true}, office, ctx);
-  assert.deepEqual(m.agenda.map(i => i.title), ['Przyjęcie porządku obrad', 'A', 'B', 'C']);
+  // Wersja 3 (G-6, N-4): brakujące punkty obowiązkowe i wymienione w regulaminie domena uzupełnia na zwykłych miejscach.
+  assert.deepEqual(m.agenda.map(i => i.title), ['Otwarcie posiedzenia i stwierdzenie kworum', 'Przyjęcie porządku obrad', 'Przyjęcie protokołu z poprzedniego posiedzenia',
+    'A', 'B', 'C', 'Sprawy bieżące, w tym przyjęcie sprawozdań', 'Podjęcie uchwał', 'Informacje bieżące i wolne wnioski', 'Zamknięcie posiedzenia']);
   assert.equal(byTitle(m, 'B').parentId, byTitle(m, 'A').id);
   assert.equal(byTitle(m, 'Przyjęcie porządku obrad').kind, 'porzadek');
 });

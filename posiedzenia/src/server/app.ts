@@ -10,12 +10,17 @@ import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, session
 import {SecretBallots} from './secret.ts';
 import {cleanHtml, docxToHtml, guessType, htmlHash, markdownToHtml, splitActs, textToHtml} from './documents.ts';
 import {minutesDoc, minutesFileName, minutesHtml, type MinutesLook} from './minutes.ts';
-import {advance, apply, canView, createMeeting, DomainError, duplicateMeeting, isOrganizer, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
+import {advance, advisoryIds, apply, canView, DomainError, duplicateMeeting, newMeetingFromSettings, secretCast, secretIssue, type Command, type Context} from '../shared/meeting.ts';
 import {newItem} from '../shared/agenda.ts';
-import {docTypeInput, sortedDocTypes} from '../shared/doctypes.ts';
+import {docTypeInput, lockedDocTypeRefusal, sortedDocTypes} from '../shared/doctypes.ts';
 import {personName} from '../shared/roster.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
-import type {Account, Actor, MaterialRef, MaterialType, Meeting} from '../shared/types.ts';
+import {canCreate, canPrepare, isOfficeAccount, isPresiding, settingsAccess} from '../shared/role.ts';
+import {applyCompositionChange, applySettingsChange, docTypeAudit as docTypeAuditEntry, organSettingsOf, type AuditEntry, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
+import {cascadeEnv} from '../shared/cascade.ts';
+import {isLockedDocType, LAW} from '../shared/law.ts';
+import {isoDayOf, timeOf} from '../shared/text.ts';
+import type {Account, Actor, DocType, ItemKind, MaterialRef, MaterialType, Meeting, OrganCode} from '../shared/types.ts';
 
 export const VERSION = '0.1.0';
 const mime: Record<string, string> = {
@@ -69,6 +74,8 @@ export async function createApplication(options: AppOptions = {}) {
   const secret = new SecretBallots(store, () => { scrub = true; });
   const afterWrite = () => { if (scrub) { scrub = false; setImmediate(() => store.scrubSecretTraces()); } };
   if (store.purgeAbortedVotes()) store.scrubSecretTraces();
+  // Wersja 3: jednorazowa migracja danych (ustawienia ogólne, zamrożenie posiedzeń sprzed wersji 3, role).
+  store.migrateV3(now());
 
   const tokenPath = join(dataDir, 'pierwsze-uruchomienie.txt');
   let setupKey = '';
@@ -82,13 +89,20 @@ export async function createApplication(options: AppOptions = {}) {
 
   const context = (): Context => ({
     roster: store.roster(), now: now(), newId: randomUUID, docTypes: store.docTypes(),
+    general: store.general(), law: LAW, accounts: accounts(),
     secret: {
       openKey: id => secret.openKey(id), tally: id => secret.tally(id), closeKey: id => secret.closeKey(id),
       // F7: karty głosowania przerwanego bez rozstrzygnięcia nie zostają w bazie (ślady w WAL usuwa scrubSecretTraces).
       discard: id => { db.prepare('DELETE FROM secret_votes WHERE ballot_id=?').run(id); },
     },
   });
-  const view = (m: Meeting, a: Actor) => viewFor(m, a, store.roster());
+  // Wersja 3: widok posiedzenia z wartościami skutecznymi (`effective`), bez dodatkowych zapytań klienta.
+  const envFor = (m: Meeting) => {
+    const previous = store.meetingIds().map(id => store.meeting(id)).filter(x => x && x.id !== m.id && x.organ === m.organ && x.openedAt && x.openedAt <= (m.openedAt ?? Infinity)).map(x => x!.openedAt!);
+    return cascadeEnv({roster: store.roster(), bundle: store.general(), organ: m.organ, accounts: accounts(), law: LAW,
+      composition: store.lastComposition(m.organ), previousOpenedAt: previous.length ? Math.max(...previous) : null});
+  };
+  const view = (m: Meeting, a: Actor) => viewFor(m, a, store.roster(), envFor(m));
   const write = <T>(fn: () => T) => { try { return store.transaction(fn); } finally { afterWrite(); } };
 
   // F13: zapytanie z ważną sesją, gdy od ostatniego przedłużenia minęło co najmniej 15 minut, przesuwa jej wygaśnięcie
@@ -121,10 +135,18 @@ export async function createApplication(options: AppOptions = {}) {
     if (!canView(store.roster(), m!, actor)) fail('Brak dostępu do tego posiedzenia.', 403);
     return m!;
   }
+  // Wersja 3: w przygotowaniu materiały dodaje biuro, przewodniczący i wiceprzewodniczący (canPrepare), w trakcie obrad
+  // biuro albo osoba prowadząca obrady; po zamknięciu nikt.
   function requireEditor(m: Meeting, actor: Actor) {
     if (m.status === 'zakonczone') fail('Posiedzenie zostało zamknięte.');
-    if (!isOrganizer(store.roster(), m, actor) && m.chair.current !== actor.personId) fail('Materiały dodaje biuro Izby albo osoba prowadząca obrady.', 403);
+    const allowed = m.status === 'przygotowanie' ? canPrepare(store.roster(), m, actor) : isOfficeAccount(actor) || isPresiding(m, actor);
+    if (!allowed) fail('Materiały dodaje biuro Izby albo osoba prowadząca obrady.', 403);
   }
+  /** Wpisy historii zmian ustawień z kontem i osobą (rozdz. 2.8 pkt 1). */
+  const auditEntry = (a: Actor, e: Pick<AuditEntry, 'area' | 'key' | 'label' | 'before' | 'after'> & {organ?: OrganCode; basis?: string}): Omit<AuditEntry, 'id'> =>
+    ({at: now(), accountId: a.account.id, actor: a.name, ...e});
+  const kindName: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro'};
+  const accountLabel = (row: UserRow) => row.person_id ? personName(store.roster(), row.person_id) : row.display_name;
 
   // Zamykanie głosowań po upływie czasu także wtedy, gdy nikt akurat nie odświeża strony.
   const ticker = setInterval(() => {
@@ -233,7 +255,11 @@ export async function createApplication(options: AppOptions = {}) {
       if (session?.refresh) res.setHeader('Set-Cookie', session.refresh);
       if (path === '/api/session' && method === 'GET') {
         const setupRequired = !store.hasUsers();
-        return json(res, {account: actor?.account ?? null, setupRequired, roster: actor || setupRequired ? store.roster() : null, version: VERSION});
+        // Wersja 3 (I-9): słownik rodzajów dla każdego zalogowanego; ustawienia ogólne dla biura, przewodniczącego
+        // i wiceprzewodniczących (DA-4), dla pozostałych, także administratora bez roli biura, null.
+        const access = actor ? settingsAccess(store.roster(), actor) : null;
+        return json(res, {account: actor?.account ?? null, setupRequired, roster: actor || setupRequired ? store.roster() : null, version: VERSION,
+          docTypes: actor ? sortedDocTypes(store.docTypes()) : null, general: access?.general ? store.general() : null});
       }
       if (path === '/api/setup' && method === 'POST') {
         const input = await jsonBody(req, 10000);
@@ -304,8 +330,24 @@ export async function createApplication(options: AppOptions = {}) {
             } else if (displayName.length < 3) fail('Podaj imię i nazwisko albo nazwę konta.');
             if (store.userByName(username)) fail('Ten login jest już zajęty. Wpisz inny login.', 409);
             if (personId && db.prepare('SELECT 1 FROM users WHERE person_id=?').get(personId)) fail('Ta osoba ma już konto.', 409);
-            db.prepare('INSERT INTO users(id,username,password,kind,person_id,display_name,label,admin,must_change,created) VALUES (?,?,?,?,?,?,?,?,1,?)')
-              .run(randomUUID(), username, password, kind, personId, displayName, String(input.label ?? '').slice(0, 120), input.admin ? 1 : 0, now());
+            const newId = randomUUID();
+            write(() => {
+              db.prepare('INSERT INTO users(id,username,password,kind,person_id,display_name,label,admin,must_change,created) VALUES (?,?,?,?,?,?,?,?,1,?)')
+                .run(newId, username, password, kind, personId, displayName, String(input.label ?? '').slice(0, 120), input.admin ? 1 : 0, now());
+              store.audit([auditEntry(a, {area: 'konta', key: `konto:${newId}`, label: `Konto ${displayName}`, before: 'brak', after: `${kindName[kind]}${input.admin ? ', administrator' : ''}, login ${username}`})]);
+              // DA-5: osoba z głosem doradczym jest zaproszona na każde posiedzenie w przygotowaniu.
+              if (kind === 'doradczy') {
+                for (const mid of store.meetingIds()) {
+                  const m = store.meeting(mid);
+                  if (!m || m.status !== 'przygotowanie' || m.invited.includes(newId)) continue;
+                  const next = structuredClone(m);
+                  next.invited.push(newId);
+                  next.log.push({at: now(), text: 'Dodano osoby z głosem doradczym zawiadamiane o każdym posiedzeniu (§ 7 ust. 2).', by: a.name, accountId: a.account.id, tag: 'ustawienia'});
+                  next.revision++;
+                  store.saveMeeting(next, now());
+                }
+              }
+            });
             return json(res, {accounts: accounts()}, 201);
           }
           if (method === 'PATCH') {
@@ -313,44 +355,127 @@ export async function createApplication(options: AppOptions = {}) {
             if (target.id === a.account.id && (input.disabled !== undefined || input.admin !== undefined)) fail('Nie można zablokować własnego konta ani odebrać sobie uprawnień.');
             const password = input.password ? await passwordHash(validPassword(input.password)) : null;
             write(() => {
-              if (typeof input.disabled === 'boolean') db.prepare('UPDATE users SET disabled=? WHERE id=?').run(input.disabled ? 1 : 0, target.id);
-              if (typeof input.admin === 'boolean') db.prepare('UPDATE users SET admin=? WHERE id=?').run(input.admin ? 1 : 0, target.id);
-              if (typeof input.label === 'string') db.prepare('UPDATE users SET label=? WHERE id=?').run(input.label.slice(0, 120), target.id);
-              if (password) db.prepare('UPDATE users SET password=?, must_change=1 WHERE id=?').run(password, target.id);
+              const label = `Konto ${accountLabel(target)}`;
+              const entries: Omit<AuditEntry, 'id'>[] = [];
+              if (typeof input.disabled === 'boolean' && !!target.disabled !== input.disabled) {
+                db.prepare('UPDATE users SET disabled=? WHERE id=?').run(input.disabled ? 1 : 0, target.id);
+                entries.push(auditEntry(a, {area: 'konta', key: `konto:${target.id}:blokada`, label, before: target.disabled ? 'zablokowane' : 'aktywne', after: input.disabled ? 'zablokowane' : 'aktywne'}));
+              }
+              if (typeof input.admin === 'boolean' && !!target.admin !== input.admin) {
+                db.prepare('UPDATE users SET admin=? WHERE id=?').run(input.admin ? 1 : 0, target.id);
+                entries.push(auditEntry(a, {area: 'konta', key: `konto:${target.id}:administrator`, label, before: target.admin ? 'administrator' : 'bez uprawnień administratora', after: input.admin ? 'administrator' : 'bez uprawnień administratora'}));
+              }
+              if (typeof input.label === 'string' && input.label.slice(0, 120) !== target.label) {
+                db.prepare('UPDATE users SET label=? WHERE id=?').run(input.label.slice(0, 120), target.id);
+                entries.push(auditEntry(a, {area: 'konta', key: `konto:${target.id}:opis`, label, before: target.label || 'brak', after: input.label.slice(0, 120) || 'brak'}));
+              }
+              if (password) {
+                db.prepare('UPDATE users SET password=?, must_change=1 WHERE id=?').run(password, target.id);
+                // Hasło nie trafia do historii, tylko fakt nadania (rozdz. 2.8 pkt 1).
+                entries.push(auditEntry(a, {area: 'konta', key: `konto:${target.id}:haslo`, label, before: '–', after: 'Nadano nowe hasło tymczasowe.'}));
+                // DA-14: nowe hasło tymczasowe członka w trakcie posiedzenia jego organu trafia do dziennika tego posiedzenia.
+                if (target.person_id) {
+                  for (const mid of store.liveMeetingIds()) {
+                    const m = store.meeting(mid);
+                    if (!m || !store.roster().memberships.some(ms => ms.organ === m.organ && ms.personId === target.person_id) && !m.frozen?.members.some(f => f.personId === target.person_id)) continue;
+                    const next = structuredClone(m);
+                    next.log.push({at: now(), text: `O godz. ${timeOf(now())} administrator nadał nowe hasło tymczasowe kontu ${accountLabel(target)}.`, by: a.name, accountId: a.account.id});
+                    next.revision++;
+                    store.saveMeeting(next, now());
+                  }
+                }
+              }
               if (password || input.disabled) db.prepare('DELETE FROM sessions WHERE user_id=?').run(target.id);
+              if (entries.length) store.audit(entries);
             });
             return json(res, {accounts: accounts()});
           }
         }
 
-        // F11: słownik rodzajów dokumentów. Czyta każdy zalogowany, zmienia administrator.
+        // F11, wersja 3: słownik rodzajów dokumentów. Czyta każdy zalogowany, zmienia biuro (dawniej administrator).
+        // Formy aktów z regulaminu zawsze wymagają głosowania (G-1). Każda zmiana trafia do historii i podnosi rewizję.
+        const docTypeAudit = (a: Actor, before: DocType | undefined, after: DocType | undefined) => docTypeAuditEntry(a, now(), before, after);
+        const docTypesResult = () => ({docTypes: sortedDocTypes(store.docTypes()), general: store.general()});
         if (path === '/api/doc-types') {
           if (method === 'GET') return json(res, {docTypes: sortedDocTypes(store.docTypes())});
           if (method === 'POST') {
-            if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+            if (!isOfficeAccount(a)) fail('Rodzaje dokumentów zmienia biuro.', 403);
             const input = await jsonBody(req, 10000);
-            write(() => store.saveDocType(docTypeInput(input ?? {}, store.docTypes())));
-            return json(res, {docTypes: sortedDocTypes(store.docTypes())}, 201);
+            write(() => {
+              const t = docTypeInput(input ?? {}, store.docTypes(), undefined, LAW.prezydium);
+              store.saveDocType(t);
+              store.audit([docTypeAudit(a, undefined, t)]);
+              store.bumpRevision();
+            });
+            return json(res, docTypesResult(), 201);
           }
         }
         const dt = path.match(/^\/api\/doc-types\/([a-z0-9_]{1,40})$/);
         if (dt && (method === 'PUT' || method === 'DELETE')) {
-          if (!a.account.admin) fail('Ta czynność wymaga uprawnień administratora.', 403);
+          if (!isOfficeAccount(a)) fail('Rodzaje dokumentów zmienia biuro.', 403);
           const current = store.docTypes().find(t => t.id === dt[1]) ?? fail('Nie znaleziono rodzaju dokumentu.', 404);
           if (method === 'PUT') {
             const input = await jsonBody(req, 10000);
-            write(() => store.saveDocType(docTypeInput(input ?? {}, store.docTypes(), current)));
+            write(() => {
+              const t = docTypeInput(input ?? {}, store.docTypes(), current, LAW.prezydium);
+              if (JSON.stringify(t) === JSON.stringify(current)) return;
+              store.saveDocType(t);
+              store.audit([docTypeAudit(a, current, t)]);
+              store.bumpRevision();
+            });
           } else {
+            if (isLockedDocType(current.id, LAW.prezydium)) fail(lockedDocTypeRefusal(current.id, LAW.prezydium));
             if (store.docTypeUsed(current.id)) fail('Ten rodzaj jest już użyty w materiale, punkcie albo głosowaniu. Możesz go tylko wyłączyć.', 409);
-            write(() => store.deleteDocType(current.id));
+            write(() => { store.deleteDocType(current.id); store.audit([docTypeAudit(a, current, undefined)]); store.bumpRevision(); });
           }
-          return json(res, {docTypes: sortedDocTypes(store.docTypes())});
+          return json(res, docTypesResult());
+        }
+
+        // Wersja 3: ustawienia ogólne (biuro), skład z podstawą (biuro) i historia zmian (DA-4, DA-2).
+        if (path === '/api/settings' && method === 'POST') {
+          if (!isOfficeAccount(a)) fail('Ustawienia ogólne zmienia biuro.', 403);
+          const input = await jsonBody(req, 200000);
+          const result = write(() => {
+            const {bundle, audit} = applySettingsChange(store.general(), input?.change as SettingsChange, {actor: a, now: now(), roster: store.roster()});
+            if (!audit.length) return {general: store.general(), entries: [] as AuditEntry[]};
+            store.saveGeneral(bundle.general);
+            const entries = store.audit(audit);
+            store.bumpRevision();
+            return {general: store.general(), entries};
+          });
+          return json(res, result);
+        }
+        if (path === '/api/composition' && method === 'POST') {
+          if (!isOfficeAccount(a)) fail('Skład organu wpisuje biuro.', 403);
+          const input = await jsonBody(req, 20000);
+          const result = write(() => {
+            const organ = (input?.organ ?? 'prezydium') as OrganCode;
+            const settings = organSettingsOf(store.general().general, organ);
+            const change = applyCompositionChange(store.roster(), settings, input, {actor: a, now: now(), today: isoDayOf(now()), newId: randomUUID});
+            store.saveComposition(change.roster, organ, change.settings);
+            const entries = store.audit(change.audit);
+            store.bumpRevision();
+            return {roster: store.roster(), general: store.general(), entries};
+          });
+          return json(res, result);
+        }
+        if (path === '/api/settings/history' && method === 'GET') {
+          const access = settingsAccess(store.roster(), a);
+          const area = (url.searchParams.get('area') || undefined) as SettingsArea | undefined;
+          const all: SettingsArea[] = ['siedziba', 'organ', 'wzory', 'rodzaje_dokumentow', 'rodzaje_spraw', 'sklad', 'konta', 'posiedzenia'];
+          // Biuro, przewodniczący i wiceprzewodniczący widzą historię bez kont; administrator tylko konta.
+          const allowed = all.filter(x => x === 'konta' ? access.accounts : !!access.general);
+          if (!allowed.length || (area && !allowed.includes(area))) fail('Brak dostępu do tej historii zmian.', 403);
+          const before = Number(url.searchParams.get('before')) || undefined;
+          const limit = Number(url.searchParams.get('limit')) || 50;
+          return json(res, store.history({areas: area ? [area] : allowed, accountId: url.searchParams.get('accountId') || undefined, before, limit}));
         }
 
         if (path === '/api/people' && method === 'GET') {
           // Lista kont potrzebna organizatorowi do zaproszeń (głos doradczy, goście).
-          const roster = store.roster();
-          const organizer = a.account.admin || a.account.kind === 'biuro' || roster.memberships.some(ms => ms.personId === a.personId && ms.canChair);
+          // Wersja 3: biuro, przewodniczący i wiceprzewodniczący (przygotowanie) oraz osoba prowadząca obrady; administrator sam nie.
+          const presiding = !!a.personId && store.liveMeetingIds().some(id => store.meeting(id)?.chair.current === a.personId);
+          const organizer = canCreate(store.roster(), 'prezydium', a) || presiding;
           return json(res, {accounts: organizer ? accounts().filter(x => !x.disabled).map(x => ({id: x.id, displayName: x.displayName, label: x.label, kind: x.kind, personId: x.personId})) : []});
         }
 
@@ -361,16 +486,12 @@ export async function createApplication(options: AppOptions = {}) {
         }
         if (path === '/api/meetings' && method === 'POST') {
           const input = await jsonBody(req, 10000);
-          const kind = input.kind === 'procedura' ? 'procedura' : 'posiedzenie';
-          const draft = createMeeting({
-            id: randomUUID(), organ: 'prezydium', kind,
-            title: String(input.title || (kind === 'posiedzenie' ? 'Posiedzenie Prezydium ORPiP' : 'Głosowanie między posiedzeniami Prezydium ORPiP')),
-            date: /^\d{4}-\d{2}-\d{2}$/.test(input.date) ? input.date : new Date(now()).toISOString().slice(0, 10),
-            time: /^\d{2}:\d{2}$/.test(input.time) ? input.time : '10:00', place: String(input.place ?? ''),
-            mode: kind === 'procedura' ? 'zdalne' : input.mode === 'zdalne' ? 'zdalne' : 'stacjonarne',
-            createdBy: a.name, now: now(), newId: randomUUID, endsAt: Number(input.endsAt) || undefined,
-          });
-          if (!isOrganizer(store.roster(), draft, a)) fail('Posiedzenie przygotowuje biuro, przewodniczący lub wiceprzewodniczący.', 403);
+          // Wersja 3: posiedzenie ze wzoru posiedzenia i ustawień ogólnych (wspólna funkcja domeny, także w wersji próbnej).
+          const draft = newMeetingFromSettings({
+            id: randomUUID(), kind: input.kind === 'procedura' ? 'procedura' : 'posiedzenie', organ: input.organ, template: input.template ? String(input.template) : undefined,
+            title: input.title ? String(input.title) : undefined, date: input.date, time: input.time, place: input.place === undefined ? undefined : String(input.place),
+            mode: input.mode, endsAt: Number(input.endsAt) || undefined, actor: a,
+          }, context());
           write(() => store.saveMeeting(draft, now()));
           return json(res, {meeting: view(draft, a)}, 201);
         }
@@ -380,14 +501,18 @@ export async function createApplication(options: AppOptions = {}) {
           const id = mm[1], rest = mm[2] ?? '';
           if (rest === '' && method === 'GET') {
             const m = meetingFor(id, a);
-            const etag = `"${VERSION}-${m.revision}-${a.account.id}"`;
+            // Wersja 3: rewizja ustawień ogólnych w ETag, żeby posiedzenie w przygotowaniu pokazało nowe wartości (R-4).
+            const etag = `"${VERSION}-${m.revision}-${store.revision()}-${a.account.id}"`;
             if (req.headers['if-none-match'] === etag) { res.writeHead(304, {'ETag': etag, 'X-Server-Now': String(now()), 'Cache-Control': 'private, no-cache'}); return res.end(); }
             return json(res, {meeting: view(m, a)}, 200, {'ETag': etag, 'Cache-Control': 'private, no-cache'});
           }
           if (rest === '' && method === 'DELETE') {
             const m = meetingFor(id, a);
-            if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Usuwa je biuro Izby, przewodniczący albo wiceprzewodniczący.', 403);
-            write(() => store.deleteMeeting(id));
+            if (!canCreate(store.roster(), m.organ, a) || m.status !== 'przygotowanie') fail('Usunąć można tylko nierozpoczęte posiedzenie. Usuwa je biuro Izby, przewodniczący albo wiceprzewodniczący.', 403);
+            write(() => {
+              store.deleteMeeting(id);
+              store.audit([auditEntry(a, {area: 'posiedzenia', organ: m.organ, key: `posiedzenie:${m.id}`, label: `${m.kind === 'procedura' ? 'Głosowanie między posiedzeniami' : 'Posiedzenie'} „${m.title}” z dnia ${m.date.split('-').reverse().join('.')}`, before: 'w przygotowaniu', after: 'usunięte'})]);
+            });
             return json(res, {ok: true});
           }
           if (rest === '/command' && method === 'POST') {
@@ -404,8 +529,12 @@ export async function createApplication(options: AppOptions = {}) {
           // F6: powielenie posiedzenia z kopią treści materiałów i plików (nowe posiedzenie nie zależy od starego).
           if (rest === '/duplicate' && method === 'POST') {
             const src = meetingFor(id, a);
-            if (!isOrganizer(store.roster(), src, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
-            const {meeting: copy, materialMap} = duplicateMeeting(src, {id: randomUUID(), now: now(), newId: randomUUID, createdBy: a.name, docTypes: store.docTypes()});
+            if (!canCreate(store.roster(), src.organ, a)) fail('Posiedzenie powiela biuro, przewodniczący albo wiceprzewodniczący.', 403);
+            const templates = organSettingsOf(store.general().general, src.organ).templates;
+            const titles: Partial<Record<ItemKind, string>> = {};
+            for (const t of (templates.find(x => x.id === src.template?.id) ?? templates[0])?.items ?? []) if (t.kind !== 'sprawa') titles[t.kind] ??= t.title;
+            const {meeting: copy, materialMap} = duplicateMeeting(src, {id: randomUUID(), now: now(), newId: randomUUID, createdBy: a.name, docTypes: store.docTypes(),
+              accountId: a.account.id, advisory: advisoryIds(accounts()), law: LAW[src.organ], titles});
             const files = new Map<string, string | null>();
             for (const ref of src.materials) {
               if (!ref.fileId || !materialMap.has(ref.id) || files.has(ref.fileId)) continue;
@@ -505,7 +634,7 @@ export async function createApplication(options: AppOptions = {}) {
               return json(res, {material: {...ref, version, hash: row!.hash, html: row!.html}}, 200, {ETag: etag, 'Cache-Control': 'private, no-cache'});
             }
             if (!mat[2] && method === 'DELETE') {
-              if (!isOrganizer(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Materiał można usunąć tylko przed otwarciem posiedzenia.', 403);
+              if (!canPrepare(store.roster(), m, a) || m.status !== 'przygotowanie') fail('Materiał można usunąć tylko przed otwarciem posiedzenia.', 403);
               if (m.ballots.some(b => b.material?.id === ref.id)) fail('Nad tym materiałem już głosowano.');
               const next = write(() => {
                 const next = structuredClone(meetingFor(id, a));

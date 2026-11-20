@@ -1,21 +1,28 @@
 import type {AgendaItem, Ballot, BallotResult, Choice, DocType, MaterialType, Meeting, Presence, Roster} from './types.ts';
 import {organMembers} from './roster.ts';
 import {defaultDocTypes, docTypeById} from './doctypes.ts';
+import {LAW, shareOf, type LegalProfile} from './law.ts';
 
-// § 8 ust. 2: organ jest władny do podejmowania uchwał przy obecności co najmniej połowy członków.
-export const quorumFor = (membersTotal: number) => Math.ceil(membersTotal / 2);
-
-// § 12 ust. 5: pisemny wniosek co najmniej 1/3 członków biorących udział w posiedzeniu.
-export const reasumptionSignaturesNeeded = (present: number) => Math.max(1, Math.ceil(present / 3));
+/** Wymagane kworum z profilu prawnego organu (§ 8 ust. 2: co najmniej połowa członków). */
+export const quorumOf = (law: LegalProfile, total: number) => shareOf(law.quorum.share, total);
+/** Podpisy pod wnioskiem o reasumpcję z profilu (§ 12 ust. 5: co najmniej 1/3 biorących udział), najmniej jeden. */
+export const signaturesNeeded = (law: LegalProfile, present: number) => Math.max(1, shareOf(law.reasumption.share, present));
+// Zgodne nakładki z wersji 2 na profil Prezydium (wynik bez zmian).
+export const quorumFor = (membersTotal: number) => quorumOf(LAW.prezydium, membersTotal);
+export const reasumptionSignaturesNeeded = (present: number) => signaturesNeeded(LAW.prezydium, present);
 
 export const choices: Choice[] = ['za', 'przeciw', 'wstrzymuje'];
 
 export function memberIds(roster: Roster, organ: string) {
   return organMembers(roster, organ).map(m => m.personId);
 }
+/** Członkowie organu posiedzenia: skład zapisany przy otwarciu (wersja 3), a bez zapisu bieżący. */
+export function memberIdsOf(meeting: Pick<Meeting, 'organ' | 'frozen'>, roster: Roster) {
+  return meeting.frozen ? [...meeting.frozen.members].sort((a, b) => a.order - b.order).map(f => f.personId) : memberIds(roster, meeting.organ);
+}
 
-export function presentMembers(meeting: Meeting, roster: Roster) {
-  return memberIds(roster, meeting.organ).filter(id => meeting.attendance[id] === 'obecny');
+export function presentMembers(meeting: Pick<Meeting, 'organ' | 'frozen' | 'attendance'>, roster: Roster) {
+  return memberIdsOf(meeting, roster).filter(id => meeting.attendance[id] === 'obecny');
 }
 
 export function hasVoted(b: Ballot, personId: string) {

@@ -116,7 +116,8 @@ test('F2: bez ogłoszenia wyniku domena wstrzymuje obrady, a członek nie widzi 
   assert.equal(resultLabel(member), 'Wynik ogłosi osoba prowadząca obrady');
   assert.doesNotMatch(viewFor(m, actor('kn'), roster).log.find(e => e.ballotId === b.id)!.text, /Za \d/);
   assert.ok(viewFor(m, chair, roster).ballots.find(x => x.id === b.id)!.result);
-  assert.ok(viewFor(m, office, roster).ballots.find(x => x.id === b.id)!.result);
+  // Wersja 3 (DA-3): biuro nie widzi wyniku przed ogłoszeniem; widzi go tylko osoba, która go ogłasza.
+  assert.equal(viewFor(m, office, roster).ballots.find(x => x.id === b.id)!.result, undefined);
   m = announce(m, ctx, b.id);
   assert.equal(viewFor(m, actor('kn'), roster).ballots.find(x => x.id === b.id)!.result!.za, 7);
   m = apply(m, {type: 'item_end', itemId: it.id, status: 'zakonczony'}, chair, ctx.tick());
@@ -128,12 +129,16 @@ test('F2: wynik głosowania między posiedzeniami członek widzi po ogłoszeniu'
   let m = newMeeting(ctx, 'procedura');
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu'}, office, ctx.tick());
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, office, ctx.tick());
-  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  // Wersja 3 (DA-21): termin krótszy niż 24 godziny wymaga powodu przy rozpoczęciu.
+  m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, chair, ctx.tick());
   m = voteAll(m, ctx);
   assert.equal(m.status, 'zakonczone');
   assert.equal(viewFor(m, actor('kn'), roster).ballots[0].result, undefined);
-  assert.ok(viewFor(m, actor('ag'), roster).ballots[0].result, 'wiceprzewodnicząca może ogłosić wynik, więc go widzi');
-  m = apply(m, {type: 'announce', ballotId: m.ballots[0].id}, actor('ag'), ctx.tick());
+  // Wersja 3 (DA-3, DA-12): wiceprzewodnicząca bez wyznaczenia nie widzi wyniku i nie ogłasza go; ogłasza przewodniczący, który rozpoczął głosowanie.
+  assert.equal(viewFor(m, actor('ag'), roster).ballots[0].result, undefined);
+  assert.throws(() => apply(m, {type: 'announce', ballotId: m.ballots[0].id}, actor('ag'), ctx), /Wynik ogłasza osoba, która rozpoczęła głosowanie, albo przewodniczący\./);
+  assert.ok(viewFor(m, chair, roster).ballots[0].result, 'przewodniczący, który rozpoczął głosowanie, widzi wynik');
+  m = apply(m, {type: 'announce', ballotId: m.ballots[0].id}, chair, ctx.tick());
   assert.equal(viewFor(m, actor('kn'), roster).ballots[0].result!.adopted, true);
 });
 
@@ -204,7 +209,7 @@ test('F6: powielenie kopiuje dane, porządek bez punktów wycofanych i materiał
   const ctx = context();
   let m = material(newMeeting(ctx), 'mat-1', 'uchwala', 'Uchwała nr 108/IX/2026');
   m = apply(m, {type: 'details', link: 'https://spotkanie.example/abc', noticeDate: '2026-11-10', protocolNumber: '12/IX/2026', recorder: 'Anna Nowak'}, office, ctx.tick());
-  m = apply(m, {type: 'invite', accountId: 'u-gosc', on: true}, office, ctx.tick());
+  m = apply(m, {type: 'invite', accountId: 'u-gosc', on: true, invitedBy: 'przewodniczacy'}, office, ctx.tick());
   m = apply(m, {type: 'deputy', personId: 'ag'}, chair, ctx.tick());
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 108/IX/2026', parentId: item(m, 'uchwaly').id}, office, ctx.tick());
   const reports = item(m, 'sprawozdania');
@@ -217,12 +222,16 @@ test('F6: powielenie kopiuje dane, porządek bez punktów wycofanych i materiał
   const {meeting: copy, materialMap} = duplicateMeeting(m, {id: 'm2', now: ctx.now, newId: ctx.newId, createdBy: 'Biuro Izby'});
   assert.equal(copy.status, 'przygotowanie');
   assert.deepEqual([copy.kind, copy.title, copy.date, copy.time, copy.place, copy.mode, copy.link], [m.kind, m.title, m.date, m.time, m.place, m.mode, m.link]);
-  assert.deepEqual(copy.invited, ['u-gosc']);
-  assert.deepEqual([copy.chair.deputy, copy.chair.deputyBasis], ['ag', 'wyznaczenie przez przewodniczącego (§ 16)']);
+  // Wersja 3 (rozdz. 2.9, 4.5 pkt 6): kopia bez gości i bez zastępcy; zaproszone są tylko osoby z głosem doradczym (tu żadnej).
+  assert.deepEqual(copy.invited, []);
+  assert.deepEqual([copy.chair.deputy, copy.chair.deputyBasis], [null, '']);
   assert.equal(copy.noticeDate, '');
   assert.equal(copy.protocolNumber, undefined);
   assert.equal(copy.recorder, undefined);
-  assert.ok(!copy.agenda.some(i => i.kind === 'wolne_wnioski'), 'punkt wycofany nie przechodzi');
+  // Wersja 3 (G-6, rozdz. 2.9): punkt wycofany nie przechodzi, ale punkt wymieniony w regulaminie wraca ze wzoru z wpisem.
+  const restored = copy.agenda.filter(i => i.kind === 'wolne_wnioski');
+  assert.equal(restored.length, 1);
+  assert.ok(!m.agenda.some(o => o.id === restored[0].id), 'punkt wycofany nie przechodzi');
   assert.ok(copy.agenda.every(i => i.status === 'oczekuje' && !i.note && !i.startedAt && !i.endedAt && !i.mode && !i.modeBasis && !i.statusReason && !i.outOfOrder));
   assert.ok(!copy.agenda.some(i => m.agenda.some(o => o.id === i.id)), 'nowe identyfikatory punktów');
   const copiedReports = copy.agenda.find(i => i.kind === 'sprawozdania')!;
@@ -234,7 +243,7 @@ test('F6: powielenie kopiuje dane, porządek bez punktów wycofanych i materiał
   const resolutions = copy.agenda.find(x => x.kind === 'uchwaly')!;
   assert.deepEqual(copy.agenda.filter(i => i.parentId === resolutions.id).map(i => i.title), ['Uchwała nr 108/IX/2026']);
   assert.ok(copy.ballots.length === 0 && copy.messages.length === 0 && !copy.openedAt);
-  assert.deepEqual(copy.log.map(e => e.text), ['Utworzono przez powielenie posiedzenia z dnia 20.11.2026.']);
+  assert.deepEqual(copy.log.map(e => e.text), ['Utworzono przez powielenie posiedzenia z dnia 20.11.2026.', 'Przywrócono punkt „Informacje bieżące i wolne wnioski” wymieniony w regulaminie (§ 9 ust. 2 pkt 8).']);
   // Głosowanie między posiedzeniami powiela się bez terminu.
   const procedure = {...newMeeting(ctx, 'procedura'), endsAt: ctx.now + 3600000};
   const copied = duplicateMeeting(procedure, {id: 'm3', now: ctx.now, newId: ctx.newId, createdBy: 'Biuro'}).meeting;
@@ -248,7 +257,7 @@ function procedure() {
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu'}, office, ctx.tick());
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 121/IX/2026 w sprawie delegacji'}, office, ctx.tick());
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, office, ctx.tick());
-  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, chair, ctx.tick());
   return {ctx, m};
 }
 
@@ -256,10 +265,13 @@ test('F7: przerwanie głosowania między posiedzeniami bez rozstrzygnięcia, z p
   let {ctx, m} = procedure();
   m = apply(m, {type: 'vote', ballotId: m.ballots[0].id, choice: 'za'}, actor('ag'), ctx.tick());
   assert.throws(() => apply(m, {type: 'procedure_end', how: 'przerwij'}, chair, ctx), /Podaj powód przerwania głosowania\./);
-  assert.throws(() => apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie'}, actor('kn'), ctx), /przewodniczący albo wiceprzewodniczący/);
-  m = apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały'}, actor('jw'), ctx.tick());
+  // Wersja 3 (DA-12): przerywa osoba, która rozpoczęła głosowanie, albo przewodniczący; nie członek ani inna wiceprzewodnicząca.
+  const manager = /Tę czynność wykonuje osoba, która rozpoczęła głosowanie, albo przewodniczący\./;
+  assert.throws(() => apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie'}, actor('kn'), ctx), manager);
+  assert.throws(() => apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały'}, actor('jw'), ctx), manager);
+  m = apply(m, {type: 'procedure_end', how: 'przerwij', reason: 'błąd w projekcie uchwały'}, chair, ctx.tick());
   assert.equal(m.status, 'zakonczone');
-  assert.deepEqual(m.ended, {how: 'przerwij', reason: 'błąd w projekcie uchwały', at: ctx.now, by: 'Jolanta Woźniak'});
+  assert.deepEqual(m.ended, {how: 'przerwij', reason: 'błąd w projekcie uchwały', at: ctx.now, by: 'Sebastian Irzykowski'});
   for (const b of m.ballots) {
     assert.equal(b.status, 'zamkniete');
     assert.equal(b.result, undefined);
@@ -287,7 +299,7 @@ test('F7: zmiana terminu głosowania między posiedzeniami co najmniej 5 minut o
   assert.deepEqual(m.deadlineChanges, [{at: ctx.now, from: before, to: later, by: 'Sebastian Irzykowski'}]);
   assert.equal(m.messages.at(-1)!.text, 'Termin głosowania zmieniono na 21 listopada 2026 r., godz. 18:00.');
   // Skrócenie terminu: po jego upływie głosowania się zamykają.
-  m = apply(m, {type: 'procedure_deadline', endsAt: ctx.now + 10 * 60000}, chair, ctx.tick());
+  m = apply(m, {type: 'procedure_deadline', endsAt: ctx.now + 10 * 60000, reason: 'Pilna sprawa.'}, chair, ctx.tick());
   m = structuredClone(m);
   advance(m, ctx.tick(11 * 60000));
   assert.equal(m.status, 'zakonczone');
@@ -314,11 +326,11 @@ test('F8: projekt porządku układany kafelkami przed przyjęciem, zmiany w dzie
   m = announce(voteAll(m, ctx), ctx);
   assert.throws(() => apply(m, {type: 'item_place', itemId: reports.id, parentId: null, beforeId: null}, chair, ctx), /Przyjęty porządek obrad zmienia się w głosowaniu/);
   assert.equal(m.log.filter(e => e.tag === 'projekt').length, 3);
-  // W przygotowaniu zmiany projektu nie trafiają do dziennika.
+  // Wersja 3 (rozdz. 2.8 pkt 2): zmiany projektu trafiają do dziennika także w przygotowaniu; protokół wymienia tylko te od otwarcia.
   const fresh = newMeeting(context());
   const prep = apply(fresh, {type: 'item_place', itemId: item(fresh, 'sprawozdania').id, parentId: null, beforeId: null}, office, context());
   assert.equal(prep.agenda.at(-1)!.kind, 'sprawozdania');
-  assert.ok(!prep.log.some(e => e.tag === 'projekt'));
+  assert.ok(prep.log.some(e => e.tag === 'projekt'));
 });
 
 test('F9: zgłoszona obecność na posiedzeniu stacjonarnym czeka na potwierdzenie i nie liczy się do kworum', () => {
@@ -340,8 +352,10 @@ test('F9: zgłoszona obecność na posiedzeniu stacjonarnym czeka na potwierdzen
   assert.throws(() => apply(m, {type: 'presence_confirm', who: 'ag', accept: true}, actor('jw'), ctx), /osoba prowadząca obrady albo biuro/);
   m = apply(m, {type: 'presence_confirm', who: 'ag', accept: true}, chair, ctx.tick());
   assert.equal(m.attendance.ag, 'obecny');
-  assert.deepEqual(m.presenceLog.at(-1), {who: 'ag', guest: false, type: 'przybycie', at: ctx.now, by: 'Sebastian Irzykowski', reportedAt: reported});
-  m = apply(m, {type: 'presence_confirm', who: 'kn', accept: false}, office, ctx.tick());
+  assert.deepEqual(m.presenceLog.at(-1), {who: 'ag', guest: false, type: 'przybycie', at: ctx.now, by: 'Sebastian Irzykowski', reportedAt: reported, accountId: 'u-si'});
+  // Wersja 3 (DA-19): biuro potwierdza zgłoszenia, ale ich nie odrzuca; odrzuca osoba prowadząca obrady.
+  assert.throws(() => apply(m, {type: 'presence_confirm', who: 'kn', accept: false}, office, ctx), /Zgłoszenie obecności odrzuca osoba prowadząca obrady\./);
+  m = apply(m, {type: 'presence_confirm', who: 'kn', accept: false}, chair, ctx.tick());
   assert.equal(m.attendance.kn, 'nieobecny');
   assert.equal(m.presenceLog.at(-1)!.type, 'odrzucenie');
   m = apply(m, {type: 'presence_confirm_all'}, office, ctx.tick());
@@ -372,7 +386,8 @@ test('F11: rodzaj „Co jest głosowane” i formuły zapisane w głosowaniu', (
   const reports = item(m, 'sprawozdania');
   assert.equal(needsVote(m, reports), false);
   assert.throws(() => apply(m, {type: 'item_edit', itemId: reports.id, docType: 'opinia'}, chair, ctx), /Nieznany rodzaj dokumentu/);
-  m = apply(m, {type: 'item_edit', itemId: reports.id, docType: 'stanowisko'}, chair, ctx.tick());
+  // Wersja 3 (G-10): w trakcie obrad osoba prowadząca zmienia „Co jest głosowane” z powodem do protokołu.
+  m = apply(m, {type: 'item_edit', itemId: reports.id, docType: 'stanowisko', reason: 'Projekt zawiera stanowisko.'}, chair, ctx.tick());
   assert.equal(needsVote(m, m.agenda.find(i => i.id === reports.id)!), true);
   m = apply(m, {type: 'item_start', itemId: reports.id, reason: 'Kolejność ustalona przed posiedzeniem.'}, chair, ctx.tick());
   m = apply(m, {type: 'ballot_open', itemId: reports.id, purpose: 'inna', subject: 'Stanowisko w sprawie wynagrodzeń', mode: 'jawne', minutes: 2}, chair, ctx.tick());
@@ -398,11 +413,13 @@ test('F11: słownik, rozpoznawanie rodzaju z tytułu i migracja „Stanowisko lu
   assert.equal(guessType('Stanowisko nr 3/IX/2026 w sprawie wynagrodzeń'), 'stanowisko');
   assert.equal(guessType('Oświadczenie Prezydium w sprawie szczepień'), 'oswiadczenie');
   const added = docTypeInput({name: 'Opinia prawna', adopted: 'Opinia przyjęta', rejected: 'Opinia nie została przyjęta', voted: true}, defaultDocTypes);
-  assert.deepEqual(added, {id: 'opinia_prawna', name: 'Opinia prawna', adopted: 'Opinia przyjęta', rejected: 'Opinia nie została przyjęta', voted: true, order: 110, active: true});
+  assert.deepEqual(added, {id: 'opinia_prawna', name: 'Opinia prawna', adopted: 'Opinia przyjęta', rejected: 'Opinia nie została przyjęta', voted: true, order: 110, active: true, inActs: false});
   assert.throws(() => docTypeInput({name: 'Uchwała', adopted: 'a', rejected: 'b'}, defaultDocTypes), /Rodzaj o tej nazwie już istnieje/);
   assert.throws(() => docTypeInput({name: 'Opinia'}, defaultDocTypes), /Wpisz formułę wyniku, gdy sprawę przyjęto/);
-  const off = docTypeInput({active: false}, defaultDocTypes, defaultDocTypes[3]);
-  assert.deepEqual({...off, active: true}, defaultDocTypes[3]);
+  // Wersja 3 (G-1): formy aktów z regulaminu (np. apel) nie dają się wyłączyć; wyłącza się inne rodzaje.
+  assert.throws(() => docTypeInput({active: false}, defaultDocTypes, defaultDocTypes[3]), /Ten rodzaj zawsze wymaga głosowania \(§ 8 ust\. 9 pkt 4\)\. Możesz zmienić tylko nazwę i formuły wyniku\./);
+  const off = docTypeInput({active: false}, defaultDocTypes, defaultDocTypes[8]);
+  assert.deepEqual({...off, active: true}, defaultDocTypes[8]);
   // Stare dane: materiał „oswiadczenie” z tytułem „Stanowisko…” dostaje rodzaj „stanowisko”; stary wynik brzmi jak dawniej.
   const {m: start} = adopted();
   let m = material(start, 'mat-s', 'oswiadczenie', 'Stanowisko Prezydium w sprawie wynagrodzeń');
@@ -535,10 +552,12 @@ test('F7: przerwane głosowanie nie ujawnia ani nie zachowuje wyborów, zostaje 
   let m = newMeeting(ctx, 'procedura');
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 120/IX/2026 w sprawie patronatu'}, office, ctx.tick());
   m = apply(m, {type: 'item_add', title: 'Uchwała nr 121/IX/2026 w sprawie delegacji'}, office, ctx.tick());
-  m = apply(m, {type: 'item_mode', itemId: m.agenda[0].id, mode: 'imienne', basis: 'uchwała Prezydium nr 99/IX/2026'}, office, ctx.tick());
-  m = apply(m, {type: 'item_mode', itemId: m.agenda[1].id, mode: 'tajne', basis: 'uchwała Prezydium nr 99/IX/2026'}, office, ctx.tick());
+  // Wersja 3 (G-13): tryb z danymi uchwały, a nie z dowolnym tekstem.
+  const decision = {kind: 'uchwala' as const, number: '99/IX/2026', date: '2026-11-10'};
+  m = apply(m, {type: 'item_mode', itemId: m.agenda[0].id, mode: 'imienne', decision}, office, ctx.tick());
+  m = apply(m, {type: 'item_mode', itemId: m.agenda[1].id, mode: 'tajne', decision}, office, ctx.tick());
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, office, ctx.tick());
-  m = apply(m, {type: 'open'}, chair, ctx.tick());
+  m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, chair, ctx.tick());
   const [named, secret] = m.ballots;
   for (const [p, c] of [['ag', 'za'], ['jw', 'przeciw'], ['kn', 'za']] as const) m = apply(m, {type: 'vote', ballotId: named.id, choice: c}, actor(p), ctx.tick());
   for (const p of ['ag', 'jw']) {
@@ -574,6 +593,8 @@ test('F11: rodzaju wyłączonego nie można wybrać w punkcie ani przy otwarciu 
   let {ctx, m} = adopted();
   const types = defaultDocTypes.map(t => t.id === 'apel' ? {...t, active: false} : t);
   const c = Object.assign(ctx, {docTypes: types});
+  // Wersja 3: w trwającym posiedzeniu obowiązuje słownik zapisany przy otwarciu (frozen.docTypes), więc test podaje go tam.
+  m = {...m, frozen: {...m.frozen!, docTypes: types}};
   const reports = item(m, 'sprawozdania');
   const off = /Ten rodzaj dokumentu jest wyłączony\. Wybierz inny rodzaj\./;
   assert.throws(() => apply(m, {type: 'item_edit', itemId: reports.id, docType: 'apel'}, chair, c), off);

@@ -15,3 +15,26 @@ export function textToHtml(text: string) {
     return head + (lines.length ? `<p>${lines.map(l => escapeHtml(l.trim())).join('<br>')}</p>` : '');
   }).join('\n');
 }
+
+// Wersja 3: daty, godziny i liczebniki w tekstach domeny (dziennik, historia zmian, linie źródła). Strefa Europe/Warsaw.
+const zone = 'Europe/Warsaw';
+/** „03.12.2026” z daty RRRR-MM-DD; pusty napis bez daty. */
+export const dateDots = (iso: string | null | undefined) => iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('.') : '';
+/** „03.12.2026” z chwili (milisekundy). */
+export const dateDotsOf = (ts: number) => new Intl.DateTimeFormat('pl-PL', {timeZone: zone, day: '2-digit', month: '2-digit', year: 'numeric'}).format(ts);
+/** Dzień RRRR-MM-DD z chwili (milisekundy). */
+export const isoDayOf = (ts: number) => new Intl.DateTimeFormat('sv-SE', {timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit'}).format(ts);
+/** „11:15” z chwili (milisekundy). */
+export const timeOf = (ts: number) => new Intl.DateTimeFormat('pl-PL', {timeZone: zone, hour: '2-digit', minute: '2-digit'}).format(ts);
+/** „19 listopada 2026 r., godz. 18:00”. */
+export function dateTimeText(ts: number) {
+  const date = new Intl.DateTimeFormat('pl-PL', {timeZone: zone, day: 'numeric', month: 'long', year: 'numeric'}).format(ts);
+  return `${date} r., godz. ${timeOf(ts)}`;
+}
+/** Liczba minut w przypadku: „2 minuty” (mianownik), „z 2 minut” (dopełniacz), „na 1 minutę” (biernik). */
+export function minutesText(n: number, form: 'mianownik' | 'dopelniacz' | 'biernik' = 'mianownik') {
+  if (form === 'dopelniacz') return `${n} ${n === 1 ? 'minuty' : 'minut'}`;
+  return `${n} ${n === 1 ? (form === 'biernik' ? 'minutę' : 'minuta') : plural(n, 'minuta', 'minuty', 'minut')}`;
+}
+/** „24 godziny”, „1 godzina”, „36 godzin”. */
+export const hoursText = (n: number) => `${n} ${plural(n, 'godzina', 'godziny', 'godzin')}`;

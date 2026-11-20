@@ -200,7 +200,9 @@ test('procedura między posiedzeniami: okno czasowe, wcześniejsze zakończenie 
   assert.throws(() => apply(m, {type: 'open'}, actor('si'), ctx), /Ustaw koniec głosowania co najmniej 5 minut od teraz/);
   m = apply(m, {type: 'details', endsAt: ctx.now + 3 * 3600000}, actor(null, 'biuro'), ctx.tick());
   assert.throws(() => apply(m, {type: 'open'}, actor('kn'), ctx), /Głosowanie między posiedzeniami rozpoczyna/);
-  m = apply(m, {type: 'open'}, actor('si'), ctx.tick());
+  // Wersja 3 (DA-21): termin krótszy niż 24 godziny wymaga powodu przy rozpoczęciu.
+  assert.throws(() => apply(m, {type: 'open'}, actor('si'), ctx), /Głosowanie potrwa krócej niż 24 godziny\. Podaj powód\./);
+  m = apply(m, {type: 'open', reason: 'Termin wyznaczony przez Okręgową Radę.'}, actor('si'), ctx.tick());
   const [first, second] = m.ballots;
   assert.equal(first.eligible.length, 7);
   for (const p of presidium) m = apply(m, {type: 'vote', ballotId: first.id, choice: 'za'}, actor(p), ctx.tick());
