@@ -1,17 +1,22 @@
 import {Fragment, type ComponentChildren} from 'preact';
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
-import {canChairOrgan, isChairman} from '../shared/meeting.ts';
-import {announceFirst, awaitingVote, choiceLabel, docTypeFor, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, pendingBefore, pendingPresence, presentMembers, quorumFor, quorumStated, reasumptionSignaturesNeeded, resolutionSubject, resultLabel, unannounced, unhandledItems} from '../shared/rules.ts';
-import {membership, organMembers, organOf} from '../shared/roster.ts';
-import type {AgendaChange, AgendaItem, BallotPurpose, DocType, Meeting, Message, Motion, Presence, Roster, VoteMode} from '../shared/types.ts';
+import {announceFirst, awaitingVote, choiceLabel, docTypeFor, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, pendingBefore, pendingPresence, presentMembers, quorumStated, resolutionSubject, resultLabel, unannounced, unhandledItems} from '../shared/rules.ts';
+import {organOf} from '../shared/roster.ts';
+import {canChairPerson, canDesignateDeputy, canKeepAttendance, chairRank, isChairmanOf, isOfficeAccount, organRoster} from '../shared/role.ts';
+import {docTypeById} from '../shared/doctypes.ts';
+import {lawOf} from '../shared/law.ts';
+import {VOTE_MINUTES} from '../shared/settings.ts';
+import {minutesText} from '../shared/text.ts';
+import type {Effective} from '../shared/cascade.ts';
+import type {Actor, AgendaChange, AgendaItem, BallotPurpose, DocType, Meeting, Message, Motion, Presence, Roster, VoteMode} from '../shared/types.ts';
 import {request, serverNow} from './api.ts';
 import {useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {announce, Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useSaveStatus} from './ui.tsx';
+import {announce, Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useMedia, useSaveStatus} from './ui.tsx';
 import {agendaChip, itemChip, modeGenitive, modeName, presenceChip} from './stany.ts';
-import {AgendaList, beforeAdoption, draftLive, emphasize, proposerSentence, VoteCard, workingSentence} from './meeting.tsx';
+import {actorOf, AgendaList, BasisBlock, beforeAdoption, chairingText, DeputyFact, draftEditing, draftLive, emphasize, LogList, personWithFunc, proposerSentence, quorumNow, signaturesFor, VoteCard, workingSentence} from './meeting.tsx';
 import {AgendaEditor} from './prep.tsx';
-import {ItemEditForm} from './item-form.tsx';
+import {ItemEditForm, votedSource} from './item-form.tsx';
 import {MaterialLink} from './reader.tsx';
 import {Messages} from './messages.tsx';
 import {useDocTypes} from './doctypes.ts';
@@ -59,7 +64,7 @@ const skippedBefore = (m: ViewMeeting, it: AgendaItem) => m.kind === 'posiedzeni
 /** Powód spotkania roboczego: stwierdzony albo widoczny brak kworum, a inaczej przejście dalej bez stwierdzenia. */
 function workingReason(m: ViewMeeting, roster: Roster): 'brak_kworum' | 'bez_stwierdzenia' {
   const last = m.quorumChecks.at(-1);
-  const low = presentMembers(m as Meeting, roster).length < quorumFor(organMembers(roster, m.organ).length);
+  const low = presentMembers(m as Meeting, roster).length < quorumNow(m, roster).required;
   return (last && last.present < last.required) || low ? 'brak_kworum' : 'bez_stwierdzenia';
 }
 
@@ -85,13 +90,6 @@ function nextItem(m: ViewMeeting, it: AgendaItem) {
   const order = orderedAgenda(m.agenda);
   return order.slice(order.indexOf(it) + 1).find(i => i.status === 'oczekuje' && (m.agendaAdopted || m.working || beforeAdoption(m, i)) && !(i.kind === 'uchwaly' && order.some(c => c.parentId === i.id)));
 }
-/** Pierwszy wcześniejszy punkt, którego jeszcze nie rozpoczęto (bez zamknięcia i punktów głównych z podpunktami). */
-function missedBefore(m: ViewMeeting, target: AgendaItem, types: DocType[]) {
-  const order = orderedAgenda(m.agenda);
-  const at = order.indexOf(target);
-  return unhandledItems(m, types).find(i => i.status === 'oczekuje' && i.id !== target.id && order.indexOf(i) < at);
-}
-
 /** Co pokazuje ekran sali (ta sama kolejność co w screen.tsx) i czy można wrócić do bieżącego punktu. */
 function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: string; material?: string} {
   const shown = m.presentation;
@@ -108,7 +106,8 @@ function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: stri
   if (material) return {text: `materiał „${material.title}”, także na telefonach`, other: true, material: material.id};
   const point = shown?.kind === 'punkt' ? m.agenda.find(i => i.id === shown.id) : undefined;
   if (point && point.id !== current?.id) return {text: `punkt ${itemNumber(m.agenda, point.id)}`, other: true, item: point.id};
-  // F8: przy przyjmowaniu porządku sala widzi projekt porządku obrad ze zmianami na żywo.
+  // F8, D2: przy przyjmowaniu porządku i w trybie zmian na spotkaniu roboczym sala widzi projekt ze zmianami na żywo.
+  if (shown?.kind === 'projekt' && draftLive(m)) return {text: 'projekt porządku obrad ze zmianami na żywo', other: false};
   if (current?.kind === 'porzadek' && draftLive(m)) return {text: 'projekt porządku obrad ze zmianami na żywo', other: false, item: current.id};
   if (current) return {text: `bieżący punkt ${itemNumber(m.agenda, current.id)}`, other: false, item: current.id};
   return {text: 'tytuł posiedzenia', other: false};
@@ -125,13 +124,14 @@ type Decision =
   | {kind: 'wiadomosci'; key: string; unread: Message[]};
 const actionable = (d: Decision) => d.kind === 'kworum' || d.kind === 'wynik' || d.kind === 'obecnosc' || (d.kind === 'wniosek' && d.x.status !== 'zbiera_podpisy');
 
-function decisionsFor(m: ViewMeeting, unread: Message[], who: {chair: boolean; confirms: boolean}): Decision[] {
+function decisionsFor(m: ViewMeeting, unread: Message[], who: {chair: boolean; confirms: boolean; actor: Actor}): Decision[] {
   const rows: Decision[] = [];
   const lastBreak = [...m.log].reverse().find(l => l.text === 'Przerwa w obradach.');
   const lastQuorum = m.quorumChecks.at(-1);
   if (who.chair && !m.working && m.status === 'trwa' && lastBreak && (!lastQuorum || lastQuorum.at < lastBreak.at)) rows.push({kind: 'kworum', key: 'kworum'});
   if (who.confirms) {
-    const pending = pendingPresence(m);
+    // DA-19: biuro nie rozpatruje zgłoszenia osoby prowadzącej obrady (canKeepAttendance z role.ts).
+    const pending = pendingPresence(m).filter(p => canKeepAttendance(m as unknown as Meeting, who.actor, p.who, 'potwierdz'));
     if (pending.length > 1) rows.push({kind: 'obecnosc-wszystkie', key: 'obecnosc-wszystkie', count: pending.length});
     for (const p of pending) rows.push({kind: 'obecnosc', key: `obecnosc-${p.guest ? 'g' : 'c'}-${p.who}`, ...p});
   }
@@ -198,9 +198,10 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
   }, [m.currentItemId]);
   const types = useDocTypes();
   const unread = useUnread(m, s.account.id, messagesOpen);
-  // Zgłoszoną obecność (F9) potwierdza osoba prowadząca obrady albo konto biura i administratora (także w podglądzie biura).
-  const confirms = !readOnly || s.account.kind === 'biuro' || s.account.admin;
-  const decisions = decisionsFor(m, unread, {chair: !readOnly, confirms});
+  // Zgłoszoną obecność (F9) potwierdza osoba prowadząca obrady albo konto biura (wersja 3: bez flagi administratora, DA-19).
+  const actor = actorOf(s);
+  const confirms = !readOnly || isOfficeAccount(actor);
+  const decisions = decisionsFor(m, unread, {chair: !readOnly, confirms, actor});
   const open = m.ballots.find(b => b.status === 'otwarte');
   // Po otwarciu głosowania przycisk, który je otworzył, znika razem z rozwiniętą kartą punktu. Panel głosowania
   // przewija się wtedy pod pasek posiedzenia, a fokus przechodzi na jego nagłówek (chyba że fokus jest w innej kolumnie).
@@ -254,12 +255,13 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
     </aside>
     <section class={'chair-col chair-main' + (tab === 'punkt' ? ' is-shown' : '')} aria-label="Punkt">
       {m.status === 'przerwa' && <Notice tone="warn">Trwa przerwa w obradach. Głosowania są wstrzymane.</Notice>}
-      {decisions.length > 0 && <DecisionCard rows={decisions} teraz={focus === 'decyzja'} onMessages={showMessages}/>}
+      {decisions.length > 0 && <DecisionCard rows={decisions} teraz={focus === 'decyzja'} onMessages={showMessages} readOnly={readOnly}/>}
       {open && <LiveBallot b={open} readOnly={readOnly} teraz={focus === 'glosowanie'}/>}
-      {/* F8: przy przyjmowaniu porządku prowadzący układa projekt kafelkami, a członkowie widzą zmiany na żywo.
-          Kafelki stoją przed kartą punktu z formularzem głosowania, żeby były widoczne bez przewijania. */}
-      {!readOnly && draftLive(m) && <DraftAgenda/>}
-      {selected && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
+      {/* F8, D2: przy przyjmowaniu porządku i w trybie zmian na spotkaniu roboczym prowadzący układa projekt kafelkami,
+          a członkowie i ekran sali widzą zmiany na żywo. Przy przyjmowaniu porządku kafelki stoją przed kartą punktu
+          z kartą głosowania, a w trybie zmian zastępują kartę punktu (O-04). */}
+      {!readOnly && draftEditing(m) && <DraftAgenda live={m.presentation?.kind === 'projekt' ? {main: waiting || decisions.length ? 'secondary' : 'primary'} : undefined}/>}
+      {selected && !(!readOnly && m.presentation?.kind === 'projekt' && draftEditing(m)) && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
     </section>
     <aside class={'chair-col chair-right' + (tab === 'obrady' ? ' is-shown' : '')} aria-label="Obrady">
       <MeetingControls readOnly={readOnly}/>
@@ -290,14 +292,18 @@ function resultSpeech(m: ViewMeeting, b: ViewBallot) {
   return `Stwierdzam, że w głosowaniu ${modeLocative(b.mode)} oddano ${r.cast} ${plural(r.cast, 'głos', 'głosy', 'głosów')}. Za ${r.za}, przeciw ${r.przeciw}, wstrzymało się ${r.wstrzymuje}. ${resultLabel(b, materialTypeOf(m, b))}.`;
 }
 
-function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () => void}) {
+function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () => void; readOnly: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const id = useId();
   const nameOf = usePresenceName();
   const open = m.ballots.find(b => b.status === 'otwarte');
   const present = presentMembers(m as Meeting, s.roster);
-  const needed = reasumptionSignaturesNeeded(present.length);
+  const needed = signaturesFor(m, present.length);
+  // O-03 pkt 5, DA-19: biuro widzi tylko zgłoszenia obecności, potwierdza je przyciskami z obrysem i ich nie odrzuca.
+  const office = props.readOnly;
+  // Osoba, która może prowadzić obrady (§ 9 ust. 1, DA-17), przejmuje prowadzenie bez potwierdzenia obecności (D1).
+  const canTake = (who: string) => chairRank(s.roster, m as unknown as Meeting, who) !== null;
   const block = voteBlock(m);
   // Pierwszy przycisk w karcie jest główny, kolejne mają obrys. W trakcie głosowania przyciski czekają na jego koniec,
   // a działania, które otwierają głosowanie, pokazują powód blokady (nieogłoszony wynik, spotkanie robocze).
@@ -305,7 +311,7 @@ function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () =
   const kind = (): Main => { const k = first ? 'primary' : 'secondary'; first = false; return k; };
   const action = (label: string, run: () => void, reason?: string | null) => open ? null : <div><Button kind={kind()} busy={busy} disabled={!!reason} reason={reason ?? undefined} onClick={run}>{label}</Button></div>;
   return <section class={'oi-card decisions' + (props.teraz ? ' is-teraz' : '')} aria-labelledby={id}>
-    <h2 class="oi-card__title" id={id}><span class="oi-mark" aria-hidden="true"/><span>Czeka na Twoją decyzję</span></h2>
+    <h2 class="oi-card__title" id={id}><span class="oi-mark" aria-hidden="true"/><span>{office ? 'Zgłoszenia obecności' : 'Czeka na Twoją decyzję'}</span></h2>
     {props.rows.map(row => {
       if (row.kind === 'kworum') return <div class="decision" key={row.key}>
         <p>Po przerwie stwierdź kworum.</p>
@@ -314,19 +320,23 @@ function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () =
       // Zgłoszenia obecności rozpatruje się także w trakcie głosowania: potwierdzona osoba dołącza do niego.
       if (row.kind === 'obecnosc-wszystkie') return <div class="decision" key={row.key}>
         <p>{`Obecność ${plural(row.count, 'zgłosiła', 'zgłosiły', 'zgłosiło')} ${row.count} ${plural(row.count, 'osoba', 'osoby', 'osób')}.`}</p>
-        <div><Button kind={kind()} busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${row.count})`}</Button></div>
+        <div><Button kind={office ? 'secondary' : kind()} busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${row.count})`}</Button></div>
       </div>;
       if (row.kind === 'obecnosc') {
         const name = nameOf(row.who, row.guest);
         // Przy kilku zgłoszeniach głównym działaniem jest „Potwierdź wszystkie zgłoszenia”, a wiersze mają szare odnośniki.
         const single = !props.rows.some(r => r.kind === 'obecnosc-wszystkie');
+        const confirm = () => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true});
         return <div class="decision decision--obecnosc" key={row.key}>
-          <p>Obecność zgłasza <span class="oi-nowrap">{name}</span>, godz. {fmtTime(row.at)}</p>
+          <p>Obecność zgłasza <span class="oi-nowrap">{name}</span>, godz. {fmtTime(row.at)}
+            {office && !row.guest && canTake(row.who) && <span class="decision-note">Ta osoba może przejąć prowadzenie bez potwierdzenia.</span>}</p>
           <div class="decision-act">
-            {single
-              ? <Button kind={kind()} small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true})}>Potwierdź obecność</Button>
-              : <Button kind="ghost" quiet small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: true})}>Potwierdź obecność</Button>}
-            <Button kind="ghost" quiet small busy={busy} label={`Odrzuć zgłoszenie, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: false})}>Odrzuć</Button>
+            {office
+              ? <Button kind="secondary" small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={confirm}>Potwierdź</Button>
+              : single
+                ? <Button kind={kind()} small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={confirm}>Potwierdź obecność</Button>
+                : <Button kind="ghost" quiet small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={confirm}>Potwierdź obecność</Button>}
+            {!office && <Button kind="ghost" quiet small busy={busy} label={`Odrzuć zgłoszenie, ${name}`} onClick={() => send({type: 'presence_confirm', who: row.who, guest: row.guest || undefined, accept: false})}>Odrzuć</Button>}
           </div>
         </div>;
       }
@@ -377,13 +387,20 @@ function LiveBallot({b, readOnly, teraz}: {b: ViewBallot; readOnly: boolean; ter
   const inFlight = b.secret ? Math.max(0, issued - b.secret.cast) : 0;
   const mine = !readOnly && !!s.personId && b.eligible.includes(s.personId);
   const trial = b.purpose === 'proba';
-  const proposer = proposerSentence(s.roster, m.organ, b);
+  const proposer = proposerSentence(s.roster, m, b);
   // Oznaczenie ostatniej osoby bez głosu kończy głosowanie od razu, chyba że w drodze są jeszcze głosy z pobranych kart.
   const lastOne = awaiting.length === 1 && inFlight === 0;
   const names = awaiting.map(p => s.personName(p));
   const n = awaiting.length;
-  const endText = n === 1 ? `Bez głosu jest jeszcze 1 osoba (${names[0]}). Jeśli zakończysz głosowanie teraz, ten głos nie zostanie policzony.`
-    : n > 1 ? `Bez głosu ${plural(n, 'jest', 'są', 'jest')} jeszcze ${n} ${plural(n, 'osoba', 'osoby', 'osób')} (${names.join(', ')}). Jeśli zakończysz głosowanie teraz, te głosy nie zostaną policzone.`
+  // O-11: osoba prowadząca nie oznacza swojej nieobecności, a okno zakończenia mówi o jej głosie osobno.
+  const chairId = m.chair.current;
+  const ownMissing = !!chairId && awaiting.includes(chairId);
+  const others = awaiting.filter(p => p !== chairId).map(p => s.personName(p));
+  const k = others.length;
+  const own = ownMissing ? (k ? ' Twój głos też nie został oddany.' : ' Twój głos nie został jeszcze oddany.') : '';
+  const endText = n > 0 && k === 0 ? `${own.trim()} Jeśli zakończysz głosowanie teraz, ten głos nie zostanie policzony.`
+    : k === 1 ? `Bez głosu jest jeszcze 1 osoba (${others[0]}).${own} Jeśli zakończysz głosowanie teraz, ${ownMissing ? 'te głosy nie zostaną policzone' : 'ten głos nie zostanie policzony'}.`
+    : k > 1 ? `Bez głosu ${plural(k, 'jest', 'są', 'jest')} jeszcze ${k} ${plural(k, 'osoba', 'osoby', 'osób')} (${others.join(', ')}).${own} Jeśli zakończysz głosowanie teraz, te głosy nie zostaną policzone.`
     : inFlight > 0 ? `Pobrano kart ${issued}, a dotarło głosów ${b.secret!.cast}. ${inFlight === 1 ? 'Brakujący głos może być jeszcze w drodze. Zaczekaj kilka sekund. Jeśli zakończysz głosowanie teraz, ten głos nie zostanie policzony.' : 'Brakujące głosy mogą być jeszcze w drodze. Zaczekaj kilka sekund. Jeśli zakończysz głosowanie teraz, te głosy nie zostaną policzone.'}`
     : 'Zagłosowali wszyscy uprawnieni.';
   const lastNote = <div class="oi-note oi-note--wazne"><span class="oi-label">Ważne</span><p>To ostatnia osoba bez głosu. Głosowanie zakończy się od razu.</p></div>;
@@ -407,7 +424,7 @@ function LiveBallot({b, readOnly, teraz}: {b: ViewBallot; readOnly: boolean; ter
       {n > 0 ? <>
         {!readOnly && <p class="muted small">Oznacz nieobecność, gdy osoba wyszła z sali. Głosowanie nie będzie na nią czekać.</p>}
         <ul>{awaiting.map((p, i) => <li key={p}><span>{names[i]}</span>
-          {!readOnly && <Button kind="ghost" quiet small haspopup label={`Oznacz nieobecność, ${names[i]}`} onClick={() => setAbsent({who: p, at: serverNow()})}>Oznacz nieobecność</Button>}</li>)}</ul>
+          {!readOnly && p !== chairId && <Button kind="ghost" quiet small haspopup label={`Oznacz nieobecność, ${names[i]}`} onClick={() => setAbsent({who: p, at: serverNow()})}>Oznacz nieobecność</Button>}</li>)}</ul>
       </> : <p>Zagłosowali wszyscy obecni.</p>}
     </div>
     <div class="live-foot">
@@ -516,7 +533,7 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
   const blocked = announceFirst(m);
   const reasonNeeded = m.kind === 'posiedzenie' && m.agendaAdopted;
   const organ = organName(m, s.roster);
-  const members = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length;
+  const quorum = quorumNow(m, s.roster), members = quorum.total, present = presentMembers(m as Meeting, s.roster).length;
   return <section class={'oi-card item-work' + (teraz && current ? ' is-teraz' : '')} aria-labelledby={id}>
     <div class="panel-head">
       {current ? <span class="oi-label">Punkt {no}</span> : <span class="kicker">Punkt {no}</span>}
@@ -550,13 +567,16 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
       <h3 class="card-sub">Głosowania w tym punkcie</h3>
       {results.map(b => <ResultLine key={b.id} b={b}/>)}
     </div>}
-    {!readOnly && current && it.kind === 'otwarcie' && <ReadAloud><p>{present >= quorumFor(members)
+    {!readOnly && current && it.kind === 'otwarcie' && <ReadAloud><p>{present >= quorum.required
       ? `Otwieram posiedzenie ${organ}. Stwierdzam, że w posiedzeniu uczestniczy ${present} z ${members} członków Prezydium, co stanowi kworum wymagane do podejmowania uchwał.`
       : `Otwieram posiedzenie ${organ}. Stwierdzam, że w posiedzeniu uczestniczy ${present} z ${members} członków Prezydium. Wobec braku kworum Prezydium nie może podejmować uchwał.`}</p></ReadAloud>}
     {!readOnly && current && closing && <ReadAloud><p>{closingSpeech(m, organ, types)}</p></ReadAloud>}
-    {(organizer || !readOnly) && others.length > 0 && !closing && <AssignMaterial it={it} others={others}/>}
     {!readOnly && current && <NextStep it={it} main={main} voteNeeded={voteNeeded}/>}
-    {(organizer || !readOnly) && <Fold title="Dane punktu"><ItemEditForm it={it} titleEditable={false} autofocus={false} status/></Fold>}
+    {/* O-02: „Przypisz materiał do punktu” stoi w „Danych punktu”. */}
+    {(organizer || !readOnly) && <Fold title="Dane punktu">
+      <ItemEditForm it={it} titleEditable={false} autofocus={false} status/>
+      {others.length > 0 && !closing && <AssignMaterial it={it} others={others}/>}
+    </Fold>}
     <NoteEditor it={it} open={readOnly}/>
     {ending && <Confirm title={ending === 'odroczony' ? 'Odroczyć punkt?' : 'Wycofać punkt?'} confirm={ending === 'odroczony' ? 'Odrocz punkt' : 'Wycofaj punkt'}
       kind={ending === 'odroczony' ? 'primary' : 'danger'} onClose={() => setEnding(null)}
@@ -567,11 +587,26 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
   </section>;
 }
 
-// Następny krok w bieżącym punkcie: przejście dalej, powrót do pominiętego punktu, zakończenie albo zamknięcie posiedzenia.
-// Dopóki wynik zamkniętego głosowania nie jest ogłoszony (F2), przyciski są nieaktywne z powodem.
+/**
+ * Pierwszy nierozpatrzony punkt przyjętego porządku przed danym punktem (O-01; te same reguły co pendingBefore):
+ * punkt, który czeka, bo rozpoczęto inny poza kolejnością. Z godziną i powodem tego rozpoczęcia, gdy są w danych.
+ */
+function waitingBefore(m: ViewMeeting, target: AgendaItem, current: AgendaItem) {
+  if (m.kind !== 'posiedzenie' || !m.agendaAdopted || m.working) return undefined;
+  const order = orderedAgenda(m.agenda);
+  // Przed „Zamknięciem posiedzenia” liczą się te same punkty co przed każdym innym (pendingBefore pomija zamknięcie).
+  const probe = target.kind === 'zamkniecie' ? {...target, kind: 'sprawa' as const} : target;
+  const it = pendingBefore(m as unknown as Meeting, probe).find(x => x.id !== current.id && x.id !== current.parentId);
+  if (!it) return undefined;
+  const skipper = order.slice(order.indexOf(it) + 1).filter(x => x.outOfOrder).sort((a, b) => a.outOfOrder!.at - b.outOfOrder!.at)[0];
+  return {it, since: skipper?.outOfOrder?.at, reason: skipper?.outOfOrder?.reason};
+}
+
+// Następny krok w bieżącym punkcie (O-01): „Następny punkt” to pierwszy nierozpatrzony punkt przyjętego porządku. Gdy
+// wcześniejszy punkt czeka, karta pokazuje od razu oba wyjścia: powrót do niego i przejście dalej poza kolejnością (okno
+// z polem „Powód”). Dopóki wynik zamkniętego głosowania nie jest ogłoszony (F2), przyciski są nieaktywne z powodem.
 function NextStep({it, main, voteNeeded}: {it: AgendaItem; main: Main; voteNeeded: boolean}) {
   const {m, send, busy} = useMeeting();
-  const types = useDocTypes();
   const flow = useStartFlow();
   const [ask, setAsk] = useState<'koniec' | 'zamkniecie' | null>(null);
   const blocked = announceFirst(m);
@@ -592,18 +627,23 @@ function NextStep({it, main, voteNeeded}: {it: AgendaItem; main: Main; voteNeede
   }
   const nextNo = itemNumber(m.agenda, next.id);
   const noQuorum = needsWorking(m, next);
-  const missed = !voteNeeded && next.kind === 'zamkniecie' ? missedBefore(m, next, types) : undefined;
+  const waiting = waitingBefore(m, next, it);
+  const from = voteNeeded ? it : undefined;
+  const waitNo = waiting ? itemNumber(m.agenda, waiting.it.id) : '';
   return <div class="next-step">
     <span class="kicker">Następny punkt</span>
     {voteNeeded && <p class="small">W tym punkcie nie przeprowadzono jeszcze głosowania.</p>}
     {noQuorum && <p class="small">{m.quorumChecks.length ? 'Ostatnio stwierdzono brak kworum.' : 'Kworum nie zostało jeszcze stwierdzone.'}</p>}
-    {missed && <>
-      <p class="small">Punkt {itemNumber(m.agenda, missed.id)} nie był rozpatrywany.</p>
-      <div><Button kind={main} busy={busy} haspopup={flow.asks(missed)} disabled={!!blocked} reason={blocked ?? undefined} onClick={() => flow.start(missed)}>Wróć do punktu {itemNumber(m.agenda, missed.id)}</Button></div>
+    {waiting ? <>
+      <p class="small">{`Punkt ${waitNo} „${waiting.it.title}” ${waiting.since ? `czeka od godz. ${fmtTime(waiting.since)}.` : 'nie był jeszcze rozpatrywany.'}`}</p>
+      {waiting.reason && <p class="small">{`Pominięto go z powodu „${waiting.reason.replace(/\.$/, '')}”.`}</p>}
+      <div><Button kind={voteNeeded || noQuorum ? 'secondary' : main} busy={busy} haspopup={flow.asks(waiting.it, from)} disabled={!!blocked} reason={blocked ?? undefined} onClick={() => flow.start(waiting.it, from)}>Wróć do punktu {waitNo}</Button></div>
+      <div><Button kind="ghost" quiet small busy={busy} haspopup disabled={!!blocked} reason={blocked ?? undefined} onClick={() => flow.start(next, from)}>Przejdź do punktu {nextNo} poza kolejnością</Button></div>
+    </> : <>
+      <div><Button kind={voteNeeded || noQuorum ? 'secondary' : main} busy={busy} haspopup={flow.asks(next, voteNeeded ? it : undefined)} disabled={!!blocked} reason={blocked ?? undefined}
+        onClick={() => flow.start(next, voteNeeded ? it : undefined)}>Przejdź do punktu {nextNo}</Button></div>
+      <span class="small muted">{next.title}</span>
     </>}
-    <div><Button kind={voteNeeded || noQuorum || missed ? 'secondary' : main} busy={busy} haspopup={flow.asks(next, voteNeeded ? it : undefined)} disabled={!!blocked} reason={blocked ?? undefined}
-      onClick={() => flow.start(next, voteNeeded ? it : undefined)}>Przejdź do punktu {nextNo}</Button></div>
-    <span class="small muted">{next.title}</span>
     {flow.dialog}
   </div>;
 }
@@ -615,7 +655,7 @@ function ResultLine({b}: {b: ViewBallot}) {
   const r = b.result;
   if (!r) return null;
   const replaced = b.supersededBy ? m.ballots.find(x => x.id === b.supersededBy) : undefined;
-  const proposer = proposerSentence(s.roster, m.organ, b);
+  const proposer = proposerSentence(s.roster, m, b);
   return <div class="result-line">
     <span class="kicker">{b.purpose === 'proba' ? `Wynik próbnego głosowania ${modeGenitive(b.mode)}` : `Wynik głosowania ${modeGenitive(b.mode)} nr ${b.number}${b.reasumptionOf ? ' po reasumpcji' : ''}`}</span>
     {b.purpose !== 'proba' && <p class="result-line__subject">{b.subject}</p>}
@@ -626,6 +666,8 @@ function ResultLine({b}: {b: ViewBallot}) {
       <ul class="named">{b.eligible.map(p => <li key={p}><span>{s.personName(p)}</span><strong>{b.votes[p] ? choiceLabel[b.votes[p]] : 'brak głosu'}</strong></li>)}</ul>
     </Fold>}
     {replaced && <p class="muted small">Wynik zastąpiony wynikiem reasumpcji w głosowaniu nr {replaced.number}.</p>}
+    {/* O-06: ta sama podstawa rozstrzygnięcia co u członków, w zwiniętej sekcji. */}
+    <BasisBlock b={b} fold/>
   </div>;
 }
 
@@ -633,7 +675,8 @@ function Quorum({main}: {main: Main}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const [asking, setAsking] = useState(false);
-  const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length, required = quorumFor(total);
+  const q = quorumNow(m, s.roster);
+  const total = q.total, present = presentMembers(m as Meeting, s.roster).length, required = q.required;
   const last = m.quorumChecks.at(-1);
   const ok = present >= required;
   const blocked = announceFirst(m);
@@ -641,12 +684,12 @@ function Quorum({main}: {main: Main}) {
   const kind: Main = m.quorumChecks.length ? 'secondary' : main;
   // Na spotkaniu roboczym (F5) zostają liczby i jedno zdanie, a „Stwierdzam kworum” tylko wtedy, gdy kworum jest.
   if (m.working) return <div class={'quorum ' + (ok ? 'is-ok' : 'is-low')}>
-    <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label="Wymagane kworum (§ 8 ust. 2)">{required}</Fact></dl>
+    <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label={`Wymagane kworum (${q.basis})`}>{required}</Fact></dl>
     <p class="small">Stwierdzenie kworum niczego już nie zmienia.</p>
     {ok && <div class="actions"><Button busy={busy} onClick={() => send({type: 'quorum'})}>Stwierdzam kworum</Button></div>}
   </div>;
   return <div class={'quorum ' + (ok ? 'is-ok' : 'is-low')}>
-    <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label="Wymagane kworum (§ 8 ust. 2)">{required}</Fact></dl>
+    <dl class="facts facts--liczby"><Fact label="Obecnych">{present} <small>z {total}</small></Fact><Fact label={`Wymagane kworum (${q.basis})`}>{required}</Fact></dl>
     <p class="strong">{ok ? 'Jest kworum. Prezydium może podejmować uchwały.' : <>Brak kworum. Prezydium nie może podejmować uchwał <Ref>(§ 8 ust. 2).</Ref></>}</p>
     {last && <p class="muted small">{last.present >= last.required ? `Ostatnio stwierdzono o godz. ${fmtTime(last.at)}, że jest kworum.` : `Ostatnio stwierdzono o godz. ${fmtTime(last.at)} brak kworum.`}</p>}
     <div class="actions">
@@ -671,29 +714,56 @@ function defaultSubject(it: AgendaItem, materials: ViewMeeting['materials'], mat
   return mat?.title ?? it.title;
 }
 
+/** Wartość z paragrafem tylko wtedy, gdy pochodzi z regulaminu (O-02): „Jawne (§ 11 ust. 1)”. */
+const withBasis = (text: string, e: Pick<Effective<unknown>, 'source' | 'basis'> | undefined) => e?.source === 'prawo' && e.basis ? <>{text} <Ref>{`(${e.basis})`}</Ref></> : text;
+/** Linia źródła przy wartości, tylko gdy różni się od ustawień ogólnych i wzoru posiedzenia (O-02). */
+function differenceLine(e: Effective<unknown> | undefined): string | null {
+  if (!e || e.legacy) return null;
+  if (e.source === 'obrady') return `Zmienione w trakcie obrad${e.stamp ? ` o godz. ${fmtTime(e.stamp.at)}` : ''}.`;
+  if (e.source === 'punkt' && e.inherited !== undefined && e.inherited !== e.value) return 'Zmienione dla tego punktu.';
+  if (e.source === 'posiedzenie' && e.inherited !== undefined && e.inherited !== e.value) return 'Zmienione dla tego posiedzenia.';
+  return null;
+}
+const sourceNote = (text: string | null) => text ? <span class="fact-src">{text}</span> : null;
+
+/**
+ * Karta „Głosowanie w tym punkcie” (O-02): przedmiot, „Co jest głosowane”, tryb, wymagana większość, czas i wymagane
+ * kworum z wartości skutecznych punktu, paragraf tylko przy wartościach z regulaminu, linia źródła tylko przy różnicy.
+ * „Zmień ustawienia tego głosowania” rozwija przedmiot, „Co jest głosowane” (z powodem do protokołu, G-9, G-10, DA-8)
+ * i czas. Wybór rodzaju bez głosowania w punkcie, który wymaga głosowania, otwiera okno „Zamknąć punkt bez głosowania?”.
+ */
 function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
   const {m, send, busy} = useMeeting();
+  const s = useSession();
   const types = useDocTypes();
   const ids = useId();
+  const phone = useMedia('(max-width: 760px)');
+  const eff = m.effective?.items[it.id];
   const materials = m.materials.filter(x => it.materialIds.includes(x.id));
   const closed = m.ballots.filter(b => b.status === 'zamkniete' && b.purpose !== 'proba' && !b.aborted);
   const votedOn = new Set(closed.filter(b => !b.supersededBy).map(b => b.material?.id));
   const decided = closed.filter(b => b.itemId === it.id && !b.supersededBy && b.purpose !== 'tryb' && b.purpose !== 'reasumpcja');
   const firstOpen = () => materials.find(x => !votedOn.has(x.id)) ?? materials[0];
+  const planned = eff?.voteMinutes.value ?? 2;
   const [extra, setExtra] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [target, setTarget] = useState<Target>('projekt');
   const [materialId, setMaterialId] = useState(firstOpen()?.id ?? '');
   const [subject, setSubject] = useState(defaultSubject(it, materials, firstOpen()?.id));
-  const [minutes, setMinutes] = useState(2);
-  // „Co jest głosowane” (F11): null to wartość domyślna z punktu, materiału albo przedmiotu (docTypeFor).
+  const [minutes, setMinutes] = useState(planned);
+  // „Co jest głosowane” (F11): null to wartość z punktu, materiału albo przedmiotu (docTypeFor). Zmiana w trakcie obrad
+  // wymaga powodu, który trafia do protokołu (G-10).
   const [docType, setDocType] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [skip, setSkip] = useState<string | null>(null);
   // Wniosek (np. poprawka) w sprawie z uchwalonym trybem może być jawny albo w uchwalonym trybie (F3).
   const [motionMode, setMotionMode] = useState<VoteMode>('jawne');
   const [motion, setMotion] = useState<'tajne' | 'imienne' | null>(null);
   const [steps, setSteps] = useState<{mode: VoteMode; list: Warning[]} | null>(null);
   const advancing = useRef(false);
-  useEffect(() => { const f = firstOpen(); setMaterialId(f?.id ?? ''); setSubject(defaultSubject(it, materials, f?.id)); setTarget('projekt'); setDocType(null); }, [it.id, m.ballots.length, it.materialIds.length, it.mode]);
-  useEffect(() => setExtra(false), [it.id]);
+  useEffect(() => { const f = firstOpen(); setMaterialId(f?.id ?? ''); setSubject(defaultSubject(it, materials, f?.id)); setTarget('projekt'); setDocType(null); setReason(''); }, [it.id, m.ballots.length, it.materialIds.length, it.mode]);
+  useEffect(() => { setExtra(false); setEditing(false); }, [it.id]);
+  useEffect(() => setMinutes(planned), [it.id, planned]);
   if (it.kind === 'porzadek' && m.agendaAdopted) return null;
   if (!m.agendaAdopted && it.kind !== 'porzadek') return null;
   if (it.kind === 'otwarcie' || it.kind === 'zamkniecie') return null;
@@ -709,7 +779,7 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
         : !last ? 'W tym punkcie przeprowadzono już głosowanie.'
         : last.mode === 'jawne' ? `W tym punkcie głosowano nad „${last.subject}” (głosowanie nr ${last.number}). Ponowne głosowanie w tej sprawie jest możliwe tylko w trybie reasumpcji (§ 12).`
         : `W tym punkcie głosowano nad „${last.subject}” (głosowanie nr ${last.number}). Wyniku głosowania ${modeGenitive(last.mode)} nie poddaje się reasumpcji.`}</p>
-      <div><Button kind="ghost" quiet small onClick={() => setExtra(true)}>Inne głosowanie w tym punkcie</Button></div>
+      <div><Button kind="ghost" quiet small onClick={() => { setExtra(true); setEditing(true); }}>Inne głosowanie w tym punkcie</Button></div>
     </div>;
   }
   const basePurpose: BallotPurpose = it.kind === 'porzadek' ? 'porzadek' : it.kind === 'protokol' ? 'protokol' : 'uchwala';
@@ -723,16 +793,32 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
   const withDoc = purpose === 'uchwala' || purpose === 'protokol' || purpose === 'inna';
   const suggested = docTypeFor(m, {item: it, materialId: chosenMaterial || null, purpose, subject}) ?? '';
   const chosenDoc = docType ?? suggested;
-  const block = voteBlock(m);
+  const docChanged = project && docType !== null && docType !== suggested;
+  const block = voteBlock(m) ?? (docChanged && !reason.trim() ? 'Wpisz powód zmiany rodzaju sprawy.' : null);
   const bare = purpose === 'uchwala' && !chosenMaterial && resolutionSubject.test(subject.trim());
   const repeat = agendaVote ? undefined : [...closed].reverse().find(b => b.purpose !== 'tryb' && b.purpose !== 'reasumpcja' && ((chosenMaterial && b.material?.id === chosenMaterial) || normalized(b.subject) === normalized(subject)));
+  const quorum = quorumNow(m, s.roster);
+  const present = presentMembers(m as Meeting, s.roster).length;
+  const majority = m.effective?.meeting.majority;
+  const modeEff = m.effective?.meeting.mode;
+  const docName = chosenDoc ? docTypeById(types, chosenDoc)?.name ?? chosenDoc : 'Bez rodzaju';
   const pick = (value: Target) => {
     setTarget(value);
     setDocType(null);
+    setReason('');
     if (value === 'projekt') { const f = firstOpen(); setMaterialId(f?.id ?? ''); setSubject(defaultSubject(it, materials, f?.id)); }
     else setSubject('');
   };
-  const openNow = (chosen: VoteMode) => send({type: 'ballot_open', itemId: it.id, purpose, subject, mode: chosen, minutes, materialId: chosenMaterial || null, ...(withDoc ? {docType: chosenDoc || null} : {})});
+  // DA-8: rodzaj bez głosowania w punkcie, który wymaga głosowania, zamyka punkt bez głosowania (okno z powodem).
+  const chooseDoc = (value: string) => {
+    const type = docTypeById(types, value);
+    if (project && value && type && !type.voted && votedSource(m, it, types)) { setSkip(value); return; }
+    setDocType(value);
+  };
+  const openNow = async (chosen: VoteMode) => {
+    if (docChanged && !await send({type: 'item_edit', itemId: it.id, docType: chosenDoc || null, reason: reason.trim()})) return;
+    send({type: 'ballot_open', itemId: it.id, purpose, subject, mode: chosen, minutes, materialId: chosenMaterial || null, ...(withDoc ? {docType: chosenDoc || null} : {})});
+  };
   const begin = (chosen: VoteMode) => {
     const list: Warning[] = [];
     if (repeat) list.push('ponownie');
@@ -752,6 +838,11 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
   const step = steps?.list[0];
   const said = subject.trim().replace(/[.\s]+$/, '');
   const speech = `Zarządzam głosowanie ${modeName(mode)}. Przedmiot głosowania „${said}”. Proszę o oddanie głosu na telefonach. Głosowanie potrwa ${minutes} ${plural(minutes, 'minutę', 'minuty', 'minut')}.`;
+  const modeText = bound ? `${modeName(fixed!).replace(/^./, c => c.toUpperCase())}, ${it.modeBasis ?? 'uchwalone przez Prezydium'}` : mode === 'jawne' ? 'Jawne' : modeName(mode).replace(/^./, c => c.toUpperCase());
+  const timeLine = minutes !== planned ? 'Zmienione w trakcie obrad.' : differenceLine(eff?.voteMinutes);
+  const docLine = docChanged ? 'Zmienione w trakcie obrad.' : project ? differenceLine(eff?.docType) : null;
+  const majorityFact = <Fact label="Wymagana większość">{withBasis('Zwykła, więcej głosów za niż przeciw', majority ?? {source: 'prawo', basis: lawOf(m.organ).majority.basis})}</Fact>;
+  const quorumFact = <Fact label="Wymagane kworum">{quorum.required} z {quorum.total} <Ref>{`(${quorum.basis})`}</Ref>, obecnych {present}</Fact>;
   // Enter w polu przedmiotu wysyła formularz także wtedy, gdy przycisk jest nieaktywny (przerwa, trwa czynność).
   // Okno wniosku o tryb ma własny formularz, więc stoi poza tym formularzem.
   return <><form class="ballot-form" onSubmit={e => { e.preventDefault(); if (e.target === e.currentTarget && !block && !busy) begin(mode); }}>
@@ -763,45 +854,56 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
           <button key={value} type="button" class="oi-opt" aria-pressed={target === value} onClick={() => pick(value)}>{label}</button>)}
       </div>
     </div>}
-    {project && materials.length > 1 && <Field label="Nad którym materiałem?"><select value={materialId} onChange={e => { const v = (e.target as HTMLSelectElement).value; setMaterialId(v); setDocType(null); setSubject(defaultSubject(it, materials, v)); }}>
-      {materials.map(x => <option key={x.id} value={x.id}>{x.title}{votedOn.has(x.id) ? ' (już głosowano)' : ''}</option>)}
-    </select></Field>}
-    <Field label="Przedmiot głosowania"><input value={subject} onInput={e => setSubject((e.target as HTMLInputElement).value)} required maxLength={400}/></Field>
-    {withDoc && <DocTypeSelect types={types} value={chosenDoc} onChange={v => setDocType(v)} label="Co jest głosowane" empty="Bez rodzaju (wynik „Przyjęto” albo „Nie przyjęto”)"
-      hint="Rodzaj decyduje o formule wyniku. Wartość domyślna pochodzi z punktu albo z materiału."/>}
-    {bound ? <div class="mode-fixed">
-      <dl class="facts"><Fact label="Tryb głosowania">{modeName(fixed!)}</Fact><Fact label="Podstawa trybu">{it.modeBasis}</Fact></dl>
-      <p class="small">Prezydium uchwaliło w tej sprawie głosowanie {modeName(fixed!)} <Ref>(§ 11).</Ref> Głosowanie odbędzie się w tym trybie.</p>
-    </div> : fixed ? <Segments label="Tryb" value={motionMode} options={[['jawne', 'Jawne'], [fixed, fixed === 'tajne' ? 'Tajne' : 'Imienne']]} onChange={setMotionMode}
-      hint="Wniosek w tej sprawie może być jawny albo w trybie uchwalonym przez Prezydium."/>
-    : <div class="oi-field">
-      <span class="oi-field__label" id={`${ids}-tryb`}>Tryb</span>
-      <div class="oi-seg seg-tryb" role="group" aria-labelledby={`${ids}-tryb`}>
-        {(['jawne', 'imienne', 'tajne'] as VoteMode[]).map(x => x === 'jawne'
-          ? <button key={x} type="button" class="oi-opt" aria-pressed="true">Jawne</button>
-          : <button key={x} type="button" class="oi-opt" aria-pressed="false" aria-disabled="true" aria-describedby={`${ids}-tryb-p`}>{x === 'tajne' ? 'Tajne' : 'Imienne'}</button>)}
+    <dl class="facts vote-rules">
+      {!editing && <Fact label="Przedmiot">{subject || 'Wpisz przedmiot głosowania.'}</Fact>}
+      {withDoc && !editing && <Fact label="Co jest głosowane">{docName}{sourceNote(docLine)}</Fact>}
+      <Fact label="Tryb">{bound ? <>{modeText} <Ref>(§ 11 ust. 2)</Ref></> : withBasis(modeText, mode === 'jawne' ? modeEff ?? {source: 'prawo', basis: '§ 11 ust. 1'} : undefined)}</Fact>
+      {!phone && majorityFact}
+      {!editing && <Fact label="Czas">{minutesText(minutes)}{sourceNote(timeLine)}</Fact>}
+      {!phone && quorumFact}
+    </dl>
+    {phone && <Fold title="Na jakiej podstawie?"><dl class="facts">{majorityFact}{quorumFact}</dl></Fold>}
+    {editing && <div class="vote-edit stack">
+      {project && materials.length > 1 && <Field label="Nad którym materiałem?"><select value={materialId} onChange={e => { const v = (e.target as HTMLSelectElement).value; setMaterialId(v); setDocType(null); setSubject(defaultSubject(it, materials, v)); }}>
+        {materials.map(x => <option key={x.id} value={x.id}>{x.title}{votedOn.has(x.id) ? ' (już głosowano)' : ''}</option>)}
+      </select></Field>}
+      <Field label="Przedmiot głosowania"><input value={subject} onInput={e => setSubject((e.target as HTMLInputElement).value)} required maxLength={400}/></Field>
+      {withDoc && <DocTypeSelect types={types} value={chosenDoc} onChange={chooseDoc} label="Co jest głosowane" empty="Bez rodzaju (wynik „Przyjęto” albo „Nie przyjęto”)"
+        hint="Rodzaj decyduje o formule wyniku. Wartość domyślna pochodzi z punktu albo z materiału."/>}
+      {docChanged && <Field label="Powód" hint="Np. projekt zawiera stanowisko, a nie uchwałę. Powód trafi do protokołu."><input value={reason} maxLength={500} required onInput={e => setReason((e.target as HTMLInputElement).value)}/></Field>}
+      {fixed && purpose === 'wniosek' && <Segments label="Tryb wniosku" value={motionMode} options={[['jawne', 'Jawne'], [fixed, fixed === 'tajne' ? 'Tajne' : 'Imienne']]} onChange={setMotionMode}
+        hint="Wniosek w tej sprawie może być jawny albo w trybie uchwalonym przez Prezydium."/>}
+      <div class="oi-field">
+        <span class="oi-field__label" id={`${ids}-czas`}>Czas</span>
+        <div class="oi-seg seg-czas" role="group" aria-labelledby={`${ids}-czas`}>
+          {VOTE_MINUTES.map(n => <button key={n} type="button" class="oi-opt" aria-pressed={minutes === n} onClick={() => setMinutes(n)}>{n} min</button>)}
+        </div>
+        <span class="oi-field__hint">{`W ustawieniach punktu ${minutesText(planned)}.`}</span>
       </div>
-      <span class="oi-field__hint" id={`${ids}-tryb-p`}>Głosowanie imienne i tajne wymaga uchwalenia przez Prezydium.</span>
     </div>}
-    {!fixed && it.kind !== 'porzadek' && <p class="small muted">Prezydium może uchwalić tajność głosowania albo głosowanie imienne. Poddaj pod głosowanie <button type="button" class="link quiet" aria-haspopup="dialog" onClick={() => setMotion('tajne')}>wniosek o głosowanie tajne</button> albo <button type="button" class="link quiet" aria-haspopup="dialog" onClick={() => setMotion('imienne')}>wniosek o głosowanie imienne</button>.</p>}
-    <div class="oi-field">
-      <span class="oi-field__label" id={`${ids}-czas`}>Czas</span>
-      <div class="oi-seg seg-czas" role="group" aria-labelledby={`${ids}-czas`}>
-        {[1, 2, 3, 5, 10, 15].map(n => <button key={n} type="button" class="oi-opt" aria-pressed={minutes === n} onClick={() => setMinutes(n)}>{n} min</button>)}
-      </div>
-    </div>
+    {!fixed && it.kind !== 'porzadek' && <div class="vote-motions">
+      <p class="small muted">Prezydium może uchwalić tajność głosowania albo głosowanie imienne.</p>
+      <div class="actions"><Button kind="ghost" quiet small haspopup onClick={() => setMotion('tajne')}>Wniosek o głosowanie tajne</Button><Button kind="ghost" quiet small haspopup onClick={() => setMotion('imienne')}>Wniosek o głosowanie imienne</Button></div>
+    </div>}
     {bare && <Notice tone="warn">Do tego punktu nie dołączono projektu uchwały. Członkowie nie zobaczą treści, nad którą głosują.</Notice>}
+    <div><Button kind={main} type="submit" busy={busy} haspopup={!!repeat || bare} disabled={!!block} reason={block ?? undefined}>Otwórz głosowanie</Button></div>
+    {!extra && <div><button type="button" class="link link-cel small quiet" aria-expanded={editing} onClick={() => setEditing(v => !v)}>Zmień ustawienia tego głosowania</button></div>}
     <ReadAloud>
       {/* Zdanie o zawiadomieniu tylko przy wpisanej dacie wysłania. Aplikacja nie wie, czy członkowie je otrzymali. */}
       {it.kind === 'porzadek' && <p>{m.noticeDate ? `Zawiadomienie z projektem porządku obrad wysłano ${longDate(m.noticeDate)} ` : ''}Czy są uwagi lub wnioski o zmianę projektu porządku obrad? Zarządzam głosowanie nad przyjęciem porządku obrad.</p>}
       <p>{speech}</p>
     </ReadAloud>
-    <div><Button kind={main} type="submit" busy={busy} haspopup={!!repeat || bare} disabled={!!block} reason={block ?? undefined}>Otwórz głosowanie</Button></div>
     {step === 'ponownie' && repeat && <Confirm key="ponownie" title="Ponownie głosować w tej samej sprawie?" kind="danger" confirm="Otwórz ponowne głosowanie" onConfirm={confirmStep} onClose={closeStep}
       text={<p>{chosenMaterial && repeat.material?.id === chosenMaterial ? 'Nad tym materiałem już głosowano' : 'W tej sprawie już głosowano'} (głosowanie nr {repeat.number}). Regulamin przewiduje ponowne głosowanie w tej samej sprawie tylko w trybie reasumpcji (§ 12).</p>}/>}
     {step === 'bez-projektu' && <Confirm key="bez-projektu" title="Otworzyć głosowanie bez projektu?" confirm="Otwórz głosowanie" focus="cancel" onConfirm={confirmStep} onClose={closeStep}
       text={<p>Do tego punktu nie dołączono projektu uchwały. Członkowie nie zobaczą treści, nad którą głosują.</p>}/>}
-  </form>{motion && <ModeMotion it={it} mode={motion} onClose={() => setMotion(null)}/>}</>;
+  </form>
+  {motion && <ModeMotion it={it} mode={motion} onClose={() => setMotion(null)}/>}
+  {skip !== null && <Confirm title="Zamknąć punkt bez głosowania?" kind="danger" confirm="Bez głosowania" onClose={() => setSkip(null)}
+    field={{label: 'Powód', required: true, hint: 'Np. projekt wymaga uzupełnienia. Powód trafi do protokołu.'}}
+    onConfirm={async why => { if (await send({type: 'item_edit', itemId: it.id, docType: skip, reason: why}) && it.status === 'w_toku') send({type: 'item_end', itemId: it.id, status: 'zakonczony'}); }}
+    text={<p>W tym punkcie nie zapadnie uchwała. Powód trafi do protokołu.</p>}/>}
+  </>;
 }
 
 // Wniosek o głosowanie tajne albo imienne (§ 11) z polem „Kto zgłasza wniosek?” (F14): lista obecnych członków.
@@ -822,7 +924,7 @@ function ModeMotion(props: {it: AgendaItem; mode: 'tajne' | 'imienne'; onClose: 
       <div class="motion-who"><Field label="Kto zgłasza wniosek?" hint="Wniosek zgłasza członek Prezydium obecny na posiedzeniu. Nazwisko trafi do protokołu.">
         <select value={who} required onChange={e => setWho((e.target as HTMLSelectElement).value)}>
           <option value="">Wybierz osobę…</option>
-          {present.map(id => <option key={id} value={id}>{s.personName(id)}{membership(s.roster, m.organ, id)?.label ? `, ${membership(s.roster, m.organ, id)!.label}` : ''}</option>)}
+          {present.map(id => <option key={id} value={id}>{personWithFunc(s.roster, m, id)}</option>)}
         </select>
       </Field></div>
       <div class="actions confirm-actions">
@@ -907,9 +1009,18 @@ function NoteEditor({it, open}: {it: AgendaItem; open: boolean}) {
 }
 
 function AgendaFixes() {
-  const {m} = useMeeting();
+  const {m, send, busy} = useMeeting();
   const [open, setOpen] = useState(false);
   const voting = m.ballots.find(b => b.status === 'otwarte');
+  // D2 (O-04): na spotkaniu roboczym poza punktem „Przyjęcie porządku obrad” projekt zmienia się w trybie zmian, który
+  // widzą członkowie i ekran sali, zamiast w oknie „Popraw porządek obrad”.
+  if (m.working && draftLive(m)) {
+    if (draftEditing(m)) return null;
+    return <div class="stack-tight">
+      <p class="muted small">Na spotkaniu roboczym punkty rozpoczyna się bez przyjmowania porządku. Zmiany projektu porządku członkowie i ekran sali widzą od razu.</p>
+      <div><Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'projekt', id: m.id})}>Zmień projekt porządku</Button></div>
+    </div>;
+  }
   return <div class="stack-tight">
     <p class="muted small">{m.working ? 'Przed przyjęciem porządek można poprawiać. Na spotkaniu roboczym punkty rozpoczyna się bez przyjmowania porządku.' : 'Przed przyjęciem porządek można poprawiać. Po nieprzyjęciu popraw go i ponownie poddaj pod głosowanie.'}</p>
     {voting ? <p class="muted small">Dostępne po zakończeniu {ballotOf(voting)}.</p>
@@ -989,7 +1100,7 @@ function MeetingControls({readOnly}: {readOnly: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const [closing, setClosing] = useState(false);
-  const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length;
+  const quorum = quorumNow(m, s.roster), present = presentMembers(m as Meeting, s.roster).length;
   const voting = regularOpen(m);
   const screen = screenShows(m);
   const blocked = announceFirst(m);
@@ -997,7 +1108,7 @@ function MeetingControls({readOnly}: {readOnly: boolean}) {
   return <section class="oi-card controls">
     <CardTitle level={2}>Obrady</CardTitle>
     {m.working ? <Notice tone="warn" label="Spotkanie robocze">{workingSentence}</Notice>
-      : present < quorumFor(total) && <Notice tone="warn">Brak kworum. Prezydium nie może podejmować uchwał <Ref>(§ 8 ust. 2).</Ref></Notice>}
+      : present < quorum.required && <Notice tone="warn">Brak kworum. Prezydium nie może podejmować uchwał <Ref>{`(${quorum.basis}).`}</Ref></Notice>}
     <dl class="facts"><Fact label="Ekran sali pokazuje">{screen.text}</Fact></dl>
     {!readOnly && screen.other && <div><Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: null})}>Pokaż bieżący punkt</Button></div>}
     {!readOnly && voting && <p class="muted small">Dostępne po zakończeniu głosowania nr {voting.number}.</p>}
@@ -1094,20 +1205,23 @@ function CloseDialog({onClose}: {onClose: () => void}) {
 }
 
 // Lista obecności: zdanie z liczbą obecnych, znaczniki tylko przy wyjątkach i szare odnośniki z nazwiskiem.
-// Zgłoszoną obecność (F9) potwierdza albo odrzuca osoba prowadząca obrady albo biuro, także wszystkie zgłoszenia naraz.
+// Zgłoszoną obecność (F9) potwierdza osoba prowadząca obrady albo biuro, także wszystkie zgłoszenia naraz. Wersja 3
+// (DA-19, O-11): czynności z listy pokazuje się tylko wtedy, gdy domena je przyjmie (canKeepAttendance z role.ts).
+// Biuro nie odrzuca zgłoszeń i nie zmienia obecności osoby prowadzącej, a w trakcie głosowania wyjście osób
+// uprawnionych zapisuje tylko osoba prowadząca, w karcie głosowania („Oznacz nieobecność”).
 function Attendance() {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const people = usePeople();
-  const [leaving, setLeaving] = useState<{who: string; at: number} | null>(null);
-  const canMark = m.chair.current === s.personId || s.isOrganizer(m.organ);
-  const canConfirm = m.chair.current === s.personId || s.account.kind === 'biuro' || s.account.admin;
-  const members = organMembers(s.roster, m.organ);
+  const actor = actorOf(s);
+  const mm = m as unknown as Meeting;
+  const presiding = m.chair.current === s.personId;
+  const office = isOfficeAccount(actor) && !presiding;
+  const members = organRoster(s.roster, m);
   const reported = members.filter(ms => m.attendance[ms.personId] === 'zgloszony');
   const away = members.filter(ms => m.attendance[ms.personId] !== 'obecny' && m.attendance[ms.personId] !== 'zgloszony');
-  const pending = pendingPresence(m);
-  const voting = m.ballots.find(b => b.status === 'otwarte');
-  const waitingFor = voting ? awaitingVote(voting) : [];
+  const pending = pendingPresence(m).filter(p => canKeepAttendance(mm, actor, p.who, 'potwierdz'));
+  const voting = regularOpen(m);
   const lastEvent = (who: string, guest: boolean) => [...m.presenceLog].reverse().find(e => e.who === who && e.guest === guest);
   const line = (label: string, status: Presence | undefined, who: string, guest: boolean) => {
     const ev = lastEvent(who, guest);
@@ -1120,21 +1234,21 @@ function Attendance() {
   const row = (who: string, name: string, label: string, status: Presence | undefined, guest: boolean) => {
     const present = status === 'obecny';
     const action = present ? 'Zapisz wyjście' : 'Zapisz obecność';
-    // W trakcie głosowania wyjście osoby bez głosu wymaga potwierdzenia: głosowanie przestaje na nią czekać.
-    const ask = present && !guest && waitingFor.includes(who);
-    const tools = status === 'zgloszony' && canConfirm
+    const allowed = (a: 'potwierdz' | 'odrzuc' | 'przybycie' | 'wyjscie') => canKeepAttendance(mm, actor, who, a);
+    // O-11: w trakcie głosowania wyjście członka zapisuje osoba prowadząca w karcie głosowania, a nie na liście.
+    const markable = present ? allowed('wyjscie') && !(voting && !guest) : allowed('przybycie');
+    const tools = status === 'zgloszony' && allowed('potwierdz')
       ? <>
         <Button kind="ghost" quiet small busy={busy} label={`Potwierdź obecność, ${name}`} onClick={() => send({type: 'presence_confirm', who, guest: guest || undefined, accept: true})}>Potwierdź obecność</Button>
-        <Button kind="ghost" quiet small busy={busy} label={`Odrzuć zgłoszenie, ${name}`} onClick={() => send({type: 'presence_confirm', who, guest: guest || undefined, accept: false})}>Odrzuć zgłoszenie</Button>
+        {allowed('odrzuc') && <Button kind="ghost" quiet small busy={busy} label={`Odrzuć zgłoszenie, ${name}`} onClick={() => send({type: 'presence_confirm', who, guest: guest || undefined, accept: false})}>Odrzuć zgłoszenie</Button>}
       </>
-      : canMark && <Button kind="ghost" quiet small busy={busy} haspopup={ask} label={`${action}, ${name}`}
-        onClick={() => ask ? setLeaving({who, at: serverNow()}) : send({type: 'presence', who, guest: guest || undefined, present: !present})}>{action}</Button>;
+      : markable && <Button kind="ghost" quiet small busy={busy} label={`${action}, ${name}`}
+        onClick={() => send({type: 'presence', who, guest: guest || undefined, present: !present})}>{action}</Button>;
     return <li key={who} class={'att-' + (status ?? 'nieobecny')}>
       <span class="att-name"><strong>{name}</strong><small>{line(label, status, who, guest)}</small></span>
       <span class="att-side"><StateChip state={presenceChip(status)}/>{tools}</span>
     </li>;
   };
-  const lastOne = !!voting && waitingFor.length === 1 && (!voting.secret || voting.secret.cast >= voting.secret.issued.length);
   // Twarda spacja po „i” łączy spójnik z następnym imieniem i nazwiskiem.
   const names = (list: typeof members) => list.map((ms, i) => <Fragment key={ms.personId}>{i === 0 ? '' : i === list.length - 1 ? ' i\u00a0' : ', '}<span class="oi-nowrap">{s.personName(ms.personId)}</span></Fragment>);
   return <section class="oi-card attendance-card">
@@ -1143,52 +1257,51 @@ function Attendance() {
     <p class="attendance-summary">Obecnych {members.filter(ms => m.attendance[ms.personId] === 'obecny').length} z {members.length}.
       {reported.length > 0 && <> Na potwierdzenie {plural(reported.length, 'czeka', 'czekają', 'czeka')} {names(reported)}.</>}
       {away.length > 0 && <> Poza posiedzeniem {names(away)}.</>}</p>
+    {voting && (presiding || office) && <p class="muted small">{office ? 'Wyjście w trakcie głosowania zapisuje osoba prowadząca obrady.' : 'Wyjście osoby bez głosu zapiszesz w karcie głosowania przyciskiem „Oznacz nieobecność”.'}</p>}
     {/* Powyżej 760 px ten sam przycisk stoi obok w karcie „Czeka na Twoją decyzję”, więc tu go nie ma (att-confirm-all). */}
-    {canConfirm && pending.length > 0 && <div class="att-confirm-all"><Button small busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${pending.length})`}</Button></div>}
+    {(presiding || office) && pending.length > 0 && <div class="att-confirm-all"><Button small busy={busy} onClick={() => send({type: 'presence_confirm_all'})}>{`Potwierdź wszystkie zgłoszenia (${pending.length})`}</Button></div>}
     <ul class="attendance">{members.map(ms => row(ms.personId, s.personName(ms.personId), ms.label, m.attendance[ms.personId], false))}</ul>
     {m.invited.length > 0 && <>
       <h3 class="card-sub">Głos doradczy i goście</h3>
       <ul class="attendance">{m.invited.map(gid => { const g = people.find(x => x.id === gid); return row(gid, g?.displayName ?? 'Zaproszona osoba', g?.label ?? '', m.guests[gid], true); })}</ul>
     </>}
-    {leaving && voting && <Confirm title="Zapisać wyjście?" kind="danger" confirm="Zapisz wyjście" onClose={() => setLeaving(null)}
-      onConfirm={() => send({type: 'presence', who: leaving.who, present: false})}
-      text={<p>Wyjście z posiedzenia zostanie zapisane przy nazwisku {s.personName(leaving.who)}, z godziną {fmtTime(leaving.at)}. Trwa {voting.purpose === 'proba' ? 'głosowanie próbne' : `głosowanie nr ${voting.number}`} i nie będzie ono czekać na głos tej osoby.</p>}
-      details={lastOne && waitingFor[0] === leaving.who ? <div class="oi-note oi-note--wazne"><span class="oi-label">Ważne</span><p>To ostatnia osoba bez głosu. Głosowanie zakończy się od razu.</p></div> : undefined}/>}
   </section>;
 }
 
-// Prowadzenie obrad: lista tylko wybiera osobę, a przekazanie wymaga potwierdzenia.
+// Prowadzenie obrad: lista tylko wybiera osobę, a przekazanie wymaga potwierdzenia. Fakt „Zastępstwo przewodniczącego”
+// z linią wyznaczenia (O-03 pkt 4); przewodniczący, który prowadzi, zmienia zastępstwo w tej sekcji.
 function Chairing({readOnly}: {readOnly: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
-  const candidates = organMembers(s.roster, m.organ).filter(ms => ms.canChair && ms.personId !== m.chair.current && m.attendance[ms.personId] === 'obecny');
+  const mm = m as unknown as Meeting;
+  // Przekazanie przyjmuje osobę obecną albo ze zgłoszoną obecnością (przekazanie potwierdza jej obecność, rozdz. 4.5).
+  const candidates = organRoster(s.roster, m).filter(ms => canChairPerson(s.roster, mm, ms.personId) && ms.personId !== m.chair.current && (m.attendance[ms.personId] === 'obecny' || m.attendance[ms.personId] === 'zgloszony'));
   const [to, setTo] = useState(candidates[0]?.personId ?? '');
   const [asking, setAsking] = useState(false);
   useEffect(() => { if (!candidates.some(c => c.personId === to)) setTo(candidates[0]?.personId ?? ''); }, [candidates.map(c => c.personId).join()]);
   const target = candidates.find(c => c.personId === to);
-  const chairman = isChairman(s.roster, m.organ, s.personId);
+  const chairman = isChairmanOf(s.roster, mm, s.personId);
+  const changes = !readOnly && canDesignateDeputy(s.roster, mm, actorOf(s));
   return <Fold title="Prowadzenie obrad">
     <div class="stack">
-      <dl class="facts"><Fact label="Prowadzi">{s.personName(m.chair.current)}</Fact>{m.chair.deputy && <Fact label="Zastępstwo przewodniczącego">{s.personName(m.chair.deputy)}, {m.chair.deputyBasis}</Fact>}</dl>
+      <dl class="facts"><Fact label="Prowadzi">{chairingText(s.roster, m) || s.personName(m.chair.current)}</Fact></dl>
+      <DeputyFact change={changes}/>
       {!readOnly && candidates.length > 0 && <>
         <Field label="Komu przekazać prowadzenie?"><select value={to} onChange={e => setTo((e.target as HTMLSelectElement).value)}>
-          {candidates.map(c => <option key={c.personId} value={c.personId}>{s.personName(c.personId)}, {c.label}</option>)}
+          {candidates.map(c => <option key={c.personId} value={c.personId}>{s.personName(c.personId)}, {c.label}{m.attendance[c.personId] === 'zgloszony' ? ', obecność zgłoszona' : ''}</option>)}
         </select></Field>
         <div><Button small haspopup busy={busy} onClick={() => setAsking(true)}>Przekaż prowadzenie</Button></div>
       </>}
       {!readOnly && !candidates.length && <p class="muted small">Teraz nie ma obecnej osoby, której można przekazać prowadzenie <Ref>(§ 9 ust. 1).</Ref></p>}
       {readOnly && <p class="muted small">Widok biura obejmuje obecność i notatki. Czynności formalne wykonuje osoba prowadząca obrady.</p>}
-      {canChairOrgan(s.roster, m.organ, s.personId) && m.chair.current !== s.personId && <p class="muted small">Prowadzenie przejmiesz w widoku uczestnika.</p>}
+      {chairRank(s.roster, mm, s.personId) !== null && m.chair.current !== s.personId && <p class="muted small">Prowadzenie przejmiesz w widoku uczestnika.</p>}
     </div>
     {asking && target && <Confirm title="Przekazać prowadzenie obrad?" confirm="Przekaż prowadzenie" focus="cancel" onClose={() => setAsking(false)}
       onConfirm={() => send({type: 'chair_handover', personId: target.personId})}
-      text={<p>Obrady poprowadzi {s.personName(target.personId)}, {target.label}. Panel prowadzenia obrad przejdzie do tej osoby, a Ty zobaczysz widok uczestnika.{chairman ? ' Prowadzenie możesz przejąć z powrotem w widoku uczestnika.' : ''}</p>}/>}
+      text={<p>Obrady poprowadzi {s.personName(target.personId)}, {target.label}.{m.attendance[target.personId] === 'zgloszony' ? ' Obecność tej osoby zostanie zapisana razem z przekazaniem.' : ''} Panel prowadzenia obrad przejdzie do tej osoby, a Ty zobaczysz widok uczestnika.{chairman ? ' Prowadzenie możesz przejąć z powrotem w widoku uczestnika.' : ''}</p>}/>}
   </Fold>;
 }
 
 function Log() {
-  const {m} = useMeeting();
-  return <Fold title="Przebieg obrad">
-    <ol class="log">{[...m.log].reverse().map((l, i) => <li key={m.log.length - i}><time>{fmtTime(l.at)}</time><span>{l.text}</span></li>)}</ol>
-  </Fold>;
+  return <Fold title="Przebieg obrad"><LogList/></Fold>;
 }

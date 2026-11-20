@@ -1,17 +1,22 @@
 import {useContext, useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import type {Command} from '../shared/meeting.ts';
-import {canChairOrgan, isChairman, noticeDays} from '../shared/meeting.ts';
-import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, modeLabel, needsVote, orderedAgenda, presentMembers, quorumFor, reasumptionSignaturesNeeded, resolutionSubject, resultLabel, resultPendingProcedureText, resultPendingText} from '../shared/rules.ts';
-import {membership, organMembers, personName} from '../shared/roster.ts';
-import type {AgendaItem, Choice, DocType, MaterialType, Meeting, Roster} from '../shared/types.ts';
+import {defaultSite, noticeDays} from '../shared/meeting.ts';
+import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, memberIdsOf, modeLabel, needsVote, orderedAgenda, presentMembers, quorumOf, resolutionSubject, resultLabel, resultPendingProcedureText, resultPendingText, signaturesNeeded} from '../shared/rules.ts';
+import {personName} from '../shared/roster.ts';
+import {lawOf} from '../shared/law.ts';
+import {basisSentences, cascadeEnv, isDraftLive, type CascadeEnv} from '../shared/cascade.ts';
+import {defaultGeneral} from '../shared/settings.ts';
+import {canDesignateDeputy, canReturn, deputyOf, organRoster, takeChairOption} from '../shared/role.ts';
+import type {Actor, AgendaItem, Choice, DocType, LogEntry, MaterialType, Meeting, Roster} from '../shared/types.ts';
+import {generalNow} from './general.ts';
 import {request, serverNow, useLive} from './api.ts';
 import {MeetingCtx, useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {SessionContext, useSession} from './session.ts';
 import {castSecret, forgetRejected, onSecretChange, resendSecret, secretCastHere, secretPending, secretRejected} from './secret.ts';
 import {announce, Button, CardTitle, Chip, Confirm, Countdown, ErrorNotice, Fact, Field, fmtDateTime, fmtShort, fmtTime, Fold, LinkButton, Modal, Notice, plural, SectionHead, StateChip, Tag, TitleLead, useAction, usePageTitle} from './ui.tsx';
-import {breakSince, meetingState, modeGenitive, modeName, votingChip} from './stany.ts';
+import {breakSince, deviationChip, meetingState, modeGenitive, modeName, votingChip} from './stany.ts';
 import {ChairPanel} from './chair.tsx';
-import {DuplicateButton, PrepEditor} from './prep.tsx';
+import {DeputyCard, DuplicateButton, PrepEditor} from './prep.tsx';
 import {ProcedureView} from './procedure.tsx';
 import {MaterialLink, MaterialReader, showBallot} from './reader.tsx';
 import {Messages} from './messages.tsx';
@@ -31,20 +36,77 @@ const castOf = (b: ViewBallot) => ({cast: b.secret ? b.secret.cast : b.voted.len
 export const trialSentence = 'Ten głos nie ma żadnych skutków. Sprawdzamy, czy głosowanie działa na Twoim telefonie.';
 /** Spotkanie robocze (F5): uwaga u członka i w panelu. */
 export const workingSentence = 'To spotkanie robocze. Bez kworum Prezydium nie podejmuje uchwał.';
+/** „Anna Nowak, Sekretarz” według składu posiedzenia (zapisanego przy otwarciu, a bez zapisu bieżącego). */
+export function personWithFunc(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen'>, id: string | null | undefined) {
+  const label = id ? organRoster(roster, m).find(x => x.personId === id)?.label : undefined;
+  return `${personName(roster, id)}${label ? `, ${label}` : ''}`;
+}
 /** „Wniosek zgłasza Anna Nowak, Sekretarz.” przy wniosku o tryb głosowania (F14). */
-export function proposerSentence(roster: Roster, organ: string, b: Pick<ViewBallot, 'target'>) {
+export function proposerSentence(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen'>, b: Pick<ViewBallot, 'target'>) {
   const who = b.target?.kind === 'tryb' ? b.target.proposedBy : undefined;
-  if (!who) return null;
-  const label = membership(roster, organ, who)?.label;
-  return `Wniosek zgłasza ${personName(roster, who)}${label ? `, ${label}` : ''}.`;
+  return who ? `Wniosek zgłasza ${personWithFunc(roster, m, who)}.` : null;
 }
 /**
- * Projekt porządku zmienia się na żywo (F8): bieżący punkt to „Przyjęcie porządku obrad”, porządek nie jest przyjęty,
- * nic się nie głosuje, a wszystkie wyniki są ogłoszone (porządek przyjmuje się przy ogłoszeniu wyniku, F2).
+ * Projekt porządku na żywo (D2, rozdz. 4.6): warunek liczy domena (`effective.meeting.draftLive`), a bez wartości
+ * skutecznej ta sama funkcja z cascade.ts. Punkt „Przyjęcie porządku obrad” albo całe spotkanie robocze.
  */
-export const draftLive = (m: ViewMeeting) => m.kind === 'posiedzenie' && m.status !== 'zakonczone' && !m.agendaAdopted
-  && m.agenda.find(i => i.id === m.currentItemId)?.kind === 'porzadek' && !m.ballots.some(b => b.status === 'otwarte')
-  && !m.ballots.some(b => b.status === 'zamkniete' && b.purpose !== 'proba' && !b.aborted && !b.announcedAt);
+export const draftLive = (m: ViewMeeting) => m.effective?.meeting.draftLive.value ?? isDraftLive(m as unknown as Meeting);
+/** Osoba prowadząca zmienia teraz projekt porządku: punkt „Przyjęcie porządku obrad” albo tryb zmian na spotkaniu roboczym (O-04). */
+export const draftEditing = (m: ViewMeeting) => draftLive(m) && (m.agenda.find(i => i.id === m.currentItemId)?.kind === 'porzadek' || m.presentation?.kind === 'projekt');
+/** Godzina ostatniej zmiany projektu porządku przy każdym punkcie, od otwarcia posiedzenia (wpisy `projekt`, rozdz. 4.6 pkt 2). */
+export function draftChanges(m: Pick<Meeting, 'log' | 'openedAt'>) {
+  const out = new Map<string, number>();
+  for (const l of m.log) if (l.tag === 'projekt' && l.itemId && l.at >= (m.openedAt ?? Infinity)) out.set(l.itemId, l.at);
+  return out;
+}
+/** Ostatni wpis o zmianie projektu porządku od otwarcia posiedzenia. */
+export const lastDraftChange = (m: Pick<Meeting, 'log' | 'openedAt'>) => [...m.log].reverse().find(l => l.tag === 'projekt' && l.at >= (m.openedAt ?? Infinity));
+
+/** Wymagane kworum z wartości skutecznej (skład zapisany przy otwarciu), a bez niej z profilu prawnego. */
+export function quorumNow(m: ViewMeeting, roster: Roster) {
+  const q = m.effective?.meeting.quorum;
+  const law = lawOf(m.organ);
+  if (q) return {required: q.value.required, total: q.value.total, basis: q.basis ?? law.quorum.basis};
+  const total = memberIdsOf(m, roster).length;
+  return {required: quorumOf(law, total), total, basis: law.quorum.basis};
+}
+/** Liczba podpisów pod wnioskiem o reasumpcję przy danej liczbie obecnych (profil prawny organu). */
+export const signaturesFor = (m: Pick<Meeting, 'organ'>, present: number) => signaturesNeeded(lawOf(m.organ), present);
+/** Środowisko kaskady w kliencie (kontrakt A, rozdz. 7): do podstawy rozstrzygnięcia wystarczą profil, organ i skład. */
+export function clientEnv(roster: Roster, m: Pick<Meeting, 'organ'>, types: DocType[]): CascadeEnv {
+  return cascadeEnv({roster, bundle: generalNow() ?? {general: defaultGeneral(defaultSite), docTypes: types, revision: 0}, organ: m.organ});
+}
+/** Konto w roli wykonawcy czynności (funkcje z role.ts). */
+export const actorOf = (s: {account: Actor['account']; personId: string | null; name: string}): Actor => ({account: s.account, personId: s.personId, name: s.name});
+/**
+ * „Prowadzi Anna Grzegorczyk, I Wiceprzewodnicząca, zastępstwo przewodniczącego” w pasku, na sali i w panelu, gdy prowadzi
+ * zastępca wyznaczony przez przewodniczącego (O-03 pkt 6). Inaczej samo imię i nazwisko.
+ */
+export function chairingText(roster: Roster, m: ViewMeeting) {
+  const id = m.chair.current;
+  if (!id) return '';
+  return id === deputyOf(roster, m as unknown as Meeting) ? `${personWithFunc(roster, m, id)}, zastępstwo przewodniczącego` : personName(roster, id);
+}
+
+/** Kto wykonał czynność z dziennika: imię i nazwisko z funkcją ze składu albo nazwa konta (O-07). */
+function logWho(roster: Roster, m: ViewMeeting, l: LogEntry) {
+  if (l.by === 'system') return /upłynął czas/.test(l.text) ? 'Upłynął czas głosowania' : /zagłosowali wszyscy/.test(l.text) ? 'Zagłosowali wszyscy uprawnieni' : 'Zapis aplikacji';
+  const person = roster.persons.find(p => p.name === l.by);
+  return person ? personWithFunc(roster, m, person.id) : l.by;
+}
+/** Przebieg obrad (jawny dziennik): najnowsze na górze, pod zdaniem osoba, a wpis z odstępstwem ze znacznikiem (O-07). */
+export function LogList() {
+  const {m} = useMeeting();
+  const s = useSession();
+  return <ol class="log">{[...m.log].reverse().map((l, i) => <li key={m.log.length - i}>
+    <time>{fmtTime(l.at)}</time>
+    <span class="log-entry">
+      {l.tag === 'odstepstwo' && <StateChip state={deviationChip()}/>}
+      <span>{l.text}</span>
+      <small class="log-by">{logWho(s.roster, m, l)}</small>
+    </span>
+  </li>)}</ol>;
+}
 
 export function MeetingPage({id}: {id: string}) {
   const s = useSession();
@@ -124,7 +186,7 @@ function useMeetingFacts() {
   return [
     <Fact key="data" label="Data" class="fact--data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
     m.place ? <Fact key="miejsce" label="Miejsce" class="fact--miejsce">{m.place}</Fact> : null,
-    chair ? <Fact key="prowadzi" label="Prowadzi">{s.personName(chair)}{m.status !== 'zakonczone' && m.attendance[chair] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact> : null,
+    chair ? <Fact key="prowadzi" label="Prowadzi">{m.status === 'zakonczone' ? s.personName(chair) : chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[chair] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact> : null,
   ];
 }
 
@@ -172,7 +234,7 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
   const liveNow = m.status === 'trwa' || m.status === 'przerwa';
   const organizer = s.isOrganizer(m.organ);
   const open = !procedure && liveNow ? m.ballots.find(b => b.status === 'otwarte') : undefined;
-  const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as Meeting, s.roster).length;
+  const quorum = quorumNow(m, s.roster), present = presentMembers(m as Meeting, s.roster).length;
   const kind = procedure ? 'Głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'Posiedzenie zdalne' : 'Posiedzenie stacjonarne';
   const short = procedure ? `Głosowanie między posiedzeniami, do ${shortDate(m)}` : `${m.working ? 'Spotkanie robocze' : 'Posiedzenie Prezydium'}, ${shortDate(m)}`;
   // Po zamknięciu posiedzenia „Projekt protokołu” jest przyciskiem głównym w podsumowaniu, więc pasek go nie powtarza.
@@ -198,7 +260,7 @@ function MeetingBar(props: {wide: boolean; participantView: boolean; toggleView?
       </div>
       <dl class="facts meeting-bar__facts">
         {facts}
-        {!procedure && liveNow && <><Fact label="Obecnych">{present} z {total}</Fact><Fact label="Wymagane kworum">{quorumFor(total)}</Fact></>}
+        {!procedure && liveNow && <><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact></>}
         {/* Jeden fakt o głosowaniu: numer, pozostały czas i oddane głosy („trwa” mówi znacznik obok tytułu). */}
         {open && votes && <Fact label={ballotTitle(open)}>zostało <Countdown endsAt={open.endsAt} label={false}/>, oddano {votes.cast} z {votes.total}</Fact>}
       </dl>
@@ -237,7 +299,7 @@ function agendaState(m: ViewMeeting, it: AgendaItem, locked: boolean, types: Doc
   return null;
 }
 
-export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean}) {
+export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean; changes?: Map<string, number>}) {
   const {m} = useMeeting();
   const types = useDocTypes();
   const closed = m.status === 'zakonczone';
@@ -254,7 +316,8 @@ export function AgendaList(props: {selected?: string | null; onSelect?: (id: str
         const state = current ? null : agendaState(m, it, locked(it), types);
         const inner = <>
           <span class="agenda-no">{itemNumber(m.agenda, it.id)}</span>
-          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}<PeopleFacts it={it} compact/></span>
+          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}<PeopleFacts it={it} compact/>
+            {props.changes?.has(it.id) && <small class="agenda-changed">zmieniono o {fmtTime(props.changes.get(it.id))}</small>}</span>
           <span class="agenda-meta">{current ? <Chip tone="trwa">Teraz</Chip> : state && <span class="agenda-state">{state}</span>}</span>
         </>;
         const cls = ['agenda-item', it.parentId ? 'is-sub' : '', current ? 'is-current' : '', selected && !current ? 'is-selected' : '', locked(it) ? 'is-locked' : '', `st-${it.status}`].filter(Boolean).join(' ');
@@ -289,7 +352,7 @@ export function emphasize(text: string) {
  * rodzaj materiału z posiedzenia, jeśli stoi w jego kontekście (ekran sali go nie ma). Głosowanie przerwane (F7)
  * ma formułę i powód bez liczb, a wynik jeszcze nieogłoszony (F2) zdanie, że ogłosi go osoba prowadząca obrady.
  */
-export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: MaterialType | null; proposer?: string | null}) {
+export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: MaterialType | null; proposer?: string | null; basisLine?: string | null}) {
   const {b} = props;
   const ctx = useContext(MeetingCtx);
   const session = useContext(SessionContext);
@@ -308,20 +371,22 @@ export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: Material
       <p class="result-meta">{`Powód „${b.aborted.reason}”. Głosów nie policzono.`}</p>
     </div>;
   }
-  // W głosowaniu między posiedzeniami nie ma obrad: wynik ogłasza przewodniczący albo wiceprzewodniczący (F2).
+  // W głosowaniu między posiedzeniami nie ma obrad: wynik ogłasza osoba, która rozpoczęła głosowanie, albo przewodniczący (DA-12).
   const pendingText = ctx?.m.kind === 'procedura' ? resultPendingProcedureText : resultPendingText;
   if (!r) return b.status === 'zamkniete' && b.resultHidden ? <div class={'result' + (props.big ? ' result-big' : '')}>
     {props.big ? <Tag>{ballotTitle(b)}</Tag> : <span class="oi-label">{ballotTitle(b)}</span>}{subject}
     <p class="result-pending">{pendingText}</p>
   </div> : null;
   const kind = props.kind !== undefined ? props.kind : ctx ? materialTypeOf(ctx.m, b) : null;
-  const reason = b.closeReason === 'czas' ? ' Upłynął czas głosowania.' : b.closeReason === 'prowadzacy' ? ' Głosowanie zakończyła osoba prowadząca obrady.' : '';
+  // O-06: gdy osoba prowadząca zakończyła głosowanie przed oddaniem wszystkich głosów, zdanie stoi w fakcie „Odstępstwo”.
+  const early = !trial && b.closeReason === 'prowadzacy' && r.cast < r.eligible && !b.remote;
+  const reason = b.closeReason === 'czas' ? ' Upłynął czas głosowania.' : b.closeReason === 'prowadzacy' && !early ? ' Głosowanie zakończyła osoba prowadząca obrady.' : '';
   const meta = b.closeReason === 'wszyscy' && r.cast === r.eligible
     ? `Zagłosowali wszyscy uprawnieni (${r.eligible}).${trial ? '' : ` Wymagane kworum ${r.quorum}.`}`
     : `Głosowało ${r.cast} z ${r.eligible} uprawnionych.${trial ? '' : ` Wymagane kworum ${r.quorum}.`}${reason}`;
   const replaced = b.supersededBy && ctx ? ctx.m.ballots.find(x => x.id === b.supersededBy) : undefined;
   // F14: zdanie o wnioskodawcy także na ekranie sali, który przekazuje je w `proposer` (nie ma kontekstu posiedzenia).
-  const proposer = props.proposer !== undefined ? props.proposer : session && ctx ? proposerSentence(session.roster, ctx.m.organ, b) : null;
+  const proposer = props.proposer !== undefined ? props.proposer : session && ctx ? proposerSentence(session.roster, ctx.m, b) : null;
   return <div class={'result' + (props.big ? ' result-big' : '')}>
     {head}{subject}
     <p class="result-label">{emphasize(resultLabel(b, kind))}</p>
@@ -330,10 +395,43 @@ export function ResultCard(props: {b: ViewBallot; big?: boolean; kind?: Material
     </div>
     <p class="result-meta">{meta}{trial ? ' Głosowanie próbne nie ma żadnych skutków.' : ''}</p>
     {proposer && <p class="result-meta">{proposer}</p>}
+    {/* O-06: podstawa rozstrzygnięcia pod liczbami; na ekranie sali jedno zdanie (`basisLine`). */}
+    {props.basisLine !== undefined ? props.basisLine && <p class="result-meta result-basis-line">{props.basisLine}</p> : ctx && <BasisBlock b={b}/>}
     {/* Ekran sali (big) nie ma elementów sterowania, więc bez rozwijanego wykazu imiennego. */}
     {!props.big && b.mode === 'imienne' && Object.keys(b.votes).length > 0 && <Fold title="Wykaz imienny"><NamedList b={b}/></Fold>}
     {replaced && <p class="muted small">Wynik zastąpiony wynikiem reasumpcji w głosowaniu nr {replaced.number}.</p>}
   </div>;
+}
+
+/** Odstępstwa przy głosowaniu (O-06): punkt rozpatrzony poza kolejnością i głosowanie zakończone przed oddaniem wszystkich głosów. */
+function ballotDeviations(m: ViewMeeting, b: ViewBallot) {
+  const out: string[] = [];
+  const it = m.agenda.find(i => i.id === b.itemId);
+  if (it?.outOfOrder && b.purpose !== 'proba') out.push(`Punkt rozpatrzono poza kolejnością przyjętego porządku obrad. Powód „${it.outOfOrder.reason.replace(/\.$/, '')}”.`);
+  const r = b.result;
+  if (r && b.closeReason === 'prowadzacy' && !b.remote && b.purpose !== 'proba' && r.cast < r.eligible) {
+    const n = r.eligible - r.cast;
+    out.push(`Głosowanie zakończyła osoba prowadząca obrady. ${n} ${plural(n, 'osoba nie oddała', 'osoby nie oddały', 'osób nie oddało')} głosu.`);
+  }
+  return out;
+}
+/**
+ * Podstawa rozstrzygnięcia pod liczbami wyniku (O-06): większość, kworum i tryb z paragrafami (basisSentences z cascade.ts)
+ * oraz fakt „Odstępstwo”. `fold` zwija całość w sekcję „Podstawa” (panel prowadzenia obrad).
+ */
+export function BasisBlock(props: {b: ViewBallot; fold?: boolean}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  const types = useDocTypes();
+  if (!props.b.result || props.b.purpose === 'proba') return null;
+  const sentences = basisSentences(clientEnv(s.roster, m, types), m as unknown as Meeting, props.b);
+  const deviations = ballotDeviations(m, props.b);
+  if (!sentences.length && !deviations.length) return null;
+  const body = <>
+    {sentences.length > 0 && <div class="result-basis">{!props.fold && <span class="kicker">Podstawa</span>}{sentences.map(x => <p key={x}>{x}</p>)}</div>}
+    {deviations.length > 0 && <dl class="facts result-deviation"><Fact label="Odstępstwo">{deviations.map(x => <span class="person-line" key={x}>{x}</span>)}</Fact></dl>}
+  </>;
+  return props.fold ? <Fold title="Podstawa">{body}</Fold> : body;
 }
 
 function NamedList({b}: {b: ViewBallot}) {
@@ -425,7 +523,7 @@ export function VoteCard(props: {b: ViewBallot; embedded?: boolean}) {
     {trial && <p class="small">{trialSentence}</p>}
     {failure}{place}{dialog}
   </div>;
-  const proposer = proposerSentence(s.roster, m.organ, b);
+  const proposer = proposerSentence(s.roster, m, b);
   const origin = b.reasumptionOf ? m.ballots.find(x => x.id === b.reasumptionOf)
     : b.target?.kind === 'reasumpcja' ? m.ballots.find(x => x.id === (b.target as {ballotId: string}).ballotId) : undefined;
   const motion = origin ? m.motions.find(x => x.ballotId === origin.id && (x.voteBallotId === b.id || x.repeatBallotId === b.id)) : undefined;
@@ -470,7 +568,8 @@ export function RejectedVote(props: {ballots: ViewBallot[]}) {
   </Notice>;
 }
 
-function PresenceCard() {
+// `secondary`: na telefonie zastępcy główne działanie to przejęcie prowadzenia, a potwierdzenie obecności ma obrys (O-03 pkt 1).
+function PresenceCard(props: {secondary?: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
   const me = s.personId!;
@@ -484,7 +583,7 @@ function PresenceCard() {
   }
   return <div class="oi-note presence">
     <div><strong>{status === 'wyszedl' ? 'Zapisano Twoje wyjście z posiedzenia.' : 'Nie potwierdzono obecności.'}</strong><span class="muted small">{m.mode === 'zdalne' ? 'Potwierdź, gdy połączysz się z posiedzeniem.' : 'Potwierdź, gdy jesteś na sali.'}</span></div>
-    <Button kind="primary" busy={busy} onClick={() => send({type: 'presence', who: me, present: true})}>{status === 'wyszedl' ? 'Wracam na posiedzenie' : 'Potwierdzam obecność'}</Button>
+    <Button kind={props.secondary ? 'secondary' : 'primary'} busy={busy} onClick={() => send({type: 'presence', who: me, present: true})}>{status === 'wyszedl' ? 'Wracam na posiedzenie' : 'Potwierdzam obecność'}</Button>
   </div>;
 }
 
@@ -525,12 +624,12 @@ function CurrentItem(props: {it: AgendaItem; accent: boolean}) {
 // Komunikaty dla czytnika ekranu o zdarzeniach obrad: porównanie poprzedniego i bieżącego stanu.
 function useMeetingAnnouncements(m: ViewMeeting, online: boolean) {
   const s = useSession();
-  const previous = useRef<{open?: string; result?: string; trial?: string; status: string; chair: string | null; online: boolean} | null>(null);
+  const previous = useRef<{open?: string; result?: string; trial?: string; status: string; chair: string | null; online: boolean; draft: number} | null>(null);
   const open = m.ballots.find(b => b.status === 'otwarte');
   const shown = m.presentation?.kind === 'wynik' ? m.ballots.find(b => b.id === m.presentation!.id && b.result) : undefined;
   const trialResult = lastTrial(m);
   useEffect(() => {
-    const now = {open: open?.id, result: shown?.id, trial: trialResult?.id, status: m.status, chair: m.chair.current, online};
+    const now = {open: open?.id, result: shown?.id, trial: trialResult?.id, status: m.status, chair: m.chair.current, online, draft: lastDraftChange(m)?.at ?? 0};
     const before = previous.current;
     previous.current = now;
     if (!before) return;
@@ -551,6 +650,8 @@ function useMeetingAnnouncements(m: ViewMeeting, online: boolean) {
     if (now.status === 'przerwa' && before.status !== 'przerwa') lines.push('Przerwa w obradach. Głosowania są wstrzymane.');
     if (now.status === 'trwa' && before.status === 'przerwa') lines.push('Obrady zostały wznowione.');
     if (now.chair && now.chair !== before.chair) lines.push(`Obrady prowadzi teraz ${s.personName(now.chair)}.`);
+    // D2: treść wpisu dziennika o zmianie projektu porządku (np. „Zmieniono projekt porządku obrad. Dodano punkt 5 „…”.”).
+    if (now.draft > before.draft) lines.push(...m.log.filter(l => l.tag === 'projekt' && l.at > before.draft && l.at >= (m.openedAt ?? Infinity)).map(l => l.text));
     if (now.online !== before.online) lines.push(online ? 'Połączenie przywrócone.' : 'Brak połączenia. Trwa ponowne łączenie.');
     if (lines.length) announce(lines.join(' '));
   });
@@ -581,11 +682,107 @@ function lastTrial(m: ViewMeeting) {
   return !m.presentation || m.presentation.at <= (last.closedAt ?? 0) || m.presentation.kind === 'glosowanie' ? last : undefined;
 }
 
-function MemberView(props: {online: boolean}) {
+/**
+ * Fakt „Zastępstwo przewodniczącego” z linią wyznaczenia (O-03 pkt 4). Przewodniczący widzi też „Zmień zastępstwo”,
+ * który rozwija kartę zastępstwa z przygotowania (wyznaczenie także w trakcie obrad i spoza sali, § 16 ust. 2).
+ */
+export function DeputyFact(props: {change: boolean}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  const [open, setOpen] = useState(false);
+  const deputy = deputyOf(s.roster, m as unknown as Meeting);
+  const set = m.chair.deputySet;
+  const basis = lawOf(m.organ).deputy?.basis ?? '§ 16 ust. 2';
+  if (!deputy && !props.change) return null;
+  return <div class="deputy-fact stack-tight">
+    <dl class="facts"><Fact label="Zastępstwo przewodniczącego">{deputy ? <>
+      <span class="person-line">{personWithFunc(s.roster, m, deputy)}</span>
+      {set && <span class="fact-src">{`Wyznaczenie przez przewodniczącego o godz. ${fmtTime(set.at)} (${basis}).`}</span>}
+    </> : 'Bez wyznaczenia'}</Fact></dl>
+    {props.change && (open ? <DeputyCard/> : <div><Button kind="ghost" quiet small onClick={() => setOpen(true)}>Zmień zastępstwo</Button></div>)}
+  </div>;
+}
+
+/**
+ * Przejęcie prowadzenia w widoku uczestnika (D1, DA-17, O-03). Kolejność do prowadzenia liczy takeChairOption z role.ts:
+ * zastępca ma kartę z przyciskiem głównym, inny wiceprzewodniczący przy wyznaczonym zastępcy cichy przycisk z powodem,
+ * a gdy osoba prowadząca jest w aplikacji obecna, każdy, kto mógłby przejąć prowadzenie po jej wyjściu, ma odnośnik
+ * „Osoba prowadząca jest poza salą”. Osoba, której wyjście zapisał przejmujący, widzi uwagę i powrót do prowadzenia.
+ */
+function useChairTake(accentFree: boolean) {
   const {m, send} = useMeeting();
   const s = useSession();
+  const [dialog, setDialog] = useState<'przejmij' | 'zamiast' | 'poza-sala' | 'powrot' | null>(null);
+  const [leftAt, setLeftAt] = useState(0);
   const me = s.personId;
-  const [taking, setTaking] = useState(false);
+  const actor = actorOf(s);
+  const mm = m as unknown as Meeting;
+  const current = m.chair.current;
+  const sitting = m.kind === 'posiedzenie' && (m.status === 'trwa' || m.status === 'przerwa');
+  const plain = sitting && me ? takeChairOption(s.roster, mm, actor) : null;
+  const left = sitting && me && !plain?.allowed ? takeChairOption(s.roster, mm, actor, {chairLeft: true}) : null;
+  const currentPresent = !!current && m.attendance[current] === 'obecny';
+  const deputy = deputyOf(s.roster, mm);
+  const change = m.chair.changes[m.chair.changes.length - 1];
+  const exitAt = current && !currentPresent ? [...m.presenceLog].reverse().find(e => e.who === current && !e.guest && e.type === 'wyjscie')?.at : undefined;
+  const role = me ? organRoster(s.roster, m).find(x => x.personId === me)?.label : undefined;
+  // Wyjście tej osoby zapisała osoba, która przejęła prowadzenie i nadal prowadzi (I-6).
+  const recorded = me && change && change.recordedExit && change.from === me && change.to === current ? change : undefined;
+  const returns = !!recorded && !!me && canReturn(s.roster, mm, me) && !!plain?.allowed;
+  const take = (extra: {chairLeft?: boolean; reason?: string} = {}) => send({type: 'chair_take', ...extra});
+  let card = null, bottom = null;
+  const note = recorded ? <Notice tone="warn" label="Prowadzenie obrad">{`Od godz. ${fmtTime(recorded.at)} obrady prowadzi ${personWithFunc(s.roster, m, current)}. Twoje wyjście zapisano przy przejęciu prowadzenia.`}</Notice> : null;
+  if (plain?.allowed && plain.basis === 'zastepca') {
+    // O-03 pkt 1: telefon wyznaczonego zastępcy, gdy osoba prowadząca jest poza posiedzeniem albo prowadzi inny wiceprzewodniczący.
+    const id = 'zastepstwo-karta';
+    const lead = currentPresent
+      ? `Obrady prowadzi ${personWithFunc(s.roster, m, current)}. Na tym posiedzeniu zastępujesz przewodniczącego (§ 16 ust. 2), więc możesz przejąć prowadzenie obrad.`
+      : `${exitAt ? `Osoba prowadząca obrady wyszła z posiedzenia o godz. ${fmtTime(exitAt)}.` : 'Osoba prowadząca obrady jest poza posiedzeniem.'} Na tym posiedzeniu zastępujesz przewodniczącego (§ 16 ust. 2), więc możesz przejąć prowadzenie obrad.${me && m.attendance[me] === 'obecny' ? '' : ' Twoja obecność zostanie zapisana razem z przejęciem.'}`;
+    card = <section class={'oi-card deputy-take' + (accentFree ? ' is-teraz' : '')} aria-labelledby={id}>
+      <h2 class="oi-card__title" id={id}><span class="oi-mark" aria-hidden="true"/><span>Zastępstwo przewodniczącego</span></h2>
+      <p>{lead}</p>
+      <div><Button kind="primary" haspopup onClick={() => setDialog(returns ? 'powrot' : 'przejmij')}>{returns ? 'Wróć do prowadzenia obrad' : 'Przejmij prowadzenie obrad'}</Button></div>
+    </section>;
+  } else if (plain?.allowed && plain.needsReason) {
+    // O-03 pkt 3: inny wiceprzewodniczący przy wyznaczonym zastępcy, bez karty „teraz” i bez przycisku głównego.
+    card = <section class="oi-card chair-priority" aria-label="Prowadzenie obrad">
+      <span class="kicker">Prowadzenie obrad</span>
+      <p>{`Pierwszeństwo w prowadzeniu ma ${personWithFunc(s.roster, m, deputy)}, zastępca wyznaczony przez przewodniczącego (§ 16 ust. 2).`}</p>
+      <div><Button kind="ghost" quiet haspopup onClick={() => setDialog('zamiast')}>Przejmij prowadzenie zamiast zastępcy</Button></div>
+    </section>;
+  } else if (plain?.allowed && plain.basis === 'powrot') {
+    bottom = <div class="actions"><Button haspopup onClick={() => setDialog('powrot')}>Wróć do prowadzenia obrad</Button></div>;
+  } else if (plain?.allowed && !currentPresent) {
+    card = <Notice>
+      <p>{exitAt ? `Osoba prowadząca obrady wyszła z posiedzenia o godz. ${fmtTime(exitAt)}. ` : ''}Możesz przejąć prowadzenie{role ? ` jako ${role}` : ''}.</p>
+      <div><Button kind="primary" haspopup onClick={() => setDialog('przejmij')}>Przejmij prowadzenie obrad</Button></div>
+    </Notice>;
+  } else if (plain?.allowed) {
+    bottom = <div class="actions"><Button haspopup onClick={() => setDialog('przejmij')}>Przejmij prowadzenie obrad</Button></div>;
+  } else if (left?.allowed && currentPresent) {
+    // O-03 pkt 2: osoba prowadząca obecna w aplikacji, ale poza salą.
+    bottom = <div class="actions"><Button kind="ghost" quiet haspopup onClick={() => { setLeftAt(serverNow()); setDialog('poza-sala'); }}>Osoba prowadząca jest poza salą</Button></div>;
+  }
+  const dialogs = <>
+    {dialog === 'przejmij' && <Confirm title="Przejąć prowadzenie obrad?" confirm="Przejmij prowadzenie" focus="cancel" onClose={() => setDialog(null)} onConfirm={() => take()}
+      text={<p>{m.attendance[me!] === 'obecny' ? 'Ekran przełączy się na panel prowadzenia obrad.' : 'Twoja obecność zostanie zapisana razem z przejęciem prowadzenia. Ekran przełączy się na panel prowadzenia obrad.'}</p>}/>}
+    {dialog === 'powrot' && <Confirm title="Wrócić do prowadzenia obrad?" confirm="Wróć do prowadzenia" focus="cancel" onClose={() => setDialog(null)} onConfirm={() => take()}
+      text={<p>Twoja obecność zostanie zapisana razem z powrotem. Ekran przełączy się na panel prowadzenia obrad.</p>}/>}
+    {dialog === 'zamiast' && <Confirm title="Przejąć prowadzenie zamiast zastępcy?" confirm="Przejmij prowadzenie" onClose={() => setDialog(null)} onConfirm={reason => take({reason})}
+      field={{label: 'Powód', required: true, hint: 'Np. zastępca jeszcze nie dotarł na salę.'}}
+      text={<p>Powód trafi do protokołu. Gdy zastępca będzie na sali, może przejąć prowadzenie.</p>}/>}
+    {dialog === 'poza-sala' && current && <Confirm title="Zapisać wyjście osoby prowadzącej?" confirm="Zapisz wyjście i przejmij prowadzenie" onClose={() => setDialog(null)}
+      onConfirm={reason => take(left?.allowed && left.needsReason ? {chairLeft: true, reason} : {chairLeft: true})}
+      field={left?.allowed && left.needsReason ? {label: 'Powód', required: true, hint: 'Np. zastępca jeszcze nie dotarł na salę.'} : undefined}
+      text={<p>{`Wyjście z posiedzenia zostanie zapisane przy nazwisku ${personName(s.roster, current)}, z godziną ${fmtTime(leftAt)}, a prowadzenie obrad przejmiesz Ty. Wpis trafi do protokołu.`}</p>}/>}
+  </>;
+  return {card, note, bottom, dialogs, deputyCard: !!(plain?.allowed && plain.basis === 'zastepca')};
+}
+
+function MemberView(props: {online: boolean}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  const me = s.personId;
   useMeetingAnnouncements(m, props.online);
   const open = m.ballots.find(b => b.status === 'otwarte');
   const waiting = !!open && !!me && m.attendance[me] === 'obecny' && awaitingVote(open).includes(me);
@@ -612,22 +809,19 @@ function MemberView(props: {online: boolean}) {
   const member = !!me && s.isMember(m.organ);
   const status = me ? m.attendance[me] ?? 'nieobecny' : 'nieobecny';
   const since = breakSince(m);
-  // Przejęcie prowadzenia: zastępca, gdy osoba prowadząca jest poza posiedzeniem, a przewodniczący zawsze.
-  const chairCapable = canChairOrgan(s.roster, m.organ, me) && m.chair.current !== me;
-  const chairAway = !m.chair.current || m.attendance[m.chair.current] !== 'obecny';
-  const takeAllowed = chairCapable && status === 'obecny' && (isChairman(s.roster, m.organ, me) || (chairAway && (m.chair.deputy === me || !m.chair.deputy || m.attendance[m.chair.deputy] !== 'obecny')));
-  const left = chairAway && m.chair.current ? [...m.presenceLog].reverse().find(e => e.who === m.chair.current && !e.guest && e.type === 'wyjscie') : undefined;
-  const role = membership(s.roster, m.organ, me)?.label;
+  const chairTake = useChairTake(!open);
   const change = m.chair.changes[m.chair.changes.length - 1];
-  const handedOver = me && change && change.from === me && m.chair.current !== me ? change : undefined;
+  const handedOver = me && change && change.from === me && m.chair.current !== me && !change.recordedExit ? change : undefined;
+  const live = draftLive(m);
+  const changes = draftChanges(m);
+  const latest = lastDraftChange(m);
+  const chairman = canDesignateDeputy(s.roster, m as unknown as Meeting, actorOf(s)) && m.chair.current !== me;
   return <div class="member">
-    {member && status !== 'obecny' && <PresenceCard/>}
+    {member && status !== 'obecny' && <PresenceCard secondary={chairTake.deputyCard}/>}
     {m.working && <Notice tone="warn" label="Spotkanie robocze">{workingSentence}</Notice>}
     {m.status === 'przerwa' && <Notice tone="warn" label="Przerwa w obradach">{since ? `od godz. ${fmtTime(since)}. ` : ''}Głosowania są wstrzymane.</Notice>}
-    {takeAllowed && chairAway && <Notice>
-      <p>{left ? `Osoba prowadząca obrady wyszła z posiedzenia o godz. ${fmtTime(left.at)}. ` : ''}Możesz przejąć prowadzenie{role ? ` jako ${role}` : ''}.</p>
-      <div><Button kind="primary" haspopup onClick={() => setTaking(true)}>Przejmij prowadzenie obrad</Button></div>
-    </Notice>}
+    {chairTake.note}
+    {chairTake.card}
     {handedOver && <Notice tone="warn" label="">Prowadzenie obrad przekazano o godz. {fmtTime(handedOver.at)}. Prowadzi {s.personName(handedOver.to)}.</Notice>}
     {open ? <VoteCard b={open}/>
       : awaitingResult ? <section class="oi-card vote-closed" aria-labelledby={`zakonczone-${awaitingResult.id}`}>
@@ -637,19 +831,22 @@ function MemberView(props: {online: boolean}) {
       : trialResult ? <ResultCard b={trialResult} big/>
       : result ? <ResultCard b={result} big/> : null}
     <RejectedVote ballots={m.ballots}/>
-    {current && <CurrentItem it={current} accent={!open}/>}
+    {current && <CurrentItem it={current} accent={!open && !chairTake.deputyCard}/>}
     {presented && !open && <section class="oi-card"><span class="oi-label">Materiał pokazywany na sali</span><MaterialReader id={presented.id} version={presented.version} inline/></section>}
     <Motions/>
-    {(m.mode === 'zdalne' || m.messages.length > 0) && <Messages/>}
-    {/* F8: gdy prowadzący układa projekt porządku, projekt jest rozwinięty, a zmiany widać przy zwykłym odświeżaniu. */}
-    <Fold key={draftLive(m) ? 'projekt-na-zywo' : 'porzadek'} title={m.agendaAdopted ? 'Przyjęty porządek obrad' : 'Projekt porządku obrad'} open={draftLive(m)}>
-      {draftLive(m) && <Notice>Osoba prowadząca obrady może jeszcze zmieniać projekt. Zmiany widzisz od razu.</Notice>}
-      <AgendaList compact/>
+    {(m.effective?.meeting.messages.value === 'zawsze' || (!m.effective && m.mode === 'zdalne') || m.messages.length > 0) && <Messages/>}
+    {/* D2 (O-04): przy przyjmowaniu porządku i przez całe spotkanie robocze projekt jest rozwinięty, rozwija się przy każdej
+        zmianie, a zmiany widać przy zwykłym odświeżaniu. */}
+    <Fold key={live ? `projekt-na-zywo-${latest?.at ?? 0}` : 'porzadek'} title={m.agendaAdopted ? 'Przyjęty porządek obrad' : 'Projekt porządku obrad'} open={live}>
+      {live && <Notice>{m.working ? 'To spotkanie robocze. Osoba prowadząca obrady może zmieniać projekt porządku. Zmiany widzisz od razu.' : 'Osoba prowadząca obrady może jeszcze zmieniać projekt. Zmiany widzisz od razu.'}</Notice>}
+      <AgendaList compact changes={live ? changes : undefined}/>
     </Fold>
     {member && status === 'obecny' && <PresenceRow/>}
-    {takeAllowed && !chairAway && <div class="actions"><Button haspopup onClick={() => setTaking(true)}>Przejmij prowadzenie obrad</Button></div>}
-    {taking && <Confirm title="Przejąć prowadzenie obrad?" confirm="Przejmij prowadzenie" focus="cancel" onClose={() => setTaking(false)} onConfirm={() => send({type: 'chair_take'})}
-      text={<p>Twój ekran przełączy się na panel prowadzenia obrad.</p>}/>}
+    {chairTake.bottom}
+    {chairman && <DeputyFact change/>}
+    {/* O-07, DA-10: jawny przebieg obrad u członka, zwinięty, przed szczegółami posiedzenia. */}
+    {member && <Fold title="Przebieg obrad"><LogList/></Fold>}
+    {chairTake.dialogs}
   </div>;
 }
 
@@ -678,7 +875,7 @@ export function Motions() {
   const eligibleBallots = m.ballots.filter(b => b.status === 'zamkniete' && !!b.announcedAt && !b.resultHidden && b.mode === 'jawne' && !b.aborted && !['reasumpcja', 'tryb', 'proba'].includes(b.purpose) && !b.reasumptionOf && !b.supersededBy && !m.motions.some(x => x.ballotId === b.id && !['odrzucony', 'wycofany'].includes(x.status)));
   const shown = m.motions.filter(x => x.status !== 'wycofany');
   if (!shown.length && (!canAct || !eligibleBallots.length)) return null;
-  const needed = reasumptionSignaturesNeeded(present.length);
+  const needed = signaturesFor(m, present.length);
   const intro = <p class="muted small">Jeśli wynik głosowania jawnego budzi uzasadnione wątpliwości, możesz złożyć wniosek o reasumpcję. Wniosek musi poprzeć co najmniej 1/3 obecnych członków, czyli teraz {needed} {plural(needed, 'podpis', 'podpisy', 'podpisów')} przy {present.length} obecnych. Reasumpcja jest możliwa tylko na tym posiedzeniu i tylko raz (§ 12).</p>;
   const file = canAct && eligibleBallots.length > 0 && <div class="actions"><Button small haspopup onClick={() => setCreating(true)}>Złóż wniosek o reasumpcję</Button></div>;
   const form = creating && <Modal title="Wniosek o reasumpcję głosowania" onClose={() => setCreating(false)}>
@@ -724,7 +921,8 @@ function PrepPreview() {
 function Summary() {
   const {m} = useMeeting();
   const s = useSession();
-  const members = organMembers(s.roster, m.organ);
+  const members = organRoster(s.roster, m);
+  const quorum = quorumNow(m, s.roster);
   const final = m.ballots.filter(b => b.result && !b.supersededBy && b.purpose !== 'proba');
   const named = final.filter(b => b.mode === 'imienne' && Object.keys(b.votes).length > 0);
   const days = noticeDays(m as Meeting);
@@ -741,7 +939,7 @@ function Summary() {
       {!m.working && <DuplicateButton/>}
       <dl class="facts">
         <Fact label="Skład">{members.length} {plural(members.length, 'osoba', 'osoby', 'osób')}</Fact>
-        <Fact label="Wymagane kworum">{quorumFor(members.length)}</Fact>
+        <Fact label="Wymagane kworum">{quorum.required}</Fact>
         <Fact label="Zawiadomienie">{days === null ? 'nie wpisano daty' : `${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem`}</Fact>
       </dl>
     </div>

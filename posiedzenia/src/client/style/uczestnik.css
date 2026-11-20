@@ -278,3 +278,20 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 /* Wynik nieogłoszony (F2) i zdanie o głosowaniu próbnym (F1) */
 .result-pending { font-size: var(--t-tekst); font-weight: 600; color: var(--tekst-mocny); }
 .vote-trial { font-size: var(--t-lista); line-height: 1.45; color: var(--tekst-mocny); }
+
+/* Wersja 3. O-07: przebieg obrad z osobą pod zdaniem i znacznikiem odstępstwa (panel i telefon członka). */
+.log-entry { display: flex; flex-direction: column; align-items: flex-start; gap: var(--odstep-1); min-width: 0; }
+.log-by { font-size: var(--t-meta); color: var(--tekst-drugorzedny); }
+/* D2 (O-04): „zmieniono o {godz.}” przy punkcie projektu porządku na żywo (słowo, nie sam kolor). */
+.agenda-changed { display: block; font-size: var(--t-meta); font-weight: 400; font-style: italic; color: var(--tekst-drugorzedny); }
+/* O-06: podstawa rozstrzygnięcia pod liczbami wyniku i fakt „Odstępstwo” */
+.result-basis { display: flex; flex-direction: column; gap: var(--odstep-1); padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.result-basis p { font-size: var(--t-maly); line-height: 1.45; color: var(--tekst); }
+.result-deviation .fact dd { font-weight: 400; font-size: var(--t-maly); }
+.result-deviation .person-line { display: block; }
+/* O-03 pkt 1: karta zastępcy przewodniczącego na telefonie */
+.deputy-take p { font-size: var(--t-tekst); line-height: 1.5; }
+.deputy-fact .person-line { display: block; }
+/* O-03 pkt 3: pierwszeństwo zastępcy u innego wiceprzewodniczącego, bez czerwonego paska (to nie jest karta „teraz”). */
+.chair-priority { gap: var(--odstep-2); }
+.chair-priority p { font-size: var(--t-tekst); line-height: 1.5; }

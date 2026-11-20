@@ -153,3 +153,27 @@
   .tile-tools, .tile .edit-form { padding-left: 0; }
 }
 @media (prefers-reduced-motion: no-preference) { .tile:not(.is-dragging) { transition: background-color .2s, border-color .2s; } }
+
+/* Wersja 3 (O-02): karta „Głosowanie w tym punkcie”. Fakty w dwóch kolumnach (przedmiot i rodzaj, tryb i większość,
+   czas i kworum), linia źródła pod wartością tylko przy różnicy, paragraf tylko przy wartości z regulaminu. */
+.vote-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--odstep-3) var(--odstep-6); }
+@media (max-width: 760px) { .vote-rules { grid-template-columns: minmax(0, 1fr); } }
+.chair .vote-rules .fact dd { font-weight: 400; }
+.fact-src { display: block; font-size: var(--t-maly); font-weight: 400; color: var(--tekst-drugorzedny); line-height: 1.4; margin-top: var(--odstep-1); }
+.vote-motions { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.vote-motions .actions { gap: 0 var(--odstep-5); }
+.vote-edit { padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.ballot-form > div > .link { align-self: flex-start; }
+
+/* O-01: następny krok z punktem, który czeka */
+.next-step > div > .link { align-self: flex-start; }
+
+/* O-03 pkt 5: zgłoszenie osoby, która może przejąć prowadzenie, w karcie biura */
+.decision-note { display: block; font-size: var(--t-maly); font-weight: 400; color: var(--tekst-drugorzedny); margin-top: var(--odstep-1); }
+
+/* O-04: tryb zmian projektu porządku na spotkaniu roboczym */
+.draft-live { display: flex; flex-direction: column; gap: var(--odstep-2); padding: var(--odstep-3) var(--odstep-4); background: var(--powierzchnia-miekka); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); }
+.draft-live > div { align-self: flex-start; }
+
+/* O-03 pkt 4: zastępstwo przewodniczącego w sekcji „Prowadzenie obrad” */
+.deputy-fact .deputy-card { padding-top: var(--odstep-2); }

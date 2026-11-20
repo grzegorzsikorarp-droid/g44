@@ -2,11 +2,13 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {useMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Button, CardTitle, fmtTime} from './ui.tsx';
+import {canMessage} from '../shared/role.ts';
 
 // Wspólny kanał wiadomości, czyli dwustronna komunikacja uczestników w czasie rzeczywistym (§ 14 ust. 5).
 // Lista ma rolę „log”, więc czytnik ekranu odczytuje nowe wiadomości. Pole ma widoczną etykietę.
 // `bare`: bez własnej karty i tytułu, gdy wiadomości stoją w zwijanej sekcji (panel prowadzenia obrad). Tam „Wyślij”
 // ma obrys, bo w kolumnie panelu jest najwyżej jeden przycisk główny (np. „Wznów obrady”).
+// Wersja 3 (DA-20): gość czyta kanał wiadomości bez pola do pisania; osoby z głosem doradczym piszą.
 export function Messages(props: {bare?: boolean}) {
   const {m, send, busy} = useMeeting();
   const s = useSession();
@@ -17,6 +19,7 @@ export function Messages(props: {bare?: boolean}) {
   const id = useId();
   useEffect(() => { list.current?.scrollTo({top: list.current.scrollHeight}); }, [m.messages.length]);
   const closed = m.status === 'zakonczone';
+  const writes = canMessage(m, {account: s.account, personId: s.personId, name: s.name});
   if (closed && !m.messages.length) return null;
   const submit = async (e: Event) => {
     e.preventDefault();
@@ -31,7 +34,8 @@ export function Messages(props: {bare?: boolean}) {
         {m.messages.map(x => <li key={x.id} class={x.author === s.account.id ? 'is-mine' : ''}><span class="message-meta">{x.authorName}, godz. {fmtTime(x.at)}</span><span class="message-text">{x.text}</span></li>)}
       </ol>}
     </div>
-    {!closed && <form class="message-form" onSubmit={submit}>
+    {!closed && !writes && <p class="muted small">Goście czytają wiadomości, ale ich nie piszą.</p>}
+    {!closed && writes && <form class="message-form" onSubmit={submit}>
       <div class={'oi-field' + (empty ? ' oi-field--blad' : '')}>
         <label class="oi-field__label" for={id}>Wiadomość do wszystkich uczestników</label>
         <div class="message-row">

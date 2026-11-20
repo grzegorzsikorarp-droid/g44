@@ -1,8 +1,12 @@
-import type {Account, AgendaItem, Ballot, DocType, Meeting, Motion, Roster} from '../shared/types.ts';
+import type {Account, AgendaItem, Ballot, ChairBasis, ChairChange, DocType, Meeting, Membership, Motion, Roster} from '../shared/types.ts';
 import {membership, organMembers, organOf, personName} from '../shared/roster.ts';
-import {ballotDocType, choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenceOf, presenterGroups, presentMembers, quorumFor, reasumptionSignaturesNeeded, resultLabel, resultPendingProcedureText, resultPendingText, unannounced} from '../shared/rules.ts';
+import {ballotDocType, choiceLabel, hasVoted, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, presenceOf, presenterGroups, presentMembers, quorumFor, quorumOf, reasumptionSignaturesNeeded, resultLabel, resultPendingProcedureText, resultPendingText, signaturesNeeded, unannounced} from '../shared/rules.ts';
 import {defaultDocTypes} from '../shared/doctypes.ts';
-import {noticeDays} from '../shared/meeting.ts';
+import {defaultSite, noticeDays} from '../shared/meeting.ts';
+import {cascadeEnv, effectiveMeeting, type Deviation} from '../shared/cascade.ts';
+import {defaultGeneral} from '../shared/settings.ts';
+import {lawOf, type LegalProfile} from '../shared/law.ts';
+import {deputyOf, organRoster} from '../shared/role.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
 
@@ -11,6 +15,12 @@ import {typo} from '../shared/typo.ts';
 // dlatego nie zawiera nazw zależnych od wersji (podaje je wywołujący w `names` i `look`).
 // Spotkanie robocze bez kworum (F5) ma zamiast protokołu notatkę: bez rozdziału „Podjęte uchwały”, z podpisem osoby
 // prowadzącej i osoby sporządzającej notatkę. Głosowania próbne (F1) są tylko w zdaniu w rozdziale I.
+// Wersja 3 (specyfikacja, rozdz. 5.8): posiedzenia z ustawieniami zapisanymi przy otwarciu (`frozen` bez `legacy`) mają
+// nowe zdania: zastępstwo, otwarcie i zmiany prowadzenia z podstawą (DA-17), wyjście zapisane przez przejmującego,
+// goście z informacją, kto zaprasza, sposób zapisu obecności, wymagana większość, odstępstwa w porządku i w punktach,
+// podpis osoby, która zamknęła obrady (DA-18), oraz zarządzający, tryb i krótszy termin głosowania między posiedzeniami.
+// Skład i liczby pochodzą z `frozen`. Odstępstwa liczy jedna funkcja domeny (effectiveMeeting(...).deviations).
+// Posiedzenia zapisane przy przejściu na wersję 3 (`legacy`) mają projekt protokołu jak w wersji 2, słowo w słowo.
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]!);
 /** Tekst dokumentu: polska typografia (twarde spacje jak w interfejsie), potem znaki HTML. */
@@ -71,6 +81,8 @@ interface Doc {
   types: DocType[]; hidden: Set<string>;
   /** Plik do edycji w Wordzie: fakty, porządek i podpisy w prostszym zapisie, który edytory tekstu odczytują wiernie. */
   word: boolean;
+  /** Wersja 3: posiedzenie z ustawieniami zapisanymi przy otwarciu (bez `legacy`), profil prawny, skład i odstępstwa. */
+  v3: boolean; law: LegalProfile; members: Membership[]; deviations: Deviation[];
 }
 
 const p = (text: string, cls = '') => `<p${cls ? ` class="${cls}"` : ''}>${t(text)}</p>`;
@@ -89,10 +101,27 @@ function table(label: string, head: string[], rows: string[][], numeric: number[
     + '</tbody></table></div>';
 }
 
-/** Imię i nazwisko z funkcją ze składu: „Sebastian Irzykowski, Przewodniczący”. */
+/** Imię i nazwisko z funkcją ze składu: „Sebastian Irzykowski, Przewodniczący” (wersja 3: ze składu zapisanego przy otwarciu). */
 function who(d: Doc, personId: string) {
-  const label = membership(d.roster, d.m.organ, personId)?.label;
+  const label = d.v3 ? d.members.find(x => x.personId === personId)?.label : membership(d.roster, d.m.organ, personId)?.label;
   return `${personName(d.roster, personId)}${label ? `, ${label}` : ''}`;
+}
+/** Skład organu w dokumencie: w wersji 3 zapisany przy otwarciu, w posiedzeniach sprzed wersji 3 bieżący (jak w wersji 2). */
+const membersOf = (d: Doc) => d.v3 ? d.members : organMembers(d.roster, d.m.organ);
+/** Odstępstwa danego rodzaju (wersja 3), w punkcie albo w całym posiedzeniu. */
+const deviationsOf = (d: Doc, kinds: Deviation['kind'][], itemId?: string) => d.deviations.filter(x => kinds.includes(x.kind) && (itemId === undefined || x.itemId === itemId));
+/** Dopisek w nawiasie przy zmianie prowadzenia (rozdz. 5.8, DA-17). */
+function chairNote(c: ChairChange) {
+  const basis: ChairBasis | undefined = c.basis;
+  switch (basis) {
+    case 'przewodniczacy': return 'przejęcie prowadzenia przez przewodniczącego';
+    case 'zastepca': return 'zastępstwo wyznaczone przez przewodniczącego, § 16 ust. 2';
+    case 'bez_wyznaczenia': return 'bez wyznaczenia zastępcy przez przewodniczącego, § 9 ust. 1';
+    case 'zamiast_zastepcy': return `zamiast wyznaczonego zastępcy, powód ${reasonText(c.reasonGiven ?? '')}`;
+    case 'przekazanie': return 'przekazanie prowadzenia';
+    case 'powrot': return 'powrót do prowadzenia po wyjściu zapisanym przy przejęciu';
+    default: return c.reason;
+  }
 }
 /** Osoba prowadząca obrady w danej chwili (z historii zmian prowadzenia). */
 function chairAt(m: Meeting, at: number) {
@@ -116,7 +145,7 @@ function byWhom(d: Doc, name: string, at: number) {
 }
 /** Członkowie organu obecni w danej chwili według listy obecności (ostatnie przybycie albo wyjście przed tą chwilą). */
 function presentAt(d: Doc, at: number) {
-  return organMembers(d.roster, d.m.organ).filter(ms => {
+  return membersOf(d).filter(ms => {
     const last = [...d.m.presenceLog].reverse().find(e => e.who === ms.personId && !e.guest && e.at <= at && (e.type === 'przybycie' || e.type === 'wyjscie'));
     return last?.type === 'przybycie';
   }).length;
@@ -257,7 +286,7 @@ function motionText(d: Doc, x: Motion) {
     case 'zbiera_podpisy': {
       if (closed) return text + ' Wniosek nie zebrał wymaganej liczby podpisów.';
       const present = presentMembers(m, d.roster);
-      return text + ` Wniosek zbiera podpisy (${x.signatures.filter(id => present.includes(id)).length} z ${reasumptionSignaturesNeeded(present.length)}).`;
+      return text + ` Wniosek zbiera podpisy (${x.signatures.filter(id => present.includes(id)).length} z ${d.v3 ? signaturesNeeded(d.law, present.length) : reasumptionSignaturesNeeded(present.length)}).`;
     }
     case 'zlozony': return text + (closed ? ' Wniosku nie poddano pod głosowanie.' : ' Wniosek czeka na decyzję Prezydium.');
     case 'glosowany': return text + (vote?.status === 'zamkniete'
@@ -282,7 +311,7 @@ function ballotsWithMotions(d: Doc, ballots: Ballot[]) {
 function openingText(d: Doc) {
   const {m} = d;
   const opener = m.chair.changes[0]?.to ?? m.chair.current;
-  const total = organMembers(d.roster, m.organ).length;
+  const total = membersOf(d).length;
   const q = m.quorumChecks[0];
   let text = `Otwarcie posiedzenia o godz. ${time(m.openedAt)}.`;
   if (opener) text += ` Obrady prowadzi ${who(d, opener)}.`;
@@ -339,6 +368,9 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   if (it.outOfOrder) parts.push(p(`Punkt rozpatrzono poza kolejnością przyjętego porządku obrad. Powód ${reasonText(it.outOfOrder.reason)}.`));
   const mats = m.materials.filter(x => it.materialIds.includes(x.id));
   if (mats.length) parts.push(p(`${mats.length === 1 ? 'Materiał' : 'Materiały'} do ${d.procedure ? 'sprawy' : 'punktu'} ${listing(mats.map(x => quoted(x.title)))}.`, 'muted'));
+  // Wersja 3 (rozdz. 5.8): zmiana rodzaju sprawy w trakcie obrad i sprawa niepoddana pod głosowanie (DA-8), a w głosowaniu
+  // między posiedzeniami tryb tajny albo imienny z danymi uchwały albo głosowania (§ 11 ust. 2).
+  for (const x of deviationsOf(d, ['rodzaj_sprawy', 'bez_glosowania', 'tryb_procedury'], it.id)) parts.push(p(x.text));
   if (it.note.trim()) parts.push(`<div class="note">${t(it.note.trim()).replace(/\n/g, '<br>')}</div>`);
   parts.push(...ballotBlocks(d, d.placed.get(it.id) ?? []));
   parts.push(...itemNotes(d, it, first).map(text => p(text, 'item-note')));
@@ -375,8 +407,12 @@ function confirmedBy(d: Doc, who: string, guest: boolean, ownName: string) {
     if (!dropped) return '';
     return dropped.by === ownName ? 'zgłoszenie w aplikacji, wycofane' : `zgłoszenie w aplikacji, odrzucone przez ${byWhom(d, dropped.by, dropped.at)}`;
   }
-  if (first.by === ownName) return 'potwierdzenie w aplikacji';
-  return first.reportedAt ? `zgłoszenie w aplikacji, potwierdzone przez ${byWhom(d, first.by, first.at)}` : `zapisane przez ${byWhom(d, first.by, first.at)}`;
+  const exit = d.v3 && own.some(e => e.type === 'wyjscie' && e.via === 'przejmujacy') ? ', wyjście zapisane przez osobę, która przejęła prowadzenie' : '';
+  // Wersja 3 (rozdz. 5.8): obecność zapisana razem z otwarciem posiedzenia albo z przejęciem prowadzenia obrad (D1).
+  if (d.v3 && first.via === 'otwarcie') return 'obecność zapisana przy otwarciu posiedzenia' + exit;
+  if (d.v3 && first.via === 'prowadzenie') return 'obecność zapisana przy przejęciu prowadzenia obrad' + exit;
+  if (first.by === ownName) return 'potwierdzenie w aplikacji' + exit;
+  return (first.reportedAt ? `zgłoszenie w aplikacji, potwierdzone przez ${byWhom(d, first.by, first.at)}` : `zapisane przez ${byWhom(d, first.by, first.at)}`) + exit;
 }
 
 /**
@@ -416,8 +452,24 @@ function chapterOne(d: Doc) {
   else out.push(p(`${sent}, ${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem${days < 7 ? ', czyli mniej niż wymagane 7 dni' : ''} (§ 7 ust. 1).`));
   if (m.openedAt) out.push(p(m.closedAt ? `Posiedzenie otwarto o godz. ${time(m.openedAt)}, a zamknięto o godz. ${time(m.closedAt)}.` : `Posiedzenie otwarto o godz. ${time(m.openedAt)}.`));
   else out.push(p('Posiedzenia jeszcze nie otwarto.'));
-  for (const c of m.chair.changes) out.push(p(`Od godz. ${time(c.at)} obrady prowadzi ${who(d, c.to)}${c.reason ? ` ${inParens(c.reason)}` : ''}.`));
-  if (m.chair.deputy) out.push(p(`Na czas nieobecności przewodniczącego zastępuje go ${who(d, m.chair.deputy)}${m.chair.deputyBasis ? ` ${inParens(m.chair.deputyBasis)}` : ''}.`));
+  if (d.v3) {
+    // Wersja 3 (rozdz. 5.8): zastępstwo, otwarcie z podstawą, wyjście zapisane przez przejmującego i zmiany prowadzenia.
+    for (const x of deviationsOf(d, ['zastepstwo'])) out.push(p(x.text));
+    for (const c of m.chair.changes) {
+      if (c.opening) {
+        const note = c.basis === 'zastepca' || c.basis === 'bez_wyznaczenia' || c.basis === 'zamiast_zastepcy' ? ` ${inParens(chairNote(c))}` : '';
+        out.push(p(`Posiedzenie otwiera ${who(d, c.to)}${note}.`));
+        continue;
+      }
+      if (c.recordedExit) out.push(p(`O godz. ${time(c.at)} zapisano wyjście osoby prowadzącej obrady. Wyjście zapisała osoba, która przejęła prowadzenie.`));
+      const note = chairNote(c);
+      out.push(p(`Od godz. ${time(c.at)} obrady prowadzi ${who(d, c.to)}${note ? ` ${inParens(note)}` : ''}.`));
+    }
+    for (const x of deviationsOf(d, ['gosc'])) out.push(p(x.text));
+  } else {
+    for (const c of m.chair.changes) out.push(p(`Od godz. ${time(c.at)} obrady prowadzi ${who(d, c.to)}${c.reason ? ` ${inParens(c.reason)}` : ''}.`));
+    if (m.chair.deputy) out.push(p(`Na czas nieobecności przewodniczącego zastępuje go ${who(d, m.chair.deputy)}${m.chair.deputyBasis ? ` ${inParens(m.chair.deputyBasis)}` : ''}.`));
+  }
   if (m.working) out.push(p(workingText(d)));
   // Przerwy z par wpisów dziennika „Przerwa w obradach.” i „Wznowienie obrad.”.
   const breaks: {from: number; to?: number}[] = [];
@@ -448,17 +500,17 @@ function chapterOne(d: Doc) {
 function workingText(d: Doc) {
   const {m} = d;
   const w = m.working!;
-  const total = organMembers(d.roster, m.organ).length;
+  const total = membersOf(d).length;
   const check = [...m.quorumChecks].reverse().find(q => q.at <= w.at);
   const first = check && check.present < check.required
     ? `O godz. ${time(check.at)} stwierdzono brak kworum (obecnych ${check.present} z ${total} członków Prezydium, wymagane co najmniej ${check.required}, § 8 ust. 2).`
-    : `Nie stwierdzono kworum (obecnych ${presentAt(d, w.at)} z ${total} członków Prezydium, wymagane co najmniej ${quorumFor(total)}, § 8 ust. 2).`;
+    : `Nie stwierdzono kworum (obecnych ${presentAt(d, w.at)} z ${total} członków Prezydium, wymagane co najmniej ${d.v3 ? quorumOf(d.law, total) : quorumFor(total)}, § 8 ust. 2).`;
   return `${first} Od godz. ${time(w.at)} obrady kontynuowano jako spotkanie robocze. Bez kworum Prezydium nie podejmuje uchwał.`;
 }
 
 function chapterTwo(d: Doc) {
   const {m, roster} = d;
-  const members = organMembers(roster, m.organ);
+  const members = membersOf(d);
   const out = [`<h2>${t('II. Lista obecności')}</h2>`];
   const head = ['Imię i nazwisko', 'Funkcja', 'Obecność', 'Sposób potwierdzenia'];
   out.push(table('Lista obecności', head, members.map(ms => {
@@ -472,7 +524,10 @@ function chapterTwo(d: Doc) {
   }
   // Zdanie o składzie i lista stwierdzeń kworum w jednym bloku: w druku lista nie zaczyna sama następnej strony.
   const checks = m.quorumChecks.length ? '<ul class="quorum-checks">' + m.quorumChecks.map(q => `<li>${t(`O godz. ${time(q.at)} stwierdzono ${q.present >= q.required ? 'kworum' : 'brak kworum'}, obecnych ${q.present}, wymagane ${q.required}.`)}</li>`).join('') + '</ul>' : '';
-  out.push(`<div class="quorum-summary">${p(`Skład Prezydium ${members.length} ${plural(members.length, 'osoba', 'osoby', 'osób')}, wymagane kworum ${quorumFor(members.length)} (§ 8 ust. 2).`)}${checks}</div>`);
+  const required = d.v3 ? quorumOf(d.law, members.length) : quorumFor(members.length);
+  // Wersja 3 (rozdz. 5.8): po zdaniu o kworum wymagana większość z profilu prawnego.
+  const majority = d.v3 ? p(`Uchwały podejmuje się zwykłą większością głosów (${d.law.majority.basis}).`) : '';
+  out.push(`<div class="quorum-summary">${p(`Skład Prezydium ${members.length} ${plural(members.length, 'osoba', 'osoby', 'osób')}, wymagane kworum ${required} (${d.v3 ? d.law.quorum.basis : '§ 8 ust. 2'}).`)}${majority}${checks}</div>`);
   return out.join('');
 }
 
@@ -492,7 +547,9 @@ function chapterThree(d: Doc) {
   const adopted = !hiddenAdoption && (m.agendaAdopted || !!adoption?.outcomePending);
   const sentence = adopted ? (adoption ? `Porządek obrad przyjęto w głosowaniu nr ${adoption.number}.` : 'Porządek obrad przyjęto.')
     : hiddenAdoption ? '' : d.note ? 'Porządku obrad nie przyjęto. Na spotkaniu roboczym nie przeprowadza się głosowań.' : 'Porządek obrad nie został przyjęty.';
-  return `<h2>${t('III. Porządek obrad')}</h2>` + list + draftChanges(d, adopted ? adoption : undefined, adopted) + (sentence ? p(sentence) : '');
+  // Wersja 3 (rozdz. 5.8): punkty dodane po wysłaniu zawiadomienia i punkty wymienione w § 9 ust. 2 pominięte z powodem.
+  const deviations = deviationsOf(d, ['poza_zawiadomieniem', 'pominiety_punkt']).map(x => p(x.text)).join('');
+  return `<h2>${t('III. Porządek obrad')}</h2>` + list + deviations + draftChanges(d, adopted ? adoption : undefined, adopted) + (sentence ? p(sentence) : '');
 }
 
 /**
@@ -524,10 +581,13 @@ function chapterFour(d: Doc) {
 
 function chapterFive(d: Doc) {
   const {m} = d;
-  const adopted = m.ballots.filter(b => b.result?.adopted && (!b.supersededBy || d.hidden.has(b.supersededBy)) && !d.hidden.has(b.id) && isResolution(m, b)).sort((x, y) => x.number - y.number);
-  const out = [`<h2>${t('V. Podjęte uchwały')}</h2>`];
+  // Wersja 3 (rozdz. 5.8): w wykazie także inne akty, których rodzaj stoi w wykazie aktów protokołu (`inActs`).
+  const inActs = (b: Ballot) => d.v3 && !notVoted.has(b.purpose) && !!d.types.find(x => x.id === ballotDocType(m, b))?.inActs;
+  const adopted = m.ballots.filter(b => b.result?.adopted && (!b.supersededBy || d.hidden.has(b.supersededBy)) && !d.hidden.has(b.id) && (isResolution(m, b) || inActs(b))).sort((x, y) => x.number - y.number);
+  const others = adopted.some(b => !isResolution(m, b));
+  const out = [`<h2>${t(others ? 'V. Podjęte uchwały i inne akty' : 'V. Podjęte uchwały')}</h2>`];
   if (!adopted.length) return out.concat(p('Nie podjęto uchwał.')).join('');
-  out.push(table('Podjęte uchwały', ['Numer', 'W sprawie', 'Za', 'Przeciw', 'Wstrzymało się'], adopted.map(b => {
+  out.push(table(others ? 'Podjęte uchwały i inne akty' : 'Podjęte uchwały', ['Numer', 'W sprawie', 'Za', 'Przeciw', 'Wstrzymało się'], adopted.map(b => {
     const ref = b.material ? m.materials.find(x => x.id === b.material!.id) : undefined;
     const title = (b.material?.title ?? b.subject).trim();
     const number = ref?.number.trim() || /\bnr\s+([^\s,]+)/i.exec(title)?.[1]?.replace(/[.,;:]$/, '') || DOTS;
@@ -546,7 +606,7 @@ function chapterSix(d: Doc) {
 
 function signatures(d: Doc) {
   const {m, roster} = d;
-  const secretary = organMembers(roster, m.organ).find(ms => ms.func === 'sekretarz');
+  const secretary = membersOf(d).find(ms => ms.func === 'sekretarz');
   const chair = m.chair.current ? personName(roster, m.chair.current) : DOTS;
   // F10: protokolant z danych do protokołu. Notatkę (F5) podpisuje osoba prowadząca i osoba, która ją sporządza.
   const people: [string, string][] = d.note ? [
@@ -557,17 +617,22 @@ function signatures(d: Doc) {
     ['Sekretarz lub zastępujący go członek Prezydium', secretary ? personName(roster, secretary.personId) : DOTS],
     ['Protokolant (jeżeli został wyznaczony)', m.recorder || DOTS],
   ];
-  if (d.word) return '<table class="signatures"><tr>' + people.map(([role, name]) => `<td>${'.'.repeat(30)}<br>${t(role)}<br><b>${t(name)}</b></td>`).join('') + '</tr></table>';
-  return '<div class="signatures">' + people.map(([role, name]) => `<div class="signature"><span class="signature-role">${t(role)}</span><span class="signature-name">${t(name)}</span></div>`).join('') + '</div>';
+  // DA-18: pod protokołem podpisuje osoba, która zamknęła obrady; gdy prowadzenie się zmieniało, zdanie o pozostałych.
+  const others = d.v3 && !d.procedure ? [...new Set(m.chair.changes.map(c => c.to))].filter(id => id !== m.chair.current) : [];
+  const also = others.length ? p(`Obrady prowadzili także ${listing(others.map(id => who(d, id)))}.`, 'signatures-note') : '';
+  if (d.word) return '<table class="signatures"><tr>' + people.map(([role, name]) => `<td>${'.'.repeat(30)}<br>${t(role)}<br><b>${t(name)}</b></td>`).join('') + '</tr></table>' + also;
+  return '<div class="signatures">' + people.map(([role, name]) => `<div class="signature"><span class="signature-role">${t(role)}</span><span class="signature-name">${t(name)}</span></div>`).join('') + '</div>' + also;
 }
 
 function footer(d: Doc, generatedAt: number) {
   const {m} = d;
   if (d.note) return p(`Projekt notatki wygenerowany z zapisu aplikacji ${longAt(generatedAt)}. Uchwały w sprawach z porządku obrad podejmie Prezydium na posiedzeniu z kworum.`, 'muted footer');
   const what = d.procedure ? 'głosowania' : 'obrad';
+  // Wersja 3: termin z profilu prawnego organu (law.minutes.deadlineDays, § 13 ust. 2), dla Prezydium 21 dni.
+  const days = d.law.minutes.deadlineDays;
   const deadline = m.closedAt
-    ? `Termin sporządzenia protokołu ${longDate(addDays(dayOf(m.closedAt), 21))} (21 dni od zakończenia ${what}).`
-    : `Protokół sporządza się w terminie 21 dni od zakończenia ${what}.`;
+    ? `Termin sporządzenia protokołu ${longDate(addDays(dayOf(m.closedAt), days))} (${days} dni od zakończenia ${what}).`
+    : `Protokół sporządza się w terminie ${days} dni od zakończenia ${what}.`;
   return p(`Projekt wygenerowany z zapisu aplikacji ${longAt(generatedAt)}. ${deadline} Protokół przyjmuje Prezydium na następnym posiedzeniu.`, 'muted footer')
     + p(`Protokół przyjęto na posiedzeniu Prezydium w dniu ${DOTS}`, 'adoption');
 }
@@ -576,7 +641,7 @@ function footer(d: Doc, generatedAt: number) {
 function attendanceSheet(d: Doc, organName: string) {
   const {m, roster} = d;
   const rows = [
-    ...organMembers(roster, m.organ).map(ms => [t(personName(roster, ms.personId)), t(ms.label), '']),
+    ...membersOf(d).map(ms => [t(personName(roster, ms.personId)), t(ms.label), '']),
     ...invitedRows(d).map(a => [t(a.name), t(a.label), '']),
   ];
   return '<section class="attachment">' + p(`Załącznik nr 1 do ${d.note ? 'notatki' : 'protokołu'}`, 'draft') + `<h2>${t('Lista obecności')}</h2>`
@@ -593,9 +658,14 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
   const council = (organOf(roster, 'rada')?.name ?? 'Okręgowa Rada').replace(/^Okręgowa Rada/, 'Okręgowej Rady');
   const procedure = m.kind === 'procedura';
   const note = isNote(m);
+  const types = m.frozen?.docTypes ?? options.docTypes ?? defaultDocTypes;
+  const v3 = !!m.frozen && !m.frozen.legacy;
+  // Odstępstwa liczy domena; do nich wystarczą profil prawny, skład i konta (ustawienia ogólne ich nie zmieniają).
+  const env = cascadeEnv({roster, bundle: {general: defaultGeneral(defaultSite), docTypes: types, revision: 0}, organ: m.organ, accounts});
   const d: Doc = {
     m, roster, accounts, procedure, office: names.office ?? 'biuro', regulation: names.regulation ?? `Regulaminu ${council}`, placed: new Map(), loose: [], trials: [],
-    note, types: options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced ? unannounced(m).map(b => b.id) : []), word,
+    note, types: v3 ? types : options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced ? unannounced(m).map(b => b.id) : []), word,
+    v3, law: lawOf(m.organ), members: organRoster(roster, m), deviations: v3 ? effectiveMeeting(env, m).deviations : [],
   };
   const known = new Set(m.agenda.map(i => i.id));
   for (const b of [...m.ballots].sort((x, y) => x.openedAt - y.openedAt || x.number - y.number)) {
@@ -635,6 +705,12 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
     : `<dl class="facts minutes-facts">${facts.map(([label, value]) => `<div class="fact"><dt>${t(label)}</dt><dd>${t(value)}</dd></div>`).join('')}</dl>`;
   const parts = [`<header><p class="draft">${t(note ? 'Projekt notatki do uzupełnienia' : 'Projekt do uzupełnienia przez sekretarza')}</p><h1>${title}</h1>${factList}</header>`];
   if (procedure) {
+    if (v3 && m.chair.current) {
+      // Wersja 3 (rozdz. 5.8, DA-12): kto zarządza głosowaniem, a przy zastępcy podstawa wyznaczenia.
+      const deputy = deputyOf(roster, m) === m.chair.current;
+      parts.push(p(`Głosowaniem zarządza ${who(d, m.chair.current)}${deputy ? ', zastępca wyznaczony przez przewodniczącego (§ 16 ust. 2)' : ''}.`));
+    }
+    for (const x of deviationsOf(d, ['termin_procedury'])) parts.push(p(x.text));
     parts.push(deadlineChanges(d));
     parts.push(`<h2>${t('Sprawy i wyniki')}</h2>`);
     for (const it of orderedAgenda(m.agenda)) {

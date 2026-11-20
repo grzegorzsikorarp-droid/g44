@@ -12,12 +12,14 @@ import {PeopleFacts} from './people.tsx';
 // drag and drop), przenosi go przyciskami „Wyżej” i „Niżej”, zmienia nazwę i osoby, dodaje punkt i podpunkt, usuwa punkt.
 // Każda zmiana trafia do przebiegu obrad, a członkowie i ekran sali widzą ją przy zwykłym odświeżaniu.
 // Po otwarciu posiedzenia domena przenosi tylko punkty nierozpoczęte i tylko za punkt „Przyjęcie porządku obrad”.
+// Wersja 3 (D2, O-04): na spotkaniu roboczym te same kafelki działają w trybie zmian (`live`), który członkowie i ekran
+// sali widzą przez całe spotkanie; „Zakończ zmiany” przywraca na ekranie sali bieżący punkt.
 
 const fixedKinds = new Set(['otwarcie', 'porzadek', 'zamkniecie']);
 /** Miejsce upuszczenia: rodzic, punkt, przed którym staje kafelek (null to koniec grupy), i wysokość kreski w liście. */
 type Slot = {parentId: string | null; beforeId: string | null; y: number; same?: boolean};
 
-export function DraftAgenda() {
+export function DraftAgenda(props: {live?: {main: 'primary' | 'secondary'}}) {
   const {m, send, busy} = useMeeting();
   const box = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -163,8 +165,13 @@ export function DraftAgenda() {
   const cancel = () => { stop(); setDrag(null); };
 
   const removed = m.agenda.find(i => i.id === removing);
-  return <section class="oi-card draft-agenda" aria-labelledby="projekt-porzadku">
+  const live = props.live;
+  return <section class={'oi-card draft-agenda' + (live?.main === 'primary' ? ' is-teraz' : '')} aria-labelledby="projekt-porzadku">
     <div class="panel-head"><h2 class="oi-card__title" id="projekt-porzadku"><span class="oi-mark" aria-hidden="true"/><span>Projekt porządku obrad</span></h2><StateChip state={m.working ? null : agendaChip(false)}/></div>
+    {live && <div class="draft-live">
+      <p class="strong">Członkowie i ekran sali widzą teraz projekt porządku.</p>
+      <div><Button kind={live.main} busy={busy} onClick={() => send({type: 'present', kind: null})}>Zakończ zmiany</Button></div>
+    </div>}
     <p class="muted small">Przeciągnij kafelek za napis „Przeciągnij” albo użyj przycisków „Wyżej” i „Niżej”. Członkowie i ekran sali widzą zmiany od razu, a każda zmiana trafia do przebiegu obrad. Punkty rozpoczęte i punkty przed „Przyjęciem porządku obrad” zostają na miejscu.</p>
     <div class="draft-box" ref={box}>
       <ol class="draft-list">{items.map(it => {

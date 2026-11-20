@@ -61,3 +61,8 @@
 /* Spotkanie robocze (F5): znacznik pod tytułem posiedzenia i zdanie w stopce */
 .screen-working { display: inline-flex; margin-top: var(--odstep-1); }
 .screen-foot-note { font-size: clamp(.95rem, .8rem + .5vw, 1.4rem); color: var(--tekst-drugorzedny); }
+
+/* Wersja 3. D2 (O-04): „zmieniono o {godz.}” pod tytułem zmienionego punktu w projekcie porządku na sali. */
+.screen-draft__changed { display: block; font-size: .75em; font-style: italic; font-weight: 400; color: var(--tekst-drugorzedny); line-height: 1.3; }
+/* O-06: podstawa rozstrzygnięcia jednym zdaniem pod liczbami */
+.result-big .result-basis-line { font-size: clamp(.95rem, .7rem + .6vw, 1.5rem); }

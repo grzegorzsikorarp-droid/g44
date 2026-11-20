@@ -1,12 +1,13 @@
 import type {ComponentChildren} from 'preact';
-import {itemNumber, materialTypeOf, orderedAgenda, presenterGroups, presentMembers, quorumFor, resultPendingText} from '../shared/rules.ts';
-import {organMembers} from '../shared/roster.ts';
-import type {AgendaItem, Meeting} from '../shared/types.ts';
+import {itemNumber, materialTypeOf, orderedAgenda, presenterGroups, presentMembers, resultPendingText} from '../shared/rules.ts';
+import {organOfCode} from '../shared/roster.ts';
+import {lawOf} from '../shared/law.ts';
+import type {AgendaItem, Meeting, Roster} from '../shared/types.ts';
 import {useLive, useNow} from './api.ts';
 import type {ViewBallot, ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Chip, Countdown, Fact, fmtShort, fmtTime, Tag, TitleLead, usePageTitle} from './ui.tsx';
-import {draftLive, proposerSentence, ResultCard} from './meeting.tsx';
+import {chairingText, draftChanges, draftLive, lastDraftChange, proposerSentence, quorumNow, ResultCard} from './meeting.tsx';
 import {Plate} from './plate.tsx';
 import {brand} from './brand.ts';
 import {breakSince, meetingState, modeName} from './stany.ts';
@@ -33,16 +34,32 @@ function People({it}: {it: Pick<AgendaItem, 'presenters'>}) {
 }
 
 /**
- * Projekt porządku obrad przy jego przyjmowaniu (F8): punkty i podpunkty dużym pismem. Lista odświeża się razem
- * z ekranem, więc sala widzi zmiany osoby prowadzącej obrady od razu.
+ * Projekt porządku obrad przy jego przyjmowaniu i w trybie zmian na spotkaniu roboczym (F8, D2): punkty i podpunkty
+ * dużym pismem. Lista odświeża się razem z ekranem, więc sala widzi zmiany osoby prowadzącej obrady od razu, a zmieniony
+ * punkt ma pod tytułem słowa „zmieniono o {godz.}” (stan nie wynika z samego koloru).
  */
 function DraftAgenda({m}: {m: ViewMeeting}) {
   const items = orderedAgenda(m.agenda);
-  return <ol class={'screen-draft' + (items.length > 12 ? ' is-long' : '')} aria-label="Projekt porządku obrad">
+  const changes = draftChanges(m);
+  // Od 9 pozycji mniejsze pismo: projekt z punktami dodanymi na spotkaniu roboczym mieści się na ekranie bez przewijania.
+  return <ol class={'screen-draft' + (items.length > 8 ? ' is-long' : '')} aria-label="Projekt porządku obrad">
     {items.map(it => <li key={it.id} class={it.parentId ? 'is-sub' : undefined}>
-      <span class="screen-draft__no">{itemNumber(m.agenda, it.id)}.</span><span class="screen-draft__title">{it.title}</span>
+      <span class="screen-draft__no">{itemNumber(m.agenda, it.id)}.</span>
+      <span class="screen-draft__title">{it.title}{changes.has(it.id) && <small class="screen-draft__changed">zmieniono o {fmtTime(changes.get(it.id))}</small>}</span>
     </li>)}
   </ol>;
+}
+
+/**
+ * Podstawa rozstrzygnięcia na sali jednym zdaniem pod liczbami (O-06): „Zwykła większość głosów (§ 8 ust. 3). Tajność
+ * uchwalona przez Prezydium w głosowaniu nr 2.”
+ */
+function basisLine(roster: Roster, m: ViewMeeting, b: ViewBallot) {
+  if (!b.result || b.purpose === 'proba' || b.aborted) return null;
+  let text = `Zwykła większość głosów (${lawOf(m.organ).majority.basis}).`;
+  const motion = b.mode === 'jawne' ? undefined : m.ballots.find(x => x.target?.kind === 'tryb' && x.target.itemId === b.itemId && x.target.mode === b.mode && x.result?.adopted && x.announcedAt);
+  if (motion) text += ` ${b.mode === 'tajne' ? 'Tajność uchwalona' : 'Głosowanie imienne uchwalone'} przez ${m.organ === 'prezydium' ? 'Prezydium' : organOfCode(roster, m.organ).name} w głosowaniu nr ${motion.number}.`;
+  return text;
 }
 
 // Ekran sali, czyli projektor: duże, czytelne informacje bez elementów sterowania.
@@ -55,9 +72,12 @@ export function RoomScreen({id}: {id: string}) {
   usePageTitle(data ? `Ekran sali – Posiedzenie ${fmtShort(data.meeting.date)}` : null);
   if (!data) return <main class="screen"><div class="screen-body"><p class="screen-sub">{error || 'Wczytywanie…'}</p></div></main>;
   const m = data.meeting;
-  const total = organMembers(s.roster, m.organ).length, present = presentMembers(m as unknown as Meeting, s.roster).length;
+  const quorum = quorumNow(m, s.roster), present = presentMembers(m as unknown as Meeting, s.roster).length;
   const open = m.ballots.find(b => b.status === 'otwarte');
   const shown = m.presentation;
+  // D2 (O-04): tryb zmian projektu porządku wybrany przez osobę prowadzącą (`present {kind: 'projekt'}`).
+  const editing = shown?.kind === 'projekt' && draftLive(m);
+  const latest = lastDraftChange(m);
   const visible = (b: ViewBallot) => b.purpose === 'proba' || !!b.announcedAt;
   const result = shown?.kind === 'wynik' ? m.ballots.find(b => b.id === shown.id) : null;
   // Zakończone głosowanie, które sala jeszcze ogląda: próbne z wynikiem, w sprawie do czasu ogłoszenia bez wyniku.
@@ -87,12 +107,13 @@ export function RoomScreen({id}: {id: string}) {
       </div>
       {open.secret && <p class="screen-key"><span class="kicker">Odcisk klucza głosowania</span><code>{open.secret.fingerprint}</code></p>}
     </State>;
-  } else if (result) body = visible(result) ? <ResultCard b={result} big kind={materialTypeOf(m, result)} proposer={proposerSentence(s.roster, m.organ, result)}/> : pending(result);
-  else if (ended) body = ended.purpose === 'proba' ? <ResultCard b={ended} big/> : pending(ended);
+  } else if (result) body = visible(result) ? <ResultCard b={result} big kind={materialTypeOf(m, result)} proposer={proposerSentence(s.roster, m, result)} basisLine={basisLine(s.roster, m, result)}/> : pending(result);
+  else if (ended) body = ended.purpose === 'proba' ? <ResultCard b={ended} big basisLine={null}/> : pending(ended);
   else if (material) body = <State label="Materiał" title={material.title} lead><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
-  else if (current && current.kind === 'porzadek' && current.id === m.currentItemId && draftLive(m)) {
-    body = <State label={`Punkt ${itemNumber(m.agenda, current.id)}`} title="Projekt porządku obrad" small>
-      <People it={current}/>
+  else if (editing || (current && current.kind === 'porzadek' && current.id === m.currentItemId && draftLive(m))) {
+    // Na spotkaniu roboczym zawsze „Projekt porządku obrad”, nigdy „Porządek obrad” (§ 8 ust. 2).
+    body = <State label={current ? `Punkt ${itemNumber(m.agenda, current.id)}` : 'Projekt porządku obrad'} title="Projekt porządku obrad" small>
+      {current?.kind === 'porzadek' && <People it={current}/>}
       <DraftAgenda m={m}/>
     </State>;
   } else if (current) body = <State label={`Punkt ${itemNumber(m.agenda, current.id)}`} title={current.title} lead><People it={current}/></State>;
@@ -107,8 +128,9 @@ export function RoomScreen({id}: {id: string}) {
     </header>
     <section class="screen-body">{body}</section>
     <footer class="screen-foot">
-      <dl class="facts"><Fact label="Obecnych">{present} z {total}</Fact><Fact label="Wymagane kworum">{quorumFor(total)}</Fact>{m.chair.current && <Fact label="Prowadzi">{s.personName(m.chair.current)}</Fact>}</dl>
+      <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{chairingText(s.roster, m)}</Fact>}</dl>
       {m.working && <p class="screen-foot-note">Bez kworum Prezydium nie podejmuje uchwał.</p>}
+      {m.working && !editing && latest && m.status !== 'zakonczone' && <p class="screen-foot-note">Projekt porządku obrad zmieniono o {fmtTime(latest.at)}.</p>}
     </footer>
   </main>;
 }

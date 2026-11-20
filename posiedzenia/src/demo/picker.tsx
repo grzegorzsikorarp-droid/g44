@@ -51,6 +51,8 @@ export function DemoPicker(props: {server: DemoServer; onDone: () => void}) {
           <li>W punkcie 1 kliknij <strong>Stwierdzam kworum</strong>. W punkcie 2 kliknij <strong>Rozpocznij ten punkt</strong>. Projekt porządku zmienisz, przeciągając kafelki, a członkowie widzą zmiany od razu. Potem kliknij <strong>Otwórz głosowanie</strong>.</li>
           <li>Zagłosuj jako członek albo skrótem „Pozostali głosują za”. Członkowie widzą wynik dopiero wtedy, gdy Przewodnicząca kliknie <strong>Ogłoś wynik głosowania</strong>, i dopiero potem obrady idą dalej.</li>
           <li>W punktach 5.1–5.4 złóż wniosek o głosowanie tajne, wskazując, kto go zgłasza, i wniosek o reasumpcję. Projekt protokołu otworzysz w szczegółach posiedzenia.</li>
+          <li>Zastępstwo sprawdzisz na otwartym posiedzeniu. Jako Przewodnicząca w sekcji „Prowadzenie obrad” kliknij <strong>Zmień zastępstwo</strong> i wybierz <strong>Ewę Dąbrowską</strong>, a potem zapisz swoje wyjście na liście obecności. Pierwszy wiceprzewodniczący przejmie prowadzenie tylko z powodem, przyciskiem <strong>Przejmij prowadzenie zamiast zastępcy</strong>, a zastępczyni przejmie je bez powodu, przyciskiem <strong>Przejmij prowadzenie obrad</strong>.</li>
+          <li>Bez kworum kliknij <strong>Kontynuuj jako spotkanie robocze</strong>, a potem w karcie „Porządek obrad” <strong>Zmień projekt porządku</strong>. Członkowie i ekran sali widzą zmiany od razu, a przy zmienionym punkcie słowa „zmieniono o”.</li>
         </ol>
       </Fold>
       {confirmReset
