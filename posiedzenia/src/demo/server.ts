@@ -5,7 +5,7 @@ import {defaultDocTypes, docTypeInput, lockedDocTypeRefusal, sortedDocTypes} fro
 import {migrateDocTypesV3, migrateMeeting, migrateMeetingV3, migrationNotesV3} from '../shared/migrate.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit, organSettingsOf, type AuditEntry, type GeneralBundle, type GeneralSettings, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
 import {canCreate, canPrepare, canReadMinutes, isOfficeAccount, isPresiding, minutesRefusal, settingsAccess} from '../shared/role.ts';
-import {cascadeEnv} from '../shared/cascade.ts';
+import {cascadeEnv, othersOf} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
 import {isoDayOf} from '../shared/text.ts';
 import {bytesToHex, fdhSync, hexToBytes, keyFingerprintSync, modPow, verifySignature} from '../shared/blind.ts';
@@ -162,10 +162,10 @@ export class DemoServer {
   }
   private put(m: Meeting) { this.state.meetings[m.id] = m; this.save(); return m; }
   private view(m: Meeting, a: Actor) {
-    const previous = Object.values(this.state.meetings).filter(x => x.id !== m.id && x.organ === m.organ && x.openedAt && x.openedAt <= (m.openedAt ?? Infinity)).map(x => x.openedAt!);
+    const others = othersOf(m, Object.values(this.state.meetings));
     const last = [...this.state.audit].reverse().find(e => e.area === 'sklad' && e.organ === m.organ);
     const env = cascadeEnv({roster: this.state.roster, bundle: this.bundle(), organ: m.organ, accounts: this.state.accounts, law: LAW,
-      composition: last ? {at: last.at, text: (last.basis ?? '').split(' ')[0]?.toLocaleLowerCase('pl') || last.after} : null, previousOpenedAt: previous.length ? Math.max(...previous) : null});
+      composition: last ? {at: last.at, text: (last.basis ?? '').split(' ')[0]?.toLocaleLowerCase('pl') || last.after} : null, ...others});
     return viewFor(m, a, this.state.roster, env);
   }
   // F11: rodzaj materiału ze słownika, włączony; bez rodzaju „inny”, jak dotąd w wersji próbnej.

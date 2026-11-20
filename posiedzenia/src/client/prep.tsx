@@ -9,7 +9,7 @@ import {agendaBasis, lawOf} from '../shared/law.ts';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {organOfCode} from '../shared/roster.ts';
 import {canDesignateDeputy, canPrepare, canSkipListed, chairRank, deputyOf, isOfficeAccount, openOption, organRoster} from '../shared/role.ts';
-import {guessText, type Deviation, type Difference, type ReviewRow} from '../shared/cascade.ts';
+import {cascadeEnv, guessText, noticeText, type Deviation, type Difference, type ReviewRow} from '../shared/cascade.ts';
 import {VOTE_MINUTES, MOTION_MINUTES, organSettingsOf, type GeneralBundle, type MeetingTemplate, type TemplateItem} from '../shared/settings.ts';
 import {dateDots, dateDotsOf, minutesText, timeOf} from '../shared/text.ts';
 import type {Actor, AgendaItem, Effective, ItemKind, Meeting, MeetingMode} from '../shared/types.ts';
@@ -25,7 +25,7 @@ import {go} from './route.ts';
 import {useDocTypes} from './doctypes.ts';
 import {setGeneral, useGeneral} from './general.ts';
 import {cleanPresenters, DocTypeSelect, PeopleFacts, PresentersEditor, samePresenters, usePeople} from './people.tsx';
-import {dateHintText, DiffList, HistoryFold, MinutesRowEditor, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type DiffRow, type EditorCtl, type HistoryRow} from './cascade-ui.tsx';
+import {appRuleWhy, copyText, dateHintText, DiffList, HistoryFold, MessagesRowEditor, messagesOptionLabel, MinutesRowEditor, NoticeDialog, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type DiffRow, type EditorCtl, type HistoryRow} from './cascade-ui.tsx';
 
 // Przygotowanie posiedzenia (wersja 3, poziom 2 kaskady; specyfikacja rozdz. 5.4): projekt porządku obrad z ustawieniami
 // punktów, ustawienia całego posiedzenia, przegląd przed otwarciem i otwarcie. Wartości skuteczne, przegląd, różnice
@@ -757,11 +757,13 @@ export function MeetingSettingsCard() {
   const restored = (e: Effective<number>) => `Przywrócono ${minutesText(Number(e.inherited), 'biernik')} z ${e.inheritedSource === 'szablon' ? 'wzoru posiedzenia' : 'ustawień ogólnych'}.`;
   const templateGone = m.template && bundle && !organSettingsOf(bundle.general, m.organ).templates.some(t => t.id === m.template!.id);
   const convener = eff?.meeting.convener.value ?? m.convener ?? chairman?.personId ?? null;
+  // U-03 (dodatek): proponowany numer z wzoru numeru protokołu w ustawieniach ogólnych.
+  const proposal = eff?.protocolNumberProposal ?? null;
   return <section class="oi-card meeting-settings" aria-labelledby="ustawienia-posiedzenia">
     <h2 class="oi-card__title" id="ustawienia-posiedzenia"><span class="oi-mark" aria-hidden="true"/><span>{frozen ? 'Ustawienia posiedzenia zapisane przy otwarciu' : 'Ustawienia całego posiedzenia'}</span></h2>
     {frozen && <p class="small">{m.frozen!.legacy ? 'Zapisano przy przejściu na wersję 3.' : `Zapisano ${dateDotsOf(m.frozen!.at)} o godz. ${timeOf(m.frozen!.at)}. Zmiana ustawień ogólnych nie wpływa na to posiedzenie.`}</p>}
     {m.template && <dl class="facts" id="ust-wzor" tabIndex={-1}><div class="fact"><dt>Wzór posiedzenia</dt><dd>{m.template.name}{templateGone ? '. Wzoru już nie ma, obowiązują ustawienia ogólne.' : ''}</dd></div></dl>}
-    <Fold title="Termin, miejsce i tryb">
+    <Fold title={eff?.meeting.messages.source === 'posiedzenie' ? 'Termin, miejsce i tryb (1 zmiana)' : 'Termin, miejsce i tryb'}>
       <SettingsList label="Termin, miejsce i tryb" onOpenChange={onEditing}>
         <SettingRow label="Termin i miejsce" at="posiedzenie" source="" action="Zmień termin i miejsce" actionLabel="Zmień termin i miejsce" genitive="terminu i miejsca"
           value={<>{`${fmtDate(m.date)}, godz. ${m.time}`}<br/>{m.place || 'Miejsce nie jest wpisane'}</>}
@@ -769,6 +771,7 @@ export function MeetingSettingsCard() {
         <SettingRow label="Tryb i połączenie" at="posiedzenie" source="" action="Zmień tryb i połączenie" actionLabel="Zmień tryb i połączenie" genitive="trybu i połączenia"
           value={<>{m.mode === 'zdalne' ? 'Zdalne' : 'Stacjonarne'}{m.mode === 'zdalne' && <><br/>{m.link || 'Brak odnośnika do połączenia'}</>}</>}
           editor={editable || lateEdit ? (close, ctl) => <ModeLinkEditor close={close} ctl={ctl} m={m} modeEditable={editable} remote={law.remote.allowed} onSave={details}/> : undefined}/>
+        {eff && <MessagesRow editable={editable}/>}
       </SettingsList>
     </Fold>
     <Fold title="Zwołanie i zawiadomienie" id="ust-zwolanie-grupa">
@@ -783,6 +786,7 @@ export function MeetingSettingsCard() {
           hint={!m.noticeDate && notice?.deadline ? `Zawiadomienie wysyła się co najmniej ${law.notice.minDays} dni przed posiedzeniem, najpóźniej ${dateDots(notice.deadline)} (${law.notice.basis}).` : undefined}
           extra={days !== null && days < law.notice.minDays && <p class="setting-src strong">{`Zawiadomienie wysłano ${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem, a regulamin wymaga co najmniej ${law.notice.minDays} dni (${law.notice.basis}). To zdanie trafi do protokołu.`}</p>}
           editor={editable ? (close, ctl) => <DateRowEditor close={close} ctl={ctl} label="Data wysłania zawiadomienia" initial={m.noticeDate} onSave={v => details({noticeDate: v})}/> : undefined}/>
+        {editable && bundle && <NoticeRow bundle={bundle}/>}
       </SettingsList>
     </Fold>
     <Fold title="Prowadzenie obrad" open={!frozen && chairRank(s.roster, m as Meeting, s.personId) === 1}>
@@ -811,12 +815,66 @@ export function MeetingSettingsCard() {
     <Fold title="Dane do protokołu">
       <SettingsList label="Dane do protokołu" onOpenChange={onEditing}>
         <SettingRow label="Numer protokołu" at="posiedzenie" source="" value={m.protocolNumber || 'Nie wpisano'} genitive="numeru protokołu" actionLabel="Zmień numer protokołu"
-          editor={editable || lateEdit ? (close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Numer protokołu" hint="Np. 12/IX/2026." initial={m.protocolNumber ?? ''} max={60} onSave={v => details({protocolNumber: v})}/> : undefined}/>
+          extra={proposal && proposal !== m.protocolNumber ? <ProtocolProposal proposal={proposal} canUse={editable || lateEdit} onUse={() => details({protocolNumber: proposal})}/> : undefined}
+          editor={editable || lateEdit ? (close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Numer protokołu" hint={proposal ? `Proponowany numer ${proposal}.` : 'Np. 12/IX/2026.'} initial={m.protocolNumber ?? ''} max={60} onSave={v => details({protocolNumber: v})}/> : undefined}/>
         <SettingRow label="Protokolant" at="posiedzenie" source="" value={m.recorder || 'Nie wpisano'} genitive="protokolanta" actionLabel="Zmień protokolanta"
           editor={editable || lateEdit ? (close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Protokolant" hint="Imię i nazwisko osoby, która sporządza protokół." initial={m.recorder ?? ''} max={120} onSave={v => details({recorder: v})}/> : undefined}/>
       </SettingsList>
     </Fold>
   </section>;
+}
+
+/**
+ * Kanał wiadomości (U-12, dodatek): przy posiedzeniu zdalnym zasada aplikacji (stan H), przy stacjonarnym ustawienie
+ * z kaskady (ustawienia ogólne, wzór posiedzenia, posiedzenie) ze zmianą i przywróceniem.
+ */
+function MessagesRow(props: {editable: boolean}) {
+  const {m} = useMeeting();
+  const cmd = useCommand();
+  const e = m.effective!.meeting.messages;
+  if (e.value === 'zawsze') return <SettingRow label="Kanał wiadomości" at="posiedzenie" value="Widoczny zawsze." effective={e} why={appRuleWhy}/>;
+  const fromStart = e.value === 'od_poczatku';
+  return <SettingRow label="Kanał wiadomości" at="posiedzenie" value={messagesOptionLabel(fromStart)} effective={e} genitive="kanału wiadomości"
+    show={v => messagesOptionLabel(v === 'od_poczatku').toLocaleLowerCase('pl')}
+    editor={props.editable ? (close, ctl) => <MessagesRowEditor close={close} ctl={ctl} label="Kanał wiadomości" initial={fromStart} onSave={v => cmd({type: 'settings_set', key: 'messagesFromStart', value: v})}/> : undefined}
+    resetLabel={e.inheritedSource === 'szablon' ? 'Przywróć ustawienie wzoru posiedzenia' : 'Przywróć ustawienie ogólne'}
+    onReset={props.editable ? async () => {
+      await cmd({type: 'settings_reset', key: 'messagesFromStart'});
+      return `Przywrócono kanał wiadomości ${messagesOptionLabel(e.inherited === 'od_poczatku').toLocaleLowerCase('pl')} z ${e.inheritedSource === 'szablon' ? 'wzoru posiedzenia' : 'ustawień ogólnych'}.`;
+    } : undefined}/>;
+}
+
+/**
+ * Treść zawiadomienia z wzoru w ustawieniach ogólnych i danych posiedzenia (U-15, dodatek). Aplikacja nie wysyła
+ * zawiadomień (DA-16): biuro kopiuje treść do wiadomości.
+ */
+function NoticeRow(props: {bundle: GeneralBundle}) {
+  const {m} = useMeeting();
+  const {roster} = useSession();
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState('');
+  const text = noticeText(cascadeEnv({roster, bundle: props.bundle, organ: m.organ}), m);
+  const copy = async () => {
+    const ok = await copyText(text);
+    if (ok) setStatus('Skopiowano zawiadomienie.'); else { setStatus(''); setOpen(true); }
+  };
+  return <SettingRow label="Treść zawiadomienia" at="posiedzenie" source="" value="Z wzoru w ustawieniach ogólnych"
+    extra={<div class="setting-extra">
+      <p class="oi-field__hint setting-hint">Wstawia termin, miejsce i projekt porządku obrad tego posiedzenia. Aplikacja nie wysyła zawiadomień, więc treść kopiuje się do wiadomości.</p>
+      <div class="actions"><Button small haspopup onClick={() => { setStatus(''); setOpen(true); }}>Pokaż zawiadomienie</Button><Button small onClick={copy}>Kopiuj zawiadomienie</Button></div>
+      <p class="save-status" role="status">{status}</p>
+      {open && <NoticeDialog title="Zawiadomienie o posiedzeniu" text={text} onClose={() => setOpen(false)}/>}
+    </div>}/>;
+}
+
+/** Propozycja numeru protokołu pod polem „Numer protokołu” (U-03) z cichym „Użyj proponowanego numeru”. */
+function ProtocolProposal(props: {proposal: string; canUse: boolean; onUse: () => Promise<unknown>}) {
+  const {busy, error, errorKind, run} = useAction();
+  return <div class="setting-extra">
+    <p class="small">{`Proponowany numer ${props.proposal}.`}</p>
+    {props.canUse && <div><Button kind="ghost" quiet small busy={busy} onClick={() => run(props.onUse)}>Użyj proponowanego numeru</Button></div>}
+    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+  </div>;
 }
 
 function TermPlaceEditor(props: {close: (s?: string) => void; ctl: EditorCtl; m: ViewMeeting; onSave: (p: {date?: string; time?: string; place?: string}) => Promise<unknown>}) {
@@ -996,7 +1054,7 @@ function SaveAsTemplate() {
       return {...item(top), ...(children.length ? {children} : {})};
     });
     const template: Partial<MeetingTemplate> = {name: name.replace(/\s+/g, ' ').trim(), items,
-      ...(m.settings && (m.settings.voteMinutes || m.settings.motionMinutes) ? {settings: {...(m.settings.voteMinutes ? {voteMinutes: m.settings.voteMinutes} : {}), ...(m.settings.motionMinutes ? {motionMinutes: m.settings.motionMinutes} : {})}} : {}),
+      ...(m.settings && (m.settings.voteMinutes || m.settings.motionMinutes || m.settings.messagesFromStart !== undefined) ? {settings: {...(m.settings.voteMinutes ? {voteMinutes: m.settings.voteMinutes} : {}), ...(m.settings.motionMinutes ? {motionMinutes: m.settings.motionMinutes} : {}), ...(m.settings.messagesFromStart !== undefined ? {messagesFromStart: m.settings.messagesFromStart} : {})}} : {}),
       defaults: {time: m.time, mode: m.mode, ...(m.recorder ? {recorder: m.recorder} : {})}};
     const r = await request<{general: GeneralBundle}>('/api/settings', {body: {change: {area: 'wzory', organ: m.organ, template}}});
     setGeneral(r.general);

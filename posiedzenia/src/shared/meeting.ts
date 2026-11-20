@@ -10,8 +10,8 @@ import {
 import {cleanTitle, completeAgenda, itemKindLabel, newItem, parseAgendaText, presidiumTemplate, validateAgenda} from './agenda.ts';
 import {defaultDocTypes, docTypeById, docTypeName, plainFormulas} from './doctypes.ts';
 import {agendaBasis, LAW, PROCEDURE_MIN_HOURS, shareText, type LegalProfile} from './law.ts';
-import {defaultGeneral, MOTION_MINUTES, organSettingsOf, proposeCaseType, VOTE_MINUTES, type GeneralBundle, type MeetingTemplate, type SiteSettings} from './settings.ts';
-import {cascadeEnv, freeze, itemVoteMinutes, meetingSetting, procedureEndAt, quorumTotal, type CascadeEnv} from './cascade.ts';
+import {defaultGeneral, messagesText, MOTION_MINUTES, organSettingsOf, proposeCaseType, VOTE_MINUTES, type GeneralBundle, type MeetingTemplate, type SiteSettings} from './settings.ts';
+import {cascadeEnv, freeze, itemVoteMinutes, meetingFlag, meetingSetting, procedureEndAt, quorumTotal, type CascadeEnv} from './cascade.ts';
 import {
   attendanceRefusal, canChairPerson, canCreate, canDesignateDeputy, canKeepAttendance, canManageProcedure, canMessage, canPrepare,
   canSkipListed, canStartProcedure, canView as roleCanView, deputyOf, funcOf, insteadOfDeputyText, isChairmanOf, isOfficeAccount,
@@ -760,10 +760,26 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(canPrepare(roster, m, actor), 'Ustawienia posiedzenia zmienia biuro, przewodniczący albo wiceprzewodniczący.', 403);
       ensure(prep, 'Ustawienia posiedzenia zapisano przy otwarciu.', 409);
       const key = cmd.key;
-      if (key === 'messagesFromStart') fail('Tego ustawienia nie można jeszcze zmienić.');
+      const env = envOf(ctx, m.organ);
+      if (key === 'messagesFromStart') {
+        // U-12 (dodatek): kanał wiadomości na posiedzeniu stacjonarnym; przy zdalnym i między posiedzeniami działa zawsze.
+        const was = meetingFlag(env, m, key).value;
+        if (cmd.type === 'settings_set') {
+          ensure(typeof cmd.value === 'boolean', 'Wybierz, kiedy kanał wiadomości jest widoczny.');
+          (m.settings ??= {})[key] = cmd.value as boolean;
+          (m.settingStamps ??= {})[key] = stampOf(ctx, actor);
+          if (was !== cmd.value) settingLog(m, ctx, actor, `Zmieniono kanał wiadomości z ${quoted(messagesText(was))} na ${quoted(messagesText(cmd.value as boolean))}.`);
+        } else {
+          if (m.settings?.[key] === undefined) break;
+          delete m.settings[key];
+          if (m.settingStamps) delete m.settingStamps[key];
+          const restored = meetingFlag(env, m, key);
+          settingLog(m, ctx, actor, `Przywrócono kanał wiadomości z ${restored.source === 'szablon' ? 'wzoru posiedzenia' : 'ustawień ogólnych'} (${quoted(messagesText(restored.value))}).`);
+        }
+        break;
+      }
       ensure(key === 'voteMinutes' || key === 'motionMinutes', 'Nieznane ustawienie posiedzenia.');
       const label = key === 'voteMinutes' ? 'czas głosowania w sprawie' : 'czas głosowań nad wnioskami';
-      const env = envOf(ctx, m.organ);
       const was = meetingSetting(env, m, key).value;
       if (cmd.type === 'settings_set') {
         const value = Number(cmd.value);

@@ -25,6 +25,8 @@ export function DraftAgenda(props: {live?: {main: 'primary' | 'secondary'}}) {
   const [editing, setEditing] = useState<string | null>(null);
   const [subFor, setSubFor] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  // O-10 (dodatek): na ekranach dotykowych narzędzia kafelka pokazuje „Zmień punkt {nr}” (przy myszy: najechanie i fokus).
+  const [toolsFor, setToolsFor] = useState<string | null>(null);
   const [drag, setDrag] = useState<{id: string; dy: number; slot: Slot | null} | null>(null);
   const [focusAfter, setFocusAfter] = useState<{id: string; tool: string} | null>(null);
   // Położenia w geście są liczone względem początku listy (y w liście), więc przewinięcie strony w trakcie ruchu,
@@ -180,13 +182,14 @@ export function DraftAgenda(props: {live?: {main: 'primary' | 'secondary'}}) {
         const up = movable ? upTarget(it) : undefined, down = movable ? downTarget(it) : undefined;
         // Punkt główny przesuwa się razem z podpunktami.
         const dragging = !!drag && (drag.id === it.id || drag.id === it.parentId);
-        const cls = ['tile', it.parentId ? 'is-sub' : '', dragging ? 'is-dragging' : '', it.status !== 'oczekuje' ? 'is-done' : ''].filter(Boolean).join(' ');
+        const cls = ['tile', it.parentId ? 'is-sub' : '', dragging ? 'is-dragging' : '', it.status !== 'oczekuje' ? 'is-done' : '', toolsFor === it.id || editing === it.id || subFor === it.id ? 'is-tools' : ''].filter(Boolean).join(' ');
         return <li key={it.id} data-id={it.id} class={cls} style={dragging && drag ? {transform: `translateY(${drag.dy}px)`} : undefined}>
           <div class="tile-head">
             {movable && <span class="tile-grip" aria-hidden="true" onPointerDown={e => grab(e as unknown as PointerEvent, it)}
               onPointerMove={e => moveTo(e as unknown as PointerEvent)} onPointerUp={drop} onPointerCancel={cancel}>Przeciągnij</span>}
             <span class="agenda-no">{no}</span>
             <div class="tile-main"><span class="tile-title">{it.title}</span><PeopleFacts it={it} compact/></div>
+            {editing !== it.id && <Button kind="ghost" quiet small class="tile-toggle" onClick={() => setToolsFor(toolsFor === it.id ? null : it.id)}>{toolsFor === it.id ? `Ukryj narzędzia punktu ${no}` : `Zmień punkt ${no}`}</Button>}
           </div>
           {editing === it.id
             ? <ItemEditForm it={it} onDone={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }} onCancel={() => { setEditing(null); setFocusAfter({id: it.id, tool: 'tool-zmien'}); }}/>
@@ -195,7 +198,7 @@ export function DraftAgenda(props: {live?: {main: 'primary' | 'secondary'}}) {
                 <Button kind="ghost" quiet small class="tool-wyzej" busy={busy} disabled={!up} label={`Przesuń punkt ${no} wyżej`} onClick={() => up && place(it, up, 'tool-wyzej')}>Wyżej</Button>
                 <Button kind="ghost" quiet small class="tool-nizej" busy={busy} disabled={!down} label={`Przesuń punkt ${no} niżej`} onClick={() => down && place(it, down, 'tool-nizej')}>Niżej</Button>
               </>}
-              <Button kind="ghost" quiet small class="tool-zmien" label={`Zmień punkt ${no}`} onClick={() => { setSubFor(null); setEditing(it.id); }}>Zmień</Button>
+              <Button kind="ghost" quiet small class="tool-zmien" label={`Zmień nazwę i osoby, punkt ${no}`} onClick={() => { setSubFor(null); setEditing(it.id); }}>Zmień</Button>
               {!it.parentId && !fixedKinds.has(it.kind) && afterAgenda(it) && <Button kind="ghost" quiet small class="tool-podpunkt" label={`Dodaj podpunkt w punkcie ${no}`} onClick={() => setSubFor(subFor === it.id ? null : it.id)}>Dodaj podpunkt</Button>}
               {it.status === 'oczekuje' && !fixedKinds.has(it.kind) && <Button kind="ghost" quiet small haspopup class="tool-usun" busy={busy} label={`Usuń punkt ${no}`} onClick={() => setRemoving(it.id)}>Usuń</Button>}
             </div>}

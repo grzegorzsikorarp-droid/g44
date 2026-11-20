@@ -17,7 +17,7 @@ import {personName} from '../shared/roster.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import {canCreate, canPrepare, canReadMinutes, isOfficeAccount, isPresiding, minutesRefusal, settingsAccess} from '../shared/role.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit as docTypeAuditEntry, organSettingsOf, type AuditEntry, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
-import {cascadeEnv} from '../shared/cascade.ts';
+import {cascadeEnv, othersOf} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
 import {isoDayOf, timeOf} from '../shared/text.ts';
 import type {Account, Actor, DocType, ItemKind, MaterialRef, MaterialType, Meeting, OrganCode} from '../shared/types.ts';
@@ -98,9 +98,9 @@ export async function createApplication(options: AppOptions = {}) {
   });
   // Wersja 3: widok posiedzenia z wartościami skutecznymi (`effective`), bez dodatkowych zapytań klienta.
   const envFor = (m: Meeting) => {
-    const previous = store.meetingIds().map(id => store.meeting(id)).filter(x => x && x.id !== m.id && x.organ === m.organ && x.openedAt && x.openedAt <= (m.openedAt ?? Infinity)).map(x => x!.openedAt!);
+    const others = othersOf(m, store.meetingIds().map(id => store.meeting(id)).filter((x): x is Meeting => !!x));
     return cascadeEnv({roster: store.roster(), bundle: store.general(), organ: m.organ, accounts: accounts(), law: LAW,
-      composition: store.lastComposition(m.organ), previousOpenedAt: previous.length ? Math.max(...previous) : null});
+      composition: store.lastComposition(m.organ), ...others});
   };
   const view = (m: Meeting, a: Actor) => viewFor(m, a, store.roster(), envFor(m));
   const write = <T>(fn: () => T) => { try { return store.transaction(fn); } finally { afterWrite(); } };

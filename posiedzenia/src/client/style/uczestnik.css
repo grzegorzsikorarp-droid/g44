@@ -295,3 +295,8 @@ button.agenda-row { cursor: pointer; transition: background-color .2s, border-co
 /* O-03 pkt 3: pierwszeństwo zastępcy u innego wiceprzewodniczącego, bez czerwonego paska (to nie jest karta „teraz”). */
 .chair-priority { gap: var(--odstep-2); }
 .chair-priority p { font-size: var(--t-tekst); line-height: 1.5; }
+
+/* O-09: „Zasady tego posiedzenia” (panel i uczestnik), wiersze bez znaków listy */
+.rules-list, .rules-diffs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-2); font-size: var(--t-maly); line-height: 1.45; }
+.rules-diffs { margin: var(--odstep-1) 0 var(--odstep-3); }
+.rules-list li + li { padding-top: var(--odstep-2); border-top: var(--kreska) solid var(--linia-jasna); }

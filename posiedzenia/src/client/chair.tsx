@@ -14,7 +14,7 @@ import {useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
 import {useSession} from './session.ts';
 import {Button, CardTitle, Confirm, Countdown, Fact, Field, Fold, fmtTime, Modal, Notice, plural, SaveStatus, Segments, StateChip, Tag, TitleLead, useMedia, useSaveStatus} from './ui.tsx';
 import {agendaChip, itemChip, modeGenitive, modeName, presenceChip} from './stany.ts';
-import {actorOf, AgendaList, BasisBlock, beforeAdoption, chairingText, DeputyFact, draftEditing, draftLive, emphasize, LogList, personWithFunc, proposerSentence, quorumNow, signaturesFor, VoteCard, workingSentence} from './meeting.tsx';
+import {actorOf, AgendaList, BasisBlock, beforeAdoption, chairingText, DeputyFact, draftEditing, draftLive, emphasize, LOG_FILTERS, LogList, MeetingRules, personWithFunc, type LogFilter, proposerSentence, quorumNow, signaturesFor, VoteCard, workingSentence} from './meeting.tsx';
 import {AgendaEditor} from './prep.tsx';
 import {ItemEditForm, votedSource} from './item-form.tsx';
 import {MaterialLink} from './reader.tsx';
@@ -54,6 +54,11 @@ const regularOpen = (m: ViewMeeting) => m.ballots.find(b => b.status === 'otwart
 /** „głosowania nr 4” albo „głosowania próbnego” w zdaniu „Dostępne po zakończeniu …”. */
 const ballotOf = (b: ViewBallot) => b.purpose === 'proba' ? 'głosowania próbnego' : `głosowania nr ${b.number}`;
 const workingRefusal = 'Na spotkaniu roboczym nie przeprowadza się głosowań.';
+// O-13 (dodatek): czasy głosowań nad wnioskami z ustawień posiedzenia (effective.motionMinutes), a ponownego głosowania
+// w sprawie z ustawień punktu. Bez wartości skutecznych (dane sprzed wersji 3) 2 minuty, jak dotąd.
+const motionMinutesOf = (m: ViewMeeting) => m.effective?.meeting.motionMinutes.value ?? 2;
+const itemMinutesOf = (m: ViewMeeting, itemId: string | null | undefined) => (itemId ? m.effective?.items[itemId]?.voteMinutes.value : undefined) ?? m.effective?.meeting.voteMinutes.value ?? 2;
+const lastsText = (n: number) => `Głosowanie potrwa ${n} ${plural(n, 'minutę', 'minuty', 'minut')}.`;
 /** Powód, dla którego nie można otworzyć głosowania w sprawie (F2, F5, przerwa), albo null. */
 const voteBlock = (m: ViewMeeting) => announceFirst(m) ?? (m.working ? workingRefusal : m.status !== 'trwa' ? 'Głosowanie otworzysz po wznowieniu obrad.' : null);
 const rootOf = (m: ViewMeeting, it: AgendaItem) => it.parentId ? m.agenda.find(i => i.id === it.parentId) ?? it : it;
@@ -222,6 +227,10 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
     });
   }, [open?.id]);
   const focus = decisions.length ? 'decyzja' : open ? 'glosowanie' : 'punkt';
+  // D2 (O-04): tryb zmian na spotkaniu roboczym, w którym kafelki zastępują kartę punktu.
+  const liveDraft = m.presentation?.kind === 'projekt' && draftEditing(m);
+  // O-10 (dodatek): przy przyjmowaniu porządku lewa kolumna pokazuje porządek zwinięty do numerów i tytułów.
+  const titlesOnly = !readOnly && draftEditing(m) && !liveDraft;
   const waiting = !open && decisions.some(actionable);
   const withTabs = () => !!tabs.current && getComputedStyle(tabs.current).display !== 'none';
   const choose = (id: string) => { setSelected(id); if (withTabs()) { setTab('punkt'); setFocusTitle(n => n + 1); } };
@@ -248,7 +257,7 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       <section class="oi-card chair-agenda" ref={agendaCard}>
         {/* Na spotkaniu roboczym (F5) porządku się nie przyjmuje, więc nie ma znacznika „Do przyjęcia”. */}
         <div class="panel-head"><CardTitle level={2}>Porządek obrad</CardTitle><StateChip state={m.working && !m.agendaAdopted ? null : agendaChip(m.agendaAdopted)}/></div>
-        <AgendaList selected={selected} onSelect={choose}/>
+        <AgendaList selected={selected} onSelect={choose} titlesOnly={titlesOnly}/>
         {!readOnly && !m.agendaAdopted && <AgendaFixes/>}
         {!readOnly && m.agendaAdopted && <AgendaChange/>}
       </section>
@@ -260,11 +269,14 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       {/* F8, D2: przy przyjmowaniu porządku i w trybie zmian na spotkaniu roboczym prowadzący układa projekt kafelkami,
           a członkowie i ekran sali widzą zmiany na żywo. Przy przyjmowaniu porządku kafelki stoją przed kartą punktu
           z kartą głosowania, a w trybie zmian zastępują kartę punktu (O-04). */}
-      {!readOnly && draftEditing(m) && <DraftAgenda live={m.presentation?.kind === 'projekt' ? {main: waiting || decisions.length ? 'secondary' : 'primary'} : undefined}/>}
-      {selected && !(!readOnly && m.presentation?.kind === 'projekt' && draftEditing(m)) && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
+      {!readOnly && liveDraft && <DraftAgenda live={{main: waiting || decisions.length ? 'secondary' : 'primary'}}/>}
+      {selected && !(!readOnly && liveDraft) && <ItemCard key={selected} itemId={selected} readOnly={readOnly} main={waiting ? 'secondary' : 'primary'} teraz={focus === 'punkt'}/>}
+      {/* O-10 (dodatek): przy przyjmowaniu porządku kolumna zaczyna się od karty głosowania nad porządkiem, a kafelki stoją pod nią. */}
+      {!readOnly && draftEditing(m) && !liveDraft && <DraftAgenda/>}
     </section>
     <aside class={'chair-col chair-right' + (tab === 'obrady' ? ' is-shown' : '')} aria-label="Obrady">
       <MeetingControls readOnly={readOnly}/>
+      <MeetingRules variant="panel"/>
       <Attendance/>
       <Chairing readOnly={readOnly}/>
       <Fold title="Wiadomości" count={m.messages.length || undefined} id={MESSAGES} open={messagesOpen}
@@ -342,6 +354,8 @@ function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () =
       }
       if (row.kind === 'wynik') return <div class="decision" key={row.key}>
         <p>Wynik głosowania nr {row.b.number} nie został ogłoszony.</p>
+        {/* O-08 (dodatek): przedmiot głosowania zwykłym pismem pod zdaniem. */}
+        {row.b.subject && <p class="decision-subject">{row.b.subject}</p>}
         {!open && <div class="decision-act">
           <Button kind={kind()} busy={busy} onClick={() => send({type: 'announce', ballotId: row.b.id})}>Ogłoś wynik głosowania nr {row.b.number}</Button>
           <span class="muted small">Ogłoszenie pokaże wynik na telefonach i ekranie sali. Do tego czasu obrady nie idą dalej.</span>
@@ -350,17 +364,22 @@ function DecisionCard(props: {rows: Decision[]; teraz: boolean; onMessages: () =
       </div>;
       if (row.kind === 'wniosek') {
         const no = row.b?.number;
+        const subject = row.b?.subject ? <p class="decision-subject">{row.b.subject}</p> : null;
         if (row.x.status === 'zbiera_podpisy') {
           const valid = row.x.signatures.filter(p => present.includes(p)).length;
-          return <div class="decision" key={row.key}><p>Wniosek o reasumpcję głosowania nr {no} zbiera podpisy, {valid} z {needed}.</p></div>;
+          return <div class="decision" key={row.key}><p>Wniosek o reasumpcję głosowania nr {no} zbiera podpisy, {valid} z {needed}.</p>{subject}</div>;
         }
         if (row.x.status === 'zlozony') return <div class="decision" key={row.key}>
           <p>Wniosek o reasumpcję głosowania nr {no} ma wymagane podpisy. O reasumpcji rozstrzyga Prezydium.</p>
-          {action('Poddaj wniosek pod głosowanie Prezydium', () => send({type: 'motion_vote', motionId: row.x.id, minutes: 2}), block)}
+          {subject}
+          {action('Poddaj wniosek pod głosowanie Prezydium', () => send({type: 'motion_vote', motionId: row.x.id, minutes: motionMinutesOf(m)}), block)}
+          {!open && <span class="muted small">{lastsText(motionMinutesOf(m))}</span>}
         </div>;
         return <div class="decision" key={row.key}>
           <p>Prezydium przyjęło wniosek o reasumpcję głosowania nr {no}.</p>
-          {action('Przeprowadź ponowne głosowanie', () => send({type: 'reasumption_open', motionId: row.x.id, minutes: 2}), block)}
+          {subject}
+          {action('Przeprowadź ponowne głosowanie', () => send({type: 'reasumption_open', motionId: row.x.id, minutes: itemMinutesOf(m, row.b?.itemId)}), block)}
+          {!open && <span class="muted small">{lastsText(itemMinutesOf(m, row.b?.itemId))}</span>}
         </div>;
       }
       const last = row.unread[row.unread.length - 1];
@@ -524,7 +543,6 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
   const materials = m.materials.filter(x => it.materialIds.includes(x.id));
   const others = m.materials.filter(x => !it.materialIds.includes(x.id));
   const results = m.ballots.filter(b => b.status === 'zamkniete' && (b.itemId === it.id || (b.target?.kind === 'tryb' && b.target.itemId === it.id))).sort((x, y) => x.number - y.number);
-  const screen = screenShows(m);
   // Porządek obrad wymaga głosowania, dopóki nie zostanie przyjęty (także po nieprzyjęciu w głosowaniu).
   // Na spotkaniu roboczym (F5) się nie głosuje, więc nic nie czeka na głosowanie.
   const voteNeeded = current && !m.working && needsVote(m, it, types) && (it.kind === 'porzadek' || !itemVoted(m, it));
@@ -534,6 +552,8 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
   const reasonNeeded = m.kind === 'posiedzenie' && m.agendaAdopted;
   const organ = organName(m, s.roster);
   const quorum = quorumNow(m, s.roster), members = quorum.total, present = presentMembers(m as Meeting, s.roster).length;
+  const itemEff = m.effective?.items[it.id]?.voteMinutes;
+  const ownMinutes = itemEff && (itemEff.source === 'punkt' || itemEff.source === 'obrady') && itemEff.value !== m.effective!.meeting.voteMinutes.value ? itemEff.value : null;
   return <section class={'oi-card item-work' + (teraz && current ? ' is-teraz' : '')} aria-labelledby={id}>
     <div class="panel-head">
       {current ? <span class="oi-label">Punkt {no}</span> : <span class="kicker">Punkt {no}</span>}
@@ -541,6 +561,8 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
     </div>
     <h2 class="item-title" id={id} tabIndex={-1}><TitleLead text={it.title}/></h2>
     <PeopleFacts it={it}/>
+    {/* O-09 (dodatek): jedna linia, gdy punkt różni się od ustawień posiedzenia. */}
+    {ownMinutes !== null && <p class="small">{`Ten punkt ma własne ustawienia, czas głosowania ${minutesText(ownMinutes)}.`}</p>}
     {it.outOfOrder && <p class="muted small">{`Rozpoczęty poza kolejnością przyjętego porządku obrad. Powód „${it.outOfOrder.reason.replace(/\.$/, '')}”.`}</p>}
     {it.statusReason && (it.status === 'odroczony' || it.status === 'wycofany') && <p class="muted small">{`Powód „${it.statusReason}”.`}</p>}
     {locked && <Notice>Ten punkt można rozpocząć po przyjęciu porządku obrad.</Notice>}
@@ -550,13 +572,13 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
       <h3 class="card-sub">Materiały</h3>
       {materials.map(x => <div class="stack-tight" key={x.id}>
         <MaterialLink id={x.id} version={x.version} label={x.title} meta={`wersja ${x.version}`}/>
-        {!readOnly && screen.material !== x.id && <div><Button kind="ghost" quiet small busy={busy} label={`Pokaż materiał na sali i telefonach, ${x.title}`} onClick={() => send({type: 'present', kind: 'material', id: x.id})}>Pokaż materiał na sali i telefonach</Button></div>}
       </div>)}
     </div>}
+    {/* O-12 (dodatek): jedna nazwa dla ekranu sali. Fakt „Na ekranie sali” i jeden cichy odnośnik zależny od stanu. */}
+    <ScreenFact it={it} materials={materials} readOnly={readOnly}/>
     {/* Działania poboczne tego punktu stoją przy jego treści, przed głosowaniem i blokiem „Następny punkt”.
         Odroczenie i wycofanie czekają na ogłoszenie wyniku (F2), a powód pokazuje główny przycisk karty. */}
     {!readOnly && <div class="item-side">
-      {screen.item !== it.id && <Button small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż na ekranie sali</Button>}
       {!blocked && (current || it.status === 'w_toku') && !['otwarcie', 'porzadek', 'zamkniecie'].includes(it.kind) && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('odroczony')}>Odrocz</Button>}
       {!blocked && it.status === 'oczekuje' && it.kind === 'sprawa' && <Button kind="ghost" quiet small haspopup onClick={() => setEnding('wycofany')}>Wycofaj</Button>}
     </div>}
@@ -585,6 +607,32 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
       text={<p>{ending === 'odroczony' ? `Punkt ${no} pozostanie w porządku obrad z oznaczeniem „odroczony”. Można go później podjąć ponownie.` : `Punkt ${no} zostanie oznaczony jako wycofany i nie będzie rozpatrywany.`}</p>}/>}
     {flow.dialog}
   </section>;
+}
+
+/**
+ * Fakt „Na ekranie sali” w karcie punktu (O-12): co sala widzi przy tym punkcie i jeden cichy odnośnik, który to zmienia
+ * („Pokaż materiał na ekranie sali” albo „Pokaż tytuł punktu na ekranie sali”). Przy kilku materiałach odnośnik dla
+ * każdego materiału, którego sala nie widzi, z tytułem w nazwie.
+ */
+function ScreenFact({it, materials, readOnly}: {it: AgendaItem; materials: ViewMeeting['materials']; readOnly: boolean}) {
+  const {m, send, busy} = useMeeting();
+  const screen = screenShows(m);
+  const shownMaterial = materials.find(x => x.id === screen.material);
+  const value = shownMaterial ? `Materiał »${shownMaterial.title}«, także na telefonach`
+    : screen.item === it.id && !screen.text.startsWith('projekt') ? 'Tytuł punktu i osoby'
+    : screen.text.charAt(0).toLocaleUpperCase('pl') + screen.text.slice(1);
+  // W trakcie głosowania, przerwy i przy projekcie porządku na żywo ekran pokazuje to, co wynika z obrad.
+  const locked = !!m.ballots.find(b => b.status === 'otwarte') || m.status === 'przerwa';
+  const showTitle = (shownMaterial || screen.item !== it.id) && !locked;
+  const hidden = materials.filter(x => x.id !== screen.material);
+  return <div class="screen-fact">
+    <dl class="facts"><Fact label="Na ekranie sali">{value}</Fact></dl>
+    {!readOnly && !locked && <div class="item-screen">
+      {showTitle && <Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż tytuł punktu na ekranie sali</Button>}
+      {!showTitle && hidden.length === 1 && <Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'material', id: hidden[0].id})}>Pokaż materiał na ekranie sali</Button>}
+      {!showTitle && hidden.length > 1 && hidden.map(x => <Button key={x.id} kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'material', id: x.id})}>{`Pokaż materiał »${x.title}« na ekranie sali`}</Button>)}
+    </div>}
+  </div>;
 }
 
 /**
@@ -841,6 +889,7 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
   const modeText = bound ? `${modeName(fixed!).replace(/^./, c => c.toUpperCase())}, ${it.modeBasis ?? 'uchwalone przez Prezydium'}` : mode === 'jawne' ? 'Jawne' : modeName(mode).replace(/^./, c => c.toUpperCase());
   const timeLine = minutes !== planned ? 'Zmienione w trakcie obrad.' : differenceLine(eff?.voteMinutes);
   const docLine = docChanged ? 'Zmienione w trakcie obrad.' : project ? differenceLine(eff?.docType) : null;
+  const draftChangeCount = it.kind === 'porzadek' ? m.log.filter(l => l.tag === 'projekt' && l.at >= (m.openedAt ?? Infinity)).length : 0;
   const majorityFact = <Fact label="Wymagana większość">{withBasis('Zwykła, więcej głosów za niż przeciw', majority ?? {source: 'prawo', basis: lawOf(m.organ).majority.basis})}</Fact>;
   const quorumFact = <Fact label="Wymagane kworum">{quorum.required} z {quorum.total} <Ref>{`(${quorum.basis})`}</Ref>, obecnych {present}</Fact>;
   // Enter w polu przedmiotu wysyła formularz także wtedy, gdy przycisk jest nieaktywny (przerwa, trwa czynność).
@@ -861,6 +910,8 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
       {!phone && majorityFact}
       {!editing && <Fact label="Czas">{minutesText(minutes)}{sourceNote(timeLine)}</Fact>}
       {!phone && quorumFact}
+      {/* O-10 (dodatek): zmiany projektu porządku od otwarcia posiedzenia, które trafią do protokołu. */}
+      {it.kind === 'porzadek' && <Fact label="Zmiany projektu na tym posiedzeniu">{draftChangeCount ? `${draftChangeCount}, trafią do protokołu` : 'Bez zmian'}</Fact>}
     </dl>
     {phone && <Fold title="Na jakiej podstawie?"><dl class="facts">{majorityFact}{quorumFact}</dl></Fold>}
     {editing && <div class="vote-edit stack">
@@ -918,9 +969,9 @@ function ModeMotion(props: {it: AgendaItem; mode: 'tajne' | 'imienne'; onClose: 
     <form class="stack" onSubmit={async e => {
       e.preventDefault();
       if (reason) return;
-      if (await send({type: 'mode_motion', itemId: props.it.id, mode: props.mode, minutes: 2, proposedBy: who})) props.onClose();
+      if (await send({type: 'mode_motion', itemId: props.it.id, mode: props.mode, minutes: motionMinutesOf(m), proposedBy: who})) props.onClose();
     }}>
-      <p>Prezydium w głosowaniu jawnym, zwykłą większością głosów, zdecyduje, czy uchwalić {props.mode === 'tajne' ? 'tajność głosowania' : 'głosowanie imienne'} w sprawie „{props.it.title}”. Głosowanie potrwa 2 minuty.</p>
+      <p>Prezydium w głosowaniu jawnym, zwykłą większością głosów, zdecyduje, czy uchwalić {props.mode === 'tajne' ? 'tajność głosowania' : 'głosowanie imienne'} w sprawie „{props.it.title}”. {lastsText(motionMinutesOf(m))}</p>
       <div class="motion-who"><Field label="Kto zgłasza wniosek?" hint="Wniosek zgłasza członek Prezydium obecny na posiedzeniu. Nazwisko trafi do protokołu.">
         <select value={who} required onChange={e => setWho((e.target as HTMLSelectElement).value)}>
           <option value="">Wybierz osobę…</option>
@@ -1068,7 +1119,7 @@ function AgendaChange() {
           ? where.startsWith('pod:') ? {op: 'dodaj', title: String(f.get('title')), parentId: where.slice(4), afterId: null} : {op: 'dodaj', title: String(f.get('title')), parentId: null, afterId: where || null}
           : mode === 'przesun' ? {op: 'przesun', itemId: String(f.get('item')), beforeId: String(f.get('before'))}
           : {op: 'usun', itemId: String(f.get('item'))};
-        if (await send({type: 'agenda_change', change, minutes: 2})) setMode(null);
+        if (await send({type: 'agenda_change', change, minutes: motionMinutesOf(m)})) setMode(null);
       }}>
         {mode === 'dodaj' && <>
           <Field label="Nazwa punktu"><input name="title" required maxLength={400}/></Field>
@@ -1086,7 +1137,7 @@ function AgendaChange() {
           </select></Field>
         </>}
         {mode === 'usun' && <Field label="Punkt do usunięcia"><select name="item">{removable.map(i => <option key={i.id} value={i.id}>{label(i)}</option>)}</select></Field>}
-        <Notice>Otworzy się głosowanie jawne na 2 minuty. Zmiana wejdzie do porządku po przyjęciu zwykłą większością głosów.</Notice>
+        <Notice>{`Otworzy się głosowanie jawne. ${lastsText(motionMinutesOf(m))} Zmiana wejdzie do porządku po przyjęciu zwykłą większością głosów.`}</Notice>
         <div class="actions"><Button kind="primary" type="submit" busy={busy}>Poddaj pod głosowanie</Button><Button onClick={() => setMode(null)}>Anuluj</Button></div>
       </form>
     </Modal>}
@@ -1302,6 +1353,12 @@ function Chairing({readOnly}: {readOnly: boolean}) {
   </Fold>;
 }
 
+// Przebieg obrad w panelu z filtrami (O-07, dodatek): „Wszystko”, „Głosowania”, „Porządek”, „Obecność”, „Odstępstwa”.
 function Log() {
-  return <Fold title="Przebieg obrad"><LogList/></Fold>;
+  const [filter, setFilter] = useState<LogFilter>('wszystko');
+  const nameOf = usePresenceName();
+  return <Fold title="Przebieg obrad">
+    <div class="log-filters"><Segments label="Pokaż wpisy" value={filter} options={LOG_FILTERS} onChange={setFilter}/></div>
+    <LogList filter={filter} presenceName={nameOf}/>
+  </Fold>;
 }

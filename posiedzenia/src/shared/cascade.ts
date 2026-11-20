@@ -1,7 +1,7 @@
 import type {Account, AgendaItem, Ballot, DocType, Effective, FrozenSettings, ItemKind, Meeting, MeetingSettingKey, Organ, OrganCode, Roster, SettingSource, Stamp} from './types.ts';
 import {APP_RULES, HOUSE_RULES, PROCEDURE_MIN_HOURS, agendaBasis, lawOf, shareText, type LegalProfile} from './law.ts';
-import {matchCaseType, organSettingsOf, type CaseType, type GeneralBundle, type GeneralSettings, type MeetingTemplate} from './settings.ts';
-import {itemNumber, needsVote, quorumOf, unannounced} from './rules.ts';
+import {matchCaseType, messagesText, nextProtocolNumber, NOTICE_TAGS, noticeTemplateOf, organSettingsOf, type CaseType, type GeneralBundle, type GeneralSettings, type MeetingTemplate} from './settings.ts';
+import {itemNumber, needsVote, orderedAgenda, quorumOf, unannounced} from './rules.ts';
 import {organOfCode, personName} from './roster.ts';
 import {deputyOf, organRoster} from './role.ts';
 import {dateDots, dateDotsOf, dateTimeText, minutesText, plural, timeOf} from './text.ts';
@@ -20,14 +20,36 @@ export interface CascadeEnv {
   revision?: number;
   composition?: {at: number; text: string} | null;
   previousOpenedAt?: number | null;
+  /** Dodatek U-03: numery protokołów innych posiedzeń tego organu z datami (do propozycji numeru). */
+  protocols?: {date: string; number: string}[];
 }
 /** Środowisko kaskady dla organu z pakietu ustawień (serwer, wersja próbna i domena). */
-export function cascadeEnv(input: {roster: Roster; bundle: GeneralBundle; organ: OrganCode; accounts?: CascadeEnv['accounts']; law?: Partial<Record<OrganCode, LegalProfile>>; composition?: CascadeEnv['composition']; previousOpenedAt?: number | null}): CascadeEnv {
+export function cascadeEnv(input: {roster: Roster; bundle: GeneralBundle; organ: OrganCode; accounts?: CascadeEnv['accounts']; law?: Partial<Record<OrganCode, LegalProfile>>; composition?: CascadeEnv['composition']; previousOpenedAt?: number | null; protocols?: CascadeEnv['protocols']}): CascadeEnv {
   return {
     law: input.law?.[input.organ] ?? lawOf(input.organ), general: input.bundle.general, docTypes: input.bundle.docTypes, roster: input.roster,
     organ: organOfCode(input.roster, input.organ), accounts: input.accounts, revision: input.bundle.revision,
-    composition: input.composition, previousOpenedAt: input.previousOpenedAt,
+    composition: input.composition, previousOpenedAt: input.previousOpenedAt, protocols: input.protocols,
   };
+}
+/**
+ * Dane z innych posiedzeń do środowiska kaskady (serwer i wersja próbna liczą to samo): ostatnie otwarcie wcześniejszego
+ * posiedzenia tego organu (przegląd, D-14) i numery protokołów posiedzeń tego organu (U-03).
+ */
+export function othersOf(m: Pick<Meeting, 'id' | 'organ' | 'openedAt'>, all: Pick<Meeting, 'id' | 'organ' | 'kind' | 'openedAt' | 'date' | 'protocolNumber'>[]): {previousOpenedAt: number | null; protocols: {date: string; number: string}[]} {
+  const same = all.filter(x => x.id !== m.id && x.organ === m.organ);
+  const previous = same.filter(x => x.openedAt && x.openedAt <= (m.openedAt ?? Infinity)).map(x => x.openedAt!);
+  return {
+    previousOpenedAt: previous.length ? Math.max(...previous) : null,
+    protocols: same.filter(x => x.kind === 'posiedzenie' && x.protocolNumber).map(x => ({date: x.date, number: x.protocolNumber!})),
+  };
+}
+/** Proponowany numer protokołu posiedzenia (U-03) albo null bez wzoru numeru. */
+export function protocolProposal(env: Pick<CascadeEnv, 'general' | 'protocols'>, m: Pick<Meeting, 'kind' | 'date'>): string | null {
+  const pattern = env.general.site.protocolNumberPattern ?? '';
+  if (m.kind !== 'posiedzenie' || !pattern || !m.date) return null;
+  const year = m.date.slice(0, 4);
+  const existing = (env.protocols ?? []).filter(p => p.date.slice(0, 4) === year).map(p => p.number);
+  return nextProtocolNumber(pattern, env.general.site.termNumber, Number(year), existing);
 }
 
 export interface MeetingEffective {
@@ -69,18 +91,23 @@ const templateOf = (env: CascadeEnv, m: Pick<Meeting, 'template' | 'organ'>): Me
 /** Słownik rodzajów dla posiedzenia: zapisany przy otwarciu albo bieżący. */
 export const docTypesOfMeeting = (env: Pick<CascadeEnv, 'docTypes'>, m: Pick<Meeting, 'frozen'>) => m.frozen?.docTypes ?? env.docTypes;
 
-/** Czas głosowań posiedzenia przed zamrożeniem: posiedzenie, wzór posiedzenia, ustawienia ogólne. */
-function liveSetting(env: CascadeEnv, m: Meeting, key: 'voteMinutes' | 'motionMinutes'): Effective<number> {
+/**
+ * Ustawienie posiedzenia przed zamrożeniem: posiedzenie, wzór posiedzenia, ustawienia ogólne. Czasy głosowań (rdzeń)
+ * i kanał wiadomości od początku posiedzenia (U-12, dodatek; bez wpisu w ustawieniach ogólnych `false`, jak dziś).
+ */
+function liveSetting(env: CascadeEnv, m: Meeting, key: 'voteMinutes' | 'motionMinutes'): Effective<number>;
+function liveSetting(env: CascadeEnv, m: Meeting, key: 'messagesFromStart'): Effective<boolean>;
+function liveSetting(env: CascadeEnv, m: Meeting, key: MeetingSettingKey): Effective<number | boolean> {
   const organ = organSettingsOf(env.general, m.organ);
-  const general: Effective<number> = {value: organ[key], source: 'ogolne', level: 1};
+  const general: Effective<number | boolean> = {value: key === 'messagesFromStart' ? !!organ.messagesFromStart : organ[key], source: 'ogolne', level: 1};
   const template = templateOf(env, m);
   const fromTemplate = template?.settings?.[key];
-  const lower: Effective<number> = fromTemplate !== undefined
+  const lower: Effective<number | boolean> = fromTemplate !== undefined
     ? {value: fromTemplate, source: 'szablon', level: 1, via: {kind: 'wzor', name: template!.name}, inherited: general.value, inheritedSource: 'ogolne'}
     : general;
   const own = m.settings?.[key];
   if (own === undefined) return lower;
-  const out: Effective<number> = {value: own, source: 'posiedzenie', level: 2, inherited: lower.value, inheritedSource: lower.source};
+  const out: Effective<number | boolean> = {value: own, source: 'posiedzenie', level: 2, inherited: lower.value, inheritedSource: lower.source};
   const stamp = m.settingStamps?.[key];
   if (stamp) out.stamp = stamp;
   return out;
@@ -95,7 +122,7 @@ export function freeze(env: CascadeEnv, m: Meeting, now: number): FrozenSettings
     docTypes: structuredClone(env.docTypes),
     meeting: {
       voteMinutes: mark(liveSetting(env, m, 'voteMinutes')), motionMinutes: mark(liveSetting(env, m, 'motionMinutes')),
-      messagesFromStart: mark<boolean>({value: false, source: 'ogolne', level: 1}),
+      messagesFromStart: mark(liveSetting(env, m, 'messagesFromStart')),
     } as Record<MeetingSettingKey, Effective<unknown>>,
   };
 }
@@ -103,6 +130,8 @@ export function freeze(env: CascadeEnv, m: Meeting, now: number): FrozenSettings
 export function freezeLegacy(env: CascadeEnv, m: Meeting, now: number): FrozenSettings {
   const f = freeze(env, {...m, settings: undefined, template: undefined}, now);
   f.legacy = true;
+  // Posiedzenia sprzed wersji 3 mają kanał wiadomości jak w wersji 2 (gdy ktoś napisze), niezależnie od ustawień ogólnych.
+  f.meeting.messagesFromStart = {value: false, source: 'ogolne', level: 1, frozen: true};
   for (const key of Object.keys(f.meeting) as MeetingSettingKey[]) f.meeting[key] = {...f.meeting[key], legacy: true};
   return f;
 }
@@ -110,6 +139,11 @@ export function freezeLegacy(env: CascadeEnv, m: Meeting, now: number): FrozenSe
 /** Czas głosowań posiedzenia: zapisany przy otwarciu albo z kaskady (posiedzenie, wzór, ustawienia ogólne). */
 export function meetingSetting(env: CascadeEnv, m: Meeting, key: 'voteMinutes' | 'motionMinutes'): Effective<number> {
   return m.frozen ? m.frozen.meeting[key] as Effective<number> : liveSetting(env, m, key);
+}
+/** Kanał wiadomości od początku posiedzenia (U-12): zapisany przy otwarciu (stare zamrożenie bez klucza: `false`) albo z kaskady. */
+export function meetingFlag(env: CascadeEnv, m: Meeting, key: 'messagesFromStart'): Effective<boolean> {
+  if (m.frozen) return (m.frozen.meeting[key] as Effective<boolean> | undefined) ?? {value: false, source: 'ogolne', level: 1, frozen: true, ...(m.frozen.legacy ? {legacy: true as const} : {})};
+  return liveSetting(env, m, key);
 }
 /**
  * Koniec głosowania między posiedzeniami (DA-21: „trwa domyślnie 24 godziny i co najmniej 24 godziny od rozpoczęcia”).
@@ -201,9 +235,12 @@ export function effectiveMeeting(env: CascadeEnv, m: Meeting, options: {review?:
   const voteMinutes = meetingSetting(env, m, 'voteMinutes');
   const motionMinutes = meetingSetting(env, m, 'motionMinutes');
   const remote = m.mode === 'zdalne' || m.kind === 'procedura';
+  // U-12 (dodatek): na posiedzeniu stacjonarnym kanał od początku albo dopiero po pierwszej wiadomości, według kaskady.
+  const fromStart = meetingFlag(env, m, 'messagesFromStart');
   const messages: MeetingEffective['meeting']['messages'] = remote
     ? {value: 'zawsze', source: 'aplikacja', level: 0, appRule: 'kanal_zdalny'}
-    : {value: 'gdy_sa_wiadomosci', source: 'ogolne', level: 1, ...(frozen ? {frozen: true as const} : {}), ...(frozen?.legacy ? {legacy: true as const} : {})};
+    : {...fromStart, value: fromStart.value ? 'od_poczatku' : 'gdy_sa_wiadomosci', inherited: fromStart.inherited === undefined ? undefined : fromStart.inherited ? 'od_poczatku' : 'gdy_sa_wiadomosci'};
+  if (messages.inherited === undefined) delete messages.inherited;
   const members = organRoster(env.roster, m);
   const seats = organSettingsOf(env.general, m.organ).seats?.count ?? null;
   const total = members.length;
@@ -236,6 +273,9 @@ export function effectiveMeeting(env: CascadeEnv, m: Meeting, options: {review?:
       differences.push({key, text: `${settingNames[key]} ${minutesText(e.value)}, ${e.inheritedSource === 'szablon' ? 'we wzorze posiedzenia' : 'w ustawieniach ogólnych'} ${minutesText(e.inherited)}.`});
     }
   }
+  if (!remote && fromStart.source === 'posiedzenie' && fromStart.inherited !== undefined && fromStart.inherited !== fromStart.value) {
+    differences.push({key: 'messagesFromStart', text: `Kanał wiadomości ${messagesText(fromStart.value)}, ${fromStart.inheritedSource === 'szablon' ? 'we wzorze posiedzenia' : 'w ustawieniach ogólnych'} ${messagesText(fromStart.inherited)}.`});
+  }
   for (const it of m.agenda) {
     const e = items[it.id], nr = itemNumber(m.agenda, it.id);
     if (it.voteMinutes !== undefined && it.voteMinutes !== voteMinutes.value) {
@@ -248,6 +288,8 @@ export function effectiveMeeting(env: CascadeEnv, m: Meeting, options: {review?:
 
   const deviations = frozen?.legacy ? [] : meetingDeviations(env, m);
   const out: MeetingEffective = {meeting, items, differences, deviations};
+  const proposal = protocolProposal(env, m);
+  if (proposal) out.protocolNumberProposal = proposal;
   if (options.review && m.status === 'przygotowanie') out.review = review(env, m, items, options.now ?? Date.now());
   return out;
 }
@@ -452,6 +494,25 @@ export function basisSentences(env: CascadeEnv, m: Meeting, b: Ballot): string[]
     }
   }
   return out;
+}
+
+/**
+ * Treść zawiadomienia z wzoru organu i danych posiedzenia (U-15, dodatek; § 7 ust. 1). Dane wstawia się bez odmiany (I-17):
+ * termin „3 grudnia 2026 r., godz. 10:00”, miejsce (przy posiedzeniu zdalnym „posiedzenie zdalne” i odnośnik), porządek
+ * obrad z numerami punktów, nazwa organu w dopełniaczu i odnośnik do połączenia. Tekst bez twardych spacji, do skopiowania.
+ */
+export function noticeText(env: Pick<CascadeEnv, 'general' | 'organ'>, m: Pick<Meeting, 'organ' | 'date' | 'time' | 'place' | 'mode' | 'link' | 'agenda'>): string {
+  const template = noticeTemplateOf(organSettingsOf(env.general, m.organ));
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(m.date) ? new Intl.DateTimeFormat('pl-PL', {timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric'}).format(Date.parse(m.date + 'T12:00:00Z')) + ' r.' : m.date;
+  const remote = m.mode === 'zdalne';
+  const link = remote ? m.link || 'odnośnik do połączenia nie jest jeszcze wpisany' : m.link;
+  const place = remote ? `posiedzenie zdalne, ${link}` : m.place || 'miejsce nie jest jeszcze wpisane';
+  const agenda = orderedAgenda(m.agenda).filter(i => i.status !== 'wycofany').map(i => `${itemNumber(m.agenda, i.id)}. ${i.title.replace(/[.\s]+$/, '')}`).join('\n');
+  const values: Record<string, string> = {
+    [NOTICE_TAGS.termin]: `${day}, godz. ${m.time}`, [NOTICE_TAGS.miejsce]: place, [NOTICE_TAGS.porzadek]: agenda,
+    [NOTICE_TAGS.organ]: env.organ.forms.genitive, [NOTICE_TAGS.odnosnik]: link,
+  };
+  return template.replace(/\[[^\]\n]{1,40}\]/g, tag => values[tag] ?? tag);
 }
 
 /** Tytuł rodzaju sprawy w propozycji: „Propozycja »…«, bo tytuł zawiera słowo „…”.” albo null bez propozycji. */

@@ -112,10 +112,67 @@ const organLabels: Record<string, string> = {
   voteMinutes: 'Czas głosowania w sprawie', motionMinutes: 'Czas głosowań nad wnioskami', procedureHours: 'Czas trwania głosowania między posiedzeniami',
   recorder: 'Protokolant domyślny', messagesFromStart: 'Kanał wiadomości na posiedzeniu stacjonarnym', noticeTemplate: 'Wzór zawiadomienia',
 };
-/** Ustawienia z dodatków (D), których rdzeń wersji 3 jeszcze nie zmienia. */
-const addOns = new Set(['protocolNumberPattern', 'messagesFromStart', 'noticeTemplate']);
+/** Ustawienia z dodatków (D), których wersja 3 jeszcze nie zmienia (wszystkie dodatki ustawień są już wdrożone). */
+const addOns = new Set<string>([]);
 const addOnRefusal = 'Tego ustawienia nie można jeszcze zmienić.';
+/** Kanał wiadomości na posiedzeniu stacjonarnym słowami (U-12): „widoczny od początku posiedzenia” albo „widoczny, gdy ktoś napisze”. */
+export const messagesText = (fromStart: boolean | undefined) => fromStart ? 'widoczny od początku posiedzenia' : 'widoczny, gdy ktoś napisze';
 const shown = (v: string) => v ? `„${v}”` : 'brak';
+
+/** Znaczniki wzoru zawiadomienia (U-15, G-4): trzy obowiązkowe (§ 7 ust. 1) i dwa dopuszczalne. */
+export const NOTICE_TAGS = {termin: '[termin]', miejsce: '[miejsce]', porzadek: '[porządek obrad]', organ: '[organ w dopełniaczu]', odnosnik: '[odnośnik]'} as const;
+/** Wzór zawiadomienia domyślny (rozdz. 5.2 sekcja 8); wstawiane dane bez odmiany (I-17). */
+export const DEFAULT_NOTICE_TEMPLATE = [
+  'Uprzejmie zawiadamiam o posiedzeniu [organ w dopełniaczu], które odbędzie się [termin].',
+  'Miejsce posiedzenia [miejsce].',
+  '',
+  'Projekt porządku obrad',
+  '[porządek obrad]',
+  '',
+  'Materiały są dostępne w aplikacji.',
+].join('\n');
+/** Wzór zawiadomienia organu: własny albo domyślny. */
+export const noticeTemplateOf = (o: Pick<OrganSettings, 'noticeTemplate'>) => o.noticeTemplate || DEFAULT_NOTICE_TEMPLATE;
+/** Tekst wielowierszowy: końce wierszy \n, bez spacji na końcach wierszy i bez pustych wierszy na początku i końcu. */
+const multiline = (v: unknown) => typeof v === 'string' ? v.replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/[ \t]+/g, ' ').trimEnd()).join('\n').replace(/^\n+|\n+$/g, '') : '';
+/** Wzór zawiadomienia (G-3, G-4): do 4000 znaków, ze znacznikami terminu, miejsca i porządku obrad, bez innych znaczników. */
+export function noticeTemplateProblem(template: string): string | null {
+  if (!template) return null;
+  if (template.length > 4000) return tooLong(4000);
+  const known = Object.values(NOTICE_TAGS) as string[];
+  const unknown = (template.match(/\[[^\]\n]{1,40}\]/g) ?? []).find(tag => !known.includes(tag));
+  if (unknown) return `Nieznany znacznik ${unknown}. Wstaw ${known.slice(0, -1).join(', ')} albo ${known.at(-1)}.`;
+  if (![NOTICE_TAGS.termin, NOTICE_TAGS.miejsce, NOTICE_TAGS.porzadek].every(tag => template.includes(tag))) return 'Wzór zawiadomienia musi zawierać termin, miejsce i porządek obrad (§ 7 ust. 1).';
+  return null;
+}
+
+/** Znaczniki wzoru numeru protokołu (U-03, dodatek). */
+export const PROTOCOL_TAGS = {numer: '[numer]', kadencja: '[kadencja]', rok: '[rok]'} as const;
+/** Wzór numeru protokołu (U-03, G-3): pusty napis (bez propozycji) albo do 40 znaków ze znacznikiem „[numer]”. */
+export function protocolPatternProblem(pattern: string): string | null {
+  if (!pattern) return null;
+  if (pattern.length > 40) return tooLong(40);
+  if (!pattern.includes(PROTOCOL_TAGS.numer)) return 'Wzór numeru protokołu musi zawierać [numer].';
+  return null;
+}
+/**
+ * Proponowany numer protokołu (U-03, rozdz. 2.3): „[numer]” to 1 + największa liczba na pozycji „[numer]” wśród numerów
+ * protokołów posiedzeń tego organu z tego samego roku kalendarzowego (`existing` podaje wywołujący), „[kadencja]” to
+ * numer kadencji, a „[rok]” rok daty posiedzenia. Numery, które nie pasują do wzoru, się pomija. Bez wzoru null.
+ */
+export function nextProtocolNumber(pattern: string, termNumber: string, year: number, existing: string[]): string | null {
+  if (!pattern || !pattern.includes(PROTOCOL_TAGS.numer)) return null;
+  const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const source = pattern.split(/(\[numer\]|\[kadencja\]|\[rok\])/).map(part =>
+    part === PROTOCOL_TAGS.numer ? '(\\d+)' : part === PROTOCOL_TAGS.kadencja ? '.*?' : part === PROTOCOL_TAGS.rok ? '\\d{4}' : esc(part)).join('');
+  const re = new RegExp(`^${source}$`, 'i');
+  let max = 0;
+  for (const number of existing) {
+    const hit = re.exec(number.trim());
+    if (hit) max = Math.max(max, Number(hit[1]));
+  }
+  return pattern.split(PROTOCOL_TAGS.numer).join(String(max + 1)).split(PROTOCOL_TAGS.kadencja).join(termNumber).split(PROTOCOL_TAGS.rok).join(String(year));
+}
 
 /** Krótki opis wzoru do historii zmian, np. „7 punktów, czas głosowania w sprawie 2 minuty”. */
 export function templateSummary(t: MeetingTemplate, organ: OrganSettings) {
@@ -123,6 +180,7 @@ export function templateSummary(t: MeetingTemplate, organ: OrganSettings) {
   const parts = [`${count} ${plural(count, 'punkt', 'punkty', 'punktów')}`,
     `czas głosowania w sprawie ${minutesText(t.settings?.voteMinutes ?? organ.voteMinutes)}`,
     `czas głosowań nad wnioskami ${minutesText(t.settings?.motionMinutes ?? organ.motionMinutes)}`];
+  if (t.settings?.messagesFromStart !== undefined) parts.push(`kanał wiadomości ${messagesText(t.settings.messagesFromStart)}`);
   if (t.defaults?.time) parts.push(`godzina ${t.defaults.time}`);
   if (t.defaults?.mode) parts.push(`tryb ${t.defaults.mode}`);
   if (t.defaults?.recorder) parts.push(`protokolant ${t.defaults.recorder}`);
@@ -166,7 +224,10 @@ function templateInput(raw: MeetingTemplate, organ: OrganCode, b: GeneralBundle,
   const settings: Partial<MeetingSettings> = {};
   if (raw.settings?.voteMinutes !== undefined && raw.settings.voteMinutes !== null) settings.voteMinutes = minutesInput(raw.settings.voteMinutes, VOTE_MINUTES);
   if (raw.settings?.motionMinutes !== undefined && raw.settings.motionMinutes !== null) settings.motionMinutes = minutesInput(raw.settings.motionMinutes, MOTION_MINUTES);
-  if (raw.settings?.messagesFromStart !== undefined) bad(addOnRefusal);
+  if (raw.settings?.messagesFromStart !== undefined && raw.settings.messagesFromStart !== null) {
+    if (typeof raw.settings.messagesFromStart !== 'boolean') bad('Wybierz, kiedy kanał wiadomości jest widoczny.');
+    settings.messagesFromStart = raw.settings.messagesFromStart;
+  }
   if (Object.keys(settings).length) out.settings = settings;
   const defaults: NonNullable<MeetingTemplate['defaults']> = {};
   if (raw.defaults?.time) { if (!/^\d{2}:\d{2}$/.test(raw.defaults.time)) bad('Nieprawidłowa godzina.'); defaults.time = raw.defaults.time; }
@@ -277,6 +338,17 @@ export function applySettingsChange(b: GeneralBundle, change: SettingsChange, en
     case 'siedziba': {
       if (!(change.key in siteLabels)) bad('Nieznane ustawienie.');
       if (addOns.has(change.key)) bad(addOnRefusal);
+      if (change.key === 'protocolNumberPattern') {
+        // U-03 (dodatek): pusty wzór wyłącza propozycję numeru.
+        const value = typeof change.value === 'string' ? change.value.replace(/\s+/g, ' ').trim() : bad('Nieprawidłowa zmiana ustawień.');
+        const problem = protocolPatternProblem(value);
+        if (problem) bad(problem);
+        const before = next.general.site.protocolNumberPattern ?? '';
+        next.general.site.protocolNumberPattern = value;
+        const words = (v: string) => v ? `„${v}”` : 'bez propozycji numeru';
+        entry({area: 'siedziba', key: change.key, label: siteLabels[change.key], before: words(before), after: words(value)});
+        break;
+      }
       const max = change.key === 'termNumber' ? 10 : 200;
       const value = text(change.value, max, change.key === 'place' ? 'Wpisz miejsce posiedzeń.' : change.key === 'term' ? 'Wpisz nazwę kadencji.' : 'Wpisz numer kadencji.');
       const before = next.general.site[change.key];
@@ -303,6 +375,20 @@ export function applySettingsChange(b: GeneralBundle, change: SettingsChange, en
         const value = text(change.value, 120);
         before = shown(organ.recorder); after = shown(value);
         organ.recorder = value;
+      } else if (change.key === 'messagesFromStart') {
+        // U-12 (dodatek): kanał wiadomości na posiedzeniu stacjonarnym od początku albo dopiero po pierwszej wiadomości.
+        if (typeof change.value !== 'boolean') bad('Wybierz, kiedy kanał wiadomości jest widoczny.');
+        before = messagesText(organ.messagesFromStart); after = messagesText(change.value as boolean);
+        if (change.value) organ.messagesFromStart = true; else delete organ.messagesFromStart;
+      } else if (change.key === 'noticeTemplate') {
+        // U-15 (dodatek): pusty tekst albo tekst domyślny przywraca wzór domyślny.
+        const value = multiline(change.value);
+        const problem = noticeTemplateProblem(value);
+        if (problem) bad(problem);
+        const words = (v: string | undefined) => !v || v === DEFAULT_NOTICE_TEMPLATE ? 'tekst domyślny' : v.length > 200 ? `„${v.slice(0, 200).replace(/\n/g, ' ')}…”` : `„${v.replace(/\n/g, ' ')}”`;
+        before = words(organ.noticeTemplate); after = words(value);
+        if (!value || value === DEFAULT_NOTICE_TEMPLATE) delete organ.noticeTemplate; else organ.noticeTemplate = value;
+        if (before === after && (organ.noticeTemplate ?? '') !== (b.general.organs[change.organ]?.noticeTemplate ?? '')) after += ' (zmieniony tekst)';
       }
       entry({area: 'organ', organ: change.organ, key: change.key, label: organLabels[change.key], before, after});
       break;

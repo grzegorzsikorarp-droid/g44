@@ -9,7 +9,7 @@ import {organOfCode} from '../shared/roster.ts';
 import {ApiError, request, serverNow} from './api.ts';
 import {brand} from './brand.ts';
 import {useSession} from './session.ts';
-import {Button, Confirm, Fact, Field, Fold, fmtDate, fmtTime, Notice, Segments} from './ui.tsx';
+import {Button, Confirm, Fact, Field, Fold, fmtDate, fmtTime, Modal, Notice, Segments} from './ui.tsx';
 
 // Wzorce kaskady ustawień K1–K7 (specyfikacja wersji 3, rozdz. 5.1), wspólne dla ustawień ogólnych, wzorów posiedzeń,
 // ustawień posiedzenia i punktu. Właściciel pliku: zespół B; zespół C tylko używa. Style są w src/client/style/ustawienia.css.
@@ -244,6 +244,15 @@ export function MinutesRowEditor(props: {close: (s?: string) => void; ctl: Edito
   </RowEditor>;
 }
 
+/** Kanał wiadomości na posiedzeniu stacjonarnym (U-12): „Widoczny, gdy ktoś napisze” albo „Widoczny od początku posiedzenia”. */
+export const messagesOptionLabel = (fromStart: boolean) => fromStart ? 'Widoczny od początku posiedzenia' : 'Widoczny, gdy ktoś napisze';
+export function MessagesRowEditor(props: {close: (s?: string) => void; ctl: EditorCtl; label: string; initial: boolean; onSave: (value: boolean) => Promise<unknown>}) {
+  const [value, setValue] = useState(props.initial ? 'tak' : 'nie');
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={(value === 'tak') !== props.initial} onSave={() => props.onSave(value === 'tak')}>
+    <Segments label={props.label} value={value} options={[['nie', messagesOptionLabel(false)], ['tak', messagesOptionLabel(true)]]} onChange={setValue}/>
+  </RowEditor>;
+}
+
 /** Data słownie pod polem daty (K7): „Czwartek, 3 grudnia 2026 r.”; pusty napis bez daty. */
 export function dateHintText(value: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
@@ -306,11 +315,14 @@ export function BasisFields(props: {value: CompositionBasis | null; onChange: (v
 export const basisReason = (value: CompositionBasis | null, onlyAct = false) => basisProblem(value, onlyAct);
 
 /** Wiersz historii zmian (K5): wpis ustawień ogólnych albo wpis dziennika posiedzenia (`text` zamiast było i jest). */
-export interface HistoryRow { id: string | number; at: number; actor: string; label: string; before: string; after: string; basis?: string; key?: string; text?: string }
-export const historyRowOf = (e: AuditEntry): HistoryRow => ({id: e.id, at: e.at, actor: e.actor, label: e.label, before: e.before, after: e.after, basis: e.basis, key: e.key});
+export interface HistoryRow { id: string | number; at: number; actor: string; label: string; before: string; after: string; basis?: string; key?: string; text?: string; area?: SettingsArea }
+export const historyRowOf = (e: AuditEntry): HistoryRow => ({id: e.id, at: e.at, actor: e.actor, label: e.label, before: e.before, after: e.after, basis: e.basis, key: e.key, area: e.area});
 
-/** Wpisy historii zmian: z `area` (albo `all`) z GET /api/settings/history po 50, z `rows` podane wiersze. */
-function useHistory(props: {area?: SettingsArea; all?: boolean; rows?: HistoryRow[]; keys?: (key: string) => boolean; version?: number}) {
+/**
+ * Wpisy historii zmian: z `area` (albo `all`) z GET /api/settings/history po 50, z `rows` podane wiersze. Filtry
+ * (dodatek): `accountId` zawęża zapytanie do konta, a `areas` i `keys` zawężają wczytane wpisy do sekcji ustawień.
+ */
+function useHistory(props: {area?: SettingsArea; all?: boolean; rows?: HistoryRow[]; keys?: (key: string) => boolean; areas?: SettingsArea[]; accountId?: string; version?: number}) {
   const [rows, setRows] = useState<HistoryRow[] | null>(props.rows ?? null);
   const [next, setNext] = useState<number | null>(null);
   const [shown, setShown] = useState(50);
@@ -318,13 +330,13 @@ function useHistory(props: {area?: SettingsArea; all?: boolean; rows?: HistoryRo
   const remote = !!(props.area || props.all);
   const load = (before?: number) => {
     if (!remote) return;
-    const query = [props.area ? `area=${props.area}` : '', before ? `before=${before}` : ''].filter(Boolean).join('&');
+    const query = [props.area ? `area=${props.area}` : '', props.accountId ? `accountId=${encodeURIComponent(props.accountId)}` : '', before ? `before=${before}` : ''].filter(Boolean).join('&');
     request<{entries: AuditEntry[]; next: number | null}>(`/api/settings/history${query ? '?' + query : ''}`)
       .then(r => { setError(''); setRows(old => [...(before ? old ?? [] : []), ...r.entries.map(historyRowOf)]); setNext(r.next); })
       .catch(e => setError((e as Error).message));
   };
-  useEffect(() => { if (props.rows) setRows(props.rows); else load(); }, [props.area, props.all, props.rows, props.version]);
-  const list = [...(rows ?? [])].filter(r => !props.keys || !r.key || props.keys(r.key)).sort((a, b) => b.at - a.at);
+  useEffect(() => { if (props.rows) setRows(props.rows); else load(); }, [props.area, props.all, props.rows, props.version, props.accountId]);
+  const list = [...(rows ?? [])].filter(r => (!props.keys || !r.key || props.keys(r.key)) && (!props.areas || !r.area || props.areas.includes(r.area))).sort((a, b) => b.at - a.at);
   const visible = remote ? list : list.slice(0, shown);
   const more = remote ? next !== null : list.length > shown;
   return {list, visible, more, error, loaded: rows !== null, loadMore: () => remote ? load(next ?? undefined) : setShown(n => n + 50)};
@@ -370,9 +382,12 @@ export function HistoryFold(props: {title?: string; area?: SettingsArea; rows?: 
     <HistoryBody h={h} label={title} emptyText={props.emptyText} simple={props.simple}/>
   </Fold>;
 }
-/** Historia zmian bez zwijania (sekcja „Historia zmian” ustawień ogólnych): wszystkie obszary, do których konto ma dostęp. */
-export function HistoryTable(props: {label: string; area?: SettingsArea; emptyText?: string; version?: number}) {
-  const h = useHistory({area: props.area, all: !props.area, version: props.version});
+/**
+ * Historia zmian bez zwijania (sekcja „Historia zmian” ustawień ogólnych): wszystkie obszary, do których konto ma dostęp.
+ * Filtry „Sekcja” i „Konto” (dodatek) podaje wywołujący przez `areas`, `keys` i `accountId`.
+ */
+export function HistoryTable(props: {label: string; area?: SettingsArea; areas?: SettingsArea[]; keys?: (key: string) => boolean; accountId?: string; emptyText?: string; version?: number}) {
+  const h = useHistory({area: props.area, all: !props.area, areas: props.areas, keys: props.keys, accountId: props.accountId, version: props.version});
   return <HistoryBody h={h} label={props.label} emptyText={props.emptyText}/>;
 }
 
@@ -394,4 +409,47 @@ export function DiffList(props: {title: string; rows: DiffRow[]; onShow?: (row: 
 export function OrganFact(props: {organ: OrganCode; label?: string}) {
   const {roster} = useSession();
   return <dl class="facts organ-fact"><Fact label={props.label ?? 'Organ'}>{organOfCode(roster, props.organ).name}</Fact></dl>;
+}
+
+/**
+ * Kopiowanie tekstu do schowka (U-15). W ramce bez uprawnień schowka (wersja próbna) próbuje jeszcze zaznaczenia
+ * i polecenia kopiowania; zwraca, czy się udało. Bez okien przeglądarki (alert, prompt).
+ */
+export async function copyText(text: string): Promise<boolean> {
+  // Gdy zasady dokumentu blokują schowek (ramka wersji próbnej), przeglądarka zgłasza błąd już przy próbie, więc się jej nie robi.
+  let allowed = true;
+  try {
+    const policy = (document as unknown as {permissionsPolicy?: {allowsFeature: (f: string) => boolean}; featurePolicy?: {allowsFeature: (f: string) => boolean}});
+    const p = policy.permissionsPolicy ?? policy.featurePolicy;
+    if (p) allowed = p.allowsFeature('clipboard-write');
+  } catch { /* bez informacji o zasadach */ }
+  if (allowed && navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* dalej zaznaczenie */ }
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  try { area.select(); return document.execCommand('copy'); } catch { return false; } finally { area.remove(); }
+}
+
+/** Okno z treścią zawiadomienia (U-15): tekst do zaznaczenia i „Kopiuj zawiadomienie”. */
+export function NoticeDialog(props: {title: string; text: string; note?: ComponentChildren; onClose: () => void}) {
+  const [status, setStatus] = useState('');
+  const area = useRef<HTMLTextAreaElement>(null);
+  const copy = async () => {
+    const ok = await copyText(props.text);
+    if (!ok) { area.current?.focus(); area.current?.select(); }
+    setStatus(ok ? 'Skopiowano zawiadomienie.' : 'Nie udało się skopiować. Tekst jest zaznaczony, skopiuj go skrótem klawiszowym.');
+  };
+  return <Modal title={props.title} wide onClose={props.onClose}>
+    <div class="stack">
+      {props.note}
+      <Field label="Treść zawiadomienia"><textarea ref={area} class="notice-area" readOnly rows={Math.min(18, props.text.split('\n').length + 1)} value={props.text}/></Field>
+      <div class="actions"><Button onClick={copy}>Kopiuj zawiadomienie</Button></div>
+      <p class="save-status" role="status">{status}</p>
+    </div>
+  </Modal>;
 }

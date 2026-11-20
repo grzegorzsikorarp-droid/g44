@@ -1,21 +1,22 @@
 import type {ComponentChildren} from 'preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {APP_RULES, HOUSE_RULES, agendaBasis, houseRule, lawOf, shareText, type AppRuleId, type HouseRuleId} from '../shared/law.ts';
 import {itemKindLabel} from '../shared/agenda.ts';
 import {sortedDocTypes} from '../shared/doctypes.ts';
 import {quorumOf} from '../shared/rules.ts';
 import {organMembers, organOfCode} from '../shared/roster.ts';
 import {settingsAccess} from '../shared/role.ts';
-import {compositionBasisText, FUNCS, funcLabel, MOTION_MINUTES, organSettingsOf, PROCEDURE_HOURS, VOTE_MINUTES,
-  type CompositionChange, type GeneralBundle, type MeetingTemplate, type SettingsChange, type TemplateItem} from '../shared/settings.ts';
+import {compositionBasisText, FUNCS, funcLabel, MOTION_MINUTES, nextProtocolNumber, noticeTemplateOf, noticeTemplateProblem, organSettingsOf, PROCEDURE_HOURS, PROTOCOL_TAGS, protocolPatternProblem, VOTE_MINUTES,
+  type CompositionChange, type GeneralBundle, type MeetingTemplate, type SettingsArea, type SettingsChange, type TemplateItem} from '../shared/settings.ts';
 import {dateDots, hoursText, minutesText, plural} from '../shared/text.ts';
-import type {CompositionBasis, Effective, Func, ItemKind, MeetingMode, OrganCode} from '../shared/types.ts';
+import type {AgendaItem, CompositionBasis, Effective, Func, ItemKind, MeetingMode, OrganCode, Roster} from '../shared/types.ts';
+import {cascadeEnv, noticeText} from '../shared/cascade.ts';
 import {request} from './api.ts';
 import {brand} from './brand.ts';
 import {setGeneral, useGeneral} from './general.ts';
 import {useSession} from './session.ts';
 import {Button, CardTitle, Confirm, ErrorNotice, Fact, Field, Fold, Modal, Notice, SectionHead, Segments, Tag, useAction, useMedia} from './ui.tsx';
-import {appRuleWhy, basisReason, BasisFields, dateHintText, HistoryFold, HistoryTable, MinutesRowEditor, OrganFact, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type EditorCtl} from './cascade-ui.tsx';
+import {appRuleWhy, basisReason, BasisFields, dateHintText, HistoryFold, HistoryTable, MessagesRowEditor, messagesOptionLabel, MinutesRowEditor, NoticeDialog, OrganFact, RowEditor, SettingRow, SettingsList, sourceLineText, TextRowEditor, type EditorCtl} from './cascade-ui.tsx';
 import {AccountsPanel} from './accounts.tsx';
 import {KindsSection} from './rodzaje.tsx';
 import {DocTypeSelect, usePeople} from './people.tsx';
@@ -40,7 +41,7 @@ const groups: {name: string; sections: SectionInfo[]}[] = [
     {id: 'wzory', name: 'Wzory posiedzeń', desc: 'Punkty porządku obrad i ustawienia, od których zaczyna się nowe posiedzenie.'},
     {id: 'rodzaje', name: 'Rodzaje spraw i dokumentów', desc: 'Co jest głosowane, formuły wyniku i sprawy, które aplikacja rozpoznaje w projekcie porządku obrad.'},
     {id: 'glosowanie', name: 'Głosowanie i obrady', desc: 'Domyślne czasy głosowań i czas głosowania między posiedzeniami.'},
-    {id: 'protokol', name: 'Protokół i zawiadomienie', desc: 'Protokolant, wykaz aktów i terminy.'},
+    {id: 'protokol', name: 'Protokół i zawiadomienie', desc: 'Protokolant, wykaz aktów, terminy i wzór zawiadomienia.'},
   ]},
   {name: 'Ślad', sections: [
     {id: 'historia', name: 'Historia zmian', desc: 'Wszystkie zmiany ustawień z datą, godziną i kontem.'},
@@ -147,13 +148,61 @@ function Section(props: {id: SectionId; bundle: GeneralBundle | null; canEdit: b
     case 'rodzaje': body = <><OrganFact organ={ORGAN}/><KindsSection bundle={props.bundle!} canEdit={props.canEdit}/></>; break;
     case 'glosowanie': body = <VotingSection bundle={props.bundle!} canEdit={props.canEdit}/>; break;
     case 'protokol': body = <MinutesSection bundle={props.bundle!} canEdit={props.canEdit}/>; break;
-    case 'historia': body = <HistoryTable label="Historia zmian" version={props.bundle?.revision}/>; break;
+    case 'historia': body = <HistorySection version={props.bundle?.revision}/>; break;
   }
   return <section class="settings-section" aria-labelledby={`sekcja-${info.id}`}>
     <div class="oi-section-head"><span class="oi-mark" aria-hidden="true"/><h2 id={`sekcja-${info.id}`}>{info.name}</h2></div>
     <p class="settings-lead">{info.desc}</p>
     {body}
   </section>;
+}
+
+/** Sekcje ustawień w filtrze historii zmian (dodatek): obszar historii albo obszary i klucze jednej sekcji. */
+const historySections: {id: string; name: string; area?: SettingsArea; areas?: SettingsArea[]; keys?: (k: string) => boolean}[] = [
+  {id: 'siedziba', name: 'Siedziba i kadencja', area: 'siedziba'},
+  {id: 'sklad', name: 'Skład', area: 'sklad'},
+  {id: 'konta', name: 'Konta i role', area: 'konta'},
+  {id: 'wzory', name: 'Wzory posiedzeń', area: 'wzory'},
+  {id: 'rodzaje', name: 'Rodzaje spraw i dokumentów', areas: ['rodzaje_dokumentow', 'rodzaje_spraw']},
+  {id: 'glosowanie', name: 'Głosowanie i obrady', area: 'organ', keys: k => k !== 'recorder' && k !== 'noticeTemplate'},
+  {id: 'protokol', name: 'Protokół i zawiadomienie', area: 'organ', keys: k => k === 'recorder' || k === 'noticeTemplate'},
+  {id: 'posiedzenia', name: 'Usunięte posiedzenia', area: 'posiedzenia'},
+];
+
+/** Konta do filtra „Konto”: z listy osób (biuro, przewodniczący, wiceprzewodniczący) i z listy kont (administrator). */
+function useFilterAccounts(admin: boolean) {
+  const people = usePeople();
+  const [accounts, setAccounts] = useState<{id: string; displayName: string}[]>([]);
+  useEffect(() => { if (admin) request<{accounts: {id: string; displayName: string}[]}>('/api/accounts').then(r => setAccounts(r.accounts)).catch(() => setAccounts([])); }, [admin]);
+  const all = new Map<string, string>();
+  for (const a of [...people, ...accounts]) all.set(a.id, a.displayName);
+  return [...all].sort((a, b) => a[1].localeCompare(b[1], 'pl'));
+}
+
+// Sekcja „Historia zmian” z filtrami „Sekcja” i „Konto” (dodatek, rozdz. 5.2 sekcja 9); filtr działa po „Pokaż”.
+function HistorySection(props: {version?: number}) {
+  const s = useSession();
+  const access = settingsAccess(s.roster, {account: s.account, personId: s.personId, name: s.name});
+  const sections = historySections.filter(x => x.area === 'konta' ? access.accounts : !!access.general);
+  const accounts = useFilterAccounts(access.accounts);
+  const [section, setSection] = useState('');
+  const [account, setAccount] = useState('');
+  const [applied, setApplied] = useState({section: '', account: ''});
+  const chosen = historySections.find(x => x.id === applied.section);
+  const label = chosen ? `Historia zmian, ${chosen.name}` : 'Historia zmian';
+  return <>
+    <form class="history-filters" aria-label="Filtry historii zmian" onSubmit={e => { e.preventDefault(); setApplied({section, account}); }}>
+      {sections.length > 1 && <Field label="Sekcja"><select value={section} onChange={e => setSection((e.target as HTMLSelectElement).value)}>
+        <option value="">Wszystkie sekcje</option>{sections.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+      </select></Field>}
+      <Field label="Konto"><select value={account} onChange={e => setAccount((e.target as HTMLSelectElement).value)}>
+        <option value="">Wszystkie konta</option>{accounts.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+      </select></Field>
+      <div><Button type="submit">Pokaż</Button></div>
+    </form>
+    <HistoryTable label={label} area={chosen?.area} areas={chosen?.areas} keys={chosen?.keys} accountId={applied.account || undefined} version={props.version}
+      emptyText={applied.section || applied.account ? 'Nie ma zmian dla wybranych filtrów.' : undefined}/>
+  </>;
 }
 
 function SiteSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
@@ -169,6 +218,7 @@ function SiteSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
       <SettingRow label="Kadencja" value={`${site.term}, numer ${site.termNumber}`} effective={general(site.term)} at="ogolne" genitive="kadencji"
         action="Zmień kadencję" actionLabel="Zmień kadencję" hint={`Kadencja trwa 4 lata (§ 2 ust. 2 ${organ.forms.regulation}).`}
         editor={props.canEdit ? (close, ctl) => <TermEditor close={close} ctl={ctl} term={site.term} number={site.termNumber}/> : undefined}/>
+      <ProtocolPatternRow pattern={site.protocolNumberPattern ?? ''} termNumber={site.termNumber} canEdit={props.canEdit}/>
     </SettingsList>
     <HistoryFold area="siedziba" version={props.bundle.revision}/>
   </>;
@@ -189,6 +239,62 @@ function TermEditor(props: {close: (s?: string) => void; ctl: EditorCtl; term: s
       <Field label="Nazwa kadencji" hint="Np. IX kadencja 2024–2028."><input value={term} maxLength={200} onInput={e => setTerm((e.target as HTMLInputElement).value)}/></Field>
       <Field label="Numer kadencji" hint="Np. IX."><input value={number} maxLength={10} onInput={e => setNumber((e.target as HTMLInputElement).value)}/></Field>
     </div>
+  </RowEditor>;
+}
+
+/** Numery protokołów posiedzeń Prezydium z tego roku (podgląd następnego numeru, U-03). Tylko na stronie ustawień. */
+function useProtocolNumbers(year: string) {
+  const [numbers, setNumbers] = useState<string[] | null>(null);
+  useEffect(() => {
+    request<{meetings: {organ: OrganCode; kind: string; date: string; protocolNumber: string | null}[]}>('/api/meetings')
+      .then(r => setNumbers(r.meetings.filter(x => x.organ === ORGAN && x.kind === 'posiedzenie' && x.protocolNumber && x.date.startsWith(year)).map(x => x.protocolNumber!)))
+      .catch(() => setNumbers([]));
+  }, [year]);
+  return numbers;
+}
+
+// U-03 (dodatek): wzór numeru protokołu. Aplikacja proponuje kolejny numer pod polem „Numer protokołu” w przygotowaniu.
+function ProtocolPatternRow(props: {pattern: string; termNumber: string; canEdit: boolean}) {
+  const year = String(new Date().getFullYear());
+  const numbers = useProtocolNumbers(year);
+  const preview = (pattern: string) => {
+    const next = nextProtocolNumber(pattern, props.termNumber, Number(year), numbers ?? []);
+    return next ? `Następny protokół Prezydium ${next}.` : '';
+  };
+  return <SettingRow label="Wzór numeru protokołu" value={props.pattern || 'Bez propozycji numeru'} effective={general(props.pattern)} at="ogolne" genitive="wzoru numeru protokołu"
+    hint="Aplikacja zaproponuje kolejny numer pod polem „Numer protokołu”. Numer zawsze można zmienić."
+    extra={props.pattern && numbers ? <p class="small">{preview(props.pattern)}</p> : undefined}
+    editor={props.canEdit ? (close, ctl) => <ProtocolPatternEditor close={close} ctl={ctl} initial={props.pattern} preview={preview}/> : undefined}/>;
+}
+function ProtocolPatternEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial: string; preview: (pattern: string) => string}) {
+  const [value, setValue] = useState(props.initial);
+  const input = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  const clean = value.replace(/\s+/g, ' ').trim();
+  // „Wstaw …” wpisuje znacznik w miejscu kursora i zostawia kursor za nim (ustawiany zaraz po zmianie wartości pola).
+  const insert = (tag: string) => {
+    const el = input.current;
+    const start = el?.selectionStart ?? value.length, end = el?.selectionEnd ?? value.length;
+    caret.current = Math.min(start + tag.length, 40);
+    setValue((value.slice(0, start) + tag + value.slice(end)).slice(0, 40));
+  };
+  useLayoutEffect(() => {
+    if (caret.current === null) return;
+    input.current?.focus();
+    input.current?.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [value]);
+  const preview = clean ? props.preview(clean) : '';
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={clean !== props.initial} onSave={() => saveSetting({area: 'siedziba', key: 'protocolNumberPattern', value: clean})} reason={protocolPatternProblem(clean) ?? undefined}>
+    <Field label="Wzór numeru protokołu" hint="Np. [numer]/[kadencja]/[rok]. Puste pole wyłącza propozycję numeru.">
+      <input ref={input} value={value} maxLength={40} onInput={e => setValue((e.target as HTMLInputElement).value)}/>
+    </Field>
+    <div class="actions">
+      <Button kind="ghost" quiet small onClick={() => insert(PROTOCOL_TAGS.numer)}>Wstaw numer</Button>
+      <Button kind="ghost" quiet small onClick={() => insert(PROTOCOL_TAGS.kadencja)}>Wstaw kadencję</Button>
+      <Button kind="ghost" quiet small onClick={() => insert(PROTOCOL_TAGS.rok)}>Wstaw rok</Button>
+    </div>
+    <p class="small" role="status">{preview}</p>
   </RowEditor>;
 }
 
@@ -422,6 +528,13 @@ function TemplatesSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
           show={v => minutesText(Number(v))} genitive="czasu głosowań nad wnioskami"
           editor={props.canEdit ? (close, ctl) => <MinutesRowEditor close={close} ctl={ctl} label="Czas głosowań nad wnioskami" initial={t.settings?.motionMinutes ?? organ.motionMinutes} options={MOTION_MINUTES} onSave={v => save(withSettings({motionMinutes: v}))}/> : undefined}
           onReset={props.canEdit ? async () => { await save(withSettings({motionMinutes: undefined})); return restored(minutesText(organ.motionMinutes, 'biernik')); } : undefined}/>
+        <SettingRow label="Kanał wiadomości" value={messagesOptionLabel(t.settings?.messagesFromStart ?? !!organ.messagesFromStart)} at="wzor" genitive="kanału wiadomości"
+          effective={t.settings?.messagesFromStart !== undefined
+            ? {value: t.settings.messagesFromStart, source: 'szablon', level: 1, via: {kind: 'wzor', name: t.name}, inherited: !!organ.messagesFromStart, inheritedSource: 'ogolne'}
+            : general(!!organ.messagesFromStart)}
+          show={v => messagesOptionLabel(!!v).toLocaleLowerCase('pl')} hint="Dotyczy posiedzenia stacjonarnego. Na posiedzeniu zdalnym kanał jest widoczny zawsze."
+          editor={props.canEdit ? (close, ctl) => <MessagesRowEditor close={close} ctl={ctl} label="Kanał wiadomości" initial={t.settings?.messagesFromStart ?? !!organ.messagesFromStart} onSave={v => save(withSettings({messagesFromStart: v}))}/> : undefined}
+          onReset={props.canEdit ? async () => { await save(withSettings({messagesFromStart: undefined})); return restored(`kanał wiadomości ${messagesOptionLabel(!!organ.messagesFromStart).toLocaleLowerCase('pl')}`); } : undefined}/>
         {/* Godzina i tryb nie są ustawieniami ogólnymi: bez własnej wartości wzoru nowe posiedzenie zaczyna się o 10:00, stacjonarnie. */}
         <SettingRow label="Godzina posiedzenia" value={t.defaults?.time ?? '10:00'} at="wzor" genitive="godziny posiedzenia" actionLabel="Zmień godzinę posiedzenia"
           state={t.defaults?.time ? 'zmieniona' : 'odziedziczona'}
@@ -586,6 +699,9 @@ function VotingSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
         hint="Od 24 do 336 godzin. Krótszy termin można ustawić dla jednego głosowania, podając powód."
         editor={props.canEdit ? (close, ctl) => <HoursEditor close={close} ctl={ctl} initial={organ.procedureHours} onSave={v => save('procedureHours', v)}/> : undefined}/>
       <SettingRow label="Najkrótszy czas głosowania między posiedzeniami" state="aplikacja" at="ogolne" value={hoursText(24)} effective={aplikacja('czas_procedury')} why={appRuleWhy}/>
+      <SettingRow label="Kanał wiadomości na posiedzeniu stacjonarnym" value={messagesOptionLabel(!!organ.messagesFromStart)} effective={general(!!organ.messagesFromStart)} at="ogolne" genitive="kanału wiadomości"
+        hint="Na posiedzeniu zdalnym i w głosowaniu między posiedzeniami kanał jest widoczny zawsze."
+        editor={props.canEdit ? (close, ctl) => <MessagesRowEditor close={close} ctl={ctl} label="Kanał wiadomości na posiedzeniu stacjonarnym" initial={!!organ.messagesFromStart} onSave={v => saveSetting({area: 'organ', organ: ORGAN, key: 'messagesFromStart', value: v})}/> : undefined}/>
       <SettingRow label="Tryb głosowania" state="regulamin" at="ogolne" value="Jawne" effective={prawo('§ 11 ust. 1')} why={lawWhy}/>
       <SettingRow label="Potwierdzanie obecności na posiedzeniu stacjonarnym" state="zasada" at="ogolne" effective={zasada('F9')}
         value="Potwierdza osoba prowadząca obrady albo biuro. Odrzuca osoba prowadząca obrady."
@@ -594,7 +710,7 @@ function VotingSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
         why="W punkcie „Przyjęcie porządku obrad” i przez całe spotkanie robocze, dopóki porządek nie jest przyjęty. Na ekranie sali stoi napis „Projekt porządku obrad”, bo spotkanie robocze niczego nie przyjmuje (§ 8 ust. 2)."/>
       <SettingRow label="Wynik głosowania" state="zasada" at="ogolne" effective={zasada('F2')} value="Widoczny po ogłoszeniu" why={houseRule('F2').text}/>
     </SettingsList>
-    <HistoryFold area="organ" version={props.bundle.revision} keys={k => k !== 'recorder'}/>
+    <HistoryFold area="organ" version={props.bundle.revision} keys={k => k !== 'recorder' && k !== 'noticeTemplate'}/>
   </>;
 }
 
@@ -610,6 +726,8 @@ function HoursEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initia
 }
 
 function MinutesSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
+  const {roster} = useSession();
+  const [sample, setSample] = useState(false);
   const organ = organSettingsOf(props.bundle.general, ORGAN);
   const m = law.minutes;
   return <>
@@ -625,8 +743,39 @@ function MinutesSection(props: {bundle: GeneralBundle; canEdit: boolean}) {
       <SettingRow label="Protokolant domyślny" value={organ.recorder || 'Nie wpisano'} effective={general(organ.recorder)} at="ogolne" genitive="protokolanta domyślnego" actionLabel="Zmień protokolanta domyślnego"
         hint="Proponowany w każdym nowym posiedzeniu, chyba że wzór posiedzenia ma własnego. Można go zmienić."
         editor={props.canEdit ? (close, ctl) => <TextRowEditor close={close} ctl={ctl} label="Protokolant domyślny" initial={organ.recorder} max={120} onSave={value => saveSetting({area: 'organ', organ: ORGAN, key: 'recorder', value})}/> : undefined}/>
+      <SettingRow label="Wzór zawiadomienia" value={<div class="notice-template">{noticeTemplateOf(organ)}</div>} effective={general(organ.noticeTemplate ?? '')} at="ogolne" genitive="wzoru zawiadomienia"
+        hint={organ.noticeTemplate ? undefined : 'Tekst domyślny.'}
+        editor={props.canEdit ? (close, ctl) => <NoticeTemplateEditor close={close} ctl={ctl} initial={noticeTemplateOf(organ)}/> : undefined}/>
     </SettingsList>
+    <div><Button haspopup onClick={() => setSample(true)}>Pokaż przykładowe zawiadomienie</Button></div>
     <p><a class="oi-link" href="#ustawienia-rodzaje">Które rodzaje stoją w wykazie aktów protokołu</a></p>
-    <HistoryFold area="organ" version={props.bundle.revision} keys={k => k === 'recorder'}/>
+    <HistoryFold area="organ" version={props.bundle.revision} keys={k => k === 'recorder' || k === 'noticeTemplate'}/>
+    {sample && <NoticeDialog title="Przykładowe zawiadomienie" text={sampleNotice(props.bundle, roster)} onClose={() => setSample(false)}
+      note={<p class="small">Dane przykładowe. Przygotowanie posiedzenia wstawi termin, miejsce i porządek obrad tego posiedzenia.</p>}/>}
   </>;
+}
+
+/** Zawiadomienie z danymi przykładowymi (U-15): pierwszy wzór posiedzenia, miejsce z ustawień, termin za 8 dni. */
+function sampleNotice(bundle: GeneralBundle, roster: Roster) {
+  const organ = organSettingsOf(bundle.general, ORGAN);
+  const template = organ.templates[0];
+  const agenda: AgendaItem[] = [];
+  template?.items.forEach((it, i) => {
+    agenda.push({id: `p${i}`, title: it.title, parentId: null, status: 'oczekuje'} as AgendaItem);
+    it.children?.forEach((c, j) => agenda.push({id: `p${i}-${j}`, title: c.title, parentId: `p${i}`, status: 'oczekuje'} as AgendaItem));
+  });
+  const day = new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10);
+  const env = cascadeEnv({roster, bundle, organ: ORGAN});
+  return noticeText(env, {organ: ORGAN, date: day, time: template?.defaults?.time ?? '10:00', place: bundle.general.site.place, mode: 'stacjonarne', link: '', agenda});
+}
+
+function NoticeTemplateEditor(props: {close: (s?: string) => void; ctl: EditorCtl; initial: string}) {
+  const [value, setValue] = useState(props.initial);
+  const clean = value.replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/[ \t]+/g, ' ').trimEnd()).join('\n').replace(/^\n+|\n+$/g, '');
+  return <RowEditor close={props.close} ctl={props.ctl} dirty={clean !== props.initial} reason={noticeTemplateProblem(clean) ?? undefined}
+    onSave={() => saveSetting({area: 'organ', organ: ORGAN, key: 'noticeTemplate', value: clean})}>
+    <Field label="Wzór zawiadomienia" hint="Wstaw [termin], [miejsce], [porządek obrad], a przy posiedzeniu zdalnym [odnośnik]. Nazwę organu wstawi [organ w dopełniaczu]. Przygotowanie posiedzenia wstawi dane. Puste pole przywraca tekst domyślny.">
+      <textarea rows={10} maxLength={4000} value={value} onInput={e => setValue((e.target as HTMLTextAreaElement).value)}/>
+    </Field>
+  </RowEditor>;
 }

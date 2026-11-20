@@ -120,3 +120,13 @@ dl.settings { display: flex; flex-direction: column; margin: 0; background: var(
 .case-item:first-child { border-top: 0; padding-top: 0; }
 .case-name { margin: 0; font-size: var(--t-karta); font-weight: 600; color: var(--tekst-mocny); }
 .doctype-table th[scope="row"] .oi-status { margin-top: var(--odstep-1); }
+
+/* Dodatki: wzór zawiadomienia (U-15) i propozycja numeru protokołu (U-03) */
+.notice-template { white-space: pre-line; font-weight: 400; }
+.notice-area { width: 100%; min-height: 12em; white-space: pre-wrap; }
+.setting-extra { display: flex; flex-direction: column; gap: var(--odstep-2); margin-top: var(--odstep-2); }
+
+/* Filtry historii zmian (dodatek): pola obok siebie, na telefonie jedno pod drugim */
+.history-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--odstep-3) var(--odstep-4); margin-bottom: var(--odstep-4); }
+.history-filters .oi-field { flex: 1 1 14em; min-width: 0; }
+.history-filters select { width: 100%; }

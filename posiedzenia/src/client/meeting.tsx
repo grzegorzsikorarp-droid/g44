@@ -4,11 +4,12 @@ import {defaultSite, noticeDays} from '../shared/meeting.ts';
 import {awaitingVote, ballotTitle, choiceCountLabel, choiceLabel, choices, itemNumber, itemVoted, materialTypeOf, memberIdsOf, modeLabel, needsVote, orderedAgenda, presentMembers, quorumOf, resolutionSubject, resultLabel, resultPendingProcedureText, resultPendingText, signaturesNeeded} from '../shared/rules.ts';
 import {personName} from '../shared/roster.ts';
 import {lawOf} from '../shared/law.ts';
-import {basisSentences, cascadeEnv, isDraftLive, procedureEndAt, type CascadeEnv} from '../shared/cascade.ts';
-import {hoursText} from '../shared/text.ts';
+import {basisSentences, cascadeEnv, isDraftLive, procedureEndAt, sourceText, type CascadeEnv} from '../shared/cascade.ts';
+import {hoursText, isoDayOf, timeOf} from '../shared/text.ts';
 import {defaultGeneral} from '../shared/settings.ts';
 import {canDesignateDeputy, canReadMinutes, canReturn, deputyOf, organRoster, takeChairOption} from '../shared/role.ts';
 import type {Actor, AgendaItem, Choice, DocType, LogEntry, MaterialType, Meeting, Roster} from '../shared/types.ts';
+import {inLogFilter, presenceWhat, type LogFilter} from '../shared/logfilter.ts';
 import {generalNow} from './general.ts';
 import {request, serverNow, useLive} from './api.ts';
 import {MeetingCtx, useMeeting, type ViewBallot, type ViewMeeting} from './context.ts';
@@ -95,16 +96,32 @@ function logWho(roster: Roster, m: ViewMeeting, l: LogEntry) {
   const person = roster.persons.find(p => p.name === l.by);
   return person ? personWithFunc(roster, m, person.id) : l.by;
 }
-/** Przebieg obrad (jawny dziennik): najnowsze na górze, pod zdaniem osoba, a wpis z odstępstwem ze znacznikiem (O-07). */
-export function LogList() {
+export {LOG_FILTERS, type LogFilter} from '../shared/logfilter.ts';
+/**
+ * Przebieg obrad (jawny dziennik): najnowsze na górze, pod zdaniem osoba, a wpis z odstępstwem ze znacznikiem (O-07).
+ * Z filtrem (dodatek, tylko panel prowadzenia) pokazuje wpisy jednego rodzaju; przy „Obecność” łączy dziennik z listą
+ * zdarzeń obecności („{osoba}, przybycie.”).
+ */
+export function LogList(props: {filter?: LogFilter; presenceName?: (who: string, guest: boolean) => string}) {
   const {m} = useMeeting();
   const s = useSession();
-  return <ol class="log">{[...m.log].reverse().map((l, i) => <li key={m.log.length - i}>
-    <time>{fmtTime(l.at)}</time>
+  const filter = props.filter ?? 'wszystko';
+  type Row = {key: string; ord: number; at: number; text: string; by: string; deviation: boolean};
+  const rows: Row[] = m.log.map((l, i) => ({l, i})).filter(({l}) => inLogFilter(l, filter))
+    .map(({l, i}) => ({key: `l${i}`, ord: i, at: l.at, text: l.text, by: logWho(s.roster, m, l), deviation: l.tag === 'odstepstwo'}));
+  if (filter === 'obecnosc') {
+    const name = (who: string, guest: boolean) => guest ? props.presenceName?.(who, true) ?? who : personWithFunc(s.roster, m, who);
+    m.presenceLog.forEach((e, i) => rows.push({key: `p${i}`, ord: i, at: e.at, text: `${name(e.who, e.guest)}, ${presenceWhat(e)}.`, by: e.by, deviation: false}));
+    rows.sort((a, b) => b.at - a.at || b.ord - a.ord);
+  } else rows.reverse();
+  if (!rows.length && filter !== 'wszystko') return <p class="muted small">Nie ma wpisów tego rodzaju.</p>;
+  // Lista przewija się w swoim obszarze (najwyżej 340 px), więc przyjmuje fokus z klawiatury (WCAG 2.1.1).
+  return <ol class="log" tabIndex={0} aria-label="Przebieg obrad">{rows.map(r => <li key={r.key}>
+    <time>{fmtTime(r.at)}</time>
     <span class="log-entry">
-      {l.tag === 'odstepstwo' && <StateChip state={deviationChip()}/>}
-      <span>{l.text}</span>
-      <small class="log-by">{logWho(s.roster, m, l)}</small>
+      {r.deviation && <StateChip state={deviationChip()}/>}
+      <span>{r.text}</span>
+      <small class="log-by">{r.by}</small>
     </span>
   </li>)}</ol>;
 }
@@ -187,7 +204,10 @@ function useMeetingFacts() {
   }
   const chair = m.status !== 'przygotowanie' && m.chair.current ? m.chair.current : null;
   return [
-    <Fact key="data" label="Data" class="fact--data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
+    // O-14 (dodatek): gdy dzień otwarcia różni się od planowanego, pasek podaje oba.
+    m.openedAt && isoDayOf(m.openedAt) !== m.date
+      ? <Fact key="data" label="Data" class="fact--data">{`Otwarto ${fmtShort(isoDayOf(m.openedAt))}, godz. ${timeOf(m.openedAt)}`}<span class="fact-note">{`Planowano ${fmtShort(m.date)}, godz. ${m.time}`}</span></Fact>
+      : <Fact key="data" label="Data" class="fact--data">{fmtShort(m.date)}, godz. {m.time}</Fact>,
     m.place ? <Fact key="miejsce" label="Miejsce" class="fact--miejsce">{m.place}</Fact> : null,
     // Rozdz. 5.4: w przygotowaniu pasek mówi, z którego wzoru posiedzenie powstało.
     m.status === 'przygotowanie' && m.template ? <Fact key="wzor" label="Wzór" class="fact--wzor">{m.template.name}</Fact> : null,
@@ -305,7 +325,7 @@ function agendaState(m: ViewMeeting, it: AgendaItem, locked: boolean, types: Doc
   return null;
 }
 
-export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean; changes?: Map<string, number>}) {
+export function AgendaList(props: {selected?: string | null; onSelect?: (id: string) => void; compact?: boolean; changes?: Map<string, number>; titlesOnly?: boolean}) {
   const {m} = useMeeting();
   const types = useDocTypes();
   const closed = m.status === 'zakonczone';
@@ -314,7 +334,7 @@ export function AgendaList(props: {selected?: string | null; onSelect?: (id: str
   const lockedTop = m.agenda.filter(it => !it.parentId && locked(it)).map(it => itemNumber(m.agenda, it.id));
   const lockedText = lockedTop.length === 1 ? `Punkt ${lockedTop[0]} można rozpocząć po przyjęciu porządku obrad.` : `Punkty ${lockedTop[0]}–${lockedTop[lockedTop.length - 1]} można rozpocząć po przyjęciu porządku obrad.`;
   return <>
-    {lockedTop.length > 0 && !props.compact && <p class="muted small">{lockedText}</p>}
+    {lockedTop.length > 0 && !props.compact && !props.titlesOnly && <p class="muted small">{lockedText}</p>}
     <ol class="agenda">
       {orderedAgenda(m.agenda).map(it => {
         const current = !closed && it.id === m.currentItemId;
@@ -322,9 +342,9 @@ export function AgendaList(props: {selected?: string | null; onSelect?: (id: str
         const state = current ? null : agendaState(m, it, locked(it), types);
         const inner = <>
           <span class="agenda-no">{itemNumber(m.agenda, it.id)}</span>
-          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}<PeopleFacts it={it} compact/>
+          <span class="agenda-title">{it.title}{it.addedAfterAdoption && <em class="muted">, dodany</em>}{!props.titlesOnly && <PeopleFacts it={it} compact/>}
             {props.changes?.has(it.id) && <small class="agenda-changed">zmieniono o {fmtTime(props.changes.get(it.id))}</small>}</span>
-          <span class="agenda-meta">{current ? <Chip tone="trwa">Teraz</Chip> : state && <span class="agenda-state">{state}</span>}</span>
+          {!(props.titlesOnly && !current) && <span class="agenda-meta">{current ? <Chip tone="trwa">Teraz</Chip> : state && <span class="agenda-state">{state}</span>}</span>}
         </>;
         const cls = ['agenda-item', it.parentId ? 'is-sub' : '', current ? 'is-current' : '', selected && !current ? 'is-selected' : '', locked(it) ? 'is-locked' : '', `st-${it.status}`].filter(Boolean).join(' ');
         return <li key={it.id} class={cls}>
@@ -840,7 +860,8 @@ function MemberView(props: {online: boolean}) {
     {current && <CurrentItem it={current} accent={!open && !chairTake.deputyCard}/>}
     {presented && !open && <section class="oi-card"><span class="oi-label">Materiał pokazywany na sali</span><MaterialReader id={presented.id} version={presented.version} inline/></section>}
     <Motions/>
-    {(m.effective?.meeting.messages.value === 'zawsze' || (!m.effective && m.mode === 'zdalne') || m.messages.length > 0) && <Messages/>}
+    {/* Kanał wiadomości według effective.meeting.messages: zawsze (zdalne), od początku (U-12) albo gdy ktoś napisze. */}
+    {((m.effective && m.effective.meeting.messages.value !== 'gdy_sa_wiadomosci') || (!m.effective && m.mode === 'zdalne') || m.messages.length > 0) && <Messages/>}
     {/* D2 (O-04): przy przyjmowaniu porządku i przez całe spotkanie robocze projekt jest rozwinięty, rozwija się przy każdej
         zmianie, a zmiany widać przy zwykłym odświeżaniu. */}
     <Fold key={live ? `projekt-na-zywo-${latest?.at ?? 0}` : 'porzadek'} title={m.agendaAdopted ? 'Przyjęty porządek obrad' : 'Projekt porządku obrad'} open={live}>
@@ -850,10 +871,56 @@ function MemberView(props: {online: boolean}) {
     {member && status === 'obecny' && <PresenceRow/>}
     {chairTake.bottom}
     {chairman && <DeputyFact change/>}
+    {/* O-09 (dodatek): zasady tego posiedzenia i różnice od ustawień ogólnych, zwinięte. */}
+    {m.effective && <MeetingRules variant="uczestnik"/>}
     {/* O-07, DA-10: jawny przebieg obrad u członka, zwinięty, przed szczegółami posiedzenia. */}
     {member && <Fold title="Przebieg obrad"><LogList/></Fold>}
     {chairTake.dialogs}
   </div>;
+}
+
+/**
+ * „Zasady tego posiedzenia” (O-09, dodatek): w panelu prowadzenia najpierw różnice od ustawień ogólnych i wzoru posiedzenia
+ * (effective.differences), potem reguły z paragrafami; u uczestnika krótsze zdania i „Pokaż różnice”. Na sali nic.
+ */
+export function MeetingRules(props: {variant: 'panel' | 'uczestnik'}) {
+  const {m} = useMeeting();
+  const s = useSession();
+  const [diffs, setDiffs] = useState(false);
+  const e = m.effective;
+  if (!e) return null;
+  const q = e.meeting.quorum, n = e.differences.length;
+  const vote = e.meeting.voteMinutes.value, motion = e.meeting.motionMinutes.value;
+  const minutes = (x: number) => `${x} ${plural(x, 'minuta', 'minuty', 'minut')}`;
+  const quorum = `Wymagane kworum ${q.value.required} z ${q.value.total} (${q.basis}).`;
+  const mode = `Głosowanie jawne, chyba że Prezydium uchwali tajność albo głosowanie imienne (${e.meeting.mode.basis?.replace(/ ust\. 1$/, '') ?? '§ 11'}).`;
+  const diffList = <ul class="rules-diffs">{e.differences.map((d, i) => <li key={i}>{d.text}</li>)}</ul>;
+  if (props.variant === 'uczestnik') return <Fold title="Zasady tego posiedzenia">
+    <ul class="rules-list">
+      <li>{quorum}</li>
+      <li>{mode}</li>
+      <li>{`Czas głosowania zwykle ${minutes(vote)}.`}</li>
+      {n > 0 && <li>{`To posiedzenie różni się od ustawień ogólnych w ${n} ${plural(n, 'sprawie', 'sprawach', 'sprawach')}.`}{' '}
+        <Button kind="ghost" quiet small onClick={() => setDiffs(v => !v)}>{diffs ? 'Ukryj różnice' : 'Pokaż różnice'}</Button>
+        {diffs && diffList}</li>}
+    </ul>
+  </Fold>;
+  const deputy = deputyOf(s.roster, m as Meeting);
+  const reasumption = e.meeting.reasumption.value;
+  const live = sourceText(e.meeting.draftLive, {at: 'obrady', show: String, houseBy: brand.houseBy});
+  return <Fold title={n ? `Zasady tego posiedzenia (${n} ${plural(n, 'różnica', 'różnice', 'różnic')})` : 'Zasady tego posiedzenia'}>
+    {n > 0 && <><span class="kicker">Różnice wobec ustawień ogólnych i wzoru posiedzenia</span>{diffList}</>}
+    <ul class="rules-list">
+      <li>{quorum}</li>
+      <li>{`Zwykła większość głosów, więcej głosów za niż przeciw (${e.meeting.majority.basis}).`}</li>
+      <li>{mode}</li>
+      {reasumption && <li>{`Reasumpcja głosowania jawnego na pisemny wniosek co najmniej ${reasumption.share} członków biorących udział w posiedzeniu, gdy wynik budzi uzasadnione wątpliwości (§ 12 ust. 1–5).`}</li>}
+      <li>{`Czas głosowania w sprawie ${minutes(vote)}, głosowań nad wnioskami ${minutes(motion)}.`}</li>
+      <li>{`Zmiany projektu porządku obrad widzą od razu członkowie i ekran sali, w punkcie „Przyjęcie porządku obrad” i przez całe spotkanie robocze. ${live}`}</li>
+      <li>{`Obrady prowadzi przewodniczący lub wiceprzewodniczący (§ 9 ust. 1). Pierwszeństwo ma przewodniczący, potem zastępca, którego przewodniczący wyznaczył (§ 16 ust. 2).`}
+        {deputy ? ` Zastępstwo przewodniczącego ${personWithFunc(s.roster, m, deputy)}.` : ''}</li>
+    </ul>
+  </Fold>;
 }
 
 const motionState = (m: ViewMeeting, x: ViewMeeting['motions'][number]) => {

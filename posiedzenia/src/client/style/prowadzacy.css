@@ -177,3 +177,21 @@
 
 /* O-03 pkt 4: zastępstwo przewodniczącego w sekcji „Prowadzenie obrad” */
 .deputy-fact .deputy-card { padding-top: var(--odstep-2); }
+.log-filters { margin-bottom: var(--odstep-2); }
+/* O-12: fakt „Na ekranie sali” w karcie punktu i jeden cichy odnośnik */
+.screen-fact { display: flex; flex-direction: column; gap: var(--odstep-1); }
+.item-screen { display: flex; flex-wrap: wrap; gap: var(--odstep-1) var(--odstep-4); }
+
+/* O-10 (dodatek): narzędzia kafelka widać przy fokusie i po najechaniu; na ekranach dotykowych pokazuje je
+   przycisk „Zmień punkt {nr}”. Uchwyt „Przeciągnij” zostaje zawsze widoczny. */
+.tile-head > .tile-toggle { grid-column: 3; justify-self: start; }
+@media (max-width: 480px) { .tile-head > .tile-toggle { grid-column: 2; } }
+@media (hover: hover) and (pointer: fine) {
+  .tile-toggle { display: none; }
+  .tile:not(:hover):not(:focus-within):not(.is-tools) .tile-tools { opacity: 0; }
+}
+@media (hover: none), (pointer: coarse) {
+  .tile:not(.is-tools) .tile-tools { display: none; }
+}
+/* O-08: przedmiot głosowania zwykłym pismem pod zdaniem karty decyzji */
+.decision .decision-subject { font-weight: 400; color: var(--tekst); }
