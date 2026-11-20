@@ -507,7 +507,10 @@ export function noticeText(env: Pick<CascadeEnv, 'general' | 'organ'>, m: Pick<M
   const remote = m.mode === 'zdalne';
   const link = remote ? m.link || 'odnośnik do połączenia nie jest jeszcze wpisany' : m.link;
   const place = remote ? `posiedzenie zdalne, ${link}` : m.place || 'miejsce nie jest jeszcze wpisane';
-  const agenda = orderedAgenda(m.agenda).filter(i => i.status !== 'wycofany').map(i => `${itemNumber(m.agenda, i.id)}. ${i.title.replace(/[.\s]+$/, '')}`).join('\n');
+  // Kropka na końcu tytułu znika, ale nie po skrócie („… z dnia 22 października 2026 r.”).
+  // Bez wyrażeń wstecznych (lookbehind), bo cel kompilacji to ES2020 i starsze przeglądarki ich nie znają.
+  const title = (t: string) => { const s = t.replace(/\s+$/, ''); return /(^|[\s(])(r|nr|ust|pkt|art|godz|np|tj|tzw|ok|im|ul|al|św)\.$/u.test(s) ? s : s.replace(/\.+$/, ''); };
+  const agenda = orderedAgenda(m.agenda).filter(i => i.status !== 'wycofany').map(i => `${itemNumber(m.agenda, i.id)}. ${title(i.title)}`).join('\n');
   const values: Record<string, string> = {
     [NOTICE_TAGS.termin]: `${day}, godz. ${m.time}`, [NOTICE_TAGS.miejsce]: place, [NOTICE_TAGS.porzadek]: agenda,
     [NOTICE_TAGS.organ]: env.organ.forms.genitive, [NOTICE_TAGS.odnosnik]: link,

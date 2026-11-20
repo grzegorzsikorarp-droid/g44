@@ -7,7 +7,7 @@ const glued = /^[(„»]?([aiouwzAIOUWZ]|§|nr|Nr|ust\.|pkt|art\.|godz\.)$/;
 const roman = /^[IVXLC]+$/;
 // „zł” tylko jako całe słowo („7 zł”), a nie początek wyrazu („7 złożono”).
 const months = 'stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia';
-const unit = new RegExp(`^(r\\.|zł(?!\\p{L})|min\\.?|dni|godz\\.|ust\\.|KB|MB|%|osób|osoby|osoba|głos|materiał|posiedzeń|posiedzeni|punkt|podpis|${months})`, 'u');
+const unit = new RegExp(`^(r\\.|zł(?!\\p{L})|min\\.?|dni|godz\\.|ust\\.|KB|MB|%|osób|osoby|osoba|głos|materiał|posiedzeń|posiedzeni|punkt|podpunkt|podpis|${months})`, 'u');
 
 export function typo(text: string) {
   if (text.indexOf('–') > 0) text = text.replace(/(\d)–(?=\d)/g, '$1⁠–⁠');

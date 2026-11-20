@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createApplication} from '../src/server/app.ts';
 import {inLogFilter, presenceWhat} from '../src/shared/logfilter.ts';
+import {typo} from '../src/shared/typo.ts';
 import {apply, envOf, newMeetingFromSettings, type Context} from '../src/shared/meeting.ts';
 import {effectiveMeeting, noticeText, othersOf, protocolProposal} from '../src/shared/cascade.ts';
 import {applySettingsChange, DEFAULT_NOTICE_TEMPLATE, defaultGeneral, nextProtocolNumber, type GeneralBundle} from '../src/shared/settings.ts';
@@ -106,6 +107,18 @@ test('U-15: treść zawiadomienia wstawia organ, termin, miejsce i porządek obr
   assert.equal(DEFAULT_NOTICE_TEMPLATE.split('\n').length, lines.length - m.agenda.length + 1);
   const remote = noticeText({...env, general: setNotice(ctx.general!, '[termin]\n[miejsce]\n[odnośnik]\n[porządek obrad]').bundle.general}, {...m, mode: 'zdalne', link: 'https://spotkanie.example/abc'});
   assert.deepEqual(remote.split('\n').slice(0, 3), ['3 grudnia 2026 r., godz. 10:00', 'posiedzenie zdalne, https://spotkanie.example/abc', 'https://spotkanie.example/abc']);
+});
+
+// Kontrola końcowa wersji 3 (j): skrót na końcu tytułu punktu zostaje w zawiadomieniu, liczba podpunktów nie łamie się.
+test('U-15: tytuł punktu kończący się skrótem zachowuje kropkę w zawiadomieniu, a „2 podpunkty” mają twardą spację', () => {
+  const ctx = setup();
+  const m = create(ctx);
+  const third = 'Przyjęcie protokołu z posiedzenia z dnia 22 października 2026 r.';
+  const agenda = m.agenda.map((it, i) => i === 2 ? {...it, title: third} : i === 3 ? {...it, title: it.title + '.  '} : it);
+  const lines = noticeText(envOf(ctx, 'prezydium'), {...m, agenda}).split('\n');
+  assert.ok(lines.includes(`3. ${third}`), 'kropka skrótu „r.” zostaje');
+  assert.ok(lines.includes(`4. ${m.agenda[3].title.replace(/[.\s]+$/, '')}`), 'zwykła kropka i spacje na końcu znikają');
+  assert.equal(typo('7 punktów i 2 podpunkty.'), '7\u00a0punktów i\u00a02\u00a0podpunkty.');
 });
 
 // U-12: kanał wiadomości od początku posiedzenia.
