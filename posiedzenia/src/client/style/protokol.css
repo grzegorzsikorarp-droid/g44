@@ -1,3 +1,4 @@
+@import "./druk.css";
 /* Protokół: ten sam wygląd w oknie i w wersji do druku. Tytuł dokumentu zostaje w skali clamp(), jak tytuł strony. */
 .minutes-view { font-size: var(--t-lista); line-height: 1.6; color: var(--tekst); display: flex; flex-direction: column; }
 .minutes-view header { display: flex; flex-direction: column; gap: var(--odstep-2); padding-bottom: var(--odstep-4); border-bottom: var(--kreska-mocna) solid var(--tekst-mocny); }

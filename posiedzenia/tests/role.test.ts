@@ -1,7 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply, duplicateMeeting, envOf, newMeetingFromSettings, type Command, type Context} from '../src/shared/meeting.ts';
-import {canCreate, canReadMinutes, canView, chairRank, minutesRefusal, openOption, settingsAccess, takeChairOption} from '../src/shared/role.ts';
+import {canCreate, canReadMinutes, canView, chairRank, minutesRefusal, openOption, settingsAccess, takeChairOption,
+  canAcceptProposal, canAddDisplay, canAssignTask, canDownloadComms, canDownloadPaper, canEditComms, canEditProtocolOf, canFile,
+  canFixProtocolOf, canPropose, canRejectProposal, canReleaseComms, canRemoveDisplay, canReport, canSeeCatalog, canSeeOwnStats,
+  canSeeRosterStats, canSeeWorkspace, canSendAfter, canSendProgress, canSetPhotos, canSetStatsSince, canShow, closedBy,
+  commsReleasedOk, isCommsAccount, isConvener, isLeading, isReferent, isReporting, isSecretary, isService, photoCircleText,
+  seesLog, seesPhotos, seesPhotosLink, seesStatsNotes} from '../src/shared/role.ts';
 import {effectiveMeeting} from '../src/shared/cascade.ts';
 import {viewFor} from '../src/shared/view.ts';
 import {defaultGeneral} from '../src/shared/settings.ts';
@@ -385,4 +390,161 @@ test('D1: po otwarciu projekt porządku obrad zmienia tylko osoba prowadząca, a
   refused(() => apply(m, {type: 'item_place', itemId: item(m, 'uchwaly').id, parentId: null, beforeId: null}, office, ctx), message);
   refused(() => apply(m, {type: 'item_add', title: 'Patronat'}, jw, ctx), message);
   refused(() => apply(prepared(ctx), {type: 'item_add', title: 'Patronat'}, kn, ctx), /^Porządek obrad poprawia biuro, przewodniczący albo wiceprzewodniczący, a po otwarciu posiedzenia osoba prowadząca obrady\.$/);
+});
+
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Wersja 4 (SPEC-4 rozdz. 4.2–4.4, DB-44, etap D.1 pkt 3 i 8): nazwane kręgi i funkcje nowych czynności. Macierze
+// 4.3.1–4.3.6 przez polecenia i trasy sprawdza etap D.2; tu funkcje na posiedzeniu w każdym stanie.
+
+const comms: Actor = {account: {id: 'u-kom', username: 'komunikacja', kind: 'komunikacja', personId: null, displayName: 'Komunikacja', label: '', admin: false, mustChange: false, disabled: false}, personId: null, name: 'Komunikacja'};
+const adv: Actor = {account: advisory, personId: null, name: advisory.displayName};
+const adminOnly: Actor = {account: {id: 'u-adm', username: 'adm', kind: 'czlonek', personId: null, displayName: 'Administrator', label: '', admin: true, mustChange: false, disabled: false}, personId: null, name: 'Administrator'};
+const az = actor('az'), eo = actor('eo');
+/** Posiedzenie w danym stanie: osoba prowadząca, zastępca i zwołujący jak w argumentach. */
+function state(status: Meeting['status'], o: {current?: string | null; deputy?: string | null; convener?: string} = {}): Meeting {
+  const ctx = setup();
+  const m = prepared(ctx);
+  return {...m, status, chair: {...m.chair, current: o.current ?? (status === 'przygotowanie' ? null : 'si'), deputy: o.deputy ?? null}, convener: o.convener};
+}
+
+test('wersja 4: kręgi kierujący, sprawozdawczość i obsługa (DB-44)', () => {
+  assert.deepEqual([chair, ag, jw, kn, az, eo].map(a => isLeading(roster, a)), [true, true, true, false, false, false]);
+  assert.deepEqual([chair, ag, jw, kn, az, eo].map(a => isReporting(roster, a)), [true, true, true, true, false, false]);
+  assert.deepEqual([office, plainOffice, chair, adminOnly, comms].map(a => isService(a)), [true, true, false, false, false]);
+  assert.equal(isSecretary(roster, null, 'kn'), true);
+  assert.equal(isSecretary(roster, null, 'eo'), false);
+  assert.deepEqual([office, chair, ag, kn, eo, adminOnly, comms].map(a => canReport(roster, a)), [true, true, true, true, false, false, false]);
+});
+
+test('wersja 4: konto „Komunikacja” widzi tylko wiersz katalogu i materiał po udostępnieniu (4.4, DB-42)', () => {
+  const closed = state('zakonczone');
+  assert.equal(isCommsAccount(comms), true);
+  assert.equal(canView(roster, closed, comms), false);
+  assert.equal(seesLog(comms), false);
+  assert.equal(canSeeCatalog(roster, closed, comms), 'wiersz');
+  assert.equal(canSeeCatalog(roster, state('trwa'), comms), null);
+  assert.equal(canSeeCatalog(roster, closed, kn), 'pelny');
+  assert.equal(canDownloadComms(roster, closed, comms), false, 'bez udostępnienia');
+  const released = {...closed, commsReleased: {at: 1, by: 'Biuro', accountId: 'u-biuro', inputs: 0}, commsInputs: 0};
+  assert.equal(commsReleasedOk(released), true);
+  assert.equal(canDownloadComms(roster, released, comms), true);
+  const changed = {...released, commsInputs: 1};
+  assert.equal(canDownloadComms(roster, changed, comms), false, 'zmiana treści po udostępnieniu wymaga ponownego udostępnienia');
+  for (const id of ['protokol', 'porzadek', 'obecnosc', 'wyniki', 'kanal', 'dziennik', 'teczka'] as const) assert.equal(canDownloadPaper(roster, released, comms, id), false, id);
+  assert.equal(canDownloadPaper(roster, released, comms, 'komunikacja'), true);
+  assert.equal(canSetPhotos(roster, closed, comms), true);
+  assert.equal(canSetPhotos(roster, state('trwa'), comms), false);
+  assert.equal(seesPhotosLink(roster, closed, comms), true);
+  // Wszystkie pozostałe funkcje wersji 3 i 4 zwracają false.
+  assert.deepEqual([canReadMinutes(roster, closed, comms), canFile(roster, closed, comms), canReleaseComms(roster, closed, comms), canEditComms(roster, closed, comms),
+    canSendAfter(roster, closed, comms), canReport(roster, comms), seesPhotos(roster, comms), canSeeOwnStats(roster, comms), canSeeRosterStats(roster, comms),
+    canSeeWorkspace(roster, closed, comms), canPropose(roster, state('przygotowanie'), comms), canCreate(roster, 'prezydium', comms)], Array(12).fill(false).map((x, i) => i === 9 ? null : x));
+});
+
+test('wersja 4: dokumenty posiedzenia według tabeli 4.3.3', () => {
+  const live = state('trwa'), closed = state('zakonczone');
+  const guestOn = (m: Meeting) => ({...m, invited: [guest.account.id, advisory.id]});
+  // Porządek, wyniki, akty i kanał: każdy z canView, także gość i głos doradczy (gdy zaproszeni).
+  for (const id of ['porzadek', 'wyniki', 'wykaz-3', 'akt-b1', 'kanal'] as const) {
+    assert.deepEqual([office, chair, eo, guest, adv, adminOnly].map(a => canDownloadPaper(roster, guestOn(live), a, id)), [true, true, true, true, true, false], id);
+  }
+  // Projekt protokołu i lista obecności w trakcie: biuro, przewodniczący, osoba prowadząca, zastępca; po zamknięciu też członkowie.
+  const liveAg = {...guestOn(live), chair: {...live.chair, current: 'ag', deputy: 'jw'}};
+  assert.deepEqual([office, chair, ag, jw, kn, eo, guest, adv].map(a => canDownloadPaper(roster, liveAg, a, 'protokol')), [true, true, true, true, false, false, false, false]);
+  assert.deepEqual([office, chair, kn, eo, guest, adv].map(a => canDownloadPaper(roster, guestOn(closed), a, 'obecnosc')), [true, true, true, true, false, false]);
+  // Dziennik: biuro i członkowie także w trakcie, bez głosu doradczego i gości.
+  assert.deepEqual([office, eo, guest, adv].map(a => canDownloadPaper(roster, guestOn(live), a, 'dziennik')), [true, true, false, false]);
+  // Teczka tylko po zamknięciu.
+  assert.deepEqual([office, chair, eo].map(a => canDownloadPaper(roster, live, a, 'teczka')), [false, false, false]);
+  assert.deepEqual([office, chair, eo, guest].map(a => canDownloadPaper(roster, guestOn(closed), a, 'teczka')), [true, true, true, false]);
+  // Materiał dla komunikacji: biuro, przewodniczący, wiceprzewodniczący i osoba, która zamknęła obrady; bez sekretarza i członków.
+  const closedByEo = {...closed, chair: {...closed.chair, current: 'eo'}};
+  assert.equal(closedBy(closedByEo), 'eo');
+  assert.equal(closedBy(live), null);
+  assert.deepEqual([office, chair, ag, kn, eo, az].map(a => canDownloadComms(roster, closedByEo, a)), [true, true, true, false, true, false]);
+  assert.deepEqual([office, chair, ag].map(a => canDownloadComms(roster, live, a)), [false, false, false], 'materiał powstaje po zamknięciu');
+  assert.deepEqual([office, chair, ag, kn, eo, az].map(a => canReleaseComms(roster, closedByEo, a)), [true, true, false, false, true, false]);
+  assert.deepEqual([office, chair, ag, kn, eo].map(a => canEditComms(roster, closedByEo, a)), [true, true, false, false, true]);
+  assert.deepEqual([office, chair, ag, kn].map(a => canEditComms(roster, state('przygotowanie'), a)), [true, true, true, false]);
+  assert.deepEqual([office, chair].map(a => canEditComms(roster, live, a)), [false, false]);
+  // „Protokół sporządzony” i pliki po posiedzeniu: biuro, przewodniczący, sekretarz; zawiadomienie także wcześniej.
+  assert.deepEqual([office, chair, ag, kn, eo].map(a => canFile(roster, closed, a)), [true, true, false, true, false]);
+  assert.deepEqual([office, kn].map(a => canFile(roster, live, a)), [false, false]);
+  assert.deepEqual([office, kn].map(a => canFile(roster, live, a, 'zawiadomienie')), [true, true]);
+  // Odnośnik do zdjęć: od otwarcia biuro, przewodniczący, osoba prowadząca; widzą członkowie, biuro, konto komunikacji.
+  assert.deepEqual([office, chair, ag, eo].map(a => canSetPhotos(roster, state('przygotowanie'), a)), [false, false, false, false]);
+  assert.deepEqual([office, chair, ag, eo].map(a => canSetPhotos(roster, liveAg, a)), [true, true, true, false]);
+  assert.deepEqual([office, eo, guest, adv].map(a => seesPhotosLink(roster, guestOn(closed), a)), [true, true, false, false]);
+  // Powiadomienie o dokumentach po zamknięciu: biuro, przewodniczący, osoba, która zamknęła obrady.
+  assert.deepEqual([office, chair, ag, eo].map(a => canSendAfter(roster, closedByEo, a)), [true, true, false, true]);
+  assert.deepEqual([office, chair].map(a => canSendAfter(roster, live, a)), [false, false]);
+});
+
+test('wersja 4: „Dotyczy protokołu” przed głosowaniem w punkcie i poprawka po zamknięciu tylko przewodniczącego (G-33, G-38)', () => {
+  const live = state('trwa', {current: 'ag'});
+  const it = live.agenda[0].id;
+  assert.deepEqual([office, chair, ag].map(a => canEditProtocolOf(roster, live, a, it)), [false, false, true]);
+  const voted = {...live, ballots: [{itemId: it, purpose: 'protokol'} as Meeting['ballots'][number]]};
+  assert.equal(canEditProtocolOf(roster, voted, ag, it), false, 'po otwarciu głosowania w punkcie wartość utrwala się w głosowaniu');
+  assert.deepEqual([office, chair, jw].map(a => canEditProtocolOf(roster, state('przygotowanie'), a, it)), [true, true, true]);
+  assert.deepEqual([office, chair].map(a => canEditProtocolOf(roster, state('zakonczone'), a, it)), [false, false]);
+  assert.deepEqual([office, chair, ag, kn].map(a => canFixProtocolOf(roster, state('zakonczone'), a)), [false, true, false, false]);
+  assert.equal(canFixProtocolOf(roster, live, chair), false);
+});
+
+test('wersja 4: zgłoszenia odrzuca i odkłada tylko zwołujący; zastępca tylko, gdy zwołuje (DB-14, K4-3)', () => {
+  const plain = state('przygotowanie');
+  assert.deepEqual([office, chair, ag, jw, kn].map(a => canRejectProposal(roster, plain, a)), [false, true, false, false, false]);
+  const byDeputy = state('przygotowanie', {deputy: 'ag', convener: 'ag'});
+  assert.deepEqual([office, chair, ag, jw].map(a => canRejectProposal(roster, byDeputy, a)), [false, true, true, false]);
+  assert.deepEqual([chair, ag, jw].map(a => isConvener(roster, byDeputy, a)), [true, true, false]);
+  const deputyNotConvening = state('przygotowanie', {deputy: 'ag', convener: 'si'});
+  assert.equal(canRejectProposal(roster, deputyNotConvening, ag), false, 'zastępca, który nie zwołuje, ma uprawnienia wiceprzewodniczącego');
+  // Wpisanie do projektu: osoby przygotowujące, biuro jako obsługa; zgłasza członek i głos doradczy, nie biuro.
+  assert.deepEqual([office, chair, jw, kn, adv].map(a => canAcceptProposal(roster, plain, a)), [true, true, true, false, false]);
+  assert.deepEqual([office, chair, kn, eo, adv, guest, comms].map(a => canPropose(roster, plain, a)), [false, true, true, true, true, false, false]);
+  assert.equal(canPropose(roster, state('trwa'), eo), false, 'po otwarciu bez nowych zgłoszeń (G-30)');
+  assert.deepEqual([office, eo, adv, guest, adminOnly].map(a => canSeeWorkspace(roster, plain, a)), ['pelny', 'pelny', 'wlasne', null, null]);
+  assert.deepEqual([office, chair, kn].map(a => canSendProgress(roster, plain, a)), [true, true, false], 'sekretarz nie przygotowuje posiedzeń (pytanie 2 b)');
+  assert.equal(canSendProgress(roster, state('trwa'), office), false);
+  // D-11: zadanie dla członka przydziela zwołujący, inni tylko sobie; zadanie dla biura każdy z pełnym wglądem.
+  assert.deepEqual([canAssignTask(roster, plain, chair, {personId: 'eo'}), canAssignTask(roster, plain, jw, {personId: 'eo'}), canAssignTask(roster, plain, jw, {personId: 'jw'}), canAssignTask(roster, plain, eo, {office: true})], [true, false, true, true]);
+  const withReferent = {...plain, agenda: plain.agenda.map((i, n) => n === 0 ? {...i, presenters: [{name: '', role: '', kind: 'referuje' as const}]} : i)};
+  const eoName = roster.persons.find(p => p.id === 'eo')!.name;
+  withReferent.agenda[0].presenters[0].name = eoName;
+  assert.equal(isReferent(roster, withReferent, withReferent.agenda[0].id, 'eo'), true);
+  assert.equal(isReferent(roster, withReferent, withReferent.agenda[0].id, 'ak'), false);
+});
+
+test('wersja 4: pokaz tylko osoba prowadząca, pliki do pokazania i zdjęcia (DB-11, DB-20, pytanie 13)', () => {
+  const live = state('trwa', {current: 'ag'});
+  assert.deepEqual([office, chair, ag].map(a => canShow(live, a)), [false, false, true]);
+  assert.deepEqual([office, chair, ag, eo].map(a => canAddDisplay(roster, live, a)), [true, false, true, false]);
+  assert.deepEqual([office, jw, kn].map(a => canAddDisplay(roster, state('przygotowanie'), a)), [true, true, false]);
+  assert.equal(canAddDisplay(roster, state('zakonczone'), office), false);
+  const shown = {...live, log: [...live.log, {at: 1, text: 'Pokazano plik.', by: 'x', tag: 'pokaz' as const, displayId: 'd1'}]};
+  assert.equal(canRemoveDisplay(roster, shown, office, {id: 'd1'}), false, 'pokazany plik zostaje w dokumentacji (G-25)');
+  assert.equal(canRemoveDisplay(roster, shown, office, {id: 'd2'}), true);
+  // Pytanie 13, wariant (a): biuro, administrator, przewodniczący i wiceprzewodniczący.
+  assert.deepEqual([office, plainOffice, adminOnly, chair, ag, jw, kn, eo, guest, adv, comms].map(a => seesPhotos(roster, a)), [true, true, true, true, true, true, false, false, false, false, false]);
+  assert.equal(photoCircleText(roster), 'biuro, administrator, przewodniczący i wiceprzewodniczący');
+});
+
+test('wersja 4: statystyki — własne, składu (pytanie 11) i dzień startu (G-40)', () => {
+  assert.deepEqual([chair, kn, eo, office, adminOnly, comms, adv].map(a => canSeeOwnStats(roster, a)), [true, true, true, false, false, false, false]);
+  const former = actor('xx');
+  const closed = {...state('zakonczone'), frozen: {at: 1, lawVersion: '', generalRevision: 0, members: [{personId: 'xx', func: 'czlonek' as const, label: '', order: 9}], docTypes: [], meeting: {} as never}};
+  assert.equal(canSeeOwnStats(roster, former), false);
+  assert.equal(canSeeOwnStats(roster, former, [closed]), true, 'osoba ze składu zapisanego przy otwarciu zakończonego posiedzenia');
+  assert.deepEqual([office, chair, ag, kn, az, eo, comms].map(a => canSeeRosterStats(roster, a)), [true, true, true, true, false, false, false]);
+  assert.deepEqual([office, chair, ag].map(a => seesStatsNotes(roster, a)), [true, true, false]);
+  // Biuro ustawia albo przesuwa wstecz; dzień, który wyłącza policzone posiedzenia, wpisuje przewodniczący z powodem.
+  assert.equal(canSetStatsSince(roster, office, null, '2026-01-01', '2026-03-12'), 'tak');
+  assert.equal(canSetStatsSince(roster, office, '2026-06-01', '2026-02-01', '2026-06-02'), 'tak', 'przesunięcie wstecz');
+  assert.equal(canSetStatsSince(roster, office, null, '2026-04-01', '2026-03-12'), 'nie');
+  assert.equal(canSetStatsSince(roster, chair, null, '2026-04-01', '2026-03-12'), 'z_powodem');
+  assert.equal(canSetStatsSince(roster, chair, null, '2026-01-01', '2026-03-12'), 'nie', 'zwykłe ustawienie należy do biura (4.3.6)');
+  assert.equal(canSetStatsSince(roster, ag, null, '2026-01-01', '2026-03-12'), 'nie');
+  assert.equal(canSetStatsSince(roster, office, '2026-03-01', null, '2026-03-12'), 'tak', 'wyczyszczenie to przesunięcie wstecz');
 });

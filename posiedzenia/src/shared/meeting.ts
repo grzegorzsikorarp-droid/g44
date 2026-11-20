@@ -1,7 +1,6 @@
 import type {
   Account, Actor, AgendaChange, AgendaItem, Ballot, BallotPurpose, ChairBasis, Choice, DocType, ItemKind, MaterialRef, MaterialType, Meeting, MeetingMode,
-  MeetingSettingKey, ModeDecision, OrganCode, Presentation, PresenceEvent, Presenter, Roster, Stamp, VoteMode,
-} from './types.ts';
+  MeetingSettingKey, ModeDecision, OrganCode, Presentation, PresenceEvent, Presenter, Roster, Stamp, VoteMode, ClosedRef} from './types.ts';
 import {organMembers, organOfCode, personName} from './roster.ts';
 import {
   announceFirst, computeResult, docTypeFor, everyoneVoted, hasVoted, itemNumber, memberIdsOf, openTally, pendingBefore,
@@ -43,6 +42,8 @@ export interface SecretHooks {
 export interface Context {
   roster: Roster; now: number; newId: () => string; secret?: SecretHooks; docTypes?: DocType[];
   general?: GeneralBundle; law?: Partial<Record<OrganCode, LegalProfile>>; accounts?: Account[];
+  /** Wersja 4 (G-33): zamknięte posiedzenia organu do „Dotyczy protokołu” (`closedRefs` z catalog.ts); czyta je etap D.2. */
+  closedMeetings?: ClosedRef[];
 }
 
 // Polecenia domeny. Pola oznaczone „wymagane” w opisie są w typie nieobowiązkowe tylko dlatego, że wymóg zależy

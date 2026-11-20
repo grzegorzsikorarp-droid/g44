@@ -1,4 +1,5 @@
-import type {Actor, ActRef, CompositionBasis, DocType, Func, ItemKind, MeetingMode, MeetingSettings, Membership, OrganCode, Roster} from './types.ts';
+import type {Actor, ActRef, CommsLevel, CompositionBasis, DocType, Func, ItemKind, MeetingMode, MeetingSettings, Membership, OrganCode, Roster} from './types.ts';
+import type {MailIntroKind, MailSettings} from './mail.ts';
 import {lawOf, agendaBasis, type LegalProfile} from './law.ts';
 import {presidiumTemplate, itemKindLabel} from './agenda.ts';
 import {organMembers, organOfCode} from './roster.ts';
@@ -36,6 +37,11 @@ export interface OrganSettings {
   messagesFromStart?: boolean;
   /** Dodatek (D). */
   noticeTemplate?: string;
+  /**
+   * Wersja 4 (U-41): „Statystyki liczą posiedzenia od dnia” (RRRR-MM-DD); brak to wszystkie posiedzenia. Zapis z G-40
+   * (dzień późniejszy niż najwcześniejsze policzone posiedzenie tylko przewodniczący z powodem) dochodzi w etapie D.2.
+   */
+  statsSince?: string;
 }
 export interface CaseType {
   id: string; name: string;
@@ -47,29 +53,61 @@ export interface CaseType {
   presenterFunc?: Func;
   basis?: ActRef;
   order: number; active: boolean;
+  /** Wersja 4 (U-25): poziom w materiale dla komunikacji; brak to „Jak rodzaj dokumentu”. */
+  comms?: CommsLevel;
 }
-export interface GeneralSettings { site: SiteSettings; organs: Partial<Record<OrganCode, OrganSettings>>; caseTypes: CaseType[] }
+/** Wersja 4: `mail` to ustawienia „Poczta e-mail” (U-36, B2-P12); brak to poczta wyłączona. */
+export interface GeneralSettings { site: SiteSettings; organs: Partial<Record<OrganCode, OrganSettings>>; caseTypes: CaseType[]; mail?: MailSettings }
 /** Pakiet dla klienta i dla domeny: ustawienia, słownik rodzajów dokumentów i jedna rewizja wszystkiego, co zmienia biuro. */
 export interface GeneralBundle { general: GeneralSettings; docTypes: DocType[]; revision: number }
 
-export type SettingsArea = 'siedziba' | 'organ' | 'wzory' | 'rodzaje_dokumentow' | 'rodzaje_spraw' | 'sklad' | 'konta' | 'posiedzenia';
+export type SettingsArea = 'siedziba' | 'organ' | 'wzory' | 'rodzaje_dokumentow' | 'rodzaje_spraw' | 'sklad' | 'konta' | 'posiedzenia' | 'poczta';
+/** Wpis historii zmian. `since` (dodatek D-14): data obowiązywania zmiany składu. */
 export interface AuditEntry {
   id: number; at: number; accountId: string; actor: string;
   area: SettingsArea; organ?: OrganCode; key: string; label: string; before: string; after: string; basis?: string;
+  since?: string;
 }
 export type SettingsChange =
   | {area: 'siedziba'; key: keyof SiteSettings; value: string}
   | {area: 'organ'; organ: OrganCode; key: Exclude<keyof OrganSettings, 'templates' | 'seats'>; value: number | boolean | string}
   | {area: 'wzory'; organ: OrganCode; template: MeetingTemplate}
   | {area: 'wzory'; organ: OrganCode; remove: string}
-  | {area: 'rodzaje_spraw'; caseType: Partial<CaseType>};
+  | {area: 'rodzaje_spraw'; caseType: Partial<CaseType>}
+  // Wersja 4 (U-36, U-37): sekcja „Poczta e-mail”; zapis z G-19–G-21 dochodzi w etapie D.2 (do tego czasu odmowa
+  // „Nieznany obszar ustawień.”). Dzień startu statystyk idzie gałęzią {area: 'organ', key: 'statsSince'}.
+  | {area: 'poczta'; key: Exclude<keyof MailSettings, 'intros'>; value: string | number | boolean}
+  | {area: 'poczta'; intro: MailIntroKind; text: string};
+/** Zmiana składu. `op: 'okres'` (dodatek D-14): korekta okresu odtworzonego; rdzeń jej nie przyjmuje. */
 export interface CompositionChange {
-  organ: OrganCode; op: 'dodaj' | 'funkcja' | 'koniec' | 'liczba';
+  organ: OrganCode; op: 'dodaj' | 'funkcja' | 'koniec' | 'liczba' | 'okres';
+  from?: string; to?: string;
   personId?: string; name?: string;
   func?: Func; label?: string; count?: number;
   since: string;
   basis: CompositionBasis;
 }
+
+/**
+ * Poziomy w materiale dla komunikacji (B1-33, U-24–U-26) od najbardziej otwartego. „Ustawienie zaostrza, nigdy nie
+ * luzuje”: poziom przy punkcie nie może być bardziej otwarty niż poziom z rodzaju sprawy albo dokumentu.
+ */
+export const COMMS_LEVELS: CommsLevel[] = ['pelna', 'tytul', 'liczba', 'pomin'];
+export const commsLevelLabel: Record<CommsLevel, string> = {pelna: 'Pełna treść', tytul: 'Tytuł', liczba: 'Tylko liczba', pomin: 'Nie trafia'};
+/** Wartości domyślne przy rodzajach dokumentów (U-24). */
+export const DOC_COMMS_DEFAULTS: Record<string, CommsLevel> = {
+  uchwala: 'liczba', stanowisko: 'pelna', oswiadczenie: 'pelna', apel: 'pelna', rezolucja: 'pelna', deklaracja: 'pelna',
+  sprawozdanie: 'tytul', protokol: 'tytul', informacja: 'tytul', inny: 'tytul',
+};
+/** Poziom domyślny rodzaju dokumentu: z tabeli U-24, a nowy rodzaj głosowany „Tylko liczba”, bez głosowania „Tytuł”. */
+export const defaultCommsLevel = (t: Pick<DocType, 'id' | 'voted'>): CommsLevel => DOC_COMMS_DEFAULTS[t.id] ?? (t.voted ? 'liczba' : 'tytul');
+/** Poziom rodzaju dokumentu: zapisany albo domyślny (pusta kolumna przy danych sprzed wersji 4). */
+export const docCommsLevel = (t: Pick<DocType, 'id' | 'voted' | 'comms'>): CommsLevel => t.comms ?? defaultCommsLevel(t);
+/** Bardziej zamknięty z dwóch poziomów. */
+export const stricterComms = (a: CommsLevel, b: CommsLevel): CommsLevel => COMMS_LEVELS.indexOf(a) >= COMMS_LEVELS.indexOf(b) ? a : b;
+/** Czy `level` nie jest bardziej otwarty niż `ceiling` (G-22). */
+export const commsWithin = (level: CommsLevel, ceiling: CommsLevel) => COMMS_LEVELS.indexOf(level) >= COMMS_LEVELS.indexOf(ceiling);
+export const isCommsLevel = (v: unknown): v is CommsLevel => typeof v === 'string' && (COMMS_LEVELS as string[]).includes(v);
 
 /** Dozwolone czasy głosowania w sprawie i głosowań nad wnioskami (G-3). */
 export const VOTE_MINUTES = [1, 2, 3, 5, 10, 15];

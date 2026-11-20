@@ -38,3 +38,13 @@ export function minutesText(n: number, form: 'mianownik' | 'dopelniacz' | 'biern
 }
 /** „24 godziny”, „1 godzina”, „36 godzin”. */
 export const hoursText = (n: number) => `${n} ${plural(n, 'godzina', 'godziny', 'godzin')}`;
+
+/**
+ * Napis do nazwy pliku (B1-07, K4-15): małe litery ASCII (polskie znaki zamienione: ą na a, ł na l itd.), cyfry
+ * i łączniki zamiast spacji, ukośników i innych znaków, bez łącznika na brzegu, najwyżej `max` znaków.
+ */
+export function asciiSlug(text: string, max = 80): string {
+  const map: Record<string, string> = {ł: 'l', Ł: 'l', ß: 'ss', æ: 'ae', Æ: 'ae', ø: 'o', Ø: 'o', đ: 'd', Đ: 'd', œ: 'oe', Œ: 'oe'};
+  const ascii = text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[łŁßæÆøØđĐœŒ]/g, c => map[c]).toLowerCase();
+  return ascii.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, max).replace(/-+$/, '');
+}

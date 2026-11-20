@@ -1,0 +1,61 @@
+{
+ "zestaw": "dane-wzor",
+ "generatedAt": 1795176000000,
+ "commit": "2a6b75a",
+ "entries": [
+  {
+   "meeting": "131cd279-a48f-41b5-b039-2d1a44a99ae9",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "131cd279-a48f-41b5-b039-2d1a44a99ae9-biuro.html",
+   "druk": "131cd279-a48f-41b5-b039-2d1a44a99ae9-biuro-druk.txt",
+   "word": "131cd279-a48f-41b5-b039-2d1a44a99ae9-biuro-word.txt"
+  },
+  {
+   "meeting": "131cd279-a48f-41b5-b039-2d1a44a99ae9",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "131cd279-a48f-41b5-b039-2d1a44a99ae9-przewodniczacy.html",
+   "druk": "131cd279-a48f-41b5-b039-2d1a44a99ae9-przewodniczacy-druk.txt",
+   "word": "131cd279-a48f-41b5-b039-2d1a44a99ae9-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "131cd279-a48f-41b5-b039-2d1a44a99ae9",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku",
+   "role": "zamykajacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "131cd279-a48f-41b5-b039-2d1a44a99ae9-zamykajacy.html",
+   "druk": "131cd279-a48f-41b5-b039-2d1a44a99ae9-zamykajacy-druk.txt",
+   "word": "131cd279-a48f-41b5-b039-2d1a44a99ae9-zamykajacy-word.txt"
+  },
+  {
+   "meeting": "131cd279-a48f-41b5-b039-2d1a44a99ae9",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "refusal": "Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady."
+  }
+ ]
+}

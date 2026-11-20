@@ -145,7 +145,7 @@ export async function createApplication(options: AppOptions = {}) {
   /** Wpisy historii zmian ustawień z kontem i osobą (rozdz. 2.8 pkt 1). */
   const auditEntry = (a: Actor, e: Pick<AuditEntry, 'area' | 'key' | 'label' | 'before' | 'after'> & {organ?: OrganCode; basis?: string}): Omit<AuditEntry, 'id'> =>
     ({at: now(), accountId: a.account.id, actor: a.name, ...e});
-  const kindName: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro'};
+  const kindName: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro', komunikacja: 'Komunikacja'};
   const accountLabel = (row: UserRow) => row.person_id ? personName(store.roster(), row.person_id) : row.display_name;
 
   // Zamykanie głosowań po upływie czasu także wtedy, gdy nikt akurat nie odświeża strony.

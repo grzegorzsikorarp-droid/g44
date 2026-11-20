@@ -1,0 +1,276 @@
+{
+ "zestaw": "dane-wzor-3",
+ "generatedAt": 1795176000000,
+ "commit": "2a6b75a",
+ "entries": [
+  {
+   "meeting": "6e4e0061-5f4a-428c-b7b2-e636d03996f1",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Spotkanie robocze Prezydium (dane wzorcowe wersji 3)",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-biuro.html",
+   "druk": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-biuro-druk.txt",
+   "word": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-biuro-word.txt"
+  },
+  {
+   "meeting": "6e4e0061-5f4a-428c-b7b2-e636d03996f1",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Spotkanie robocze Prezydium (dane wzorcowe wersji 3)",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-przewodniczacy.html",
+   "druk": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-przewodniczacy-druk.txt",
+   "word": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "6e4e0061-5f4a-428c-b7b2-e636d03996f1",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Spotkanie robocze Prezydium (dane wzorcowe wersji 3)",
+   "role": "zamykajacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-zamykajacy.html",
+   "druk": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-zamykajacy-druk.txt",
+   "word": "6e4e0061-5f4a-428c-b7b2-e636d03996f1-zamykajacy-word.txt"
+  },
+  {
+   "meeting": "6e4e0061-5f4a-428c-b7b2-e636d03996f1",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Spotkanie robocze Prezydium (dane wzorcowe wersji 3)",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "refusal": "Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady."
+  },
+  {
+   "meeting": "9db1e991-49d9-44d0-ba60-868ae02a77cd",
+   "status": "przygotowanie",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (w przygotowaniu)",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "9db1e991-49d9-44d0-ba60-868ae02a77cd-biuro.html",
+   "druk": "9db1e991-49d9-44d0-ba60-868ae02a77cd-biuro-druk.txt",
+   "word": "9db1e991-49d9-44d0-ba60-868ae02a77cd-biuro-word.txt"
+  },
+  {
+   "meeting": "9db1e991-49d9-44d0-ba60-868ae02a77cd",
+   "status": "przygotowanie",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (w przygotowaniu)",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "9db1e991-49d9-44d0-ba60-868ae02a77cd-przewodniczacy.html",
+   "druk": "9db1e991-49d9-44d0-ba60-868ae02a77cd-przewodniczacy-druk.txt",
+   "word": "9db1e991-49d9-44d0-ba60-868ae02a77cd-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "9db1e991-49d9-44d0-ba60-868ae02a77cd",
+   "status": "przygotowanie",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (w przygotowaniu)",
+   "role": "zamykajacy",
+   "actor": null,
+   "refusal": "brak osoby w tej roli"
+  },
+  {
+   "meeting": "9db1e991-49d9-44d0-ba60-868ae02a77cd",
+   "status": "przygotowanie",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (w przygotowaniu)",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "refusal": "Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady."
+  },
+  {
+   "meeting": "a4d72a47-5123-4e9f-ba57-ba5ad082567a",
+   "status": "zakonczone",
+   "kind": "procedura",
+   "title": "Głosowanie między posiedzeniami (dane wzorcowe wersji 3)",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-biuro.html",
+   "druk": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-biuro-druk.txt",
+   "word": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-biuro-word.txt"
+  },
+  {
+   "meeting": "a4d72a47-5123-4e9f-ba57-ba5ad082567a",
+   "status": "zakonczone",
+   "kind": "procedura",
+   "title": "Głosowanie między posiedzeniami (dane wzorcowe wersji 3)",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-przewodniczacy.html",
+   "druk": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-przewodniczacy-druk.txt",
+   "word": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "a4d72a47-5123-4e9f-ba57-ba5ad082567a",
+   "status": "zakonczone",
+   "kind": "procedura",
+   "title": "Głosowanie między posiedzeniami (dane wzorcowe wersji 3)",
+   "role": "zamykajacy",
+   "actor": {
+    "username": "ag.test",
+    "personId": "ag"
+   },
+   "body": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-zamykajacy.html",
+   "druk": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-zamykajacy-druk.txt",
+   "word": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-zamykajacy-word.txt"
+  },
+  {
+   "meeting": "a4d72a47-5123-4e9f-ba57-ba5ad082567a",
+   "status": "zakonczone",
+   "kind": "procedura",
+   "title": "Głosowanie między posiedzeniami (dane wzorcowe wersji 3)",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "body": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-czlonek.html",
+   "druk": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-czlonek-druk.txt",
+   "word": "a4d72a47-5123-4e9f-ba57-ba5ad082567a-czlonek-word.txt"
+  },
+  {
+   "meeting": "b65af400-2bd3-405a-b779-00677180b3f7",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (trwa, dane wzorcowe wersji 3)",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "b65af400-2bd3-405a-b779-00677180b3f7-biuro.html",
+   "druk": "b65af400-2bd3-405a-b779-00677180b3f7-biuro-druk.txt",
+   "word": "b65af400-2bd3-405a-b779-00677180b3f7-biuro-word.txt"
+  },
+  {
+   "meeting": "b65af400-2bd3-405a-b779-00677180b3f7",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (trwa, dane wzorcowe wersji 3)",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "b65af400-2bd3-405a-b779-00677180b3f7-przewodniczacy.html",
+   "druk": "b65af400-2bd3-405a-b779-00677180b3f7-przewodniczacy-druk.txt",
+   "word": "b65af400-2bd3-405a-b779-00677180b3f7-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "b65af400-2bd3-405a-b779-00677180b3f7",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (trwa, dane wzorcowe wersji 3)",
+   "role": "zamykajacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "b65af400-2bd3-405a-b779-00677180b3f7-zamykajacy.html",
+   "druk": "b65af400-2bd3-405a-b779-00677180b3f7-zamykajacy-druk.txt",
+   "word": "b65af400-2bd3-405a-b779-00677180b3f7-zamykajacy-word.txt"
+  },
+  {
+   "meeting": "b65af400-2bd3-405a-b779-00677180b3f7",
+   "status": "trwa",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (trwa, dane wzorcowe wersji 3)",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "refusal": "Projekt protokołu w trakcie obrad widzą biuro i osoby prowadzące obrady."
+  },
+  {
+   "meeting": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f",
+   "status": "zakonczone",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (dane wzorcowe wersji 3)",
+   "role": "biuro",
+   "actor": {
+    "username": "biuro",
+    "personId": null
+   },
+   "body": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-biuro.html",
+   "druk": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-biuro-druk.txt",
+   "word": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-biuro-word.txt"
+  },
+  {
+   "meeting": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f",
+   "status": "zakonczone",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (dane wzorcowe wersji 3)",
+   "role": "przewodniczacy",
+   "actor": {
+    "username": "si.test",
+    "personId": "si"
+   },
+   "body": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-przewodniczacy.html",
+   "druk": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-przewodniczacy-druk.txt",
+   "word": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-przewodniczacy-word.txt"
+  },
+  {
+   "meeting": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f",
+   "status": "zakonczone",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (dane wzorcowe wersji 3)",
+   "role": "zamykajacy",
+   "actor": {
+    "username": "ag.test",
+    "personId": "ag"
+   },
+   "body": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-zamykajacy.html",
+   "druk": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-zamykajacy-druk.txt",
+   "word": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-zamykajacy-word.txt"
+  },
+  {
+   "meeting": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f",
+   "status": "zakonczone",
+   "kind": "posiedzenie",
+   "title": "Posiedzenie Prezydium (dane wzorcowe wersji 3)",
+   "role": "czlonek",
+   "actor": {
+    "username": "eo.test",
+    "personId": "eo"
+   },
+   "body": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-czlonek.html",
+   "druk": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-czlonek-druk.txt",
+   "word": "ba9ae794-b5b5-43fb-96e0-c90ff3a7537f-czlonek-word.txt"
+  }
+ ]
+}

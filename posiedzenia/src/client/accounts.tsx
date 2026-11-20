@@ -9,8 +9,8 @@ import {accountChip} from './stany.ts';
 import {brand} from './brand.ts';
 import {HistoryFold} from './cascade-ui.tsx';
 
-const kinds: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro'};
-const newAccountTitle: Record<Exclude<Account['kind'], 'czlonek'>, string> = {doradczy: 'Nowe konto z głosem doradczym', gosc: 'Nowe konto gościa', biuro: 'Nowe konto biura'};
+const kinds: Record<Account['kind'], string> = {czlonek: 'Członek organu', doradczy: 'Głos doradczy', gosc: 'Gość', biuro: 'Biuro', komunikacja: 'Komunikacja'};
+const newAccountTitle: Record<Exclude<Account['kind'], 'czlonek' | 'komunikacja'>, string> = {doradczy: 'Nowe konto z głosem doradczym', gosc: 'Nowe konto gościa', biuro: 'Nowe konto biura'};
 const ascii = (s: string) => s.toLowerCase().replace(/[ąćęłńóśźż]/g, c => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]).replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 function temporaryPassword() {
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -140,7 +140,7 @@ function CreateAccount(props: {kind: Account['kind']; personId?: string; council
   const [password] = useState(temporaryPassword);
   const [admin, setAdmin] = useState(false);
   const title = props.personId ? (s.roster.memberships.some(m => m.organ === 'prezydium' && m.personId === props.personId) ? 'Nowe konto członka Prezydium' : `Nowe konto członka ${props.councilName}`)
-    : newAccountTitle[props.kind as Exclude<Account['kind'], 'czlonek'>];
+    : newAccountTitle[props.kind as Exclude<Account['kind'], 'czlonek' | 'komunikacja'>];
   return <Modal title={title} onClose={props.onClose}>
     <form class="stack" onSubmit={e => {
       e.preventDefault();

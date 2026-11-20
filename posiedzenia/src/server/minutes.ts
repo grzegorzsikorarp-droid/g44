@@ -9,6 +9,9 @@ import {lawOf, type LegalProfile} from '../shared/law.ts';
 import {deputyOf, organRoster} from '../shared/role.ts';
 import {plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
+import {channelMessages, confirmedBy as confirmedByShared, fileBase, generatedLine, openBallotText, paperPage, presenceText} from '../shared/papers.ts';
+import {shownFileText, shownInItem} from '../shared/show.ts';
+import {docxFromHtml, type DocxOptions} from '../shared/docx.ts';
 
 // Projekt protokołu: dokument organu z nagłówkiem, rozdziałami I–VI, przebiegiem obrad z głosowaniami w punktach,
 // podpisami i stopką. Ten sam tekst trafia na stronę do druku, do pliku do edycji w Wordzie i do okna wersji próbnej,
@@ -21,6 +24,12 @@ import {typo} from '../shared/typo.ts';
 // podpis osoby, która zamknęła obrady (DA-18), oraz zarządzający, tryb i krótszy termin głosowania między posiedzeniami.
 // Skład i liczby pochodzą z `frozen`. Odstępstwa liczy jedna funkcja domeny (effectiveMeeting(...).deviations).
 // Posiedzenia zapisane przy przejściu na wersję 3 (`legacy`) mają projekt protokołu jak w wersji 2, słowo w słowo.
+// Wersja 4 (SPEC-4 DB-4, 6.12): treść zmienia się tylko przy `frozen.v4` (posiedzenie otwarte w wersji 4): zdanie
+// o pokazanych plikach (B3-14), wiadomości kanału od otwarcia (B2-W20), wyniki nieogłoszone ukryte u każdego (B1-03)
+// i głosowanie otwarte tylko zdaniem „Głosowanie nr {n} trwa.” (T-7). Posiedzenia sprzed wersji 4 mają tekst słowo
+// w słowo jak w wersji 3 dla każdej roli (wzorce tests/fixtures/protokoly-v3/). Zmienia się tylko opakowanie strony
+// i pliku: znak „Projekt” na każdej stronie, nagłówek od drugiej strony, stopka „Wygenerowano …” i „Strona X z Y”, plik
+// .docx (B1-05, B1-09). Lista obecności bierze brzmienie z src/shared/papers.ts (`presenceText`, `confirmedBy`).
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]!);
 /** Tekst dokumentu: polska typografia (twarde spacje jak w interfejsie), potem znaki HTML. */
@@ -83,6 +92,8 @@ interface Doc {
   word: boolean;
   /** Wersja 3: posiedzenie z ustawieniami zapisanymi przy otwarciu (bez `legacy`), profil prawny, skład i odstępstwa. */
   v3: boolean; law: LegalProfile; members: Membership[]; deviations: Deviation[];
+  /** Wersja 4: posiedzenie otwarte w wersji 4 (`frozen.v4`, DB-4). */
+  v4: boolean;
 }
 
 const p = (text: string, cls = '') => `<p${cls ? ` class="${cls}"` : ''}>${t(text)}</p>`;
@@ -122,26 +133,6 @@ function chairNote(c: ChairChange) {
     case 'powrot': return 'powrót do prowadzenia po wyjściu zapisanym przy przejęciu';
     default: return c.reason;
   }
-}
-/** Osoba prowadząca obrady w danej chwili (z historii zmian prowadzenia). */
-function chairAt(m: Meeting, at: number) {
-  let current: string | null = null;
-  for (const c of m.chair.changes) if (c.at <= at) current = c.to;
-  return current;
-}
-/**
- * Kto zapisał albo potwierdził obecność, w bierniku bez odmiany nazwiska: „osobę prowadzącą obrady (Anna Nowak)”,
- * „członka Prezydium (…)”, „inną osobę (…)” albo biuro z nazwą konta („biuro Izby (Biuro Drugie)”). Imię i nazwisko
- * albo nazwa konta stoi w nawiasie w mianowniku.
- */
-function byWhom(d: Doc, name: string, at: number) {
-  const {m, roster} = d;
-  const chair = chairAt(m, at);
-  if (chair && name === personName(roster, chair)) return `osobę prowadzącą obrady (${name})`;
-  const person = roster.persons.find(x => x.name === name);
-  if (person) return membership(roster, m.organ, person.id) ? `członka Prezydium (${name})` : `inną osobę (${name})`;
-  // F9: przy kilku kontach biura nazwa konta mówi, kto potwierdził obecność.
-  return name && name !== 'system' ? `${d.office} (${name})` : d.office;
 }
 /** Członkowie organu obecni w danej chwili według listy obecności (ostatnie przybycie albo wyjście przed tą chwilą). */
 function presentAt(d: Doc, at: number) {
@@ -232,6 +223,8 @@ function remoteParticipation(d: Doc, b: Ballot) {
 function ballotBlock(d: Doc, b: Ballot) {
   const {m, roster} = d;
   const r = b.result;
+  // Wersja 4 (T-7, K4-29): głosowanie otwarte tylko zdaniem, bez liczb i bez osób.
+  if (d.v4 && b.status === 'otwarte') return `<div class="ballot">${p(openBallotText(b.number))}</div>`;
   const lines = [
     `<p class="ballot-head"><strong>${t(`Głosowanie nr ${b.number}`)}</strong> ${t(inParens(`${modeWord(b.mode)}${b.modeBasis ? `, ${b.modeBasis}` : ''}`))}</p>`,
     p(b.subject, 'ballot-subject'),
@@ -368,6 +361,9 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   if (it.outOfOrder) parts.push(p(`Punkt rozpatrzono poza kolejnością przyjętego porządku obrad. Powód ${reasonText(it.outOfOrder.reason)}.`));
   const mats = m.materials.filter(x => it.materialIds.includes(x.id));
   if (mats.length) parts.push(p(`${mats.length === 1 ? 'Materiał' : 'Materiały'} do ${d.procedure ? 'sprawy' : 'punktu'} ${listing(mats.map(x => quoted(x.title)))}.`, 'muted'));
+  // Wersja 4 (B3-14, 6.12): pliki do pokazania faktycznie pokazane w tym punkcie, tylko przy `frozen.v4`.
+  const shown = d.v4 ? shownInItem(m, it.id) : [];
+  if (shown.length) parts.push(p(`Pliki pokazane w punkcie ${quoted(it.title)} ${shown.map(shownFileText).join(', ')}.`, 'muted'));
   // Wersja 3 (rozdz. 5.8): zmiana rodzaju sprawy w trakcie obrad i sprawa niepoddana pod głosowanie (DA-8), a w głosowaniu
   // między posiedzeniami tryb tajny albo imienny z danymi uchwały albo głosowania (§ 11 ust. 2).
   for (const x of deviationsOf(d, ['rodzaj_sprawy', 'bez_glosowania', 'tryb_procedury'], it.id)) parts.push(p(x.text));
@@ -377,43 +373,8 @@ function itemSection(d: Doc, it: AgendaItem, first: boolean) {
   return `<section class="item"><div class="item-start">${head}${parts[0] ?? ''}</div>${parts.slice(1).join('')}</section>`;
 }
 
-/**
- * Obecność z wpisów: „obecność od 10:02, wyjście 11:30, powrót 11:45” albo „nieobecność”. Zgłoszenia obecności (F9)
- * nie są obecnością: liczy się dopiero potwierdzenie (przybycie).
- */
-function presenceText(m: Meeting, who: string, guest: boolean) {
-  const events = m.presenceLog.filter(e => e.who === who && !!e.guest === guest && (e.type === 'przybycie' || e.type === 'wyjscie'));
-  if (!events.length) return 'nieobecność';
-  let arrived = false;
-  return events.map(e => {
-    if (e.type !== 'przybycie') return `wyjście ${time(e.at)}`;
-    const text = arrived ? `powrót ${time(e.at)}` : `obecność od ${time(e.at)}`;
-    arrived = true;
-    return text;
-  }).join(', ');
-}
-/**
- * Sposób potwierdzenia pierwszego przybycia: potwierdzenie przez samą osobę w aplikacji (posiedzenie zdalne),
- * zgłoszenie w aplikacji potwierdzone przez osobę prowadzącą obrady albo biuro (F9) albo zapis przez inną osobę.
- * Bez przybycia: zgłoszenie czekające na potwierdzenie, niepotwierdzone, odrzucone albo wycofane.
- */
-function confirmedBy(d: Doc, who: string, guest: boolean, ownName: string) {
-  const {m} = d;
-  const own = m.presenceLog.filter(e => e.who === who && !!e.guest === guest);
-  const first = own.find(e => e.type === 'przybycie');
-  if (!first) {
-    if (presenceOf(m, who, guest) === 'zgloszony') return m.status === 'zakonczone' ? 'zgłoszenie w aplikacji, niepotwierdzone' : 'zgłoszenie w aplikacji, czeka na potwierdzenie';
-    const dropped = [...own].reverse().find(e => e.type === 'odrzucenie');
-    if (!dropped) return '';
-    return dropped.by === ownName ? 'zgłoszenie w aplikacji, wycofane' : `zgłoszenie w aplikacji, odrzucone przez ${byWhom(d, dropped.by, dropped.at)}`;
-  }
-  const exit = d.v3 && own.some(e => e.type === 'wyjscie' && e.via === 'przejmujacy') ? ', wyjście zapisane przez osobę, która przejęła prowadzenie' : '';
-  // Wersja 3 (rozdz. 5.8): obecność zapisana razem z otwarciem posiedzenia albo z przejęciem prowadzenia obrad (D1).
-  if (d.v3 && first.via === 'otwarcie') return 'obecność zapisana przy otwarciu posiedzenia' + exit;
-  if (d.v3 && first.via === 'prowadzenie') return 'obecność zapisana przy przejęciu prowadzenia obrad' + exit;
-  if (first.by === ownName) return 'potwierdzenie w aplikacji' + exit;
-  return (first.reportedAt ? `zgłoszenie w aplikacji, potwierdzone przez ${byWhom(d, first.by, first.at)}` : `zapisane przez ${byWhom(d, first.by, first.at)}`) + exit;
-}
+/** Sposób potwierdzenia obecności: brzmienie wspólne z listą obecności (src/shared/papers.ts). */
+const confirmedBy = (d: Doc, who: string, guest: boolean, ownName: string) => confirmedByShared({m: d.m, roster: d.roster, office: d.office, v3: d.v3}, who, guest, ownName);
 
 /**
  * Sposób zakończenia głosowania między posiedzeniami (F7): przed terminem z policzeniem głosów albo przerwanie
@@ -660,12 +621,14 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
   const note = isNote(m);
   const types = m.frozen?.docTypes ?? options.docTypes ?? defaultDocTypes;
   const v3 = !!m.frozen && !m.frozen.legacy;
+  const v4 = !!m.frozen?.v4;
   // Odstępstwa liczy domena; do nich wystarczą profil prawny, skład i konta (ustawienia ogólne ich nie zmieniają).
   const env = cascadeEnv({roster, bundle: {general: defaultGeneral(defaultSite), docTypes: types, revision: 0}, organ: m.organ, accounts});
   const d: Doc = {
     m, roster, accounts, procedure, office: names.office ?? 'biuro', regulation: names.regulation ?? `Regulaminu ${council}`, placed: new Map(), loose: [], trials: [],
-    note, types: v3 ? types : options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced ? unannounced(m).map(b => b.id) : []), word,
-    v3, law: lawOf(m.organ), members: organRoster(roster, m), deviations: v3 ? effectiveMeeting(env, m).deviations : [],
+    // Wersja 4 (B1-03, DB-4): przy `frozen.v4` wyniki nieogłoszone są ukryte u każdego, także u osoby prowadzącej.
+    note, types: v3 ? types : options.docTypes ?? defaultDocTypes, hidden: new Set(options.hideUnannounced || v4 ? unannounced(m).map(b => b.id) : []), word,
+    v3, law: lawOf(m.organ), members: organRoster(roster, m), deviations: v3 ? effectiveMeeting(env, m).deviations : [], v4,
   };
   const known = new Set(m.agenda.map(i => i.id));
   for (const b of [...m.ballots].sort((x, y) => x.openedAt - y.openedAt || x.number - y.number)) {
@@ -718,8 +681,10 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
       parts.push(itemSection(d, it, false));
     }
     if (d.loose.length) parts.push(`<h3>${t('Głosowania poza sprawami')}</h3>` + ballotsWithMotions(d, d.loose));
-    if (m.messages.length) parts.push(`<h2>${t('Wiadomości uczestników w trakcie głosowania')}</h2><ul class="messages">`
-      + m.messages.map(x => `<li><strong>${t(x.authorName)}</strong>, ${t(`${longAt(x.at)} ${quoted(x.text)}`)}</li>`).join('') + '</ul>');
+    // Wersja 4 (B2-W20, DB-15): przy `frozen.v4` tylko wiadomości od rozpoczęcia głosowania.
+    const messages = v4 ? channelMessages(m) : m.messages;
+    if (messages.length) parts.push(`<h2>${t('Wiadomości uczestników w trakcie głosowania')}</h2><ul class="messages">`
+      + messages.map(x => `<li><strong>${t(x.authorName)}</strong>, ${t(`${longAt(x.at)} ${quoted(x.text)}`)}</li>`).join('') + '</ul>');
     parts.push(signatures(d), footer(d, generatedAt));
   } else {
     parts.push(chapterOne(d), chapterTwo(d), chapterThree(d), chapterFour(d));
@@ -732,17 +697,17 @@ function render(m: Meeting, roster: Roster, accounts: Account[], generatedAt: nu
 
 export interface MinutesLook { css?: string | null; logo?: string | null; nameplate?: [string, string] | null; org?: string; names?: MinutesNames; options?: MinutesOptions }
 
-// Pełna strona do druku: ten sam arkusz stylów co aplikacja (krój, kolory i nagłówki Izby), znak Izby na górze.
-// Blok stylu dodaje nagłówek stron od drugiej (numery stron są w protokol.css).
+// Strona do druku i zapisu jako PDF (B1-05, B1-08, K4-9): ten sam arkusz stylów co aplikacja (krój, kolory i nagłówki Izby),
+// znak Izby na górze pierwszej strony, wiersz „Projekt” powtarzany na każdej drukowanej stronie (tabela układu), nagłówek
+// od drugiej strony, stopka „Wygenerowano …” i „Strona X z Y” (Chrome i Edge). Treść (`minutesBody`) bez zmian.
 export function minutesHtml(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, look: MinutesLook = {}) {
   const plate = look.logo && look.nameplate ? `<div class="oi-nameplate"><img src="${esc(look.logo)}" alt="Znak ${esc((look.org ?? '').replace(/^Okręgowa Izba/, 'Okręgowej Izby'))}"><p class="oi-nameplate__name">${t(look.nameplate[0])} <b>${t(look.nameplate[1])}</b></p></div>` : '';
-  const style = look.css ? `<link rel="stylesheet" href="${esc(look.css)}">` : '<style>body{font-family:system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:24px}</style>';
-  const header = minutesPageHeader(m).replace(/["\\]/g, '\\$&');
-  const pages = `<style>@media print{@page{@top-left{content:"${header}"}}@page:first{@top-left{content:none}}}</style>`;
   const doc = `/api/meetings/${encodeURIComponent(m.id)}/protokol?format=doc`;
-  return `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(minutesTitle(m))} – ${esc(m.title)}</title>${style}${pages}</head>
-<body class="oi-root minutes-page"><div class="toolbar"><span class="kicker">${t(minutesTitle(m))}</span><div class="toolbar-actions"><a class="oi-btn oi-btn--obrys" href="${esc(doc)}"><span>${t('Pobierz do edycji w Wordzie')}</span></a><button type="button" class="oi-btn" data-print><span>${t('Drukuj lub zapisz jako PDF')}</span></button></div></div>
-<main>${plate}<article class="minutes-view">${minutesBody(m, roster, accounts, generatedAt, look.names, look.options)}</article></main><script src="/druk.js"></script></body></html>`;
+  const name = minutesTitle(m);
+  return paperPage(minutesBody(m, roster, accounts, generatedAt, look.names, look.options), {
+    title: `${name} – ${m.title}`, header: minutesPageHeader(m), draft: true, generatedAt, css: look.css ?? null, plate,
+    links: [{href: doc, label: 'Word', name: `Pobierz ${name.charAt(0).toLowerCase()}${name.slice(1)} w formacie Word`}],
+  });
 }
 
 // Plik do edycji w Wordzie: ten sam tekst z prostym stylem wewnętrznym (Titillium Web albo Arial, bez kolorów), bez skryptów.
@@ -764,4 +729,17 @@ export function minutesDoc(m: Meeting, roster: Roster, accounts: Account[], gene
   return `<!doctype html><html lang="pl" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="ProgId" content="Word.Document"><title>${t(`${minutesTitle(m)} – ${m.title}`)}</title>`
     + `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]--><style>${docStyle}</style></head>`
     + `<body><div class="Section1">${org}<article class="minutes-view">${body}</article></div></body></html>`;
+}
+
+/** Nazwa pliku Word projektu protokołu według B1-07, np. „2026-11-19-prezydium-projekt-protokolu.docx”. */
+export const minutesDocxFileName = (m: Meeting, at: number) => `${fileBase(m, 'protokol', at)}.docx`;
+/**
+ * Prawdziwy plik Word (.docx, B1-09, DB-27) z wariantu `word` projektu protokołu: nagłówek „Projekt” na każdej stronie,
+ * od drugiej strony z nazwą dokumentu, stopka „Wygenerowano …” i „Strona X z Y”. Treść ta sama co w dawnym pliku `.doc`
+ * (`minutesDoc`), który zostaje do czasu przełączenia trasy w etapie D.2.
+ */
+export function minutesDocx(m: Meeting, roster: Roster, accounts: Account[], generatedAt: number, look: MinutesLook = {}, o: {deflateRaw?: DocxOptions['deflateRaw']} = {}): Promise<Uint8Array> {
+  const body = render(m, roster, accounts, generatedAt, look.names ?? {}, look.options ?? {}, true);
+  return docxFromHtml(body, {title: `${minutesTitle(m)} – ${m.title}`, header: minutesPageHeader(m), firstHeader: look.org, draft: true,
+    footerLeft: generatedLine(generatedAt), now: generatedAt, deflateRaw: o.deflateRaw});
 }

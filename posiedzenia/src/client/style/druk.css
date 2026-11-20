@@ -1,0 +1,22 @@
+/* Strony dokumentów do druku i zapisu jako PDF (wersja 4: SPEC-4 5.5, B1-05, B1-08, K4-9, K4-27). Uogólnienie strony
+   projektu protokołu z protokol.css: treść stoi w tabeli układu, której wiersz nagłówka z napisem „Projekt” powtarza się
+   na każdej drukowanej stronie w każdej przeglądarce, która drukuje tabele. Numery stron i stopkę „Wygenerowano …”
+   dopisują pola @page (Chrome i Edge). Tylko tokeny, zero zaokrągleń. */
+/* Układ stały: szeroka tabela w treści przewija się w swojej ramce i nie rozpycha strony na telefonie. */
+.paper-page .paper-layout { width: 100%; table-layout: fixed; border: 0; border-collapse: collapse; }
+.paper-page .paper-layout > thead > tr > td, .paper-page .paper-layout > tbody > tr > td { padding: 0; border: 0; background: none; }
+.paper-page .paper-mark { display: none; margin: 0 0 var(--odstep-2); font-size: var(--t-etykieta); font-weight: 700; font-style: italic; text-transform: uppercase; letter-spacing: .1em; color: var(--tekst-drugorzedny); }
+.paper-page .toolbar-note { flex-basis: 100%; margin: 0; font-size: var(--t-maly); color: var(--tekst-drugorzedny); }
+/* Listy dokumentów z numeracją jak w Wordzie: cyfra z kropką albo półpauza, bez kropek-kółek (K4-27). */
+.minutes-view ul:not(.minutes-agenda) { list-style: none; padding-left: 1.4em; }
+.minutes-view ul:not(.minutes-agenda) > li::before { content: "–"; display: inline-block; width: 1.4em; margin-left: -1.4em; }
+.minutes-view ol { list-style: decimal; }
+@media print {
+  .paper-page .paper-mark { display: block; }
+  .paper-page .paper-layout > thead { display: table-header-group; }
+  .paper-page main { width: auto; padding: 0; }
+  @page {
+    size: A4; margin: 16mm 15mm;
+    @bottom-left { font-family: var(--font-sans); font-size: 9pt; color: var(--tekst-drugorzedny); }
+  }
+}
