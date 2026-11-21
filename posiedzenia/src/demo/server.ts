@@ -24,7 +24,7 @@ import {actBallots, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} f
 import {acceptAvatar, acceptDisplayFile, naturalOrder, refusalByName, seriesProblem, sniff, SHOW_LIMITS} from '../shared/files.ts';
 import {memberStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
 import {statsPageBody} from '../shared/stats-page.ts';
-import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, defaultMailSettings, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
+import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, minutesDraft, defaultMailSettings, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
 import {afterMail, addressChangedMail, codeMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
 import {minutesBody, minutesDocx, minutesDocxFileName, minutesHtml, minutesTitle, type MinutesLook} from '../server/minutes.ts';
 import {buildFolder, disposition, paperFile, type ExportCodec, type ExportDeps} from '../server/export-core.ts';
@@ -222,6 +222,15 @@ export class DemoServer {
   /** Konta z wersją zdjęcia z pamięci karty (zdjęcia nie trafiają do `localStorage`, B3 7.3). */
   private accounts(): Account[] { return this.state.accounts.map(a => this.withAvatar(a)); }
   private avatarKey(a: Pick<Account, 'id' | 'personId'>) { return a.personId ?? a.id; }
+  /** Jak `dropAvatar` na serwerze: usunięcie z przyczyną ma jeden wpis w historii kont (5.4, K4-30). */
+  private dropAvatar(target: Account, removed: NonNullable<Account['avatarRemoved']>, accountId: string) {
+    if (!this.avatars.delete(this.avatarKey(target))) return;
+    target.avatarRemoved = removed;
+    const label = target.personId ? personName(this.state.roster, target.personId) : target.displayName;
+    const basis = removed.cause === 'blokada' ? 'blokada konta' : removed.cause === 'koniec_czlonkostwa' ? '30 dni po zakończeniu członkostwa' : removed.reason;
+    this.record([{at: removed.at, accountId, actor: removed.by, area: 'konta', key: `konto:${target.id}:zdjecie`, label: `Konto ${label}`,
+      before: 'zdjęcie', after: `Usunięto zdjęcie profilowe konta ${label}.`, ...(basis ? {basis} : {})}]);
+  }
   private withAvatar(a: Account): Account {
     const v = this.avatars.get(this.avatarKey(a))?.v;
     const out = {...a};
@@ -445,7 +454,10 @@ export class DemoServer {
         if (!actor) return json(base);
         // Wersja 4 (2.5): jak na serwerze; zdjęcia tylko z pamięci karty, bez adresów e-mail.
         const roster = this.state.roster;
-        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(this.state.accounts.filter(u => !u.disabled && this.avatars.has(this.avatarKey(u))).map(u => [this.avatarKey(u), {v: this.avatars.get(this.avatarKey(u))!.v}])) : null;
+        // Poza kręgiem z pytania 13 mapa ma tylko własne zdjęcie (W-2), jak na serwerze.
+        const ownV = this.avatars.get(this.avatarKey(actor.account))?.v;
+        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(this.state.accounts.filter(u => !u.disabled && this.avatars.has(this.avatarKey(u))).map(u => [this.avatarKey(u), {v: this.avatars.get(this.avatarKey(u))!.v}]))
+          : ownV ? {[this.avatarKey(actor.account)]: {v: ownV}} : null;
         const closed = this.allMeetings().filter(m => m.status === 'zakonczone');
         const prepares = canCreate(roster, 'prezydium', actor);
         return json({...base, avatars, photoCircle: photoCircleText(roster), ...(isCommsAccount(actor) ? {home: '#odbyte'} : {}),
@@ -470,7 +482,8 @@ export class DemoServer {
       if (path === '/api/me' && method === 'GET') {
         const c = this.contactOf(a.account.id);
         return json({email: c.email || null, emailState: c.email ? c.state : 'brak', emailConfirmedAt: c.confirmedAt, emailConfirmedBy: c.confirmedBy, pendingEmail: c.code && c.code.expires > Date.now() ? c.code.address : null,
-          prefs: prefsOf(c.prefs), avatar: a.account.avatar ?? 0, avatarScreen: !!a.account.avatarScreen, avatarRemoved: a.account.avatarRemoved ?? null, mailEnabled: this.mailEnabled()}, 200, noStore);
+          prefs: prefsOf(c.prefs), avatar: a.account.avatar ?? 0, avatarScreen: !!a.account.avatarScreen, avatarRemoved: a.account.avatarRemoved ?? null, mailEnabled: this.mailEnabled(),
+          privacyUrl: /^https:\/\/\S+$/.test(this.mailSettings().privacyUrl) ? this.mailSettings().privacyUrl : null}, 200, noStore);
       }
       if (path === '/api/me/prefs' && method === 'PUT') {
         const c = this.contactOf(a.account.id);
@@ -546,10 +559,7 @@ export class DemoServer {
         if (!a.account.admin) fail('Cudze zdjęcie usuwa administrator.', 403);
         const target = this.state.accounts.find(x => x.id === accountAvatar[1]) ?? fail('Nie znaleziono konta.', 404);
         const reason = String(input?.reason ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-        this.avatars.delete(this.avatarKey(target));
-        target.avatarRemoved = {at: Date.now(), by: a.name, ...(reason ? {reason} : {}), cause: 'administrator'};
-        const label = target.personId ? personName(this.state.roster, target.personId) : target.displayName;
-        this.record([{at: Date.now(), accountId: a.account.id, actor: a.name, area: 'konta', key: `konto:${target.id}:zdjecie`, label: `Konto ${label}`, before: 'zdjęcie', after: `Usunięto zdjęcie profilowe konta ${label}.`, ...(reason ? {basis: reason} : {})}]);
+        this.dropAvatar(target, {at: Date.now(), by: a.name, ...(reason ? {reason} : {}), cause: 'administrator'}, a.account.id);
         this.save();
         return json({accounts: this.accountsForAdmin()});
       }
@@ -714,8 +724,6 @@ export class DemoServer {
           if (typeof input.disabled === 'boolean' && target.disabled !== input.disabled) {
             entries.push({at: Date.now(), accountId: a.account.id, actor: a.name, area: 'konta', key: `konto:${target.id}:blokada`, label, before: target.disabled ? 'zablokowane' : 'aktywne', after: input.disabled ? 'zablokowane' : 'aktywne'});
             target.disabled = input.disabled;
-            // DB-20, K4-30: blokada konta usuwa zdjęcie profilowe od razu.
-            if (input.disabled && this.avatars.delete(this.avatarKey(target))) target.avatarRemoved = {at: Date.now(), by: a.name, cause: 'blokada'};
           }
           if (typeof input.admin === 'boolean' && target.admin !== input.admin) {
             entries.push({at: Date.now(), accountId: a.account.id, actor: a.name, area: 'konta', key: `konto:${target.id}:administrator`, label, before: target.admin ? 'administrator' : 'bez uprawnień administratora', after: input.admin ? 'administrator' : 'bez uprawnień administratora'});
@@ -743,6 +751,8 @@ export class DemoServer {
             }
           }
           this.record(entries);
+          // DB-20, K4-30: blokada konta usuwa zdjęcie profilowe od razu (wpis w historii po wpisie o blokadzie).
+          if (input.disabled === true) this.dropAvatar(target, {at: Date.now(), by: a.name, cause: 'blokada'}, a.account.id);
         }
         this.save();
         return json({accounts: this.accountsForAdmin()}, method === 'POST' ? 201 : 200);
@@ -1008,8 +1018,10 @@ export class DemoServer {
         if (method !== 'POST') fail('Niedozwolona metoda.', 405);
         const kind = String(input?.kind ?? '') as MailKind;
         if (!(kind in MAIL_KINDS)) fail('Nieznany rodzaj wiadomości.');
-        const m = this.meetingFor(id, a);
+        const saved = this.meetingFor(id, a);
         const sending = mailMatch[1] === '/send';
+        // W-5: podgląd „Protokół do wglądu” ze szkicu okna „Protokół sporządzony”, bez zapisu; wysyłka z zapisanym faktem.
+        const m = !sending && kind === 'protokol' ? minutesDraft(saved, this.state.roster, input?.draft) ?? saved : saved;
         const lastProgressAt = this.state.batches.filter(b => b.kind === 'postep' && b.meetingId === m.id).reduce<number | null>((x, b) => Math.max(x ?? 0, b.created), null);
         const allowed = canSendMail(kind, this.state.roster, m, a, {now: Date.now(), lastProgressAt, ...(sending ? {enabled: this.mailEnabled()} : {})});
         if (!allowed.allowed) fail(allowed.reason, allowed.status ?? 403);

@@ -55,3 +55,5 @@
 .show-text__end { margin: 0; font-size: .7em; font-weight: 600; color: var(--tekst-drugorzedny); }
 .show-stage__label { margin: 0; text-align: center; font-size: clamp(1rem, .8rem + .6vw, 1.6rem); color: var(--tekst-mocny); font-weight: 600; }
 .show-nopdf { max-width: 40ch; }
+/* W-W4-18: w karcie pokazu u uczestnika tytuł materiału stoi raz (nad czytnikiem), czytnik pokazuje tylko wersję. */
+.member-show .reader-head h2 { display: none; }

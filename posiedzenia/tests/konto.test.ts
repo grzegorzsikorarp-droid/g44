@@ -97,3 +97,44 @@ test('4.4, DA-2: konto „Komunikacja” zakłada tylko administrator, bez upraw
     assert.equal((await p.comms.ok('/api/me')).emailState, 'brak');
   } finally { await stop(); }
 });
+
+test('W-W4-01, W-2: osoba spoza kręgu z pytania 13 dostaje w sesji tylko własne zdjęcie', async () => {
+  const {origin, stop} = await startServer();
+  try {
+    const p = await people(origin);
+    const eo = p.members.get('eo')!, ag = p.members.get('ag')!;
+    const put = (c: typeof eo) => c.raw('/api/me/avatar', {method: 'PUT', body: new Uint8Array(jpeg(300, 300)), headers: {'Content-Type': 'image/jpeg'}});
+    assert.equal((await put(eo)).status, 200);
+    assert.equal((await put(ag)).status, 200);
+    assert.deepEqual((await eo.ok('/api/session')).avatars, {eo: {v: 1}}, 'członek widzi własne zdjęcie, bez cudzych');
+    assert.equal((await p.members.get('kn')!.ok('/api/session')).avatars, null, 'bez własnego zdjęcia mapa pusta jak dotąd');
+    assert.deepEqual((await ag.ok('/api/session')).avatars, {eo: {v: 1}, ag: {v: 1}}, 'krąg z pytania 13 widzi wszystkie');
+    assert.equal((await eo.raw('/api/avatars/ag')).status, 403, 'cudze zdjęcie nadal poza kręgiem');
+  } finally { await stop(); }
+});
+
+test('D-KDZ4-02, 5.4, K4-30: blokada konta i usunięcie 30 dni po końcu członkostwa dopisują po jednym wpisie w historii', async () => {
+  let clock = Date.now();
+  const {origin, stop, app} = await startServer({now: () => clock, purgeMs: 30});
+  try {
+    const p = await people(origin);
+    const kn = p.members.get('kn')!, ak = p.members.get('ak')!;
+    const put = (c: typeof kn) => c.raw('/api/me/avatar', {method: 'PUT', body: new Uint8Array(jpeg(300, 300)), headers: {'Content-Type': 'image/jpeg'}});
+    assert.equal((await put(kn)).status, 200);
+    assert.equal((await put(ak)).status, 200);
+    const removals = () => app.store.history({area: 'konta'}).entries.filter(e => e.after.startsWith('Usunięto zdjęcie profilowe konta'));
+    await p.admin.ok('/api/accounts', {id: p.idOf('kn.test'), disabled: true}, 'PATCH');
+    assert.deepEqual(removals().map(e => [e.label, e.basis, e.actor]), [['Konto Krystyna Naczk', 'blokada konta', 'Biuro Izby']]);
+    // Koniec członkostwa: osoba znika ze składu z wpisem w historii składu, po 31 dniach zdjęcie usuwa `purge`.
+    const roster = app.store.roster();
+    app.store.saveComposition({...roster, memberships: roster.memberships.filter(ms => !(ms.personId === 'ak' && ms.organ === 'prezydium'))}, 'prezydium', app.store.general().general.organs.prezydium!);
+    app.store.audit([{at: clock, accountId: '', actor: 'Biuro Izby', area: 'sklad', organ: 'prezydium', key: 'osoba:ak', label: 'Anna Kryczka', before: 'członek', after: 'koniec członkostwa'}]);
+    clock += 31 * 86400000;
+    const until = Date.now() + 3000;
+    while (removals().length < 2 && Date.now() < until) await new Promise(r => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 150));
+    const list = removals();
+    assert.equal(list.length, 2, 'po jednym wpisie, bez powtórzeń przy kolejnych przebiegach');
+    assert.deepEqual([list[0].label, list[0].basis, list[0].actor], ['Konto Anna Kryczka', '30 dni po zakończeniu członkostwa', 'Aplikacja']);
+  } finally { await stop(); }
+});

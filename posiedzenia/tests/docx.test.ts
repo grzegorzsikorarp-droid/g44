@@ -115,3 +115,16 @@ test('parseHtml: encje, atrybuty z cudzysłowem i niedomknięte znaczniki', () =
   const tree = parseHtml('<p class="a b" title="x > y">A&nbsp;&amp;&#8211;B<br>C</p><div>D');
   assert.equal(textOf(tree), 'A &–BCD');
 });
+
+test('W-W4-15: szerokości kolumn Worda według treści, długie słowo dostaje szerszą kolumnę', async () => {
+  const html = '<table><thead><tr><th>Imię i nazwisko</th><th>Funkcja</th><th>Rodzaj</th><th>Obecność</th></tr></thead><tbody>'
+    + '<tr><td>Anna Przykładowa</td><td>I Wiceprzewodnicząca</td><td>członek</td><td>tak</td></tr></tbody></table>';
+  const doc = await docxFromHtml(html, {title: 'Próba', now: NOW});
+  const xml = entryText(doc, 'word/document.xml');
+  const widths = [...xml.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map(x => Number(x[1]));
+  assert.equal(widths.length, 4);
+  assert.ok(widths[1] > widths[2] && widths[1] > widths[3], `kolumna „Funkcja” najszersza z krótkich: ${widths}`);
+  assert.ok(widths.reduce((a, b) => a + b, 0) <= 9638, 'suma nie przekracza szerokości strony');
+  const cells = [...xml.matchAll(/<w:tcW w:w="(\d+)"/g)].map(x => Number(x[1]));
+  assert.deepEqual(cells.slice(0, 4), widths, 'komórki mają szerokości siatki');
+});

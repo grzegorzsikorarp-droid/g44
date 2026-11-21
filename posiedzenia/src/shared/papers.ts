@@ -271,7 +271,9 @@ function head(m: Meeting, id: PaperId, ctx: PaperContext) {
   const day = paperDay(m);
   const what = m.kind === 'procedura' ? 'głosowania między posiedzeniami' : isNote(m) ? 'spotkania roboczego' : 'posiedzenia';
   const line = stateLine(m, id, ctx.at);
-  const title = `${t(`${paperName(m, id)} ${what}`)} <b>${t(organName(m, roster))}</b> ${t(`z dnia ${longDate(day)}`)}`;
+  // Lista do podpisu: „Lista obecności posiedzenia … (do podpisu)” (W-W4-23).
+  const sign = id === 'obecnosc-podpis';
+  const title = `${t(`${sign ? 'Lista obecności' : paperName(m, id)} ${what}`)} <b>${t(organName(m, roster))}</b> ${t(`z dnia ${longDate(day)}${sign ? ' (do\u00a0podpisu)' : ''}`)}`;
   const list: [string, string][] = [];
   if (m.kind === 'procedura') list.push(['Termin głosowania', m.openedAt ? `od ${dateDots(isoDayOf(m.openedAt))}, godz. ${timeOf(m.openedAt)}` : DOTS]);
   else {
@@ -415,8 +417,9 @@ function resultsHtml(m: Meeting, ctx: PaperContext) {
     blocks.push(p(`${b.subject} (${b.mode}${b.modeBasis ? `, ${b.modeBasis}` : ''})`, 'ballot-subject'));
     if (outcome) { out.push(`<div class="ballot">${blocks.join('')}${p(outcome, 'muted')}</div>`); continue; }
     const r = b.result!;
-    blocks.push(table(`Wynik głosowania nr ${b.number}`, ['Za', 'Przeciw', 'Wstrzymało się', 'Głosowało', 'Wymagane kworum', 'Wynik'],
-      [[String(r.za), String(r.przeciw), String(r.wstrzymuje), t(`${r.cast} z ${r.eligible}`), String(r.quorum), t(resultLabel(b, materialTypeOf(m, b)))]], [0, 1, 2, 4], 'result-table'));
+    // Nagłówek wiersza to słowo („nr 3”), a wszystkie liczby stoją w komórkach `oi-liczba` pod swoimi nagłówkami (W-W4-19).
+    blocks.push(table(`Wynik głosowania nr ${b.number}`, ['Głosowanie', 'Za', 'Przeciw', 'Wstrzymało się', 'Głosowało', 'Wymagane kworum', 'Wynik'],
+      [[t(`nr ${b.number}`), String(r.za), String(r.przeciw), String(r.wstrzymuje), t(`${r.cast} z ${r.eligible}`), String(r.quorum), t(resultLabel(b, materialTypeOf(m, b)))]], [1, 2, 3, 5], 'result-table'));
     if (b.secret) blocks.push(`<p class="muted">${t(`Głosowanie tajne. Pobrano kart ${b.secret.issued.length}, oddano głosów ${b.secret.cast}. Odcisk klucza głosowania`)} <code>${esc(b.secret.fingerprint)}</code>. ${t('System nie zapisuje powiązania między osobą a głosem.')}</p>`);
     if (b.mode === 'imienne') {
       const order = organRoster(roster, m).map(x => x.personId);
@@ -457,7 +460,11 @@ function actHtml(m: Meeting, ctx: PaperContext, ballotId: string) {
   const {roster} = ctx.env;
   const b = actBallots(m, ctx.env).find(x => x.id === ballotId);
   if (!b) throw Object.assign(new Error('Ten dokument nie istnieje.'), {status: 404});
-  const out = [`<header><p class="draft">${t(organName(m, roster))}</p><h1>${t(actTitle(b))}</h1></header>`];
+  // Nagłówek aktu jak tytuły innych dokumentów i protokołu: cienka kursywa z nazwą organu pogrubioną, bez etykiety
+  // wersalikami (IDENTYFIKACJA.md „Nie pisz wersalikami całych nazw”, W-W4-23): „Uchwała nr … Prezydium … z dnia … w sprawie …”.
+  const title = actTitle(b), cut = title.indexOf(' w sprawie '), dated = `z dnia ${longDate(paperDay(m))}`;
+  const heading = `${t(cut > 0 ? title.slice(0, cut) : title)} <b>${t(organName(m, roster))}</b> ${t(cut > 0 ? `${dated}${title.slice(cut)}` : dated)}`;
+  const out = [`<header><h1>${heading}</h1></header>`];
   if (b.material) {
     const content = ctx.materialHtml?.(b.material.id, b.material.version) ?? null;
     if (!content || content.hash !== b.material.hash) throw Object.assign(new Error('Treść w aplikacji różni się od wersji głosowanej. Zgłoś to biuru.'), {status: 409});
@@ -465,7 +472,7 @@ function actHtml(m: Meeting, ctx: PaperContext, ballotId: string) {
   } else out.push(p('Treści aktu nie dołączono w aplikacji.'));
   const r = b.result!;
   const formula = b.formulas?.adopted ?? resultLabel(b, materialTypeOf(m, b));
-  out.push(p(`Treść przyjęta w głosowaniu nr ${b.number} (${b.mode}) na ${m.kind === 'procedura' ? 'głosowaniu między posiedzeniami' : 'posiedzeniu'} z dnia ${longDate(paperDay(m))}. ${formula}. Za ${r.za}, przeciw ${r.przeciw}, wstrzymało się ${r.wstrzymuje}. Dokument z aplikacji, bez podpisów.`, 'muted'));
+  out.push(p(`Treść przyjęta w głosowaniu nr ${b.number} (${b.mode}) na ${m.kind === 'procedura' ? 'głosowaniu między posiedzeniami' : 'posiedzeniu'} z dnia ${longDate(paperDay(m))} ${formula}. Za ${r.za}, przeciw ${r.przeciw}, wstrzymało się ${r.wstrzymuje}. Dokument z aplikacji, bez podpisów.`, 'muted'));
   // Podpisy (B1-06, § 8 ust. 7 RR): przewodniczący lub wiceprzewodniczący oraz członek Okręgowej Rady, a w sprawach
   // finansowych skarbnik.
   const item = m.agenda.find(i => i.id === b.itemId);

@@ -5,12 +5,13 @@ import {useGeneral} from './general.ts';
 import {MailDialog} from './mail.tsx';
 import {Button, CardTitle, Confirm, ErrorNotice, Fact, Field, fmtTime, Fold, Modal, Notice, Segments, StateChip, useAction} from './ui.tsx';
 import {proposalChip} from './stany.ts';
-import {canAcceptProposal, canPropose, canRejectProposal, canSeeWorkspace, canSendProgress} from '../shared/role.ts';
+import {canAcceptProposal, canPropose, canRejectProposal, canSeeWorkspace, canSendProgress, isReferent, organRoster} from '../shared/role.ts';
 import {carriedText, PREP_LIMITS, PREP_REFUSALS, type Comment, type PrepCommand, type PrepView, type Proposal} from '../shared/workspace.ts';
-import {itemNumber} from '../shared/rules.ts';
+import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {personName} from '../shared/roster.ts';
 import {dateDots, dateDotsOf} from '../shared/text.ts';
-import type {Actor, OrganCode} from '../shared/types.ts';
+import {typo} from '../shared/typo.ts';
+import type {Actor, Meeting, OrganCode, Roster} from '../shared/types.ts';
 import {canEditComment, decisionText, itemThreads, waitingProposals, waitsForConvener} from './prep-rules.ts';
 import './style/wspolpraca.css';
 
@@ -115,6 +116,10 @@ export function PrepCard(props: {meeting: MeetingData; onChange?: (m: MeetingDat
     {proposing && <ProposalDialog meeting={props.meeting} onClose={() => setProposing(false)} onDone={done}/>}
   </section>;
   const waiting = waitingProposals(prep);
+  // W-W4-04: fakt „Referujesz punkt {nr}.” dla osoby referującej (materiał dodaje w karcie „Twoje punkty”).
+  const mineNo = orderedAgenda(props.meeting.agenda).filter(it => isReferent(s.roster, props.meeting, it.id, s.personId)).map(it => itemNumber(props.meeting.agenda, it.id));
+  const one = props.meeting.kind === 'procedura' ? ['sprawę', 'sprawy'] : ['punkt', 'punkty'];
+  const referring = !mineNo.length ? '' : mineNo.length === 1 ? `Referujesz ${one[0]} ${mineNo[0]}.` : `Referujesz ${one[1]} ${mineNo.slice(0, -1).join(', ')} i ${mineNo.at(-1)}.`;
   return <section class="oi-card stack prep-card" id="przygotowanie-posiedzenia">
     <CardTitle level={2}>Przygotowanie posiedzenia</CardTitle>
     {p.total > 0 && <p class="prep-progress">{p.text}</p>}
@@ -123,6 +128,7 @@ export function PrepCard(props: {meeting: MeetingData; onChange?: (m: MeetingDat
       <Fact label="Zgłoszenia czekające na decyzję zwołującego"><span class="prep-line">{String(waiting)}{waiting > 0 && <Button kind="ghost" small quiet label="Pokaż zgłoszenia" onClick={() => showPrep('zgloszenia')}>Pokaż</Button>}</span></Fact>
     </dl>
     {p.notice && <p class="small">{p.notice}</p>}
+    {referring && <p class="small">{typo(referring)}</p>}
     {prep.readOnly && <Notice>{PREP_REFUSALS.opened}</Notice>}
     {(proposer || sender) && <div class="actions">
       {proposer && <Button haspopup onClick={() => setProposing(true)}>Zgłoś sprawę</Button>}
@@ -144,6 +150,13 @@ export function ProposalsCard(props: {meeting: MeetingData; onChange: (m: Meetin
   </section>;
 }
 
+/** „Ewa Przykładowa, Członek Prezydium” (B2 2.13, W-W4-22): funkcja ze składu, osoba spoza składu zgłasza z głosem doradczym. */
+function proposer(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen'>, p: Proposal) {
+  const person = roster.persons.find(x => x.name === p.byName);
+  const func = person ? organRoster(roster, m).find(x => x.personId === person.id)?.label ?? '' : 'głos doradczy';
+  return func ? `${p.byName}, ${func}` : p.byName;
+}
+
 function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'proposal_accept' | 'proposal_reject' | 'proposal_defer') => void; onEdit: () => void; onWithdraw: () => void; busy: boolean}) {
   const s = useSession();
   const actor = useActorOf();
@@ -157,7 +170,7 @@ function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'p
   const carried = carriedText(p);
   return <li class="proposal">
     <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state, waitsForConvener(p, preparer, decides))}/></div>
-    <p class="small">{`${p.byName}, ${dateDotsOf(p.at)}. ${p.justification}`}{p.attachment && <> <button type="button" class="link" onClick={() => download(`/api/meetings/${encodeURIComponent(meeting.id)}/przygotowanie/pliki/${p.attachment!.id}`)}>{`Plik „${p.attachment.name}”.`}</button></>}</p>
+    <p class="small">{`${proposer(s.roster, meeting as unknown as Meeting, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}{p.attachment && <> <button type="button" class="link" onClick={() => download(`/api/meetings/${encodeURIComponent(meeting.id)}/przygotowanie/pliki/${p.attachment!.id}`)}>{`Plik „${p.attachment.name}”.`}</button></>}</p>
     {carried && <p class="small muted">{carried}</p>}
     {p.state === 'wpisane' && <p class="small">{`Wpisane do projektu${no ? ` jako punkt ${no}` : ''}. ${p.decision?.by ?? ''}, ${p.decision ? dateDotsOf(p.decision.at) : ''}.`}</p>}
     {(p.state === 'odrzucone' || p.state === 'odlozone' || p.state === 'wygasle') && p.decision && <p class="small">{`${decisionText(p)}, ${dateDotsOf(p.decision.at)}.`}</p>}
@@ -294,6 +307,7 @@ export function PrepArchive(props: {meeting: MeetingData}) {
   return <PrepArchiveFold meeting={props.meeting}/>;
 }
 function PrepArchiveFold(props: {meeting: MeetingData}) {
+  const {roster} = useSession();
   const [prep, setPrep] = useState<PrepView | null | undefined>(undefined);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
@@ -314,7 +328,7 @@ function PrepArchiveFold(props: {meeting: MeetingData}) {
       <h3 class="kicker">{`Zgłoszenia (${prep.proposals.length})`}</h3>
       {prep.proposals.length ? <ul class="proposal-list">{prep.proposals.map(p => <li key={p.id} class="proposal">
         <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state)}/></div>
-        <p class="small">{`${p.byName}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
+        <p class="small">{`${proposer(roster, props.meeting as unknown as Meeting, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
         {p.decision && p.state !== 'wpisane' && <p class="small">{`${decisionText(p)}, ${dateDotsOf(p.decision.at)}.`}</p>}
       </li>)}</ul> : <p class="muted">Nikt nie zgłosił sprawy na to posiedzenie.</p>}
       <h3 class="kicker">{`Uwagi (${roots.length})`}</h3>
@@ -334,10 +348,11 @@ function PrepArchiveFold(props: {meeting: MeetingData}) {
 export const waitingSentence = (n: number) => `Zgłoszenia czekające na posiedzenie ${n}`;
 /** Okno z listą zgłoszeń czekających na posiedzenie organu (lista posiedzeń, osoby przygotowujące). */
 export function WaitingDialog(props: {proposals: Proposal[]; onClose: () => void}) {
+  const {roster} = useSession();
   return <Modal title={`Zgłoszenia czekające na posiedzenie (${props.proposals.length})`} onClose={props.onClose}>
     {props.proposals.length ? <ul class="proposal-list">{props.proposals.map(p => <li key={p.id} class="proposal">
       <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state)}/></div>
-      <p class="small">{`${p.byName}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
+      <p class="small">{`${proposer(roster, {organ: 'prezydium'}, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
       {carriedText(p) && <p class="small muted">{carriedText(p)}</p>}
     </li>)}</ul> : <p class="muted">{`Nie ma zgłoszeń czekających na posiedzenie.`}</p>}
     <div class="actions"><Button onClick={props.onClose}>Zamknij</Button></div>

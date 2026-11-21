@@ -248,7 +248,7 @@ function templateItem(m: Meeting, ctx: Context, t: MeetingTemplate['items'][numb
   if (t.caseType) it.caseType = t.caseType;
   if (t.presenterFunc) {
     const ms = organMembers(ctx.roster, m.organ).find(x => x.func === t.presenterFunc);
-    if (ms) it.presenters = [{name: personName(ctx.roster, ms.personId), role: ms.label, kind: 'referuje'}];
+    if (ms) it.presenters = [{name: personName(ctx.roster, ms.personId), role: ms.label, kind: 'referuje', personId: ms.personId}];
   }
   m.agenda.push(it);
   guessProtocolOf(m, ctx, it);
@@ -1155,7 +1155,7 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
           if (!it.docType) it.docType = c.docType;
           if (!it.presenters.length && c.presenterFunc) {
             const ms = organRoster(roster, m).find(x => x.func === c.presenterFunc);
-            if (ms) it.presenters = [{name: name(ctx, ms.personId), role: ms.label, kind: 'referuje'}];
+            if (ms) it.presenters = [{name: name(ctx, ms.personId), role: ms.label, kind: 'referuje', personId: ms.personId}];
           }
           delete it.caseTypeGuess;
           if (was?.id !== c.id) settingLog(m, ctx, actor, was ? `Zmieniono rodzaj sprawy w punkcie ${nr()} z ${quoted(was.name)} na ${quoted(c.name)}.` : `Ustawiono rodzaj sprawy w punkcie ${nr()} ${quoted(c.name)}.`, it.id);

@@ -1,6 +1,7 @@
 import type {AccountKind, Actor, Meeting, Roster} from './types.ts';
 import type {Allowed} from './law.ts';
 import {canSendAfter, canSendProgress, canFile, isCommsAccount, isService, organRoster} from './role.ts';
+import {personName} from './roster.ts';
 import {timeOf} from './text.ts';
 
 // Poczta e-mail wersji 4 (SPEC-4 2.1, 3.4 G-19–G-21 i G-32, 5.4; B2-P01–P18). Reguły w jednym miejscu: serwer
@@ -141,6 +142,21 @@ export function canSendMail(kind: MailKind, roster: Roster, m: Meeting, a: Actor
     return {allowed: true, basis: '§ 13 ust. 2'};
   }
   return {allowed: false, reason: 'Tej wiadomości nie wysyła się z posiedzenia.', status: 400};
+}
+
+/**
+ * Podgląd „Protokół do wglądu” przed zapisem faktu (W-5, zasada 0.2 pkt 4): okno „Protokół sporządzony” przysyła szkic
+ * `{date, authorPersonId}`, z którego powstaje kopia posiedzenia z faktem tylko do zbudowania treści. Nic się nie zapisuje,
+ * a wysyłka nadal wymaga zapisanego faktu (`canSendMail`). Szkic niepełny albo z osobą spoza składu daje `null`.
+ */
+export function minutesDraft(m: Meeting, roster: Roster, draft: unknown): Meeting | null {
+  if (!draft || typeof draft !== 'object' || m.status !== 'zakonczone') return null;
+  const d = draft as {date?: unknown; authorPersonId?: unknown};
+  const date = typeof d.date === 'string' ? d.date.trim() : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const ms = organRoster(roster, m).find(x => x.personId === d.authorPersonId);
+  if (!ms) return null;
+  return {...m, minutesReady: {date, author: {personId: ms.personId, name: personName(roster, ms.personId), func: ms.label}, at: 0, by: '', accountId: ''}};
 }
 
 /**

@@ -149,7 +149,8 @@ function TestDialog(props: {onClose: () => void}) {
   return <Modal title="Wyślij wiadomość próbną" onClose={props.onClose}>
     <form class="stack" onSubmit={e => { e.preventDefault(); setSteps(null); run(async () => { const r = await request<{steps: NonNullable<typeof steps>; demo?: string}>('/api/mail/test', {body: {to: to.trim()}}); setSteps(r.steps); setNote(r.demo ?? ''); }); }}>
       <Field label="Adres"><input type="email" required spellcheck={false} value={to} maxLength={254} onInput={e => setTo((e.target as HTMLInputElement).value)}/></Field>
-      <div class="actions"><Button kind="primary" type="submit" busy={busy}>Wyślij</Button><Button kind="ghost" onClick={props.onClose}>Zamknij</Button></div>
+      {/* W-W4-17: przed wysłaniem „Anuluj”, po wyniku tylko „Zamknij” w nagłówku okna. */}
+      <div class="actions"><Button kind="primary" type="submit" busy={busy}>Wyślij</Button>{!steps && <Button kind="ghost" onClick={props.onClose}>Anuluj</Button>}</div>
     </form>
     {steps && <ol class="mail-steps" aria-label="Kroki wiadomości próbnej">{steps.map(x => <li key={x.name}>
       <span class="mail-step__name">{x.name}</span><StateChip state={mailStepChip(x)}/><span class="mail-step__text">{x.skipped || x.text === 'Pominięto' ? '' : x.text}</span>

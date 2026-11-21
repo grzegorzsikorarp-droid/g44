@@ -163,7 +163,7 @@ export function commsMarkdown(m: Meeting, env: CascadeEnv, o: CommsOptions): str
   const titled = adopted.filter(b => ['pelna', 'tytul'].includes(levelOf(itemOf(b))))
     .sort((a, b) => (levelOf(itemOf(a)) === 'pelna' ? 0 : 1) - (levelOf(itemOf(b)) === 'pelna' ? 0 : 1) || a.number - b.number);
   const s1 = m.kind === 'procedura'
-    ? `Głosowanie między posiedzeniami ${name} zakończyło się ${longDate(m.closedAt ? isoDayOf(m.closedAt) : day)}.`
+    ? `Głosowanie między posiedzeniami ${name} zakończyło się ${longDate(m.closedAt ? isoDayOf(m.closedAt) : day)}`
     : `${kindWord} ${name} odbyło się ${longDate(day)} w trybie ${m.mode === 'zdalne' ? 'zdalnym' : 'stacjonarnym'}, obecnych było ${present.length} z ${members.length} członków.`;
   const hiddenNote = hiddenActs.length ? `, w tym ${hiddenActs.length} w sprawach, których ten materiał nie opisuje` : '';
   const s2 = working ? `Bez kworum ${short} nie ${organVerb(organ ?? {forms: {gender: 'n'}} as never, {m: 'podejmował', f: 'podejmowała', n: 'podejmowało'})} uchwał, a obrady trwały jako spotkanie robocze.`
@@ -196,8 +196,14 @@ export function commsMarkdown(m: Meeting, env: CascadeEnv, o: CommsOptions): str
 
   // Porządek obrad: punkty porządkowe z tytułami, sprawy według poziomu, sprawy bez rodzaju sprawy tylko liczbą (K4-1).
   const advisoryPersons = new Set(accounts.filter(a => a.kind === 'doradczy' && a.personId).map(a => a.personId!));
-  const people = (it: AgendaItem) => it.presenters.filter(x => x.kind === 'referuje' && x.personId && (memberIds.has(x.personId) || advisoryPersons.has(x.personId)))
-    .map(x => `${personName(roster, x.personId!) || x.name}${x.role ? `, ${x.role}` : ''}`);
+  // Osoba bez `personId` (punkty sprzed poprawki D-KDZ4-01) liczy się jak w `isReferent` i B2-W11: imię i nazwisko
+  // odpowiada dokładnie jednej osobie ze składu zapisanego przy otwarciu. Pozostałe osoby pomija się bez śladu.
+  const personOf = (x: AgendaItem['presenters'][number]) => x.personId
+    ?? (() => { const same = members.filter(ms => personName(roster, ms.personId) === x.name.trim()); return same.length === 1 ? same[0].personId : undefined; })();
+  const people = (it: AgendaItem) => it.presenters.flatMap(x => {
+    const id = x.kind === 'referuje' ? personOf(x) : undefined;
+    return id && (memberIds.has(id) || advisoryPersons.has(id)) ? [`${personName(roster, id) || x.name}${x.role ? `, ${x.role}` : ''}`] : [];
+  });
   const stateWord = (it: AgendaItem) => it.status === 'odroczony' ? 'odroczono' : it.status === 'wycofany' ? 'wycofano' : it.status === 'oczekuje' ? (it.kind === 'zamkniecie' ? 'zamknięto' : 'nie rozpatrzono') : 'rozpatrzono';
   const shownLine = (it: AgendaItem, lvl: CommsLevel) => {
     const shown = shownInItem(m, it.id);
@@ -231,15 +237,27 @@ export function commsMarkdown(m: Meeting, env: CascadeEnv, o: CommsOptions): str
       }
       return lines;
     };
+    // Kolejne punkty główne z poziomem „Tylko liczba” w tej samej grupie i bez podpunktów łączą się w jeden wiersz
+    // („Sprawy bez rodzaju sprawy, 2 (nie rozpatrzono)”), jak grupy podpunktów (W-W4-21).
+    let run: {line: number; group: string; items: AgendaItem[]} | null = null;
     for (const top of m.agenda.filter(i => !i.parentId)) {
       const lvl = levelOf(top);
       const subs = m.agenda.filter(i => i.parentId === top.id);
       if (lvl === 'pomin') { hiddenItems++; hiddenItems += subs.length; continue; }
-      n++;
       if (lvl === 'liczba') {
         if (!top.caseType) noCase++;
-        out.push(`${n}. ${md(groupName(top))}, 1 (${stateWord(top)})`);
+        const g = groupName(top);
+        if (run && run.group === g && !subs.length) {
+          run.items.push(top);
+          out[run.line] = `${out[run.line].slice(0, out[run.line].indexOf('. ') + 2)}${md(g)}, ${run.items.length} (${[...new Set(run.items.map(stateWord))].join(', ')})`;
+          continue;
+        }
+        n++;
+        out.push(`${n}. ${md(g)}, 1 (${stateWord(top)})`);
+        run = subs.length ? null : {line: out.length - 1, group: g, items: [top]};
       } else {
+        n++;
+        run = null;
         out.push(`${n}. ${md(top.title.replace(/:$/, ''))} (${stateWord(top)})`);
         const ppl = orderingKinds(m.organ).has(top.kind) ? [] : people(top);
         if (ppl.length) out.push(`   - Według porządku obrad referuje ${ppl.map(md).join('; ')}.`);

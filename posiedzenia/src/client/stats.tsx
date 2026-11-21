@@ -76,7 +76,7 @@ export function MyStatsPage(props: {query: URLSearchParams}) {
     else setCustom(true);
   };
   const shown = custom ? 'inny' : mode;
-  return <div class="page stats-page stack">
+  return <div class="page page--kolumna stats-page stack">
     <p><a class="oi-link" href="#konto">Moje konto</a></p>
     <h1 class="app-title">Moje <b>statystyki</b></h1>
     <section class="oi-card stack" aria-label="Okres">

@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import {commsCeiling, commsChangedAt, commsChoices, commsLevelOfItem, commsLevels, commsMarkdown, commsRelease, commsSourceText} from '../src/shared/comms.ts';
 import {defaultDocTypes} from '../src/shared/doctypes.ts';
 import type {Meeting} from '../src/shared/types.ts';
-import {closedMeeting, envWith, NOW, openedMeeting} from './scenariusz-v4.ts';
+import {caseTypes, closedMeeting, envWith, NOW, office, openedMeeting} from './scenariusz-v4.ts';
+import {apply} from '../src/shared/meeting.ts';
+import {defaultGeneral} from '../src/shared/settings.ts';
+import {seedSite} from '../src/server/seed.ts';
+import {context, newMeeting} from './helpers.ts';
 
 // Materiał dla komunikacji (SPEC-4 6.10, DB-10, DB-41, DB-42; K4-1 pkt 8, K4-5, K4-6, K4-32; etap D.1 pkt 5 i 8).
 
@@ -131,4 +135,37 @@ test('DB-42: stan udostępnienia materiału i zmiana treści po udostępnieniu',
   const released: Meeting = {...m, commsReleased: {at: NOW, by: 'Biuro', accountId: 'u', inputs: 0}};
   assert.equal(commsRelease(released), 'udostepniony');
   assert.equal(commsRelease({...released, commsInputs: 1}), 'zmieniony');
+});
+
+test('D-KDZ4-01, B2-W11: osoba z rodzaju sprawy ma personId, a materiał przy poziomie „Tytuł” ją wymienia', () => {
+  // Polecenie `item_edit` z rodzajem sprawy, który ma funkcję osoby referującej, zapisuje osobę ze składu z `personId`.
+  const ctx = context();
+  ctx.general = {general: {...defaultGeneral(seedSite), caseTypes: caseTypes.map(c => c.id === 'patronat' ? {...c, presenterFunc: 'sekretarz' as const} : c)}, docTypes: defaultDocTypes, revision: 1};
+  let p = newMeeting(ctx);
+  p = apply(p, {type: 'item_add', title: 'Uchwała w sprawie patronatu', parentId: p.agenda.find(i => i.kind === 'uchwaly')!.id}, office, ctx.tick());
+  const added = p.agenda.at(-1)!;
+  p = apply(p, {type: 'item_edit', itemId: added.id, caseType: 'patronat'}, office, ctx.tick());
+  assert.deepEqual(p.agenda.find(i => i.id === added.id)!.presenters, [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje', personId: 'kn'}]);
+  // Materiał: punkt z rodzajem „Patronat” (poziom „Tytuł”) wymienia osobę ze składu, także zapisaną bez `personId`
+  // przed poprawką (imię i nazwisko odpowiada dokładnie jednej osobie ze składu zapisanego przy otwarciu).
+  const {m, env} = closedMeeting({v4: true});
+  const it = item(m, 'Uchwała nr 108');
+  for (const presenter of [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje' as const, personId: 'kn'}, {name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje' as const}]) {
+    const text = commsMarkdown({...m, agenda: m.agenda.map(i => i.id === it.id ? {...i, presenters: [presenter]} : i)}, env, {at: NOW});
+    assert.ok(text.includes('- Uchwała nr 108/IX/2026 w sprawie patronatu nad konferencją (rozpatrzono)\n     - Według porządku obrad referuje Krystyna Naczk, Sekretarz.'), JSON.stringify(presenter));
+  }
+  const outsider = commsMarkdown({...m, agenda: m.agenda.map(i => i.id === it.id ? {...i, presenters: [{name: 'Krystyna Naczkowska', role: 'Sekretarz', kind: 'referuje' as const}]} : i)}, env, {at: NOW});
+  assert.ok(!outsider.includes('Naczkowska'), 'osoba spoza składu bez śladu');
+});
+
+test('W-W4-21: kolejne punkty główne bez rodzaju sprawy w jednym wierszu grupy', () => {
+  const {m, env} = closedMeeting({v4: true});
+  const tops = m.agenda.filter(i => !i.parentId);
+  const last = tops.at(-1)!;
+  const extra = (id: string, title: string) => ({...last, id, title, kind: 'sprawa' as const, status: 'oczekuje' as const, caseType: undefined, presenters: [], materialIds: []});
+  const agenda = [...m.agenda.filter(i => i.id !== last.id), extra('x1', 'Sprawa pani Anny'), extra('x2', 'Sprawa pana Jana'), last];
+  const text = commsMarkdown({...m, agenda}, env, {at: NOW});
+  assert.ok(text.includes('Sprawy bez rodzaju sprawy, 2 (nie rozpatrzono)'), text);
+  assert.ok(!text.includes('Sprawa pani Anny') && !text.includes('Sprawa pana Jana'));
+  assert.equal((text.match(/Sprawy bez rodzaju sprawy, 1 \(nie rozpatrzono\)/g) ?? []).length, 0, 'bez dwóch identycznych wierszy z rzędu');
 });

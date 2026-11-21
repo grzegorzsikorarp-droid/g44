@@ -159,6 +159,8 @@ export interface CatalogRow {
   complete?: {have: number; of: number; items: {label: string; ok: boolean}[]};
   /** Stan udostępnienia materiału dla komunikacji (DB-42) dla osób, które udostępniają, i konta „Komunikacja” (6.9, 4.4). */
   commsRelease?: 'brak' | 'udostepniony' | 'zmieniony';
+  /** Chwila ostatniego udostępnienia („Udostępniono {data}, godz. {g}.”, 4.4), przy tych samych osobach co `commsRelease`. */
+  commsReleasedAt?: number | null;
 }
 /** Komplet dokumentów posiedzenia (6.9): przy notatce projekt notatki i odnośnik. */
 export function completeness(m: Meeting, adoption: Adoption | null) {
@@ -190,7 +192,10 @@ export function catalogRows(meetings: Meeting[], env: Pick<CascadeEnv, 'roster' 
     if (!scope) continue;
     const day = paperDay(m);
     const adoption = adoptions.get(m.id) ?? null;
-    const protocol = protocolState(m, adoption, o.today);
+    // Konto „Komunikacja” (zakres 'wiersz') dostaje stan protokołu z datą przyjęcia, bez terminu sporządzenia i osoby (4.4).
+    const full = protocolState(m, adoption, o.today);
+    const protocol = scope === 'pelny' ? full
+      : {...full, text: adoption ? `Przyjęty ${dateDots(isoDayOf(adoption.at))}.` : '', overdue: false, deadline: null};
     const complete = completeness(m, adoption);
     const term = m.frozen?.term ? m.frozen.term.name : null;
     if (filter.rok && !day.startsWith(filter.rok)) continue;
@@ -209,7 +214,7 @@ export function catalogRows(meetings: Meeting[], env: Pick<CascadeEnv, 'roster' 
       photos: m.photos ? (seesPhotosLink(env.roster, m, actor) ? {url: m.photos.url} : 'jest') : 'brak',
     };
     if (scope === 'pelny') Object.assign(row, {term, protocolNumber: m.protocolNumber?.trim() ?? '', turnout: meetingTurnout(m, env.roster), complete});
-    if (canReleaseComms(env.roster, m, actor) || isCommsAccount(actor)) row.commsRelease = commsRelease(m);
+    if (canReleaseComms(env.roster, m, actor) || isCommsAccount(actor)) Object.assign(row, {commsRelease: commsRelease(m), commsReleasedAt: m.commsReleased?.at ?? null});
     rows.push(row);
   }
   return rows.sort((a, b) => b.day.localeCompare(a.day) || a.title.localeCompare(b.title, 'pl'));
@@ -227,7 +232,7 @@ export function catalogCsv(rows: CatalogRow[], actor: Actor): string {
 export interface PeriodReport {
   from: string; to: string; organ: string; at: number;
   meetings: {id: string; day: string; kind: string; mode: string; protocolNumber: string; protocol: string; turnout: string; acts: number; photos: string}[];
-  counts: {meetings: number; remote: number; working: number; procedures: number; acts: {name: string; count: number}[]; turnout: string};
+  counts: {meetings: number; remote: number; working: number; procedures: number; acts: {id: string; name: string; count: number}[]; turnout: string};
   pending: number;
   actsByCase: {group: string; level: 'lista' | 'liczba'; count: number; items: {number: string; subject: string; day: string}[]; numbers: string[]}[];
 }
@@ -270,12 +275,16 @@ export function periodReport(meetings: Meeting[], env: CascadeEnv, period: {from
         protocolNumber: m.protocolNumber?.trim() ?? '', protocol: protocolState(m, adoptions.get(m.id) ?? null, o.today).label, turnout: `${tr.present} z ${tr.members}`, acts: actBallots(m, env).length, photos: m.photos?.url ?? ''};
     }),
     counts: {meetings: list.filter(m => m.kind === 'posiedzenie').length, remote: list.filter(m => m.kind === 'posiedzenie' && m.mode === 'zdalne').length, working: list.filter(m => m.kind === 'posiedzenie' && m.working).length,
-      procedures: list.filter(m => m.kind === 'procedura').length, acts: [...actCounts].map(([d, count]) => ({name: types.find(x => x.id === d)?.name ?? d, count})),
+      procedures: list.filter(m => m.kind === 'procedura').length, acts: [...actCounts].map(([d, count]) => ({id: d, name: types.find(x => x.id === d)?.name ?? d, count})),
       turnout: pt.seats ? `${Math.round(100 * pt.present / pt.seats)}% (${pt.present} z ${pt.seats})` : '–'},
     pending: list.filter(m => !(m.kind === 'posiedzenie' && m.working) && !adoptions.has(m.id)).length,
     actsByCase: [...groups.values()],
   };
 }
+/** Mianownik liczby mnogiej rodzaju dokumentu w zestawieniu („Podjęte uchwały 6, stanowiska 1.”); inny rodzaj małą literą. */
+const ACT_PLURAL: Record<string, string> = {uchwala: 'uchwały', stanowisko: 'stanowiska', oswiadczenie: 'oświadczenia', apel: 'apele', rezolucja: 'rezolucje', deklaracja: 'deklaracje'};
+const actsLine = (acts: PeriodReport['counts']['acts']) => acts.length
+  ? `Podjęte ${acts.map(a => `${ACT_PLURAL[a.id] ?? a.name.toLocaleLowerCase('pl')} ${a.count}`).join(', ')}.` : 'Podjęte akty 0.';
 /** Treść zestawienia do druku (B1-30 pkt 1–5). Adres albumu tylko w wydruku (K4-31). */
 export function periodReportHtml(r: PeriodReport, roster: Roster): string {
   void roster;
@@ -283,9 +292,9 @@ export function periodReportHtml(r: PeriodReport, roster: Roster): string {
   if (r.pending) out.push(`<p>${t(`Dane posiedzeń bez przyjętego protokołu mogą się jeszcze zmienić (${r.pending}).`)}</p>`);
   if (!r.meetings.length) return out.concat(`<p>${t('W tym okresie nie zakończyło się żadne posiedzenie Prezydium.')}</p>`).join('');
   out.push(`<h2>${t('Liczby')}</h2><ul class="paper-list"><li>${t(`Posiedzenia ${r.counts.meetings}, w tym zdalne ${r.counts.remote} i spotkania robocze ${r.counts.working}.`)}</li><li>${t(`Głosowania między posiedzeniami ${r.counts.procedures}.`)}</li>`
-    + `<li>${t(`Podjęte akty ${r.counts.acts.length ? r.counts.acts.map(a => `${a.name} ${a.count}`).join(', ') : '0'}.`)}</li><li>${t(`Średnia frekwencja ${r.counts.turnout}.`)}</li></ul>`);
+    + `<li>${t(actsLine(r.counts.acts))}</li><li>${t(`Średnia frekwencja ${r.counts.turnout}.`)}</li></ul>`);
   out.push(`<h2>${t('Posiedzenia')}</h2><div class="table-wrap" role="region" tabindex="0" aria-label="${t('Posiedzenia w okresie')}"><table><thead><tr>${['Data', 'Rodzaj', 'Tryb', 'Numer protokołu', 'Stan protokołu', 'Obecnych', 'Podjęte akty', 'Zdjęcia'].map(h => `<th scope="col">${t(h)}</th>`).join('')}</tr></thead><tbody>`
-    + r.meetings.map(m => `<tr><th scope="row">${t(dateDots(m.day))}</th><td>${t(m.kind)}</td><td>${t(m.mode)}</td><td>${t(m.protocolNumber || '……')}</td><td>${t(m.protocol)}</td><td>${t(m.turnout)}</td><td class="oi-liczba">${m.acts}</td><td>${m.photos ? t(m.photos) : t('brak')}</td></tr>`).join('') + '</tbody></table></div>');
+    + r.meetings.map(m => `<tr><th scope="row">${t(dateDots(m.day))}</th><td>${t(m.kind)}</td><td>${t(m.mode)}</td><td>${t(m.protocolNumber || 'brak numeru')}</td><td>${t(m.protocol)}</td><td>${t(m.turnout)}</td><td class="oi-liczba">${m.acts}</td><td>${m.photos ? t(m.photos) : t('brak')}</td></tr>`).join('') + '</tbody></table></div>');
   if (r.actsByCase.length) {
     out.push(`<h2>${t('Podjęte akty według rodzajów spraw')}</h2>`);
     for (const g of r.actsByCase) {

@@ -107,13 +107,20 @@ const TABLE_WIDTH = 9638;
 /** Tabela z siatką kolumn: komórki scalone w poziomie (gridSpan) i w pionie (vMerge). */
 function table(rows: {head: boolean; cells: Cell[]}[], o: {borders: boolean; keepRows?: boolean}): string {
   // Pierwsze przejście: liczba kolumn siatki z uwzględnieniem komórek scalonych w pionie z wierszy wyżej.
+  // Przy okazji miara treści kolumn z komórek bez scalenia: najdłuższe słowo i długość tekstu (W-W4-15).
   const carry: number[] = [];
+  const need: number[] = [];
   let cols = 0;
   for (const r of rows) {
     let col = 0;
     const take = () => { while ((carry[col] ?? 0) > 0) col++; };
     for (const c of r.cells) {
       take();
+      if (c.colspan === 1) {
+        const text = c.content.join('').replace(/<w:(tab|br)\/>/g, ' ').replace(/<[^>]+>/g, '').replace(/&(?:[a-z]+|#\d+);/g, 'x').trim();
+        const longest = text.split(/\s+/).reduce((n, w) => Math.max(n, w.length), 0);
+        need[col] = Math.max(need[col] ?? 0, longest, Math.min(text.length, 40) / 2);
+      }
       for (let k = 0; k < c.colspan; k++) carry[col + k] = Math.max(carry[col + k] ?? 0, c.rowspan);
       col += c.colspan;
     }
@@ -122,7 +129,11 @@ function table(rows: {head: boolean; cells: Cell[]}[], o: {borders: boolean; kee
     for (let k = 0; k < carry.length; k++) if (carry[k] > 0) carry[k]--;
   }
   cols = Math.max(cols, 1);
-  const width = Math.floor(TABLE_WIDTH / cols);
+  // Szerokości kolumn według treści, żeby długie słowa („Wiceprzewodnicząca”) nie łamały się w środku (W-W4-15).
+  const weights = Array.from({length: cols}, (_, i) => Math.max(4, need[i] ?? 4));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const widths = weights.map(w => Math.floor(TABLE_WIDTH * w / total));
+  const spanWidth = (from: number, n: number) => widths.slice(from, from + n).reduce((a, b) => a + b, 0);
   const pending: ({rows: number; span: number} | undefined)[] = [];
   const tr = rows.map((r, i) => {
     const out: string[] = [];
@@ -130,7 +141,7 @@ function table(rows: {head: boolean; cells: Cell[]}[], o: {borders: boolean; kee
     const flush = (until: number) => {
       while (col < until && pending[col]) {
         const p = pending[col]!;
-        out.push(`<w:tc><w:tcPr><w:tcW w:w="${width * p.span}" w:type="dxa"/>${p.span > 1 ? `<w:gridSpan w:val="${p.span}"/>` : ''}<w:vMerge/></w:tcPr><w:p/></w:tc>`);
+        out.push(`<w:tc><w:tcPr><w:tcW w:w="${spanWidth(col, p.span)}" w:type="dxa"/>${p.span > 1 ? `<w:gridSpan w:val="${p.span}"/>` : ''}<w:vMerge/></w:tcPr><w:p/></w:tc>`);
         p.rows--;
         if (p.rows <= 0) pending[col] = undefined;
         col += p.span;
@@ -142,21 +153,21 @@ function table(rows: {head: boolean; cells: Cell[]}[], o: {borders: boolean; kee
     for (const c of r.cells) {
       flush(Infinity);
       const span = Math.min(c.colspan, Math.max(1, cols - col));
-      out.push(`<w:tc><w:tcPr><w:tcW w:w="${width * span}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ''}${c.rowspan > 1 ? '<w:vMerge w:val="restart"/>' : ''}</w:tcPr>${content(c)}</w:tc>`);
+      out.push(`<w:tc><w:tcPr><w:tcW w:w="${spanWidth(col, span)}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ''}${c.rowspan > 1 ? '<w:vMerge w:val="restart"/>' : ''}</w:tcPr>${content(c)}</w:tc>`);
       if (c.rowspan > 1) pending[col] = {rows: c.rowspan - 1, span};
       col += span;
     }
     flush(Infinity);
     while (col < cols) {
       // Wiersz krótszy od siatki: pusta komórka do końca, żeby Word nie przesuwał kolumn.
-      out.push(`<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr><w:p/></w:tc>`);
+      out.push(`<w:tc><w:tcPr><w:tcW w:w="${widths[col]}" w:type="dxa"/></w:tcPr><w:p/></w:tc>`);
       col++;
     }
     const trPr = '<w:cantSplit/>' + (r.head ? '<w:tblHeader/>' : '');
     return `<w:tr><w:trPr>${trPr}</w:trPr>${out.join('')}</w:tr>`;
   }).join('');
   return `<w:tbl><w:tblPr><w:tblStyle w:val="${o.borders ? 'Tabela' : 'TabelaBezRamek'}"/><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="fixed"/></w:tblPr>`
-    + `<w:tblGrid>${Array.from({length: cols}, () => `<w:gridCol w:w="${width}"/>`).join('')}</w:tblGrid>${tr}</w:tbl>`;
+    + `<w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${tr}</w:tbl>`;
 }
 
 /** Stan numeracji list: każda lista numerowana ma własny numer (od `start`), wypunktowania jedną definicję. */

@@ -159,3 +159,22 @@ test('B3-14 i B2-W20 w projekcie protokołu tylko przy frozen.v4; opakowanie str
   const standalone = paperPage('<p>x</p>', {title: 't', header: 'h', draft: false, generatedAt: NOW, standalone: true});
   assert.ok(standalone.includes(`content="default-src 'none'; style-src 'unsafe-inline'"`) && !standalone.includes('<script'), 'plik HTML w teczce z CSP i bez skryptu (K4-15)');
 });
+
+test('W-W4-08, W-W4-19, W-W4-23: zdanie pod aktem bez podwójnej kropki, nagłówek aktu bez wersalików, liczby wyników w kolumnach, tytuł listy do podpisu', () => {
+  const {m} = closedMeeting({v4: true});
+  const b = actBallots(m, envWith())[0];
+  const act = paperHtml(`akt-${b.id}`, m, ctxOf());
+  assert.ok(!/r\.\./.test(plain(act)), 'bez „r..”');
+  assert.ok(plain(act).includes('na posiedzeniu z dnia 20 listopada 2026 r. Uchwała podjęta.'), plain(act));
+  assert.ok(!act.includes('<p class="draft">'), 'nazwa organu bez etykiety wersalikami');
+  const h1 = /<h1>(.*?)<\/h1>/.exec(act)![1];
+  assert.match(h1, /<b>Prezydium Okręgowej Rady[^<]*<\/b>/, 'nazwa organu pogrubiona w tytule jak w protokole');
+  assert.equal(plain(h1).trim(), 'Uchwała nr 108/IX/2026 Prezydium Okręgowej Rady Pielęgniarek i Położnych w Słupsku z dnia 20 listopada 2026 r. w sprawie patronatu nad konferencją');
+  const results = paperHtml('wyniki', m, ctxOf());
+  const row = /<table class="result-table">.*?<tbody><tr>(.*?)<\/tr>/.exec(results)![1];
+  assert.match(row, /^<th scope="row">nr\s\d+<\/th>/, 'nagłówek wiersza to słowo');
+  assert.ok(/^<th scope="row">[^<]+<\/th><td class="oi-liczba">\d+<\/td><td class="oi-liczba">\d+<\/td><td class="oi-liczba">\d+<\/td>/.test(row), row);
+  const sign = plain(paperHtml('obecnosc-podpis', m, ctxOf()));
+  assert.ok(sign.includes('Lista obecności posiedzenia Prezydium Okręgowej Rady') && sign.includes('z dnia 20 listopada 2026 r. (do podpisu)'));
+  assert.ok(!sign.includes('Lista obecności do podpisu posiedzenia'));
+});

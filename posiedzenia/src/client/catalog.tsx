@@ -48,7 +48,7 @@ function CatalogItem(props: {row: Row; comms: boolean; staff: boolean; leading: 
       {r.complete && <Fold title={`Komplet dokumentów, ${r.complete.have} z ${r.complete.of}`}>
         <ul class="complete-list">{r.complete.items.map(i => <li key={i.label}><span>{i.label}</span> <strong>{i.ok ? 'jest' : 'brak'}</strong></li>)}</ul>
       </Fold>}
-      {props.comms && r.commsRelease && <p class="catalog-comms"><StateChip state={commsReleaseChip(r.commsRelease)}/> {typo(commsRowText(r.commsRelease, null))}</p>}
+      {props.comms && r.commsRelease && <p class="catalog-comms"><StateChip state={commsReleaseChip(r.commsRelease)}/> {typo(commsRowText(r.commsRelease, r.commsReleasedAt))}</p>}
       {!props.comms && r.commsRelease && <p class="small catalog-comms"><StateChip state={commsReleaseChip(r.commsRelease)}/></p>}
       <div class="actions">
         {!props.comms && <a class="oi-btn oi-btn--obrys" href={`#p-${r.id}/dokumenty`} aria-label={`Dokumenty, ${r.title}`}><span>Dokumenty</span></a>}

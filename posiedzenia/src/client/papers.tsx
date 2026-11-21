@@ -6,7 +6,7 @@ import {generalNow} from './general.ts';
 import {MailDialog, MailHistory} from './mail.tsx';
 import {Button, CardTitle, Check, ErrorNotice, Field, Fold, Modal, Notice, plural, Segments, StateChip, useAction} from './ui.tsx';
 import {checkChip, commsReleaseChip, paperStateChip, protocolChip} from './stany.ts';
-import {changedText, checkBallotNumber, FILED_LABELS, filedGroups, filedLine, formatButtons, paperPath, paperRows, releaseButton, releaseText} from './papers-rules.ts';
+import {changedText, checkBallotNumber, FILED_LABELS, filedGroups, filedLine, formatButtons, mdBlocks, paperPath, paperRows, releaseButton, releaseText, type MdItem} from './papers-rules.ts';
 import {meetingPapers, paperNameAccusative, type PaperEntry} from '../shared/papers.ts';
 import {photosLinkText, photosUrlCheck, type CatalogRow} from '../shared/catalog.ts';
 import {commsChoices, commsSourceText, commsLevels, orderingKinds} from '../shared/comms.ts';
@@ -62,11 +62,12 @@ function PaperRow(props: {meeting: MeetingData; paper: PaperEntry; signature: Pa
 export function ReleaseDialog(props: {meeting: Pick<MeetingData, 'id'>; onClose: () => void; onDone: (m: MeetingData) => void}) {
   const {busy, error, errorKind, run} = useAction();
   const [text, setText] = useState<string | null>(null);
-  useEffect(() => { request<{text: string}>(`/api/katalog/${enc(props.meeting.id)}/komunikacja.json`).then(r => setText(r.text)).catch(e => setText((e as Error).message)); }, [props.meeting.id]);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { request<{text: string}>(`/api/katalog/${enc(props.meeting.id)}/komunikacja.json`).then(r => setText(r.text)).catch(e => { setFailed(true); setText((e as Error).message); }); }, [props.meeting.id]);
   return <Modal title="Udostępnić materiał komunikacji?" wide onClose={props.onClose}>
     <div class="stack">
-      <textarea class="comms-preview" readOnly rows={12} aria-label="Materiał dla komunikacji" value={text ?? 'Wczytywanie…'}/>
       <p>{typo('Konto komunikacji pobierze ten plik i może go wkleić do zewnętrznego czatu. Sprawdź, czy tytuły, zdania i opis nie zawierają danych osób spoza organu.')}</p>
+      <CommsView text={text} error={failed}/>
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions">
         <Button kind="primary" busy={busy} onClick={() => run(async () => props.onDone((await sendCmd(props.meeting.id, {type: 'comms_release'})).meeting))}>Udostępnij</Button>
@@ -76,20 +77,44 @@ export function ReleaseDialog(props: {meeting: Pick<MeetingData, 'id'>; onClose:
   </Modal>;
 }
 
-/** Podgląd materiału dla komunikacji (B1-37): pole tylko do odczytu i „Kopiuj”. */
-export function CommsPreview(props: {meetingId: string; onClose: () => void}) {
-  const [text, setText] = useState<string | null>(null);
+function MdList(props: {items: MdItem[]}) {
+  const ordered = props.items[0]?.ordered;
+  const items = props.items.map((it, i) => <li key={i} value={it.value}>{it.text}{it.children.length > 0 && <MdList items={it.children}/>}</li>);
+  return ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
+}
+/**
+ * Materiał dla komunikacji (B1-37, W-W4-05): treść bez nagłówka YAML jako sformatowany podgląd (tekst z pliku zawsze jako
+ * tekst), a surowy plik z „Kopiuj” w zwiniętej części „Plik .md do skopiowania”.
+ */
+function CommsView(props: {text: string | null; error?: boolean}) {
   const [copied, setCopied] = useState('');
   const field = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { request<{text: string}>(`/api/katalog/${enc(props.meetingId)}/komunikacja.json`).then(r => setText(r.text)).catch(e => setText((e as Error).message)); }, [props.meetingId]);
-  return <Modal title="Materiał dla komunikacji" wide onClose={props.onClose}>
-    <div class="stack">
-      <textarea ref={field} class="comms-preview" readOnly rows={16} aria-label="Treść materiału dla komunikacji" value={text ?? 'Wczytywanie…'}/>
-      <div class="actions">
-        <Button onClick={async () => setCopied(await copyText(text ?? '', field.current) ? 'Skopiowano.' : 'Tekst jest zaznaczony. Skopiuj go skrótem klawiszowym.')}>Kopiuj</Button>
-        <span role="status" class="small">{copied}</span>
-      </div>
+  if (props.text === null) return <p class="muted">Wczytywanie…</p>;
+  if (props.error) return <ErrorNotice>{props.text}</ErrorNotice>;
+  return <div class="stack">
+    <div class="comms-rendered" role="region" tabIndex={0} aria-label="Podgląd materiału dla komunikacji">
+      {mdBlocks(props.text).map((b, i) => b.kind === 'h' ? (b.level === 1 ? <h3 key={i} class="comms-rendered__title">{b.text}</h3> : b.level === 2 ? <h4 key={i}>{b.text}</h4> : <h5 key={i}>{b.text}</h5>)
+        : b.kind === 'p' ? <p key={i}>{b.text}</p> : b.kind === 'quote' ? <blockquote key={i}>{b.lines.map((l, j) => <p key={j}>{l}</p>)}</blockquote> : <MdList key={i} items={b.items}/>)}
     </div>
+    <Fold title="Plik .md do skopiowania">
+      <div class="stack-tight">
+        <textarea ref={field} class="comms-preview" readOnly rows={12} aria-label="Plik materiału dla komunikacji (Markdown)" value={props.text}/>
+        <div class="actions">
+          <Button onClick={async () => setCopied(await copyText(props.text ?? '', field.current) ? 'Skopiowano.' : 'Tekst jest zaznaczony. Skopiuj go skrótem klawiszowym.')}>Kopiuj</Button>
+          <span role="status" class="small">{copied}</span>
+        </div>
+      </div>
+    </Fold>
+  </div>;
+}
+
+/** Podgląd materiału dla komunikacji (B1-37): sformatowana treść i plik do skopiowania. */
+export function CommsPreview(props: {meetingId: string; onClose: () => void}) {
+  const [text, setText] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { request<{text: string}>(`/api/katalog/${enc(props.meetingId)}/komunikacja.json`).then(r => setText(r.text)).catch(e => { setFailed(true); setText((e as Error).message); }); }, [props.meetingId]);
+  return <Modal title="Materiał dla komunikacji" wide onClose={props.onClose}>
+    <CommsView text={text} error={failed}/>
   </Modal>;
 }
 
@@ -113,13 +138,19 @@ function MinutesReadyDialog(props: {meeting: MeetingData; onClose: () => void; o
   const mailOn = !!s.mail?.enabled;
   const [notify, setNotify] = useState(mailOn && !m.minutesReady);
   const [preview, setPreview] = useState<{text: string; skipped: string[]} | string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const office = isService(actor);
-  const loadPreview = () => {
-    if (preview !== null) return;
-    request<{text: string; recipients: {name: string; state: string}[]}>(`/api/meetings/${enc(m.id)}/mail/preview`, {body: {kind: 'protokol', recipients: {group: 'wszyscy'}}})
-      .then(r => setPreview({text: r.text, skipped: r.recipients.filter(x => x.state !== 'wysle').map(x => x.state === 'wylaczone' ? `${x.name} ma wyłączone te wiadomości.` : `${x.name} nie ma potwierdzonego adresu e-mail.`)}))
-      .catch(e => setPreview((e as Error).message));
-  };
+  // W-W4-02 (zasada 0.2 pkt 4): podgląd ze szkicu okna (data i osoba sporządzająca), bez zapisu faktu; odświeża się po zmianie.
+  useEffect(() => {
+    if (!previewOpen) return;
+    if (!date || !author) { setPreview(typo('Wpisz datę sporządzenia i wybierz osobę, a podgląd pokaże treść wiadomości.')); return; }
+    let live = true;
+    setPreview(null);
+    request<{text: string; recipients: {name: string; state: string}[]}>(`/api/meetings/${enc(m.id)}/mail/preview`, {body: {kind: 'protokol', recipients: {group: 'wszyscy'}, draft: {date, authorPersonId: author}}})
+      .then(r => { if (live) setPreview({text: r.text, skipped: r.recipients.filter(x => x.state !== 'wysle').map(x => x.state === 'wylaczone' ? `${x.name} ma wyłączone te wiadomości.` : `${x.name} nie ma potwierdzonego adresu e-mail.`)}); })
+      .catch(e => { if (live) setPreview((e as Error).message); });
+    return () => { live = false; };
+  }, [previewOpen, date, author]);
   return <Modal title="Protokół sporządzony" onClose={props.onClose}>
     <form class="stack" onSubmit={e => { e.preventDefault(); run(async () => {
       if (!date) { setError('Wpisz datę sporządzenia protokołu.'); return; }
@@ -146,7 +177,7 @@ function MinutesReadyDialog(props: {meeting: MeetingData; onClose: () => void; o
       </Field>
       <Field label="Plik protokołu (nieobowiązkowy)" hint="DOCX albo PDF do 10 MB."><input type="file" accept=".docx,.pdf" onChange={e => setFile((e.target as HTMLInputElement).files?.[0] ?? null)}/></Field>
       {mailOn && <Check checked={notify} onChange={setNotify}>Powiadom członków e-mailem</Check>}
-      {mailOn && notify && <Fold title="Podgląd wiadomości" onToggle={on => { if (on) loadPreview(); }}>
+      {mailOn && notify && <Fold title="Podgląd wiadomości" onToggle={setPreviewOpen}>
         {preview === null ? <p class="muted small">Wczytywanie…</p>
           : typeof preview === 'string' ? <p class="small">{preview}</p>
           : <div class="stack-tight"><pre class="mail-preview-text">{preview.text}</pre>{preview.skipped.map(x => <p key={x} class="small">{x}</p>)}</div>}

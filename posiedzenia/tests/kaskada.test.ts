@@ -151,7 +151,7 @@ test('„Co jest głosowane” w punkcie: własne, z rodzaju sprawy, z materiał
   const fromCase = e.items[pwz.id].docType;
   assert.deepEqual([fromCase.value, fromCase.source, fromCase.via?.kind], ['uchwala', 'ogolne', 'rodzaj_sprawy']);
   assert.equal(src(fromCase, 'punkt'), 'Wynika z rodzaju sprawy »Prawo wykonywania zawodu«.');
-  assert.deepEqual(m.agenda.find(i => i.id === pwz.id)!.presenters, [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje'}], 'rodzaj sprawy uzupełnia osobę referującą');
+  assert.deepEqual(m.agenda.find(i => i.id === pwz.id)!.presenters, [{name: 'Krystyna Naczk', role: 'Sekretarz', kind: 'referuje', personId: 'kn'}], 'rodzaj sprawy uzupełnia osobę referującą (z personId, D-KDZ4-01)');
   assert.equal(m.agenda.find(i => i.id === pwz.id)!.caseTypeGuess, undefined, 'przyjęcie usuwa propozycję');
   m = apply(m, {type: 'item_edit', itemId: position.id, docType: 'oswiadczenie'}, office, ctx.tick());
   const own = eff(ctx, m).items[position.id].docType;

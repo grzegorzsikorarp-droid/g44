@@ -31,7 +31,9 @@ export type AvatarSize = 32 | 40 | 48 | 64 | 160;
 export function Avatar(props: {personKey: string | null; name: string; size?: AvatarSize; alone?: boolean; class?: string}) {
   const session = useContext(SessionContext);
   const [, setTick] = useState(0);
-  useEffect(() => avatars.subscribe(() => setTick(t => t + 1)), []);
+  // Subskrypcja zaczyna się po pierwszym rysowaniu; zdjęcie wczytane między rysowaniem a subskrypcją (np. karta „Zdjęcie”
+  // w „Moim koncie” po odpowiedzi /api/me) pokazuje się dzięki jednemu ponownemu odczytowi pamięci (W-W4-01).
+  useEffect(() => { const off = avatars.subscribe(() => setTick(t => t + 1)); setTick(t => t + 1); return off; }, []);
   useEffect(() => { if (session) avatars.load(session.avatars ?? null, session.account.id); }, [session?.account.id, JSON.stringify(session?.avatars ?? null)]);
   const size = props.size ?? 40;
   const url = avatars.url(props.personKey);

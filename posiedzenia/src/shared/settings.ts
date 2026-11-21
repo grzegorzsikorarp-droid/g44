@@ -533,7 +533,9 @@ export function applySettingsChange(b: GeneralBundle, change: SettingsChange, en
         mail.security = v as MailSettings['security'];
         before = `${prev.port}, ${prev.security === 'tls' ? 'TLS' : 'STARTTLS'}`; after = `${mail.port}, ${mail.security === 'tls' ? 'TLS' : 'STARTTLS'}`;
       } else {
-        if (typeof v !== 'string' || /[\r\n\0]/.test(v)) bad('Nieprawidłowa zmiana ustawień.');
+        if (typeof v !== 'string') bad('Nieprawidłowa zmiana ustawień.');
+        // G-21 i pole przy nim: adres z nowym wierszem albo znakiem NUL dostaje komunikat o adresie, inne pola o jednym wierszu.
+        if (/[\r\n\0]/.test(v as string)) bad(key === 'fromAddress' || key === 'replyTo' ? ADDRESS_REFUSAL : 'Wpisz tę wartość w jednym wierszu.');
         const value = (v as string).trim();
         if ((key === 'fromAddress' || key === 'replyTo') && value && !validAddress(value)) bad(ADDRESS_REFUSAL);
         if (key === 'fromName' && value.length > 80) bad('Nazwa nadawcy może mieć najwyżej 80 znaków.');

@@ -53,8 +53,8 @@ export function releaseText(release: Release, releasedAt?: number | null): strin
   return 'Czeka na udostępnienie.';
 }
 /**
- * Stan materiału w wierszu katalogu u konta „Komunikacja” (4.4). Wiersz katalogu z serwera nie podaje chwili udostępnienia,
- * więc bez niej zdanie mówi tylko, że plik można pobrać.
+ * Stan materiału w wierszu katalogu u konta „Komunikacja” (4.4) z chwilą udostępnienia z wiersza (`commsReleasedAt`,
+ * D-KDZ4-04); bez niej zdanie mówi tylko, że plik można pobrać.
  */
 export function commsRowText(release: Release, releasedAt?: number | null): string {
   if (release === 'udostepniony') return releasedAt ? `Udostępniono ${dayTime(releasedAt)}.` : 'Materiał dla komunikacji jest udostępniony i można go pobrać.';
@@ -136,4 +136,52 @@ export function presetOf(range: {from: string; to: string}, today: string, term?
     if (r && r.from === range.from && r.to === range.to) return p;
   }
   return 'inny';
+}
+
+// Podgląd materiału dla komunikacji (W-W4-05, B1-37): treść bez nagłówka YAML jako bloki do wyświetlenia przez Preact
+// (tekst zawsze jako tekst, bez HTML z pliku). Plik powstaje w `commsMarkdown`, więc wystarczają nagłówki `#`–`###`,
+// akapity, cytaty `> ` i listy `- ` oraz `1. ` z wcięciami.
+
+export interface MdItem { text: string; value?: number; ordered: boolean; children: MdItem[] }
+export type MdBlock = {kind: 'h'; level: 1 | 2 | 3; text: string} | {kind: 'p'; text: string} | {kind: 'quote'; lines: string[]} | {kind: 'list'; items: MdItem[]};
+const unescapeMd = (s: string) => s.replace(/\\([\\`*_[\]<>|#])/g, '$1');
+/** Treść pliku bez nagłówka YAML (`---` … `---`). */
+export function commsBody(md: string): string {
+  const m = /^---\n[\s\S]*?\n---\n?/.exec(md);
+  return (m ? md.slice(m[0].length) : md).replace(/^\n+/, '');
+}
+/** Bloki treści Markdown materiału dla komunikacji. */
+export function mdBlocks(md: string): MdBlock[] {
+  const out: MdBlock[] = [];
+  let list: {items: MdItem[]; stack: {indent: number; item: MdItem}[]} | null = null;
+  let para: string[] = [];
+  const flush = () => { if (para.length) out.push({kind: 'p', text: unescapeMd(para.join(' '))}); para = []; };
+  for (const raw of commsBody(md).split('\n')) {
+    const line = raw.replace(/\s+$/, '');
+    const li = /^(\s*)(-|(\d+)\.)\s+(.*)$/.exec(line);
+    if (li) {
+      flush();
+      if (!list) { list = {items: [], stack: []}; out.push({kind: 'list', items: list.items}); }
+      const indent = li[1].length;
+      const item: MdItem = {text: unescapeMd(li[4]), ordered: li[2] !== '-', children: [], ...(li[3] ? {value: Number(li[3])} : {})};
+      while (list.stack.length && list.stack.at(-1)!.indent >= indent) list.stack.pop();
+      (list.stack.at(-1)?.item.children ?? list.items).push(item);
+      list.stack.push({indent, item});
+      continue;
+    }
+    if (!line.trim()) { flush(); list = null; continue; }
+    list = null;
+    const h = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (h) { flush(); out.push({kind: 'h', level: h[1].length as 1 | 2 | 3, text: unescapeMd(h[2])}); continue; }
+    const q = /^>\s?(.*)$/.exec(line);
+    if (q) {
+      flush();
+      const last = out.at(-1);
+      if (last?.kind === 'quote') last.lines.push(unescapeMd(q[1])); else out.push({kind: 'quote', lines: [unescapeMd(q[1])]});
+      continue;
+    }
+    para.push(line.trim());
+  }
+  flush();
+  return out;
 }

@@ -137,7 +137,10 @@ export function App() {
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : v4?.page === 'konto' || v4?.page === 'moje-statystyki' ? 'konto' : v4?.page === 'odbyte' ? (info.account.kind === 'komunikacja' ? 'odbyte' : 'lista') : v4 ? null : 'lista'} settings={sections.length > 0} onLogout={logout}/><main id="tresc" tabIndex={-1}>{meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
+        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : v4?.page === 'konto' || v4?.page === 'moje-statystyki' ? 'konto' : v4?.page === 'odbyte' ? (info.account.kind === 'komunikacja' ? 'odbyte' : 'lista') : v4 ? null : 'lista'}
+          home={!meeting && !settings && !v4 && !commsHome} settings={sections.length > 0} onLogout={logout}/>
+          {/* W-W4-13: konto „Komunikacja” spoza swoich tras od razu przechodzi na #odbyte, bez montowania listy posiedzeń. */}
+          <main id="tresc" tabIndex={-1}>{commsHome ? <p class="muted">Wczytywanie…</p> : meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
     </SessionContext.Provider>;
   }
   return <>{!(signedIn && screen) && <SkipLink/>}{content}<LiveRegion/></>;
@@ -148,14 +151,15 @@ function SkipLink() {
   return <a class="skip-link" href="#tresc" data-kotwica onClick={e => { e.preventDefault(); document.getElementById('tresc')?.focus(); }}>Przejdź do treści</a>;
 }
 
-// Na liście posiedzeń tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza.
+// Na stronie głównej (lista posiedzeń) tytuł aplikacji stoi w nagłówku strony, więc górny pasek go nie powtarza (`home`).
+// Zaznaczenie pozycji „Posiedzenia” (`current`) jest osobne: na „Odbytych posiedzeniach” nazwa aplikacji zostaje (W-W4-11).
 // Nawigacja (SPEC-4 6.1, DB-8) ma najwyżej trzy pozycje: „Posiedzenia” (zakładki „Bieżące” i „Odbyte”), „Statystyki”
 // (dopiero z dodatkiem D-13, `session.can.rosterStats`) i „Ustawienia” (settingsAccess z role.ts). Konto „Komunikacja” ma
 // jedną pozycję „Odbyte posiedzenia”. „Moje konto” to przycisk z własnym zdjęciem i imieniem w górnym pasku (zamiast okna
 // „Twoje konto”); przy 320 px widać tylko zdjęcie albo inicjały, a imię jest w nazwie dostępnej. W wersji próbnej pasek ma
 // też odnośnik „Skrzynka (próba)” (S-24) i przycisk zmiany osoby.
 type TopCurrent = 'lista' | 'ustawienia' | 'konto' | 'odbyte' | null;
-function TopBar(props: {current: TopCurrent; settings: boolean; onLogout: () => Promise<void>}) {
+function TopBar(props: {current: TopCurrent; home: boolean; settings: boolean; onLogout: () => Promise<void>}) {
   const s = useSession();
   const {account, name, membership} = s;
   const comms = account.kind === 'komunikacja';
@@ -165,7 +169,7 @@ function TopBar(props: {current: TopCurrent; settings: boolean; onLogout: () => 
   return <header class="topbar">
     <a class="topbar-brand" href={comms ? '#odbyte' : '#'} aria-label={comms ? 'Posiedzenia Prezydium, odbyte posiedzenia' : 'Posiedzenia Prezydium, lista posiedzeń'}>
       <Plate decorative/>
-      {props.current !== 'lista' && <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>}
+      {!props.home && <span class="topbar-app"><strong>Posiedzenia <b>Prezydium</b></strong><small>{brand.organ}</small></span>}
     </a>
     <div class="topbar-side">
       <nav class="oi-subnav topbar-nav" aria-label="Części aplikacji">

@@ -50,6 +50,8 @@ export function useSession() {
 export interface Me {
   email: string | null; emailState: EmailState; emailConfirmedAt: number | null; emailConfirmedBy: 'kod' | 'administrator' | null; pendingEmail: string | null;
   prefs: MailPrefs; avatar: number; avatarScreen: boolean; avatarRemoved: Account['avatarRemoved'] | null; mailEnabled: boolean;
+  /** Adres informacji o przetwarzaniu danych z ustawień poczty (E-1, K4-30); brak przy pustym albo bez https. */
+  privacyUrl?: string | null;
 }
 /**
  * „Moje konto” (K4-22): `GET /api/me` raz przy wejściu na stronę `#konto` i ponownie tylko po zapisie (`reload`),

@@ -88,7 +88,7 @@ Po posiedzeniu biuro, przewodniczący albo sekretarz dołączają pliki (protok�
 
 Strona „Odbyte posiedzenia” pokazuje tylko posiedzenia zakończone, z filtrami (rok, kadencja, rodzaj, stan protokołu, „Tylko bez kompletu”, wyszukiwanie), liczbą podjętych aktów, obecnością i kompletem dokumentów. „Zestawienie za okres” (rok, kadencja, ostatnie 12 miesięcy albo inny okres) ma wydruk i CSV posiedzeń oraz aktów; widzą je biuro, przewodniczący, wiceprzewodniczący i sekretarz.
 
-Do posiedzenia można wpisać odnośnik do albumu zdjęć (tylko `https`; ostrzeżenie przy adresach spoza `photos.app.goo.gl` i `photos.google.com`). Aplikacja przechowuje tylko odnośnik i nigdy go nie otwiera. Odnośnik do albumu otwiera album każdemu, kto go ma. Dlatego widzą go tylko członkowie Prezydium, biuro i konto „Komunikacja”, a nie osoby z głosem doradczym i goście. CSV katalogu i zestawienia podaje tylko „jest” albo „brak”.
+Do posiedzenia można wpisać odnośnik do albumu zdjęć (tylko `https`; ostrzeżenie przy adresach spoza `photos.app.goo.gl` i `photos.google.com`). Aplikacja przechowuje tylko odnośnik i nigdy go nie otwiera. Album udostępniony przez link otwiera każdy, kto zna adres. Dlatego widzą go tylko członkowie Prezydium, biuro i konto „Komunikacja”, a nie osoby z głosem doradczym i goście. CSV katalogu i zestawienia podaje tylko „jest” albo „brak”.
 
 ### Materiał dla komunikacji i konto „Komunikacja”
 

@@ -115,7 +115,8 @@ export function afterMail(m: Meeting, o: MailBase & {intro: string; sender: Mail
   const deadline = !working ? minutesDeadline(m) : null;
   const blocks: Block[] = [
     {p: o.intro.trim()},
-    {label: `${o.organ.name}, ${what} z dnia ${longDate(day)}${closed}.`, items: facts, plain: true},
+    // Data słownie kończy się skrótem „r.”, który zamyka zdanie bez godziny zamknięcia (W-W4-08).
+    {label: `${o.organ.name}, ${what} z dnia ${longDate(day)}${closed ? `${closed}.` : ''}`, items: facts, plain: true},
   ];
   blocks.push({label: 'Dokumenty w aplikacji', items: papers});
   if (deadline) blocks.push({p: `Protokół sporządza się w ciągu 21 dni, do ${dateDots(deadline)} (§ 13 ust. 2).`});
@@ -125,15 +126,15 @@ export function afterMail(m: Meeting, o: MailBase & {intro: string; sender: Mail
 
 /**
  * „Protokół do wglądu” (B2 3.3, K4-7): wiadomość służbowa, wychodzi dopiero po zapisie faktu „Protokół sporządzony”
- * z osobą sporządzającą i zawiera zdania „Protokół sporządzono {data}. Sporządza {imię i nazwisko}, {funkcja}.”
+ * z osobą sporządzającą i zawiera zdania „Protokół posiedzenia … z dnia … sporządzono {data}. Sporządza {imię i nazwisko}, {funkcja}.”
  */
 export function minutesMail(m: Meeting, o: MailBase): MailContent {
   const r = m.minutesReady;
   if (!r) throw new Error('Brak faktu „Protokół sporządzony”.');
   const day = paperDay(m);
   return render(`Protokół posiedzenia ${shortDate(day)} do wglądu`, [
-    {p: `Protokół posiedzenia ${o.organ.forms.genitive} z dnia ${longDate(day)}.`},
-    {p: `Protokół sporządzono ${dateDots(r.date)}. Sporządza ${r.author.name}, ${r.author.func}.`},
+    // Brzmienie B2 3.3; data słownie kończy się skrótem „r.”, więc bez drugiej kropki (W-W4-08).
+    {p: `Protokół posiedzenia ${o.organ.forms.genitive} z dnia ${longDate(day)} sporządzono ${dateDots(r.date)}. Sporządza ${r.author.name}, ${r.author.func}.`},
     {p: 'Jest do wglądu w biurze (§ 13 ust. 2) i w aplikacji. Prezydium przyjmie go na najbliższym posiedzeniu (§ 13 ust. 3).'},
     {link: link(o, m, '/dokumenty'), text: 'Dokumenty znajdziesz w aplikacji', button: 'Otwórz dokumenty posiedzenia'},
   ], 'To wiadomość służbowa. Przychodzi do osób, które pełnią funkcję w organie.', o);

@@ -95,3 +95,20 @@ test('F: okres zestawienia: rok, ostatnie 12 miesięcy, kadencja i „Inny okres
   assert.equal(presetOf({from: '2025-11-22', to: '2026-11-21'}, '2026-11-21', term), '12');
   assert.equal(presetOf({from: '2026-03-01', to: '2026-04-30'}, '2026-11-21', term), 'inny');
 });
+
+test('W-W4-05: podgląd materiału dla komunikacji bez nagłówka YAML, z nagłówkami, listami z wcięciami i cytatem', async () => {
+  const {commsBody, mdBlocks} = await import('../src/client/papers-rules.ts');
+  const md = ['---', 'dokument: "Materiał dla komunikacji"', 'wygenerowano: "2026-11-21T02:44:25+01:00"', '---', '',
+    '# Posiedzenie Prezydium z dnia 21 listopada 2026 r.', '', 'Materiał przygotowany automatycznie.', '',
+    '## Porządek obrad', '', '1. Otwarcie (rozpoczęto)', '   - Pokazano 2 pliki.', '2. Podjęcie uchwał (rozpatrzono)',
+    '   - Uchwała nr 1 (rozpatrzono)', '     - Według porządku obrad referuje Anna Przykładowa, Sekretarz.', '', '> Treść \\#1 uchwały', '> druga linia', '', '- Album <b>x</b>'].join('\n');
+  assert.ok(commsBody(md).startsWith('# Posiedzenie'), 'bez nagłówka YAML');
+  const blocks = mdBlocks(md);
+  assert.deepEqual(blocks.map(b => b.kind), ['h', 'p', 'h', 'list', 'quote', 'list']);
+  const list = blocks[3] as {kind: 'list'; items: {text: string; value?: number; children: {text: string; children: {text: string}[]}[]}[]};
+  assert.deepEqual(list.items.map(i => [i.value, i.text]), [[1, 'Otwarcie (rozpoczęto)'], [2, 'Podjęcie uchwał (rozpatrzono)']]);
+  assert.equal(list.items[1].children[0].children[0].text, 'Według porządku obrad referuje Anna Przykładowa, Sekretarz.');
+  assert.deepEqual((blocks[4] as {lines: string[]}).lines, ['Treść #1 uchwały', 'druga linia']);
+  assert.equal((blocks[5] as {items: {text: string}[]}).items[0].text, 'Album <b>x</b>', 'HTML z pliku zostaje tekstem (Preact go nie wykonuje)');
+  assert.ok(!JSON.stringify(blocks).includes('wygenerowano'));
+});

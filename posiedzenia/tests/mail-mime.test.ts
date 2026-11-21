@@ -130,7 +130,7 @@ test('DB-18, K4-7: dokumenty po posiedzeniu bez nazw uchwał i bez imion przy g�
   assert.throws(() => minutesMail(closed, base), {message: 'Brak faktu „Protokół sporządzony”.'});
   const ready = {...closed, minutesReady: {date: '2026-11-25', author: {personId: 'kn', name: 'Krystyna Naczk', func: 'Sekretarz'}, by: 'Biuro', at: ctx.now}};
   const mm = minutesMail(ready as never, base);
-  assert.ok(mm.text.includes('Protokół sporządzono 25.11.2026. Sporządza Krystyna Naczk, Sekretarz.'));
+  assert.ok(mm.text.includes('sporządzono 25.11.2026. Sporządza Krystyna Naczk, Sekretarz.'));
   const code = codeMail('123456', base);
   assert.ok(code.text.includes('Kod 123 456.') && !code.text.includes('http://') && !code.text.includes('#p-'), 'kod bez linku');
   assert.equal(testMail({...base, at: ctx.now}).subject, 'Wiadomość próbna');

@@ -9,6 +9,7 @@ import {TestSmtp, type Received} from './smtp-serwer.ts';
 import {parse} from './mail-parse.ts';
 import {startServer, people, type Client} from './serwer-v4.ts';
 import {CANCELLED_ON_OPEN} from '../src/server/mail/outbox.ts';
+import {closedMeeting} from './scenariusz-v4.ts';
 
 // Poczta przez API (SPEC-4 5.2, 5.4, 4.3.2, G-19–G-21, G-32, G-37, K4-13, K4-36, B2-P07, B2-P13, B2-P14) z udawanym serwerem
 // poczty (TLS, certyfikat testowy) i serwerem aplikacji z APP_URL https. Hasło tylko w opcjach serwera, nigdy w odpowiedzi.
@@ -180,4 +181,43 @@ test('5.4, K4-36: main.ts czyta hasło z pliku, usuwa je ze środowiska i drukuj
   rmSync(work, {recursive: true, force: true});
   assert.ok(out.includes('Poczta wyłączona.'), out);
   assert.ok(!out.includes('Sekret-z-pliku') && !out.includes('Sekret-ze-zmiennej'));
+});
+
+test('W-W4-02, 0.2 pkt 4: podgląd „Protokół do wglądu” ze szkicu okna, bez zapisu faktu; wysyłka nadal wymaga faktu', async () => {
+  const {origin, stop, app} = await startServer();
+  try {
+    const p = await people(origin);
+    const {m} = closedMeeting({v4: true});
+    app.store.saveMeeting(m, Date.now());
+    const kn = p.members.get('kn')!;
+    const preview = (c: Client, body: object) => c.call(`/api/meetings/${m.id}/mail/preview`, {kind: 'protokol', recipients: {group: 'wszyscy'}, ...body});
+    const without = await preview(kn, {});
+    assert.deepEqual([without.status, without.body.error], [409, 'Wiadomość „Protokół do wglądu” wychodzi po wpisaniu, kto i kiedy sporządził protokół.']);
+    const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Warsaw'}).format(Date.now());
+    const [y, mo, d] = today.split('-');
+    const draft = await preview(kn, {draft: {date: today, authorPersonId: 'kn'}});
+    assert.equal(draft.status, 200);
+    assert.ok(draft.body.text.includes(`sporządzono ${d}.${mo}.${y}. Sporządza Krystyna Naczk, Sekretarz.`), draft.body.text);
+    assert.ok(!/r\.\./.test(draft.body.text), 'bez podwójnej kropki po dacie słownie (W-W4-08)');
+    assert.equal((await preview(kn, {draft: {date: today, authorPersonId: 'obcy'}})).status, 409, 'osoba spoza składu nie daje szkicu');
+    assert.equal(app.store.meeting(m.id)!.minutesReady, undefined, 'podgląd niczego nie zapisuje');
+    assert.equal((await kn.call(`/api/meetings/${m.id}/mail/send`, {kind: 'protokol', draft: {date: today, authorPersonId: 'kn'}})).status, 409, 'wysyłka bez zapisanego faktu odmówiona');
+    assert.equal((await preview(p.members.get('eo')!, {draft: {date: today, authorPersonId: 'kn'}})).status, 403, 'członek bez prawa');
+  } finally { await stop(); }
+});
+
+test('D-KDZ4-03, G-21: znak nowego wiersza w adresie daje komunikat o adresie, w innym polu o jednym wierszu', async () => {
+  const {origin, stop} = await startServer();
+  try {
+    const p = await people(origin);
+    const set = (key: string, value: unknown) => p.admin.call('/api/settings', {change: {area: 'poczta', key, value}});
+    for (const key of ['fromAddress', 'replyTo']) {
+      const r = await set(key, 'x\r\ny@example.org');
+      assert.deepEqual([r.status, r.body.error], [400, 'Wpisz poprawny adres e-mail, bez polskich znaków, spacji i nawiasów.'], key);
+    }
+    for (const key of ['host', 'user', 'fromName']) {
+      const r = await set(key, 'a\nb');
+      assert.deepEqual([r.status, r.body.error], [400, 'Wpisz tę wartość w jednym wierszu.'], key);
+    }
+  } finally { await stop(); }
 });

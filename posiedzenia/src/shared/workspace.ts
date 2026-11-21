@@ -456,7 +456,10 @@ export function progress(env: CascadeEnv, m: Meeting, ws: PrepSpace | null, _act
   const missing = !gaps.length ? null
     : `Brakuje ${rest > 0 ? `${shown.join(', ')} i ${rest} ${plural(rest, 'innej', 'innych', 'innych')}` : shown.length < 2 ? shown[0] : `${shown.slice(0, -1).join(', ')} i ${shown.at(-1)}`}.`;
   const review = effectiveMeeting(env, m, {review: true, now}).review ?? [];
-  const notice = m.kind === 'posiedzenie' ? review.find(r => r.target === 'zawiadomienie')?.text ?? null : null;
+  // Postęp czytają członkowie i adresaci wiadomości, więc zdanie jest bezosobowe (B2 3.3, W-W4-03); tryb rozkazujący
+  // „Wyślij zawiadomienie …” zostaje tylko w przeglądzie przed otwarciem u osób przygotowujących.
+  const notice = m.kind === 'posiedzenie'
+    ? review.find(r => r.target === 'zawiadomienie')?.text.replace(/^Wyślij zawiadomienie najpóźniej /, 'Zawiadomienie trzeba wysłać najpóźniej ') ?? null : null;
   return {ready, total: ids.length, text: progressText(ready, ids.length), missing,
     proposalsWaiting: ws ? ws.proposals.filter(p => p.state === 'zgloszone').length : 0, myTasks: 0, myTasksOverdue: 0, openRemarks: 0, notice};
 }

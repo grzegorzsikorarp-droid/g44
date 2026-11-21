@@ -135,3 +135,30 @@ test('DB-25, B1-30: zestawienie za okres bez danych o osobach; adres albumu tylk
   assert.deepEqual(periodInput('2020-01-01', '2026-01-02'), {error: 'Okres może mieć najwyżej 5 lat.'});
   assert.deepEqual(periodInput('', '2026-01-02'), {error: 'Wpisz datę początku i końca okresu.'});
 });
+
+test('D-KDZ4-04, W-W4-16, 4.4: wiersz konta „Komunikacja” z chwilą udostępnienia i stanem protokołu z datą przyjęcia, bez terminu sporządzenia', () => {
+  const {a, b} = pair();
+  const env = envWith();
+  const releasedAt = Date.parse('2026-11-21T10:05:00Z');
+  const released: Meeting = {...a, commsReleased: {at: releasedAt, by: 'Biuro', accountId: 'u-biuro', inputs: 0}, commsInputs: 0};
+  const [rowB, rowA] = catalogRows([released, b], env, comms, {}, {today: '2026-12-12'});
+  assert.deepEqual([rowA.commsRelease, rowA.commsReleasedAt], ['udostepniony', releasedAt]);
+  assert.equal(rowA.protocol.text, 'Przyjęty 10.12.2026.', 'stan protokołu z datą przyjęcia');
+  assert.equal(rowB.protocol.state, 'projekt');
+  assert.deepEqual([rowB.protocol.text, rowB.protocol.overdue, rowB.protocol.deadline], ['', false, null], 'bez terminu sporządzenia i „Termin minął.”');
+  assert.equal(rowB.commsReleasedAt, null);
+  const officeRow = catalogRows([released], env, office, {}, {today: '2026-12-12'})[0];
+  assert.equal(officeRow.commsReleasedAt, releasedAt, 'osoby, które udostępniają, też widzą chwilę udostępnienia');
+  assert.ok(officeRow.protocol.text.startsWith('Termin sporządzenia') || officeRow.protocol.text.startsWith('Przyjęty'), 'pełny wiersz bez zmian');
+  assert.equal(catalogRows([released], env, actor('eo'), {}, {today: '2026-12-12'})[0].commsReleasedAt, undefined, 'członek bez stanu udostępnienia');
+});
+
+test('W-W4-14: zestawienie „Podjęte uchwały 4.” w liczbie mnogiej i „brak numeru” zamiast kropek', () => {
+  const {a, b} = pair();
+  const env = envWith();
+  const r = periodReport([{...a, protocolNumber: ''}, b], env, {from: '2026-01-01', to: '2026-12-31'}, {at: NOW, today: '2026-12-12'});
+  const html = periodReportHtml(r, roster);
+  assert.match(html, /Podjęte uchwały \d+\./);
+  assert.ok(!/Podjęte akty Uchwała/.test(html));
+  assert.ok(html.includes('brak numeru') && !html.includes('……'));
+});

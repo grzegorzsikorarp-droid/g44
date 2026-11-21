@@ -438,6 +438,9 @@ export function MemberShow(props: {meeting: MeetingData}) {
   const framed = !pdf || pdfMode === 'ramka';
   const pagedFile = x.kind === 'plik' && (x.d.kind === 'obrazy' || x.d.kind === 'pdf') && pages > 1 && framed;
   const original = x.kind === 'plik' ? (x.d.kind === 'obrazy' ? x.d.files[page - 1] ?? x.d.files[0] : x.d.files[0]) : null;
+  // W-W4-12: zdanie wersji próbnej tylko przy pliku dodanym w tej karcie (wbudowane pliki próbne mają stały przedrostek).
+  const ids = x.kind === 'plik' ? x.d.files.map(f => f.fileId) : x.kind === 'material-pdf' && x.ref.fileId ? [x.ref.fileId] : [];
+  const addedHere = ids.some(id => !id.startsWith('plik_proba-'));
   return <section class="oi-card stack member-show" aria-labelledby="pokaz-uczestnik">
     <div class="panel-head"><span class="oi-label" id="pokaz-uczestnik">{m.mode === 'zdalne' ? 'Pokaz' : 'Pokaz na sali'}</span></div>
     <p class="member-show__title">{x.title}</p>
@@ -460,6 +463,6 @@ export function MemberShow(props: {meeting: MeetingData}) {
       {x.kind === 'plik' && x.d.pdf && <Button kind="ghost" onClick={() => download(downloadPath(m.id, x.d.pdf!.fileId))}>Pobierz wersję PDF</Button>}
     </div>
     {x.kind === 'plik' && x.d.description && <Fold title="Opis pokazu"><p class="pre-line">{x.d.description}</p></Fold>}
-    {brand.demo && <Notice>Pliki dodane w wersji próbnej znikają po odświeżeniu strony.</Notice>}
+    {brand.demo && addedHere && <Notice>Pliki dodane w wersji próbnej znikają po odświeżeniu strony.</Notice>}
   </section>;
 }

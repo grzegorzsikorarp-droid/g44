@@ -4,7 +4,7 @@ import {mkdtempSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createApplication} from '../src/server/app.ts';
-import {inLogFilter, presenceWhat} from '../src/shared/logfilter.ts';
+import {inLogFilter, LOG_FILTERS, presenceWhat} from '../src/shared/logfilter.ts';
 import {typo} from '../src/shared/typo.ts';
 import {apply, envOf, newMeetingFromSettings, type Context} from '../src/shared/meeting.ts';
 import {effectiveMeeting, noticeText, othersOf, protocolProposal} from '../src/shared/cascade.ts';
@@ -244,4 +244,12 @@ test('filtry historii zmian przez API (sekcja i konto); propozycja numeru i kana
     await new Promise<void>(r => app.server.close(() => r()));
     rmSync(dir, {recursive: true, force: true});
   }
+});
+
+test('6.12 wersji 4: filtr dziennika „Pokaz” z wpisami pokazu plików, bez innych wpisów', () => {
+  const pokaz = {text: 'Pokazano plik „Harmonogram” (PDF, 3 strony) w punkcie 6.', tag: 'pokaz' as const};
+  assert.ok(inLogFilter(pokaz, 'pokaz'));
+  assert.ok(!inLogFilter({text: 'Otwarto głosowanie jawne nr 1.'}, 'pokaz'));
+  assert.ok(!inLogFilter(pokaz, 'glosowania') && !inLogFilter(pokaz, 'odstepstwa'));
+  assert.ok(LOG_FILTERS.some(([id, label]) => id === 'pokaz' && label === 'Pokaz'));
 });

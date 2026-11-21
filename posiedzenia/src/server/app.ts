@@ -17,7 +17,7 @@ import {buildFolder, deflateRaw, disposition, paperFile, type ExportDeps} from '
 import {Outbox, type Outgoing, type Sender} from './mail/outbox.ts';
 import {sendOne, type SmtpOptions} from './mail/smtp.ts';
 import {buildMessage} from './mail/mime.ts';
-import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, hostMatches, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
+import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, minutesDraft, hostMatches, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
 import {afterMail, addressChangedMail, codeMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
 import {applyPrep, applyWaiting, carryOver, deferredOnOpen, emptySpace, onOpen, prepView, progress, purgeOld, toWaiting, waitingId, PREP_REFUSALS, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
 import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
@@ -347,9 +347,16 @@ export async function createApplication(options: AppOptions = {}) {
   // Zdjęcia profilowe (DB-20, K4-30): od razu po blokadzie konta i 30 dni po wpisie zakończenia członkostwa w składzie.
   const avatarFile = (key: string, v: number) => join(dataDir, 'avatars', `${key.replace(/[^\w-]/g, '_')}-${v}.jpg`);
   const avatarKey = (row: Pick<UserRow, 'id' | 'person_id'>) => row.person_id ?? row.id;
-  function dropAvatar(row: UserRow, removed: NonNullable<Account['avatarRemoved']> | null) {
-    if (row.avatar) { try { unlinkSync(avatarFile(avatarKey(row), Number(row.avatar))); } catch { /* plik już usunięty */ } }
+  // Usunięcie z przyczyną (blokada, koniec członkostwa, administrator) ma jeden wpis w historii kont (5.4, K4-30);
+  // usunięcie własnego zdjęcia przez osobę (`removed` null) wpisu nie ma.
+  function dropAvatar(row: UserRow, removed: NonNullable<Account['avatarRemoved']> | null, accountId = '') {
+    const had = !!Number(row.avatar);
+    if (had) { try { unlinkSync(avatarFile(avatarKey(row), Number(row.avatar))); } catch { /* plik już usunięty */ } }
     store.setAvatar(row.id, 0, removed);
+    if (!removed || !had) return;
+    const basis = removed.cause === 'blokada' ? 'blokada konta' : removed.cause === 'koniec_czlonkostwa' ? '30 dni po zakończeniu członkostwa' : removed.reason;
+    store.audit([{at: removed.at, accountId, actor: removed.by, area: 'konta', key: `konto:${row.id}:zdjecie`, label: `Konto ${accountLabel(row)}`,
+      before: 'zdjęcie', after: `Usunięto zdjęcie profilowe konta ${accountLabel(row)}.`, ...(basis ? {basis} : {})}]);
   }
   function purgeAvatars(t: number) {
     for (const row of store.users()) {
@@ -467,7 +474,10 @@ export async function createApplication(options: AppOptions = {}) {
         // Wersja 4 (2.5): mapa zdjęć tylko dla kręgu z pytania 13 (bez adresów obrazów), tekst kręgu, strona startowa konta
         // „Komunikacja”, poczta dla osób, które wysyłają wiadomości, i pozycje nawigacji z role.ts. Bez adresów e-mail (DB-19).
         const roster = store.roster();
-        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(store.users().filter(u => u.avatar && !u.disabled).map(u => [avatarKey(u), {v: Number(u.avatar)}])) : null;
+        // Poza kręgiem z pytania 13 mapa ma tylko własne zdjęcie (W-2: osoba widzi swoje zdjęcie w pasku i w „Moim koncie”).
+        const own = store.user(actor.account.id);
+        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(store.users().filter(u => u.avatar && !u.disabled).map(u => [avatarKey(u), {v: Number(u.avatar)}]))
+          : own && Number(own.avatar) ? {[avatarKey(own)]: {v: Number(own.avatar)}} : null;
         const closed = allMeetings().filter(m => m.status === 'zakonczone');
         const prepares = canCreate(roster, 'prezydium', actor);
         return json(res, {...base, avatars, photoCircle: photoCircleText(roster), ...(isCommsAccount(actor) ? {home: '#odbyte'} : {}),
@@ -537,7 +547,9 @@ export async function createApplication(options: AppOptions = {}) {
           const code = store.emailCode(a.account.id);
           return json(res, {email: row.email || null, emailState: row.email ? row.email_state : 'brak', emailConfirmedAt: row.email_confirmed_at ?? null,
             emailConfirmedBy: row.email_confirmed_by || null, pendingEmail: code && code.expires > now() ? code.address : null, prefs: prefsOf(row.prefs),
-            avatar: Number(row.avatar) || 0, avatarScreen: !!row.avatar_screen, avatarRemoved: accountView(row).avatarRemoved ?? null, mailEnabled: mailEnabled()}, 200, noStore);
+            avatar: Number(row.avatar) || 0, avatarScreen: !!row.avatar_screen, avatarRemoved: accountView(row).avatarRemoved ?? null, mailEnabled: mailEnabled(),
+            // E-1 (K4-30): odnośnik do informacji o przetwarzaniu danych z ustawień poczty dla każdej osoby w „Moim koncie”.
+            privacyUrl: /^https:\/\/\S+$/.test(mailSettings().privacyUrl) ? mailSettings().privacyUrl : null}, 200, noStore);
         }
         if (path === '/api/me/prefs' && method === 'PUT') {
           const input = await jsonBody(req, 10000);
@@ -643,8 +655,7 @@ export async function createApplication(options: AppOptions = {}) {
           const input = (req.headers['content-type'] || '').startsWith('application/json') ? await jsonBody(req, 10000) : {};
           const reason = String(input?.reason ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
           write(() => {
-            dropAvatar(target, {at: now(), by: a.name, ...(reason ? {reason} : {}), cause: 'administrator'});
-            store.audit([auditEntry(a, {area: 'konta', key: `konto:${target.id}:zdjecie`, label: `Konto ${accountLabel(target)}`, before: 'zdjęcie', after: `Usunięto zdjęcie profilowe konta ${accountLabel(target)}.`, ...(reason ? {basis: reason} : {})})]);
+            dropAvatar(target, {at: now(), by: a.name, ...(reason ? {reason} : {}), cause: 'administrator'}, a.account.id);
           });
           return json(res, {accounts: accountsForAdmin()});
         }
@@ -907,10 +918,10 @@ export async function createApplication(options: AppOptions = {}) {
                   entries.push(auditEntry(a, {area: 'konta', key: `konto:${target.id}:email`, label, before: row.email_state === 'potwierdzony' ? 'adres potwierdzony' : 'adres niepotwierdzony', after: input.emailConfirmed ? 'Adres potwierdzony przez administratora.' : 'adres niepotwierdzony'}));
                 }
               }
-              // DB-20, K4-30: blokada konta usuwa zdjęcie profilowe od razu.
-              if (input.disabled === true && target.avatar) dropAvatar(store.user(target.id)!, {at: now(), by: a.name, cause: 'blokada'});
               if (password || input.disabled) db.prepare('DELETE FROM sessions WHERE user_id=?').run(target.id);
               if (entries.length) store.audit(entries);
+              // DB-20, K4-30: blokada konta usuwa zdjęcie profilowe od razu (wpis w historii po wpisie o blokadzie).
+              if (input.disabled === true && target.avatar) dropAvatar(store.user(target.id)!, {at: now(), by: a.name, cause: 'blokada'}, a.account.id);
             });
             return json(res, {accounts: accountsForAdmin()});
           }
@@ -1267,8 +1278,10 @@ export async function createApplication(options: AppOptions = {}) {
             const input = await jsonBody(req, 20000);
             const kind = String(input?.kind ?? '') as MailKind;
             if (!(kind in MAIL_KINDS)) fail('Nieznany rodzaj wiadomości.');
-            const m = meetingFor(id, a);
+            const saved = meetingFor(id, a);
             const sending = mailMatch[1] === '/send';
+            // W-5: podgląd „Protokół do wglądu” ze szkicu okna „Protokół sporządzony”, bez zapisu; wysyłka z zapisanym faktem.
+            const m = !sending && kind === 'protokol' ? minutesDraft(saved, store.roster(), input?.draft) ?? saved : saved;
             const lastProgressAt = outbox.lastProgressAt(m.id);
             const allowed = canSendMail(kind, store.roster(), m, a, {now: now(), lastProgressAt, ...(sending ? {enabled: mailEnabled()} : {})});
             if (!allowed.allowed) fail(allowed.reason, allowed.status ?? 403);

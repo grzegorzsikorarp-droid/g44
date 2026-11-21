@@ -3,8 +3,9 @@ import type {LogEntry, PresenceEvent} from './types.ts';
 // Filtry przebiegu obrad w panelu prowadzenia (O-07, dodatek wersji 3): wpisy dziennika jednego rodzaju, a przy
 // „Obecność” także zdarzenia z listy obecności. Wspólne dla aplikacji i wersji próbnej (klient), testowane w tests/dodatki.
 
-export type LogFilter = 'wszystko' | 'glosowania' | 'porzadek' | 'obecnosc' | 'odstepstwa';
-export const LOG_FILTERS: [LogFilter, string][] = [['wszystko', 'Wszystko'], ['glosowania', 'Głosowania'], ['porzadek', 'Porządek'], ['obecnosc', 'Obecność'], ['odstepstwa', 'Odstępstwa']];
+// Wersja 4 (6.12): pozycja „Pokaz” z wpisami pokazu plików (`tag: 'pokaz'`, B3-13).
+export type LogFilter = 'wszystko' | 'glosowania' | 'porzadek' | 'obecnosc' | 'odstepstwa' | 'pokaz';
+export const LOG_FILTERS: [LogFilter, string][] = [['wszystko', 'Wszystko'], ['glosowania', 'Głosowania'], ['porzadek', 'Porządek'], ['obecnosc', 'Obecność'], ['odstepstwa', 'Odstępstwa'], ['pokaz', 'Pokaz']];
 
 /** Czy wpis dziennika należy do filtra: głosowania i wnioski, porządek i punkty, obecność i kworum, odstępstwa i wpisy z powodem. */
 export function inLogFilter(l: Pick<LogEntry, 'text' | 'tag' | 'ballotId'>, filter: LogFilter) {
@@ -14,6 +15,7 @@ export function inLogFilter(l: Pick<LogEntry, 'text' | 'tag' | 'ballotId'>, filt
     case 'porzadek': return l.tag === 'projekt' || /^(Rozpoczęto punkt|Punkt \d)/.test(l.text);
     case 'obecnosc': return /^(Stwierdzono (brak )?kworum|Zapisano wyjście osoby prowadzącej|Posiedzenie kontynuowane jako spotkanie robocze)/.test(l.text);
     case 'odstepstwa': return l.tag === 'odstepstwo' || /[Pp]owód „/.test(l.text);
+    case 'pokaz': return l.tag === 'pokaz';
   }
 }
 

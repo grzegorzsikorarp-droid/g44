@@ -128,7 +128,7 @@ export function AvatarEditor(props: {file: File; onClose: () => void; onSave: (b
 }
 
 /** Odnośnik do informacji o przetwarzaniu danych osobowych (K4-30), gdy biuro wpisało adres w ustawieniach poczty. */
-const privacyUrl = () => { const u = generalNow()?.general.mail?.privacyUrl ?? ''; return /^https:\/\//.test(u) ? u : ''; };
+const privacyUrl = (me: Me) => { const u = me.privacyUrl ?? generalNow()?.general.mail?.privacyUrl ?? ''; return /^https:\/\//.test(u) ? u : ''; };
 
 function PhotoCard(props: {me: Me; onSaved: () => void}) {
   const s = useSession();
@@ -139,7 +139,7 @@ function PhotoCard(props: {me: Me; onSaved: () => void}) {
   const picker = useRef<HTMLInputElement>(null);
   const has = !!avatars.url(s.avatarKey) || props.me.avatar > 0;
   const removed = props.me.avatarRemoved;
-  const url = privacyUrl();
+  const url = privacyUrl(props.me);
   return <section class="oi-card stack account-photo" aria-labelledby="konto-zdjecie">
     <h2 class="oi-card__title" id="konto-zdjecie"><span class="oi-mark" aria-hidden="true"/><span>Zdjęcie</span></h2>
     <div class="account-photo__row">
@@ -186,7 +186,7 @@ function EmailCard(props: {me: Me; onSaved: () => void}) {
   // K4-21: zdanie o protokole tylko u członków organu i osób z głosem doradczym (bez kont biura i komunikacji).
   const member = !!s.personId || s.account.kind === 'doradczy';
   const prefs = props.me.prefs;
-  const url = privacyUrl();
+  const url = privacyUrl(props.me);
   const setPref = (key: 'postep' | 'po_posiedzeniu', on: boolean) => run(async () => { await request('/api/me/prefs', {method: 'PUT', body: {[key]: on}}); setOk('Zapisano.'); props.onSaved(); });
   return <section class="oi-card stack" aria-labelledby="konto-adres">
     <h2 class="oi-card__title" id="konto-adres"><span class="oi-mark" aria-hidden="true"/><span>Adres e-mail i powiadomienia</span></h2>
@@ -210,7 +210,7 @@ function EmailCard(props: {me: Me; onSaved: () => void}) {
       <Field label="Kod z wiadomości"><input inputMode="numeric" autocomplete="one-time-code" maxLength={6} value={code} onInput={e => setCode((e.target as HTMLInputElement).value)}/></Field>
       <div><Button type="submit" busy={busy} disabled={!code.trim()} reason="Wpisz kod z wiadomości.">Potwierdź adres</Button></div>
     </form>}
-    <fieldset class="stack-tight"><legend class="sr-only">Powiadomienia</legend>
+    <fieldset class="stack-tight plain-fieldset"><legend class="sr-only">Powiadomienia</legend>
       {!comms && <Check checked={prefs.postep} disabled={busy} onChange={on => setPref('postep', on)}>Informacje o przygotowaniu posiedzeń</Check>}
       <Check checked={prefs.po_posiedzeniu} disabled={busy} onChange={on => setPref('po_posiedzeniu', on)}>Dokumenty po posiedzeniu</Check>
     </fieldset>
@@ -258,7 +258,7 @@ export function AccountPage(props: {onLogout?: () => void} = {}) {
   const [leaving, setLeaving] = useState(false);
   usePageTitle('Moje konto – Posiedzenia Prezydium');
   const label = s.membership('prezydium')?.label ?? s.account.label;
-  return <div class="page account-page stack">
+  return <div class="page page--kolumna account-page stack">
     <header class="page-head"><Tag>Konto</Tag><h1 class="app-title">Moje <b>konto</b></h1><p>Tu zmienisz zdjęcie, adres do powiadomień i hasło.</p></header>
     {error && <ErrorNotice>{error}</ErrorNotice>}
     {!me && !error && <p class="muted">Wczytywanie…</p>}
