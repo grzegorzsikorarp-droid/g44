@@ -5,15 +5,16 @@ import {Avatar, avatars} from './avatar.tsx';
 import {brand} from './brand.ts';
 import {generalNow} from './general.ts';
 import {Plate} from './plate.tsx';
-import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, Modal, Notice, Tag, useAction, usePageTitle} from './ui.tsx';
+import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, Modal, Notice, Segments, Tag, useAction, usePageTitle} from './ui.tsx';
+import {canSeeWorkspace, mayShowOnScreen} from '../shared/role.ts';
 import {dateDots, isoDayOf} from '../shared/text.ts';
 import {tokens} from '../../brand/tokens/tokens.ts';
 import './style/konto.css';
 
 // „Moje konto” (SPEC-4 6.2, DB-21, B3-43, trasa #konto). Karty w kolejności 6.2: „Zdjęcie” (z oknem „Kadr zdjęcia”,
 // `AvatarEditor`, B3-31), „Dane konta”, „Adres e-mail i powiadomienia”, „Moje statystyki” (tylko `canSeeOwnStats`),
-// „Hasło” (`PasswordCard`), „Wylogowanie”. Dodatki D-2 (wielkość tekstu), D-3 (wylogowanie na innych urządzeniach), D-9
-// („Pokazuj innym …”) i D-16 (zgoda na ekran sali) dochodzą później i nie mają tu jeszcze miejsca. `GET /api/me` tylko przy
+// „Hasło” (`PasswordCard`), „Wielkość tekstu” (dodatek D-2), „Wylogowanie” (z dodatkiem D-3 „Wyloguj na innych
+// urządzeniach”). W karcie „Zdjęcie” zgoda na ekran sali (D-16), w powiadomieniach „Pokazuj innym …” (D-9). `GET /api/me` tylko przy
 // wejściu i po zapisie (`useMe`, K4-22). Zdjęcie trafia do pamięci zdjęć karty (`avatars.setOwn`), więc `<img>` dostaje
 // wyłącznie adres `blob:` (T-4).
 
@@ -26,6 +27,28 @@ export const emailStateText = (me: Pick<Me, 'email' | 'emailState' | 'emailConfi
   me.emailState === 'potwierdzony' && me.email
     ? `${me.emailConfirmedBy === 'administrator' ? 'Potwierdzony przez administratora' : 'Potwierdzony'}${me.emailConfirmedAt ? ' ' + dateDots(isoDayOf(me.emailConfirmedAt)) : ''}`
     : me.email || me.pendingEmail ? 'Czeka na potwierdzenie' : 'Brak adresu';
+
+/** Dodatek D-2 (U-47): wielkość tekstu na tym urządzeniu (`localStorage 'posiedzenia:pismo'`), 100, 115 albo 130 %. */
+export type TextSize = 'zwykla' | 'wieksza' | 'najwieksza';
+const TEXT_SIZE_KEY = 'posiedzenia:pismo';
+export function readTextSize(): TextSize {
+  try { const v = localStorage.getItem(TEXT_SIZE_KEY); return v === 'wieksza' || v === 'najwieksza' ? v : 'zwykla'; } catch { return 'zwykla'; }
+}
+/** Wielkość tekstu na stronie; ekran sali ma własną wielkość pisma i ignoruje to ustawienie (`screen`). */
+export function applyTextSize(size: TextSize, screen = false) {
+  const root = document.documentElement;
+  if (screen || size === 'zwykla') root.removeAttribute('data-pismo'); else root.setAttribute('data-pismo', size);
+}
+function saveTextSize(size: TextSize) { try { localStorage.setItem(TEXT_SIZE_KEY, size); } catch { /* bez zapisu, np. w ramce */ } }
+
+function TextSizeCard() {
+  const [size, setSize] = useState<TextSize>(readTextSize);
+  return <section class="oi-card stack">
+    <CardTitle level={2}>Wielkość tekstu</CardTitle>
+    <Segments label="Wielkość tekstu" value={size} options={[['zwykla', 'Zwykła'], ['wieksza', 'Większa'], ['najwieksza', 'Największa']]}
+      hint="Dotyczy tylko tego urządzenia. Ekran sali ma własną wielkość pisma." onChange={v => { setSize(v); saveTextSize(v); applyTextSize(v); }}/>
+  </section>;
+}
 
 const readError = (file: File) => `Tego zdjęcia przeglądarka nie odczyta. Wybierz zdjęcie JPG, PNG albo WebP.${/\.hei[cf]$/i.test(file.name) || /hei[cf]/i.test(file.type) ? ' Zdjęcie z iPhone’a dodaj z telefonu albo zapisz jako JPG.' : ''}`;
 /** Dekodowanie z orientacją z EXIF (B3-31 pkt 1); w starszej przeglądarce zwykły obraz. */
@@ -156,6 +179,8 @@ function PhotoCard(props: {me: Me; onSaved: () => void}) {
         }}/>
       </div>
     </div>
+    {mayShowOnScreen(s.roster, {account: s.account, personId: s.personId, name: s.name}) && <Check checked={props.me.avatarScreen} disabled={busy}
+      onChange={on => run(async () => { await request('/api/me/avatar-screen', {method: 'PUT', body: {on}}); setOk('Zapisano.'); props.onSaved(); })}>Pokazuj moje zdjęcie na ekranie sali, gdy prowadzę obrady</Check>}
     <p class="small">{`Zdjęcie jest dobrowolne. Widzą je ${s.photoCircle}, w panelu prowadzenia obrad, na liście obecności i w składzie w ustawieniach. Nie trafia do protokołu ani do innych dokumentów. Znika po zablokowaniu konta i 30 dni po zakończeniu członkostwa. Możesz je w każdej chwili zmienić albo usunąć.`}</p>
     {url && <p class="small"><a class="oi-link" href={url} target="_blank" rel="noopener noreferrer">Informacja o przetwarzaniu danych osobowych</a></p>}
     {removed && <Notice>{removed.cause === 'koniec_czlonkostwa'
@@ -187,7 +212,9 @@ function EmailCard(props: {me: Me; onSaved: () => void}) {
   const member = !!s.personId || s.account.kind === 'doradczy';
   const prefs = props.me.prefs;
   const url = privacyUrl(props.me);
-  const setPref = (key: 'postep' | 'po_posiedzeniu', on: boolean) => run(async () => { await request('/api/me/prefs', {method: 'PUT', body: {[key]: on}}); setOk('Zapisano.'); props.onSaved(); });
+  // Dodatek D-9 (U-46, K4-30): „Pokazuj innym …” tylko u członków organu i biura (zakres pełny przestrzeni roboczej), domyślnie wyłączone.
+  const watcher = canSeeWorkspace(s.roster, {organ: 'prezydium', status: 'przygotowanie', frozen: null} as never, {account: s.account, personId: s.personId, name: s.name}) === 'pelny';
+  const setPref = (key: 'postep' | 'po_posiedzeniu' | 'showPresence', on: boolean) => run(async () => { await request('/api/me/prefs', {method: 'PUT', body: {[key]: on}}); setOk('Zapisano.'); props.onSaved(); });
   return <section class="oi-card stack" aria-labelledby="konto-adres">
     <h2 class="oi-card__title" id="konto-adres"><span class="oi-mark" aria-hidden="true"/><span>Adres e-mail i powiadomienia</span></h2>
     {!props.me.mailEnabled && !brand.demo && <Notice>Aplikacja nie wysyła jeszcze wiadomości e-mail. Adres możesz wpisać już teraz, a potwierdzi go administrator albo kod, gdy poczta zacznie działać.</Notice>}
@@ -213,6 +240,7 @@ function EmailCard(props: {me: Me; onSaved: () => void}) {
     <fieldset class="stack-tight plain-fieldset"><legend class="sr-only">Powiadomienia</legend>
       {!comms && <Check checked={prefs.postep} disabled={busy} onChange={on => setPref('postep', on)}>Informacje o przygotowaniu posiedzeń</Check>}
       <Check checked={prefs.po_posiedzeniu} disabled={busy} onChange={on => setPref('po_posiedzeniu', on)}>Dokumenty po posiedzeniu</Check>
+      {watcher && <Check checked={prefs.showPresence} disabled={busy} onChange={on => setPref('showPresence', on)}>Pokazuj innym, że oglądam przygotowanie posiedzenia</Check>}
     </fieldset>
     {member && <p class="small">Informacja o protokole do wglądu przychodzi zawsze, dopóki pełnisz funkcję w organie. Zawiadomienia o posiedzeniach przychodzą tak jak dotąd.</p>}
     <p class="small muted">Adres służy wyłącznie do wiadomości o posiedzeniach. Widzisz go Ty i administrator aplikacji. {url
@@ -256,6 +284,9 @@ export function AccountPage(props: {onLogout?: () => void} = {}) {
   const s = useSession();
   const {me, error, reload} = useMe();
   const [leaving, setLeaving] = useState(false);
+  const [others, setOthers] = useState(false);
+  const [othersDone, setOthersDone] = useState('');
+  const logoutOthers = useAction();
   usePageTitle('Moje konto – Posiedzenia Prezydium');
   const label = s.membership('prezydium')?.label ?? s.account.label;
   return <div class="page page--kolumna account-page stack">
@@ -283,9 +314,16 @@ export function AccountPage(props: {onLogout?: () => void} = {}) {
       <CardTitle level={2}>Hasło</CardTitle>
       {brand.demo ? <p>W wersji próbnej nie ma haseł.</p> : <PasswordCard onDone={() => {}}/>}
     </section>
+    <TextSizeCard/>
     {props.onLogout && <section class="oi-card stack">
       <CardTitle level={2}>Wylogowanie</CardTitle>
-      <div><Button haspopup={!brand.demo} onClick={() => brand.demo ? props.onLogout!() : setLeaving(true)}>Wyloguj się</Button></div>
+      <div class="actions"><Button haspopup={!brand.demo} onClick={() => brand.demo ? props.onLogout!() : setLeaving(true)}>Wyloguj się</Button>
+        <Button kind="ghost" haspopup onClick={() => setOthers(true)}>Wyloguj na innych urządzeniach</Button></div>
+      {others && <Confirm title="Wylogować na innych urządzeniach?" text={<p>Aplikacja wyloguje Cię na wszystkich innych telefonach i komputerach. To urządzenie zostanie zalogowane.</p>}
+        confirm="Wyloguj na innych urządzeniach" kind="danger" cancel="Anuluj" focus="cancel" onClose={() => setOthers(false)}
+        onConfirm={() => { setOthers(false); logoutOthers.run(async () => { await request('/api/me/sessions/logout-others', {body: {}}); setOthersDone('Wylogowano na innych urządzeniach.'); }); }}/>}
+      {logoutOthers.error && <ErrorNotice kind={logoutOthers.errorKind}>{logoutOthers.error}</ErrorNotice>}
+      <p role="status" class="save-status">{othersDone}</p>
       {leaving && <Confirm title="Wylogować się?" confirm="Wyloguj się" focus="cancel" onClose={() => setLeaving(false)} onConfirm={() => { props.onLogout!(); }}
         text={<p>Aby wrócić, zalogujesz się ponownie loginem i hasłem. Jeśli trwa posiedzenie, do tego czasu nie oddasz głosu.</p>}/>}
     </section>}

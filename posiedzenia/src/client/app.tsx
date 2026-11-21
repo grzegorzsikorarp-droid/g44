@@ -13,9 +13,9 @@ import {personName} from '../shared/roster.ts';
 import {brand} from './brand.ts';
 import {commsRouteAllowed, currentRoute, go, onRoute, registeredPage, v4Route} from './route.ts';
 import type {VNode} from 'preact';
-import {AccountPage, PasswordCard} from './account.tsx';
+import {AccountPage, applyTextSize, PasswordCard, readTextSize} from './account.tsx';
 import {Avatar} from './avatar.tsx';
-import {MyStatsPage} from './stats.tsx';
+import {MyStatsPage, RosterStatsPage} from './stats.tsx';
 import {CatalogPage, ReportPage} from './catalog.tsx';
 import type {Session} from './session.ts';
 import {Plate} from './plate.tsx';
@@ -75,6 +75,8 @@ export function App() {
   };
 
   const screen = hash.match(/^#ekran-([\w-]+)$/);
+  // Dodatek D-2 (U-47): wielkość tekstu z „Mojego konta” na tym urządzeniu; ekran sali ma własną wielkość pisma.
+  useEffect(() => { applyTextSize(readTextSize(), !!screen); }, [!!screen]);
   const meeting = hash.match(/^#p-([\w-]+)$/);
   // Wersja 3: ustawienia ogólne pod #ustawienia i #ustawienia-{sekcja}; dawne trasy #konta i #rodzaje prowadzą do sekcji.
   const legacy = hash === '#konta' ? '#ustawienia-konta' : hash === '#rodzaje' ? '#ustawienia-rodzaje' : null;
@@ -132,12 +134,13 @@ export function App() {
   } else {
     const session: Session = {account: info.account, roster: info.roster!, avatars: info.avatars, photoCircle: info.photoCircle, can: info.can, mail: info.mail, home: info.home};
     const page = !v4 ? null : v4.page === 'konto' ? <AccountPage onLogout={() => { logout(); }}/> : v4.page === 'moje-statystyki' ? <MyStatsPage query={v4.query}/>
+      : v4.page === 'statystyki' ? <RosterStatsPage query={v4.query}/>
       : v4.page === 'odbyte' ? <CatalogPage query={v4.query}/> : v4.page === 'zestawienie' ? <ReportPage query={v4.query}/>
       : v4.page === 'dokumenty' ? <MeetingPage id={v4.id}/> : extraPage ? extraPage() as VNode : null;
     content = <SessionContext.Provider value={session}>
       {info.account.mustChange ? <main class="center-page" id="tresc" tabIndex={-1}><PasswordCard forced onDone={load}/></main>
         : screen ? <RoomScreen id={screen[1]}/>
-        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : v4?.page === 'konto' || v4?.page === 'moje-statystyki' ? 'konto' : v4?.page === 'odbyte' ? (info.account.kind === 'komunikacja' ? 'odbyte' : 'lista') : v4 ? null : 'lista'}
+        : <><TopBar current={meeting ? null : settings ? 'ustawienia' : v4?.page === 'konto' || v4?.page === 'moje-statystyki' ? 'konto' : v4?.page === 'statystyki' ? 'statystyki' : v4?.page === 'odbyte' ? (info.account.kind === 'komunikacja' ? 'odbyte' : 'lista') : v4 ? null : 'lista'}
           home={!meeting && !settings && !v4 && !commsHome} settings={sections.length > 0} onLogout={logout}/>
           {/* W-W4-13: konto „Komunikacja” spoza swoich tras od razu przechodzi na #odbyte, bez montowania listy posiedzeń. */}
           <main id="tresc" tabIndex={-1}>{commsHome ? <p class="muted">Wczytywanie…</p> : meeting ? <MeetingPage id={meeting[1]}/> : settings ? <SettingsPage section={section}/> : page ?? <Home/>}</main></>}
@@ -158,7 +161,7 @@ function SkipLink() {
 // jedną pozycję „Odbyte posiedzenia”. „Moje konto” to przycisk z własnym zdjęciem i imieniem w górnym pasku (zamiast okna
 // „Twoje konto”); przy 320 px widać tylko zdjęcie albo inicjały, a imię jest w nazwie dostępnej. W wersji próbnej pasek ma
 // też odnośnik „Skrzynka (próba)” (S-24) i przycisk zmiany osoby.
-type TopCurrent = 'lista' | 'ustawienia' | 'konto' | 'odbyte' | null;
+type TopCurrent = 'statystyki' | 'lista' | 'ustawienia' | 'konto' | 'odbyte' | null;
 function TopBar(props: {current: TopCurrent; home: boolean; settings: boolean; onLogout: () => Promise<void>}) {
   const s = useSession();
   const {account, name, membership} = s;
@@ -176,7 +179,7 @@ function TopBar(props: {current: TopCurrent; home: boolean; settings: boolean; o
         {comms
           ? <a href="#odbyte" aria-current={props.current === 'odbyte' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Odbyte posiedzenia</a>
           : <a href="#" aria-current={props.current === 'lista' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Posiedzenia</a>}
-        {!comms && s.can.rosterStats && <a href="#statystyki"><span class="oi-mark" aria-hidden="true"/>Statystyki</a>}
+        {!comms && s.can.rosterStats && <a href="#statystyki" aria-current={props.current === 'statystyki' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Statystyki</a>}
         {!comms && props.settings && <a href="#ustawienia" aria-current={props.current === 'ustawienia' ? 'page' : undefined}><span class="oi-mark" aria-hidden="true"/>Ustawienia</a>}
       </nav>
       {brand.demo && <a class="topbar-inbox" href="#skrzynka">Skrzynka (próba)</a>}

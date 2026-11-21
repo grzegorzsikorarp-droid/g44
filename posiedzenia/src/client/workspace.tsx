@@ -1,15 +1,15 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {download, request, upload, type MeetingData} from './api.ts';
+import {download, request, setPrepPlace, upload, type MeetingData} from './api.ts';
 import {useSession} from './session.ts';
 import {useGeneral} from './general.ts';
 import {MailDialog} from './mail.tsx';
-import {Button, CardTitle, Confirm, ErrorNotice, Fact, Field, fmtTime, Fold, Modal, Notice, Segments, StateChip, useAction} from './ui.tsx';
-import {proposalChip} from './stany.ts';
-import {canAcceptProposal, canPropose, canRejectProposal, canSeeWorkspace, canSendProgress, isReferent, organRoster} from '../shared/role.ts';
-import {carriedText, PREP_LIMITS, PREP_REFUSALS, type Comment, type PrepCommand, type PrepView, type Proposal} from '../shared/workspace.ts';
+import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, fmtTime, Fold, Modal, Notice, Segments, StateChip, useAction} from './ui.tsx';
+import {overdueChip, proposalChip} from './stany.ts';
+import {canAcceptProposal, canAssignTask, canPropose, canRejectProposal, canSeeWorkspace, canSendProgress, isChairmanOf, isReferent, isService, organRoster} from '../shared/role.ts';
+import {carriedText, PREP_LIMITS, PREP_REFUSALS, taskOpen, taskOverdue, type Comment, type FeedRow, type PrepCommand, type PrepView, type Proposal, type Task} from '../shared/workspace.ts';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {personName} from '../shared/roster.ts';
-import {dateDots, dateDotsOf} from '../shared/text.ts';
+import {dateDots, dateDotsOf, plural} from '../shared/text.ts';
 import {typo} from '../shared/typo.ts';
 import type {Actor, Meeting, OrganCode, Roster} from '../shared/types.ts';
 import {canEditComment, decisionText, itemThreads, waitingProposals, waitsForConvener} from './prep-rules.ts';
@@ -43,6 +43,8 @@ export function ProposalDialog(props: {meeting?: Pick<MeetingData, 'id' | 'date'
   const bundle = useGeneral();
   const organ = props.meeting?.organ ?? props.organ ?? 'prezydium';
   const {busy, error, errorKind, run} = useAction();
+  // Dodatek D-9: otwarte okno zgłoszenia jedzie w nagłówku zwykłego odświeżania (`X-Przygotowanie: zgloszenie`).
+  useEffect(() => { if (!props.meeting) return; setPrepPlace('zgloszenie'); return () => setPrepPlace(''); }, []);
   const [title, setTitle] = useState(props.edit?.title ?? '');
   const [why, setWhy] = useState(props.edit?.justification ?? '');
   const [caseType, setCaseType] = useState(props.edit?.caseType ?? '');
@@ -126,10 +128,14 @@ export function PrepCard(props: {meeting: MeetingData; onChange?: (m: MeetingDat
     {p.missing && <div class="prep-line"><p>{p.missing}</p>{canAcceptProposal(s.roster, props.meeting, actor) && <Button kind="ghost" small quiet label="Pokaż braki w przeglądzie przed otwarciem" onClick={() => showPrep('przeglad')}>Pokaż</Button>}</div>}
     <dl class="facts">
       <Fact label="Zgłoszenia czekające na decyzję zwołującego"><span class="prep-line">{String(waiting)}{waiting > 0 && <Button kind="ghost" small quiet label="Pokaż zgłoszenia" onClick={() => showPrep('zgloszenia')}>Pokaż</Button>}</span></Fact>
+      {p.myTasks > 0 && <Fact label="Twoje zadania"><span class="prep-line">{`${p.myTasks}${p.myTasksOverdue ? `, w tym po terminie ${p.myTasksOverdue}` : ''}`}<Button kind="ghost" small quiet label="Pokaż zadania" onClick={() => showPrep('zadania')}>Pokaż</Button></span></Fact>}
+      {p.openRemarks > 0 && <Fact label="Uwagi do materiałów">{`${p.openRemarks} ${plural(p.openRemarks, 'otwarta', 'otwarte', 'otwartych')}`}</Fact>}
+      {prep.presence.length > 0 && <Fact label="Teraz oglądają">{prep.presence.map(x => `${x.name}${x.label ? `, ${x.label}` : ''}${x.where ? `, ${x.where}` : ''}.`).join(' ')}</Fact>}
     </dl>
     {p.notice && <p class="small">{p.notice}</p>}
     {referring && <p class="small">{typo(referring)}</p>}
     {prep.readOnly && <Notice>{PREP_REFUSALS.opened}</Notice>}
+    {prep.feed.since !== null && !prep.readOnly && <WhatsNew meeting={props.meeting} feed={prep.feed} onChange={m => props.onChange?.(m)}/>}
     {(proposer || sender) && <div class="actions">
       {proposer && <Button haspopup onClick={() => setProposing(true)}>Zgłoś sprawę</Button>}
       {sender && <Button haspopup onClick={() => setMail(true)}>Wyślij informację o postępie</Button>}
@@ -138,6 +144,103 @@ export function PrepCard(props: {meeting: MeetingData; onChange?: (m: MeetingDat
     {proposing && <ProposalDialog meeting={props.meeting} onClose={() => setProposing(false)} onDone={done}/>}
     {mail && <MailDialog meeting={props.meeting} kind="postep" onClose={() => setMail(false)}/>}
   </section>;
+}
+
+/**
+ * Dodatek D-10 (6.5, B2-W13): zwinięte „Co nowego od Twojej poprzedniej wizyty {data}, godz. {g} ({n})” z częściami
+ * „Dla Ciebie” i „Pozostałe zmiany”; zdania bezosobowe, osoba pod zdaniem; „Oznacz jako przeczytane” (polecenie `seen`).
+ */
+function WhatsNew(props: {meeting: MeetingData; feed: PrepView['feed']; onChange: (m: MeetingData) => void}) {
+  const {busy, error, errorKind, run} = useAction();
+  const n = props.feed.forYou.length + props.feed.other.length;
+  const row = (r: FeedRow, i: number) => <li key={i}><p>{typo(r.text)}{r.itemId && <> <Button kind="ghost" small quiet label={`Pokaż punkt ${itemNumber(props.meeting.agenda, r.itemId)}`} onClick={() => showPrep(`punkt:${r.itemId}`)}>Pokaż</Button></>}</p>
+    {r.by && <p class="small muted">{`${r.by}, ${whenText(r.at)}`}</p>}</li>;
+  return <Fold title={`Co nowego od Twojej poprzedniej wizyty ${whenText(props.feed.since!)} (${n})`}>
+    {!n ? <p class="muted">Od Twojej poprzedniej wizyty nic się nie zmieniło.</p> : <div class="stack">
+      {props.feed.forYou.length > 0 && <div class="stack-tight"><h3 class="kicker">{`Dla Ciebie (${props.feed.forYou.length})`}</h3><ul class="feed-list">{props.feed.forYou.map(row)}</ul></div>}
+      {props.feed.other.length > 0 && <div class="stack-tight"><h3 class="kicker">{`Pozostałe zmiany (${props.feed.other.length})`}</h3><ul class="feed-list">{props.feed.other.map(row)}</ul></div>}
+    </div>}
+    <div><Button small busy={busy} onClick={() => run(async () => props.onChange((await send(props.meeting.id, {type: 'seen'} as never)).meeting))}>Oznacz jako przeczytane</Button></div>
+    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+  </Fold>;
+}
+
+/** Osoba odpowiedzialna za zadanie słowem: imię i nazwisko z funkcją albo „Biuro”. */
+const assigneeText = (roster: Roster, m: Pick<Meeting, 'organ' | 'frozen'>, t: Task) => 'office' in t.assignee ? 'Biuro'
+  : `${personName(roster, t.assignee.personId)}${organRoster(roster, m).find(x => x.personId === (t.assignee as {personId: string}).personId)?.label ? `, ${organRoster(roster, m).find(x => x.personId === (t.assignee as {personId: string}).personId)!.label}` : ''}`;
+
+/**
+ * Dodatek D-11 (6.5, B2-W10, B2 2.13): karta „Zadania ({n})” albo „Zadania do punktu ({n})” z polem „Zrobione” u osoby
+ * odpowiedzialnej, terminem i znacznikiem „Po terminie”, oknem „Dodaj zadanie” z osobami, którym to konto może
+ * przydzielić zadanie (zadanie dla członka przydziela zwołujący, Z13).
+ */
+export function TasksCard(props: {meeting: MeetingData; itemId?: string | null; onChange: (m: MeetingData) => void; embedded?: boolean}) {
+  const s = useSession();
+  const actor = useActorOf();
+  const {busy, error, errorKind, run} = useAction();
+  const [adding, setAdding] = useState(false);
+  const prep = props.meeting.prep;
+  if (!prep || prep.scope !== 'pelny') return null;
+  const m = props.meeting as unknown as Meeting;
+  const list = prep.tasks.filter(t => !t.cancelled && (!props.itemId || t.itemId === props.itemId));
+  const open = list.filter(taskOpen).length;
+  const writable = !prep.readOnly;
+  const act = (cmd: PrepCommand) => run(async () => props.onChange((await send(props.meeting.id, cmd)).meeting));
+  const title = props.itemId ? `Zadania do punktu (${list.length})` : `Zadania (${open})`;
+  const body = <>
+    {list.length ? <ul class="task-list">{list.map(t => {
+      const mine = 'office' in t.assignee ? isService(actor) : t.assignee.personId === s.personId;
+      const where = t.itemId && !props.itemId && props.meeting.agenda.some(i => i.id === t.itemId) ? `, punkt ${itemNumber(props.meeting.agenda, t.itemId)}` : '';
+      return <li key={t.id} class="task">
+        {mine && writable ? <Check checked={!!t.done} disabled={busy} onChange={on => act({type: 'task_done', taskId: t.id, on} as never)}>{`Zrobione, ${t.title}`}</Check>
+          : <p><strong>{t.title}</strong>{t.done ? ' Zrobione.' : ''}</p>}
+        <p class="small">{`${assigneeText(s.roster, m, t)}${where}`}{t.due && <> <span class="oi-nowrap">{`do ${dateDots(t.due)}`}</span></>} {taskOverdue(t, Date.now()) && <StateChip state={overdueChip()}/>}</p>
+        {t.carriedFrom && <p class="small muted">{`Z posiedzenia z dnia ${dateDots(t.carriedFrom.date)}.`}</p>}
+        {writable && !t.done && (t.accountId === s.account.id || isChairmanOf(s.roster, m, s.personId)) && <div><Button small kind="ghost" quiet busy={busy} onClick={() => act({type: 'task_cancel', taskId: t.id} as never)}>Anuluj zadanie</Button></div>}
+      </li>;
+    })}</ul> : <p class="muted">{props.itemId ? 'Nie ma zadań do tego punktu.' : 'Nie ma zadań przy tym posiedzeniu.'}</p>}
+    {writable && <div><Button small haspopup onClick={() => setAdding(true)}>Dodaj zadanie</Button></div>}
+    {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+    {adding && <TaskDialog meeting={props.meeting} itemId={props.itemId ?? null} onClose={() => setAdding(false)} onDone={next => { setAdding(false); props.onChange(next); }}/>}
+  </>;
+  if (props.embedded) return <div class="stack prep-tasks"><h3 class="kicker">{title}</h3>{body}</div>;
+  return <section class="oi-card stack" id="ust-zadania" tabIndex={-1} aria-labelledby="zadania-tytul">
+    <h2 class="oi-card__title" id="zadania-tytul"><span class="oi-mark" aria-hidden="true"/><span>{title}</span></h2>
+    {body}
+  </section>;
+}
+
+function TaskDialog(props: {meeting: MeetingData; itemId: string | null; onClose: () => void; onDone: (m: MeetingData) => void}) {
+  const s = useSession();
+  const actor = useActorOf();
+  const {busy, error, errorKind, run} = useAction();
+  const m = props.meeting as unknown as Meeting;
+  const people = organRoster(s.roster, m).filter(x => canAssignTask(s.roster, m, actor, {personId: x.personId}));
+  const [title, setTitle] = useState('');
+  const [who, setWho] = useState(people.some(x => x.personId === s.personId) && !isService(actor) ? s.personId! : 'biuro');
+  const [due, setDue] = useState('');
+  const [item, setItem] = useState(props.itemId ?? '');
+  return <Modal title="Dodaj zadanie" onClose={props.onClose}>
+    <form class="stack" onSubmit={e => { e.preventDefault(); run(async () => {
+      const r = await send(props.meeting.id, {type: 'task_add', title, assignee: who === 'biuro' ? {office: true} : {personId: who}, ...(due ? {due} : {}), ...(item ? {itemId: item} : {})} as never);
+      props.onDone(r.meeting);
+    }); }}>
+      <Field label="Zadanie"><input value={title} required maxLength={PREP_LIMITS.task} onInput={e => setTitle((e.target as HTMLInputElement).value)}/></Field>
+      <Field label="Osoba odpowiedzialna" hint="Zadanie dla członka Prezydium przydziela zwołujący. Każdy członek może dodać zadanie dla siebie i dla biura.">
+        <select value={who} onChange={e => setWho((e.target as HTMLSelectElement).value)}>
+          <option value="biuro">Biuro</option>
+          {people.map(x => <option key={x.personId} value={x.personId}>{`${personName(s.roster, x.personId)}${x.label ? `, ${x.label}` : ''}`}</option>)}
+        </select>
+      </Field>
+      <Field label="Termin (nieobowiązkowy)"><input type="date" value={due} onInput={e => setDue((e.target as HTMLInputElement).value)}/></Field>
+      {!props.itemId && <Field label="Punkt (nieobowiązkowy)"><select value={item} onChange={e => setItem((e.target as HTMLSelectElement).value)}>
+        <option value="">Bez punktu</option>
+        {orderedAgenda(props.meeting.agenda).map(i => <option key={i.id} value={i.id}>{`${itemNumber(props.meeting.agenda, i.id)}. ${i.title}`}</option>)}
+      </select></Field>}
+      {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+      <div class="actions"><Button kind="primary" type="submit" busy={busy} disabled={!title.trim()} reason="Wpisz zadanie.">Dodaj zadanie</Button><Button kind="ghost" onClick={props.onClose}>Anuluj</Button></div>
+    </form>
+  </Modal>;
 }
 
 /** Karta „Zgłoszenia ({n})” pod „Materiały” (6.5): lista zgłoszeń z decyzjami według uprawnień. */
@@ -157,7 +260,7 @@ function proposer(roster: Roster, m: Pick<Meeting, 'organ' | 'frozen'>, p: Propo
   return func ? `${p.byName}, ${func}` : p.byName;
 }
 
-function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'proposal_accept' | 'proposal_reject' | 'proposal_defer') => void; onEdit: () => void; onWithdraw: () => void; busy: boolean}) {
+function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'proposal_accept' | 'proposal_reject' | 'proposal_defer') => void; onEdit: () => void; onWithdraw: () => void; onForward: () => void; busy: boolean}) {
   const s = useSession();
   const actor = useActorOf();
   const {p, meeting} = props;
@@ -180,6 +283,8 @@ function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'p
       {decides && <Button small kind="ghost" quiet haspopup onClick={() => props.onAsk('proposal_reject')}>Odrzuć</Button>}
     </div>}
     {open && preparer && !decides && <p class="small">{PREP_REFUSALS.reject}</p>}
+    {open && preparer && !decides && (p.forwarded ? <p class="small muted">{`Przekazano do decyzji zwołującego ${dateDotsOf(p.forwarded.at)}. ${p.forwarded.by}.`}</p>
+      : <div><Button small kind="ghost" quiet busy={props.busy} onClick={props.onForward}>Przekaż do decyzji zwołującego</Button></div>)}
     {open && mine && <div class="actions">
       <Button small kind="ghost" quiet haspopup onClick={props.onEdit}>Popraw zgłoszenie</Button>
       <Button small kind="ghost" quiet haspopup onClick={props.onWithdraw}>Wycofaj zgłoszenie</Button>
@@ -213,6 +318,7 @@ function Thread(props: {root: Comment; replies: Comment[]; meeting: MeetingData;
   const [reply, setReply] = useState<string | null>(null);
   const [editing, setEditing] = useState<{id: string; text: string} | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [moving, setMoving] = useState<string | null>(null);
   const prep = props.meeting.prep!;
   const writable = !prep.readOnly && prep.scope === 'pelny';
   const preparer = canAcceptProposal(s.roster, props.meeting, actor);
@@ -225,9 +331,11 @@ function Thread(props: {root: Comment; replies: Comment[]; meeting: MeetingData;
         <div class="actions"><Button small type="submit" busy={busy}>Zapisz uwagę</Button><Button small kind="ghost" onClick={() => setEditing(null)}>Anuluj</Button></div>
       </form>
       : <p class="comment__text">{c.text}</p>}
+    {c.movedTo && <p class="small muted">{`Przeniesiono do materiałów ${dateDotsOf(c.movedTo.at)}.`}</p>}
     {writable && !c.deleted && c.accountId === s.account.id && editing?.id !== c.id && <div class="actions">
       {canEditComment(c, props.all, s.account.id, Date.now()) && <Button small kind="ghost" quiet onClick={() => setEditing({id: c.id, text: c.text})}>Popraw</Button>}
       <Button small kind="ghost" quiet haspopup onClick={() => setRemoving(c.id)}>Usuń</Button>
+      {!c.parentId && !c.movedTo && <Button small kind="ghost" quiet haspopup onClick={() => setMoving(c.id)}>Przenieś do materiałów punktu</Button>}
     </div>}
   </div>;
   const {root} = props;
@@ -244,6 +352,8 @@ function Thread(props: {root: Comment; replies: Comment[]; meeting: MeetingData;
       <div class="actions"><Button small type="submit" busy={busy}>Odpowiedz</Button><Button small kind="ghost" onClick={() => setReply(null)}>Anuluj</Button></div>
     </form>}
     {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+    {moving && <Confirm title="Przenieść uwagę do materiałów punktu?" text={<p>Powstanie materiał „Inny” z treścią uwagi. Zobaczą go wszyscy uczestnicy posiedzenia, także goście, i może trafić do protokołu jako materiał.</p>}
+      confirm="Przenieś do materiałów punktu" cancel="Anuluj" focus="cancel" onClose={() => setMoving(null)} onConfirm={() => { const id = moving; setMoving(null); act({type: 'comment_to_material', commentId: id} as never); }}/>}
     {removing && <Confirm title="Usunąć uwagę?" text={<p>Zamiast treści zostanie zdanie „Uwagę usunięto.” z Twoim imieniem i nazwiskiem oraz godziną.</p>} confirm="Usuń uwagę" kind="danger" focus="cancel"
       onClose={() => setRemoving(null)} onConfirm={() => { const id = removing; setRemoving(null); act({type: 'comment_delete', commentId: id}); }}/>}
   </li>;
@@ -283,7 +393,7 @@ export function WorkspacePanel(props: {meeting: MeetingData; itemId?: string | n
   const list = [...prep.proposals].sort((a, b) => (a.state === 'zgloszone' ? 0 : 1) - (b.state === 'zgloszone' ? 0 : 1) || a.at - b.at);
   return <div class="stack prep-proposals">
     {list.length ? <ul class="proposal-list">{list.map(p => <ProposalRow key={p.id} p={p} meeting={props.meeting} busy={busy}
-      onAsk={type => setAsk({p, type})} onEdit={() => setAsk({p, type: 'edit'})} onWithdraw={() => setAsk({p, type: 'proposal_withdraw'})}/>)}</ul>
+      onAsk={type => setAsk({p, type})} onEdit={() => setAsk({p, type: 'edit'})} onWithdraw={() => setAsk({p, type: 'proposal_withdraw'})} onForward={() => act({type: 'proposal_forward', proposalId: p.id} as never)}/>)}</ul>
       : <p class="muted">{prep.scope === 'wlasne' ? 'Nie masz jeszcze zgłoszeń przy tym posiedzeniu.' : 'Nikt jeszcze nie zgłosił sprawy na to posiedzenie.'}</p>}
     {ask?.type === 'proposal_accept' && <AcceptDialog p={ask.p} meeting={props.meeting} decides={decides} onClose={() => setAsk(null)} onDone={m => { setAsk(null); props.onChange(m); }}/>}
     {ask && (ask.type === 'proposal_reject' || ask.type === 'proposal_defer') && <Confirm title={ask.type === 'proposal_reject' ? 'Odrzucić zgłoszenie?' : 'Odłożyć zgłoszenie na następne posiedzenie?'} text={<p>{`„${ask.p.title}”`}</p>}

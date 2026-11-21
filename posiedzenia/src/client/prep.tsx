@@ -19,10 +19,11 @@ import {useSession} from './session.ts';
 import {announce, Button, CardTitle, Check, Confirm, ErrorNotice, Field, fmtDate, fmtTime, Fold, Modal, Notice, plural, Segments, StateChip, tabMemory, useAction, useMedia, useSaveStatus, type SaveState} from './ui.tsx';
 import {ItemEditForm} from './item-form.tsx';
 import {readinessCheckChip, reviewChip} from './stany.ts';
-import {PrepCard, ProposalsCard, WorkspacePanel} from './workspace.tsx';
+import {PrepCard, ProposalsCard, TasksCard, WorkspacePanel} from './workspace.tsx';
+import {setPrepPlace} from './api.ts';
 import {DisplayList} from './show.tsx';
 import type {MeetingData} from './api.ts';
-import {commentsSentence, itemCommentCount, proposalsTab, readinessSentence} from './prep-rules.ts';
+import {commentsSentence, itemCommentCount, readinessSentence, workTab} from './prep-rules.ts';
 import {commsChoices, commsSourceText} from '../shared/comms.ts';
 import {commsLevelLabel} from '../shared/settings.ts';
 import type {CatalogRow} from '../shared/catalog.ts';
@@ -102,7 +103,7 @@ export function PrepLayout(props: {main: ComponentChildren; review: ComponentChi
   const setTab = (t: PrepTab) => { setTabState(t); tabMemory.set(TAB_KEY, t); };
   const show = (target: string) => {
     const item = target.startsWith('punkt:') ? target.slice(6) : null;
-    if (phone) setTab(item || target === 'materialy' ? 'porzadek' : target === 'zgloszenia' && props.proposals ? 'zgloszenia' : target === 'przeglad' ? 'przeglad' : 'posiedzenie');
+    if (phone) setTab(item || target === 'materialy' ? 'porzadek' : (target === 'zgloszenia' || target === 'zadania') && props.proposals ? 'zgloszenia' : target === 'przeglad' ? 'przeglad' : 'posiedzenie');
     if (item) setOpenItem(item);
     setTimeout(() => {
       const el = document.getElementById(item ? `ustawienia-punktu-${item}` : `ust-${target}`);
@@ -121,7 +122,8 @@ export function PrepLayout(props: {main: ComponentChildren; review: ComponentChi
     window.addEventListener('posiedzenia:pokaz', on);
     return () => window.removeEventListener('posiedzenia:pokaz', on);
   }, []);
-  const proposalsTabInfo = proposalsTab((m as MeetingData).prep);
+  // Dodatek D-11: zakładka „Zgłoszenia i zadania ({n})” (zgłoszenia czekające i Twoje otwarte zadania).
+  const proposalsTabInfo = workTab((m as MeetingData).prep);
   const current = tab === 'zgloszenia' && !props.proposals ? 'porzadek' : tab;
   const open = (m.effective?.review ?? []).filter(r => r.group !== 'gotowe').length;
   return <PrepCtx.Provider value={ctx}>
@@ -177,7 +179,7 @@ export function PrepEditor() {
   const onChange = (next: MeetingData) => replace({meeting: next});
   return <PrepLayout
     top={<PrepCard meeting={md} onChange={onChange}/>}
-    proposals={md.prep?.scope === 'pelny' ? <ProposalsCard meeting={md} onChange={onChange}/> : undefined}
+    proposals={md.prep?.scope === 'pelny' ? <><ProposalsCard meeting={md} onChange={onChange}/><TasksCard meeting={md} onChange={onChange}/></> : undefined}
     main={<>
       <section class="oi-card">
         <div class="panel-head"><CardTitle level={2}>Projekt porządku obrad</CardTitle></div>
@@ -451,7 +453,10 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
   const no = itemNumber(m.agenda, it.id);
   const rada = organOfCode(s.roster, 'rada');
   useLayoutEffect(() => { heading.current?.focus({preventScroll: false}); }, []);
+  // Dodatek D-9 (B2-W14): otwarte ustawienia punktu jadą w nagłówku zwykłego odświeżania (`X-Przygotowanie`).
+  useEffect(() => { setPrepPlace(`punkt:${it.id}`); return () => setPrepPlace(''); }, [it.id]);
   if (!e) return null;
+  const others = ((m as MeetingData).prep?.presence ?? []).filter(x => x.itemId === it.id);
   const mandatory = isMandatory(m as Meeting, it), listed = isListed(m as Meeting, it);
   const skipper = canSkipListed(s.roster, m as Meeting, actor);
   const basis = agendaBasis(law, it.kind) ?? '';
@@ -479,6 +484,7 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
       <h3 id={`ustawienia-punktu-${it.id}`} tabIndex={-1} ref={heading}>{`Ustawienia punktu ${no}`}</h3>
       <Button kind="ghost" quiet small onClick={props.close}>Zamknij ustawienia punktu</Button>
     </div>
+    {others.map(x => <Notice key={x.name}>{`${x.name} ma otwarte ustawienia tego punktu. Jeśli zmienicie to samo pole, zostanie zapis późniejszy.`}</Notice>)}
     <ItemReadiness it={it} no={no}/>
     <SettingsList label={`Ustawienia punktu ${no}`}>
       <SettingRow label="Nazwa punktu" value={it.title} at="punkt" source="" genitive="nazwy punktu" actionLabel={`Zmień nazwę punktu ${no}`}
@@ -520,6 +526,7 @@ function ItemSettings(props: {it: AgendaItem; close: () => void}) {
       {commsApplies(m, it) && <CommsRows it={it} no={no}/>}
     </SettingsList>
     {(m as MeetingData).prep?.scope === 'pelny' && <ItemComments it={it} no={no}/>}
+    {(m as MeetingData).prep?.scope === 'pelny' && <TasksCard meeting={m as MeetingData} itemId={it.id} embedded onChange={next => replace({meeting: next})}/>}
   </section>;
 }
 
@@ -1031,12 +1038,14 @@ function Guests(props: {editable: boolean}) {
   const [asking, setAsking] = useState<string | null>(null);
   const [by, setBy] = useState<'przewodniczacy' | 'organ'>('przewodniczacy');
   const [decision, setDecision] = useState('');
+  // Dodatek D-6 (U-43, B1-34): zgoda gościa na wymienienie w materiale dla komunikacji, zapisywana przy zaproszeniu.
+  const [consent, setConsent] = useState(false);
   const guests = people.filter(a => a.kind === 'gosc');
   const source = duplicateSource(m);
   const previous = guests.filter(g => source?.invited.includes(g.id) && !m.invited.includes(g.id));
   const name = (g: {displayName: string; label: string}) => `${g.displayName}${g.label && g.label.toLowerCase() !== 'gość' ? `, ${g.label}` : ''}`;
-  const ask = (id: string) => { setAsking(id); setBy('przewodniczacy'); setDecision(''); };
-  const invite = (id: string) => run(async () => { await cmd({type: 'invite', accountId: id, on: true, invitedBy: by, ...(by === 'organ' ? {decision: decision.trim()} : {})}); setAsking(null); });
+  const ask = (id: string) => { setAsking(id); setBy('przewodniczacy'); setDecision(''); setConsent(false); };
+  const invite = (id: string) => run(async () => { await cmd({type: 'invite', accountId: id, on: true, invitedBy: by, ...(by === 'organ' ? {decision: decision.trim()} : {}), ...(consent ? {comms: true} : {})}); setAsking(null); });
   const missing = by === 'organ' && !decision.trim() ? 'Wpisz, kiedy Prezydium zaprosiło gościa, np. datę posiedzenia albo numer uchwały.' : '';
   return <div class="guests" id="ust-goscie" tabIndex={-1}>
     <h3 class="card-sub">Goście</h3>
@@ -1050,9 +1059,15 @@ function Guests(props: {editable: boolean}) {
           <span><strong>{g.displayName}</strong>{g.label && g.label.toLowerCase() !== 'gość' ? `, ${g.label}` : ''}</span>
         </Check>
         {invited && info && <p class="small muted guest-info">{info.by === 'organ' ? `Na zaproszenie Prezydium, ${info.decision}.` : 'Na zaproszenie przewodniczącego.'}</p>}
+        {invited && info && <div class="guest-info">
+          <Check checked={!!info.comms} disabled={!props.editable || busy} onChange={on => run(async () => { await cmd({type: 'invite', accountId: g.id, on: true, comms: on}); })}>Gość zgadza się na wymienienie w materiale dla komunikacji</Check>
+          {info.comms && <p class="small muted">{`Zgodę zapisano ${dateDotsOf(info.comms.at)}. ${info.comms.by}.`}</p>}
+        </div>}
         {asking === g.id && <div class="invite-form">
           <Segments label="Kto zaprasza" value={by} options={[['przewodniczacy', 'Przewodniczący'], ['organ', 'Prezydium']]} onChange={setBy}/>
           {by === 'organ' && <Field label="Kiedy Prezydium zaprosiło" hint="Np. posiedzenie z dnia 12.11.2026 albo uchwała nr 98/IX/2026."><input value={decision} maxLength={200} onInput={e => setDecision((e.target as HTMLInputElement).value)}/></Field>}
+          <Check checked={consent} onChange={setConsent}>Gość zgadza się na wymienienie w materiale dla komunikacji</Check>
+          <p class="small muted">Bez zgody materiał dla komunikacji podaje tylko liczbę gości. Ze zgodą podaje imię, nazwisko i funkcję gościa.</p>
           <div class="actions"><Button small kind="primary" busy={busy} disabled={!!missing} reason={missing} onClick={() => invite(g.id)}>Zapisz zaproszenie</Button><Button small kind="ghost" quiet onClick={() => setAsking(null)}>Anuluj</Button></div>
         </div>}
       </li>;

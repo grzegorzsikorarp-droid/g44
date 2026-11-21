@@ -5,7 +5,12 @@ import type {MaterialRef} from '../shared/types.ts';
 import {request} from './api.ts';
 import {useMeeting} from './context.ts';
 import {useSession} from './session.ts';
-import {Button, Countdown, ErrorNotice, errorKindOf, LinkButton, Modal, type ErrorKind} from './ui.tsx';
+import {Button, Confirm, Countdown, ErrorNotice, errorKindOf, Field, Fold, LinkButton, Modal, StateChip, useAction, type ErrorKind} from './ui.tsx';
+import {canSetRemarkState} from '../shared/role.ts';
+import {PREP_LIMITS, type Comment, type PrepView} from '../shared/workspace.ts';
+import {remarkChip} from './stany.ts';
+import {dateDotsOf} from '../shared/text.ts';
+import type {MeetingData} from './api.ts';
 import {useDocTypes} from './doctypes.ts';
 import {htmlPages} from './show-pages.ts';
 
@@ -67,7 +72,66 @@ export function MaterialReader(props: {id: string; version: number; inline?: boo
     {doc.html && props.shownPage ? <ShownPages html={doc.html} page={props.shownPage}/>
       : doc.html ? <div class="doc" dangerouslySetInnerHTML={{__html: doc.html}}/> : <p class="muted">Ten materiał jest dostępny tylko jako plik do pobrania.</p>}
     {doc.fileId && <div><LinkButton small href={`/api/meetings/${m.id}/files/${doc.fileId}`}>Pobierz oryginał{doc.fileName ? ` (${doc.fileName})` : ''}</LinkButton></div>}
+    {(m as unknown as MeetingData).prep?.scope === 'pelny' && m.status === 'przygotowanie' && <MaterialRemarks materialId={props.id} version={doc.version}/>}
   </article>;
+}
+
+/**
+ * Dodatek D-12 (6.5, B2-W08, B2-W09): „Uwagi do materiału ({n})” w przygotowaniu: uwaga do konkretnej wersji z cytatem
+ * (z zaznaczenia albo wpisany, do 300 znaków), znaczniki „Otwarta”, „Uwzględniona w wersji {n}”, „Nieuwzględniona”;
+ * stan zmienia osoba referująca w swoim punkcie albo osoba przygotowująca; autor przenosi swoją uwagę do materiałów punktu.
+ */
+function MaterialRemarks(props: {materialId: string; version: number}) {
+  const {m, replace} = useMeeting();
+  const s = useSession();
+  const {busy, error, errorKind, run} = useAction();
+  const [writing, setWriting] = useState<{quote: string; text: string} | null>(null);
+  const [ask, setAsk] = useState<{c: Comment; type: 'nieuwzgledniona' | 'przenies'} | null>(null);
+  const prep = (m as unknown as MeetingData).prep as PrepView;
+  const remarks = prep.comments.filter(c => !c.parentId && c.target.kind === 'material' && c.target.materialId === props.materialId);
+  const current = m.materials.find(x => x.id === props.materialId)?.version ?? props.version;
+  const itemId = m.agenda.find(i => i.materialIds.includes(props.materialId))?.id ?? null;
+  const decides = canSetRemarkState(s.roster, m as never, {account: s.account, personId: s.personId, name: s.name}, itemId);
+  const send = (cmd: object) => run(async () => { const r = await request<{meeting: MeetingData}>(`/api/meetings/${m.id}/przygotowanie`, {body: {cmd}}); replace({meeting: r.meeting as never}); });
+  const selected = () => { try { return (window.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim().slice(0, PREP_LIMITS.quote); } catch { return ''; } };
+  // Zaznaczenie w tekście materiału zapamiętuje się przy każdej zmianie, bo kliknięcie przycisku może je wyczyścić.
+  const lastSelection = useRef('');
+  useEffect(() => {
+    const on = () => { const t = selected(); if (t) lastSelection.current = t; };
+    document.addEventListener('selectionchange', on);
+    return () => document.removeEventListener('selectionchange', on);
+  }, []);
+  return <div class="material-remarks">
+    <Fold title="Uwagi do materiału" count={remarks.length}>
+      {remarks.length ? <ol class="prep-comments">{remarks.map(c => {
+        const t = c.target as {version: number; quote?: string};
+        return <li key={c.id} class="thread">
+          <p class="comment__by small">{`${c.byName}, ${dateDotsOf(c.at)}, wersja ${t.version}`} {c.remark && <StateChip state={remarkChip(c.remark.state, c.remark.version)}/>}</p>
+          {t.quote && <blockquote class="remark-quote">{`„${t.quote}”`}</blockquote>}
+          {c.deleted ? <p class="muted">Uwagę usunięto.</p> : <p class="comment__text">{c.text}</p>}
+          {c.remark?.state === 'otwarta' && t.version < current && <p class="small">{`Dotyczy wersji ${t.version}. Obecna wersja ${current}.`}</p>}
+          {c.remark?.state === 'nieuwzgledniona' && c.remark.reason && <p class="small">{`Powód „${c.remark.reason}”. ${c.remark.by ?? ''}`.trim()}</p>}
+          {c.movedTo && <p class="small muted">{`Przeniesiono do materiałów ${dateDotsOf(c.movedTo.at)}.`}</p>}
+          {!c.deleted && <div class="actions">
+            {decides && c.remark?.state !== 'uwzgledniona' && <Button small kind="ghost" quiet busy={busy} onClick={() => send({type: 'remark_state', commentId: c.id, state: 'uwzgledniona', version: current})}>{`Uwzględniona w wersji ${current}`}</Button>}
+            {decides && c.remark?.state !== 'nieuwzgledniona' && <Button small kind="ghost" quiet haspopup onClick={() => setAsk({c, type: 'nieuwzgledniona'})}>Nieuwzględniona</Button>}
+            {decides && c.remark?.state !== 'otwarta' && <Button small kind="ghost" quiet busy={busy} onClick={() => send({type: 'remark_state', commentId: c.id, state: 'otwarta'})}>Otwórz ponownie</Button>}
+            {c.accountId === s.account.id && !c.movedTo && <Button small kind="ghost" quiet haspopup onClick={() => setAsk({c, type: 'przenies'})}>Przenieś do materiałów punktu</Button>}
+          </div>}
+        </li>;
+      })}</ol> : <p class="muted">Nie ma jeszcze uwag do tego materiału.</p>}
+      {writing ? <form class="stack-tight" onSubmit={e => { e.preventDefault(); send({type: 'comment_add', target: {kind: 'material', materialId: props.materialId, version: props.version, ...(writing.quote.trim() ? {quote: writing.quote.trim()} : {})}, text: writing.text}); setWriting(null); }}>
+        <Field label="Cytowany fragment" hint="Zaznacz fragment w tekście przed kliknięciem „Zgłoś uwagę” albo wpisz go. Najwyżej 300 znaków."><input value={writing.quote} maxLength={PREP_LIMITS.quote} onInput={e => setWriting({...writing, quote: (e.target as HTMLInputElement).value})}/></Field>
+        <Field label="Twoja uwaga" hint="Uwagi widzą członkowie Prezydium i biuro. Nie są materiałem posiedzenia i nie trafiają do protokołu."><textarea rows={3} maxLength={PREP_LIMITS.comment} value={writing.text} onInput={e => setWriting({...writing, text: (e.target as HTMLTextAreaElement).value})}/></Field>
+        <div class="actions"><Button small type="submit" busy={busy} disabled={!writing.text.trim()} reason="Wpisz treść uwagi.">Zgłoś uwagę</Button><Button small kind="ghost" onClick={() => setWriting(null)}>Anuluj</Button></div>
+      </form> : <div><Button small onClick={() => setWriting({quote: lastSelection.current || selected(), text: ''})}>Zgłoś uwagę</Button></div>}
+      {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+    </Fold>
+    {ask?.type === 'nieuwzgledniona' && <Confirm title="Uwaga nieuwzględniona?" text={<p>{ask.c.text}</p>} confirm="Zapisz" cancel="Anuluj" focus="field" field={{label: 'Powód', hint: 'Zobaczy go osoba, która zgłosiła uwagę.', required: true, maxLength: PREP_LIMITS.reason}}
+      onClose={() => setAsk(null)} onConfirm={reason => { const c = ask.c; setAsk(null); send({type: 'remark_state', commentId: c.id, state: 'nieuwzgledniona', reason}); }}/>}
+    {ask?.type === 'przenies' && <Confirm title="Przenieść uwagę do materiałów punktu?" text={<p>Powstanie materiał „Inny” z treścią uwagi. Zobaczą go wszyscy uczestnicy posiedzenia, także goście, i może trafić do protokołu jako materiał.</p>}
+      confirm="Przenieś do materiałów punktu" cancel="Anuluj" focus="cancel" onClose={() => setAsk(null)} onConfirm={() => { const c = ask.c; setAsk(null); send({type: 'comment_to_material', commentId: c.id}); }}/>}
+  </div>;
 }
 
 /** Tekst materiału w porcjach pokazu z zaznaczoną porcją widoczną na sali (B3-25). */

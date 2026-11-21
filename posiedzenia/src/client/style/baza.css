@@ -20,6 +20,9 @@
 
 /* Podstawa */
 html { -webkit-text-size-adjust: 100%; }
+/* Dodatek D-2 (U-47): wielkość tekstu z „Mojego konta”, tylko na tym urządzeniu; ekran sali bez atrybutu. */
+:root[data-pismo="wieksza"] { font-size: 115%; }
+:root[data-pismo="najwieksza"] { font-size: 130%; }
 body { margin: 0; background: var(--tlo); color: var(--tekst); font-family: var(--font-sans); font-size: var(--t-tekst); line-height: 1.55; -webkit-font-smoothing: antialiased; }
 *, *::before, *::after { box-sizing: border-box; }
 body.no-scroll { overflow: hidden; }

@@ -28,12 +28,21 @@ export function proposalsTab(prep: Pick<PrepView, 'proposals'> | null | undefine
   return {label: `Zgłoszenia (${n})`, name: `Zgłoszenia, ${n} ${plural(n, 'czeka', 'czekają', 'czeka')} na decyzję`};
 }
 
+/**
+ * Dodatek D-11 (6.5): zakładka telefonu „Zgłoszenia i zadania ({n})”, gdzie n to zgłoszenia czekające na decyzję i Twoje
+ * otwarte zadania; nazwa dostępna „Zgłoszenia i zadania, {n} do zrobienia”.
+ */
+export function workTab(prep: Pick<PrepView, 'proposals' | 'progress'> | null | undefined): {label: string; name: string} {
+  const n = waitingProposals(prep) + (prep?.progress.myTasks ?? 0);
+  return {label: `Zgłoszenia i zadania (${n})`, name: `Zgłoszenia i zadania, ${n} do zrobienia`};
+}
+
 const what: Record<ReadinessCheck['key'], (c: ReadinessCheck) => string> = {
   material: () => 'materiału',
   projekt_aktu: c => c.text.replace(/^Brak (projektu \S+)\..*$/s, '$1'),
   referent: () => 'osoby referującej',
   rodzaj_sprawy: () => 'decyzji o rodzaju sprawy',
-  protokol: () => 'protokołu',
+  protokol: () => 'sporządzonego protokołu',
 };
 const list = (parts: string[]) => parts.length < 2 ? parts.join('') : `${parts.slice(0, -1).join(', ')} i ${parts.at(-1)}`;
 /** Zdanie o gotowości w wierszu punktu (6.5): „Gotowe.” albo „Brakuje projektu uchwały.”; bez sprawdzeń pusty napis. */

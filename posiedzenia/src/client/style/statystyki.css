@@ -23,3 +23,19 @@
   .stats-page .oi-table.stat-table th, .stats-page .oi-table.stat-table td { padding-inline: var(--odstep-2); }
 }
 @media print { .stat-bar__track { display: none; } }
+
+/* Dodatek D-13: „Statystyki składu” (B4 5.2): sortowanie przyciskiem w nagłówku, na telefonie cztery kolumny i rozwinięcie wiersza. */
+.stat-sort { all: unset; cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.stat-sort:focus-visible { outline: 3px solid var(--fokus); outline-offset: 3px; }
+@media (pointer: coarse) { .stat-sort { display: inline-block; min-height: 44px; line-height: 44px; } }
+.roster-table th[scope="row"] { min-width: 10rem; }
+.roster-rows td { background: var(--powierzchnia-miekka); }
+.roster-narrow { display: none; }
+@media (max-width: 599px) {
+  .roster-table .roster-wide { display: none; }
+  .roster-narrow { display: block; }
+  /* Telefon: tabela mieści się w szerokości ekranu, a rozwinięcie wiersza zawija się w widocznej części obszaru. */
+  .roster-table th[scope="row"] { min-width: 0; }
+  .roster-table th[scope="col"], .stat-sort { white-space: normal; }
+  .roster-rows .stat-rows, .roster-rows .roster-narrow { max-width: calc(100vw - 5rem); }
+}

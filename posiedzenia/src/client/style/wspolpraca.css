@@ -31,3 +31,12 @@
 /* Karta „Twoje punkty” osoby referującej (W-W4-04, B2-W11): punkt z dodaniem materiału i nowej wersji, podziały linia-jasna. */
 .referent-item + .referent-item { border-top: var(--kreska) solid var(--linia-jasna); padding-top: var(--odstep-3); }
 .referent-item__title { margin: 0; font-size: var(--t-lista); font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+
+/* Dodatki D-10, D-11, D-12 (6.5, B2 2.13): „Co nowego”, zadania i uwagi do materiału; listy bez kropek, stan słowem. */
+.feed-list, .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--odstep-3); }
+.feed-list li p { margin: 0; }
+.task { border-left: 6px solid var(--linia); padding-left: var(--odstep-3); }
+.task p { margin: 0; }
+.prep-tasks { margin-top: var(--odstep-4); }
+.material-remarks { margin-top: var(--odstep-4); }
+.remark-quote { margin: var(--odstep-1) 0; padding-left: var(--odstep-3); border-left: 3px solid var(--linia); font-style: italic; color: var(--tekst-drugorzedny); }
