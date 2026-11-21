@@ -6,7 +6,7 @@ import {MailDialog} from './mail.tsx';
 import {Button, CardTitle, Check, Confirm, ErrorNotice, Fact, Field, fmtTime, Fold, Modal, Notice, Segments, StateChip, useAction} from './ui.tsx';
 import {overdueChip, proposalChip} from './stany.ts';
 import {canAcceptProposal, canAssignTask, canPropose, canRejectProposal, canSeeWorkspace, canSendProgress, isChairmanOf, isReferent, isService, organRoster} from '../shared/role.ts';
-import {carriedText, PREP_LIMITS, PREP_REFUSALS, taskOpen, taskOverdue, type Comment, type FeedRow, type PrepCommand, type PrepView, type Proposal, type Task} from '../shared/workspace.ts';
+import {carriedText, quoted, PREP_LIMITS, PREP_REFUSALS, taskOpen, taskOverdue, type Comment, type FeedRow, type PrepCommand, type PrepView, type Proposal, type Task} from '../shared/workspace.ts';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {personName} from '../shared/roster.ts';
 import {dateDots, dateDotsOf, plural} from '../shared/text.ts';
@@ -192,7 +192,7 @@ export function TasksCard(props: {meeting: MeetingData; itemId?: string | null; 
       const mine = 'office' in t.assignee ? isService(actor) : t.assignee.personId === s.personId;
       const where = t.itemId && !props.itemId && props.meeting.agenda.some(i => i.id === t.itemId) ? `, punkt ${itemNumber(props.meeting.agenda, t.itemId)}` : '';
       return <li key={t.id} class="task">
-        {mine && writable ? <Check checked={!!t.done} disabled={busy} onChange={on => act({type: 'task_done', taskId: t.id, on} as never)}>{`Zrobione, ${t.title}`}</Check>
+        {mine && writable ? <><p><strong>{t.title}</strong></p><Check checked={!!t.done} disabled={busy} onChange={on => act({type: 'task_done', taskId: t.id, on} as never)}>Zrobione<span class="sr-only">{`, ${t.title}`}</span></Check></>
           : <p><strong>{t.title}</strong>{t.done ? ' Zrobione.' : ''}</p>}
         <p class="small">{`${assigneeText(s.roster, m, t)}${where}`}{t.due && <> <span class="oi-nowrap">{`do ${dateDots(t.due)}`}</span></>} {taskOverdue(t, Date.now()) && <StateChip state={overdueChip()}/>}</p>
         {t.carriedFrom && <p class="small muted">{`Z posiedzenia z dnia ${dateDots(t.carriedFrom.date)}.`}</p>}
@@ -272,7 +272,7 @@ function ProposalRow(props: {p: Proposal; meeting: MeetingData; onAsk: (type: 'p
   const no = p.decision?.itemId ? itemNumber(meeting.agenda, p.decision.itemId) : '';
   const carried = carriedText(p);
   return <li class="proposal">
-    <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state, waitsForConvener(p, preparer, decides))}/></div>
+    <div class="proposal__head"><strong>{quoted(p.title)}</strong><StateChip state={proposalChip(p.state, waitsForConvener(p, preparer, decides))}/></div>
     <p class="small">{`${proposer(s.roster, meeting as unknown as Meeting, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}{p.attachment && <> <button type="button" class="link" onClick={() => download(`/api/meetings/${encodeURIComponent(meeting.id)}/przygotowanie/pliki/${p.attachment!.id}`)}>{`Plik „${p.attachment.name}”.`}</button></>}</p>
     {carried && <p class="small muted">{carried}</p>}
     {p.state === 'wpisane' && <p class="small">{`Wpisane do projektu${no ? ` jako punkt ${no}` : ''}. ${p.decision?.by ?? ''}, ${p.decision ? dateDotsOf(p.decision.at) : ''}.`}</p>}
@@ -299,7 +299,7 @@ function AcceptDialog(props: {p: Proposal; meeting: MeetingData; decides: boolea
   const [place, setPlace] = useState<'przed_wolnymi_wnioskami' | 'w_uchwalach'>('przed_wolnymi_wnioskami');
   const sitting = props.meeting.kind === 'posiedzenie';
   const hasResolutions = props.meeting.agenda.some(i => i.kind === 'uchwaly' && !i.parentId);
-  return <Modal title={`Wpisać zgłoszenie „${props.p.title}” do projektu porządku?`} onClose={props.onClose}>
+  return <Modal title={`Wpisać zgłoszenie ${quoted(props.p.title)} do projektu porządku?`} onClose={props.onClose}>
     <form class="stack" onSubmit={e => { e.preventDefault(); run(async () => { props.onDone((await send(props.meeting.id, {type: 'proposal_accept', proposalId: props.p.id, title, place})).meeting); }); }}>
       <p>Sprawa stanie się punktem projektu porządku obrad. Plik dołączy do materiałów punktu, a osoba zgłaszająca zobaczy stan „Wpisane do projektu”.</p>
       <Field label={sitting ? 'Nazwa punktu' : 'Nazwa sprawy'}><input value={title} required maxLength={PREP_LIMITS.title} onInput={e => setTitle((e.target as HTMLInputElement).value)}/></Field>
@@ -396,10 +396,10 @@ export function WorkspacePanel(props: {meeting: MeetingData; itemId?: string | n
       onAsk={type => setAsk({p, type})} onEdit={() => setAsk({p, type: 'edit'})} onWithdraw={() => setAsk({p, type: 'proposal_withdraw'})} onForward={() => act({type: 'proposal_forward', proposalId: p.id} as never)}/>)}</ul>
       : <p class="muted">{prep.scope === 'wlasne' ? 'Nie masz jeszcze zgłoszeń przy tym posiedzeniu.' : 'Nikt jeszcze nie zgłosił sprawy na to posiedzenie.'}</p>}
     {ask?.type === 'proposal_accept' && <AcceptDialog p={ask.p} meeting={props.meeting} decides={decides} onClose={() => setAsk(null)} onDone={m => { setAsk(null); props.onChange(m); }}/>}
-    {ask && (ask.type === 'proposal_reject' || ask.type === 'proposal_defer') && <Confirm title={ask.type === 'proposal_reject' ? 'Odrzucić zgłoszenie?' : 'Odłożyć zgłoszenie na następne posiedzenie?'} text={<p>{`„${ask.p.title}”`}</p>}
+    {ask && (ask.type === 'proposal_reject' || ask.type === 'proposal_defer') && <Confirm title={ask.type === 'proposal_reject' ? 'Odrzucić zgłoszenie?' : 'Odłożyć zgłoszenie na następne posiedzenie?'} text={<p>{quoted(ask.p.title)}</p>}
       confirm={ask.type === 'proposal_reject' ? 'Odrzuć' : 'Odłóż'} cancel="Anuluj" focus="field" field={{label: 'Powód', hint: 'Zobaczy go osoba zgłaszająca.', required: true, maxLength: PREP_LIMITS.reason}}
       onClose={() => setAsk(null)} onConfirm={reason => { const a = ask; setAsk(null); act({type: a.type as 'proposal_reject' | 'proposal_defer', proposalId: a.p.id, reason: reason ?? ''}); }}/>}
-    {ask?.type === 'proposal_withdraw' && <Confirm title="Wycofać zgłoszenie?" text={<p>{`„${ask.p.title}” nie trafi do osób przygotowujących posiedzenie.`}</p>} confirm="Wycofaj zgłoszenie" cancel="Anuluj" focus="cancel"
+    {ask?.type === 'proposal_withdraw' && <Confirm title="Wycofać zgłoszenie?" text={<p>{`${quoted(ask.p.title)} nie trafi do osób przygotowujących posiedzenie.`}</p>} confirm="Wycofaj zgłoszenie" cancel="Anuluj" focus="cancel"
       onClose={() => setAsk(null)} onConfirm={() => { const a = ask; setAsk(null); act({type: 'proposal_withdraw', proposalId: a.p.id}); }}/>}
     {ask?.type === 'edit' && <ProposalDialog meeting={props.meeting} edit={ask.p} onClose={() => setAsk(null)} onDone={r => { setAsk(null); if (r.meeting) props.onChange(r.meeting); }}/>}
     {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
@@ -437,7 +437,7 @@ function PrepArchiveFold(props: {meeting: MeetingData}) {
       <p class="small">Uwagi i zgłoszenia z przygotowania nie są materiałem posiedzenia i nie trafiają do protokołu.</p>
       <h3 class="kicker">{`Zgłoszenia (${prep.proposals.length})`}</h3>
       {prep.proposals.length ? <ul class="proposal-list">{prep.proposals.map(p => <li key={p.id} class="proposal">
-        <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state)}/></div>
+        <div class="proposal__head"><strong>{quoted(p.title)}</strong><StateChip state={proposalChip(p.state)}/></div>
         <p class="small">{`${proposer(roster, props.meeting as unknown as Meeting, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
         {p.decision && p.state !== 'wpisane' && <p class="small">{`${decisionText(p)}, ${dateDotsOf(p.decision.at)}.`}</p>}
       </li>)}</ul> : <p class="muted">Nikt nie zgłosił sprawy na to posiedzenie.</p>}
@@ -461,7 +461,7 @@ export function WaitingDialog(props: {proposals: Proposal[]; onClose: () => void
   const {roster} = useSession();
   return <Modal title={`Zgłoszenia czekające na posiedzenie (${props.proposals.length})`} onClose={props.onClose}>
     {props.proposals.length ? <ul class="proposal-list">{props.proposals.map(p => <li key={p.id} class="proposal">
-      <div class="proposal__head"><strong>{`„${p.title}”`}</strong><StateChip state={proposalChip(p.state)}/></div>
+      <div class="proposal__head"><strong>{quoted(p.title)}</strong><StateChip state={proposalChip(p.state)}/></div>
       <p class="small">{`${proposer(roster, {organ: 'prezydium'}, p)}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
       {carriedText(p) && <p class="small muted">{carriedText(p)}</p>}
     </li>)}</ul> : <p class="muted">{`Nie ma zgłoszeń czekających na posiedzenie.`}</p>}

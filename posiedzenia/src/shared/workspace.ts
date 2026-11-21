@@ -95,7 +95,8 @@ export const emptySpace = (meetingId: string, organ: OrganCode): PrepSpace => ({
 const fail = (message: string, status = 400): never => { throw new DomainError(message, status); };
 function ensure(condition: unknown, message: string, status = 400): asserts condition { if (!condition) fail(message, status); }
 const clean = (v: unknown, max: number) => typeof v === 'string' ? v.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').trim().slice(0, max) : '';
-const quoted = (text: string) => `„${text.replace(/„/g, '»').replace(/”/g, '«')}”`;
+/** Tytuł w cudzysłowie „…”; cudzysłów w tytule zmienia się na zagnieżdżony »…« (brand/JEZYK.md). */
+export const quoted = (text: string) => `„${text.replace(/„/g, '»').replace(/”/g, '«')}”`;
 
 /** Komunikaty strażnika G-29–G-31 (rozdz. 3.4), dosłownie. */
 export const PREP_REFUSALS = {
@@ -554,8 +555,12 @@ export function carryOver(waiting: PrepSpace, previous: PrepSpace | null, target
   if (moved.length) rest.revision++;
   return {ws, waiting: rest};
 }
-/** Zdanie o pochodzeniu zgłoszenia przeniesionego (B2-W06). */
-export const carriedText = (p: Proposal) => !p.carriedFrom ? null : p.carriedFrom.date ? `Z posiedzenia z dnia ${dateDots(p.carriedFrom.date)}.` : 'Zgłoszone przed utworzeniem posiedzenia.';
+/**
+ * Zdanie o pochodzeniu zgłoszenia przeniesionego (B2-W06). Z `currentId` (dodatek D-5, zgłoszenia czekające na spotkaniu
+ * roboczym) zgłoszenie przeniesione przy otwarciu tego samego posiedzenia nie dostaje zdania z datą bieżącego posiedzenia.
+ */
+export const carriedText = (p: Proposal, currentId?: string) => !p.carriedFrom || (currentId && p.carriedFrom.meetingId === currentId) ? null
+  : p.carriedFrom.date ? `Z posiedzenia z dnia ${dateDots(p.carriedFrom.date)}.` : 'Zgłoszone przed utworzeniem posiedzenia.';
 
 /**
  * Usuwanie po terminie (DB-13, DB-36, B2-W19): przestrzeń znika 90 dni po zamknięciu posiedzenia, a zgłoszenie

@@ -127,7 +127,7 @@ function MaterialRemarks(props: {materialId: string; version: number}) {
       </form> : <div><Button small onClick={() => setWriting({quote: lastSelection.current || selected(), text: ''})}>Zgłoś uwagę</Button></div>}
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
     </Fold>
-    {ask?.type === 'nieuwzgledniona' && <Confirm title="Uwaga nieuwzględniona?" text={<p>{ask.c.text}</p>} confirm="Zapisz" cancel="Anuluj" focus="field" field={{label: 'Powód', hint: 'Zobaczy go osoba, która zgłosiła uwagę.', required: true, maxLength: PREP_LIMITS.reason}}
+    {ask?.type === 'nieuwzgledniona' && <Confirm title="Oznaczyć uwagę jako nieuwzględnioną?" text={<p>{ask.c.text}</p>} confirm="Zapisz" cancel="Anuluj" focus="field" field={{label: 'Powód', hint: 'Zobaczy go osoba, która zgłosiła uwagę.', required: true, maxLength: PREP_LIMITS.reason}}
       onClose={() => setAsk(null)} onConfirm={reason => { const c = ask.c; setAsk(null); send({type: 'remark_state', commentId: c.id, state: 'nieuwzgledniona', reason}); }}/>}
     {ask?.type === 'przenies' && <Confirm title="Przenieść uwagę do materiałów punktu?" text={<p>Powstanie materiał „Inny” z treścią uwagi. Zobaczą go wszyscy uczestnicy posiedzenia, także goście, i może trafić do protokołu jako materiał.</p>}
       confirm="Przenieś do materiałów punktu" cancel="Anuluj" focus="cancel" onClose={() => setAsk(null)} onConfirm={() => { const c = ask.c; setAsk(null); send({type: 'comment_to_material', commentId: c.id}); }}/>}

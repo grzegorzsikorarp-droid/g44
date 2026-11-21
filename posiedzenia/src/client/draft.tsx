@@ -5,7 +5,7 @@ import {useMeeting} from './context.ts';
 import {announce, Button, Confirm, ErrorNotice, Field, Fold, StateChip, useAction} from './ui.tsx';
 import {request, type MeetingData} from './api.ts';
 import {useSession} from './session.ts';
-import {carriedText, waitingLiveAllowed, type Proposal} from '../shared/workspace.ts';
+import {carriedText, quoted, waitingLiveAllowed, type Proposal} from '../shared/workspace.ts';
 import {dateDotsOf} from '../shared/text.ts';
 import type {Meeting} from '../shared/types.ts';
 import {agendaChip} from './stany.ts';
@@ -255,14 +255,14 @@ function WaitingProposals() {
     <Fold title={list ? `Zgłoszenia czekające (${list.length})` : 'Zgłoszenia czekające'} onToggle={open => { if (open && !list) load(); }}>
       {!list ? <p class="muted">Wczytywanie…</p> : !list.length ? <p class="muted">Nie ma zgłoszeń czekających na posiedzenie.</p>
         : <ul class="proposal-list">{list.map(p => <li key={p.id} class="proposal">
-          <p><strong>{`„${p.title}”`}</strong></p>
+          <p><strong>{quoted(p.title)}</strong></p>
           <p class="small">{`${p.byName}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
-          {carriedText(p) && <p class="small muted">{carriedText(p)}</p>}
-          <div><Button small kind="ghost" quiet busy={busy} label={`Dodaj do projektu zgłoszenie „${p.title}”`} onClick={() => run(async () => {
+          {carriedText(p, m.id) && <p class="small muted">{carriedText(p, m.id)}</p>}
+          <div><Button small kind="ghost" quiet busy={busy} label={`Dodaj do projektu zgłoszenie ${quoted(p.title)}`} onClick={() => run(async () => {
             const r = await request<{meeting: MeetingData; proposals: Proposal[]}>(path, {body: {proposalId: p.id}});
             setList(r.proposals);
             replace({meeting: r.meeting as never});
-            announce(`Dodano punkt „${p.title}” do projektu porządku obrad.`);
+            announce(`Dodano punkt ${quoted(p.title)} do projektu porządku obrad.`);
           })}>Dodaj do projektu</Button></div>
         </li>)}</ul>}
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}

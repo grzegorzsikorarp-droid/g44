@@ -249,7 +249,7 @@ export function RosterStatsPage(props: {query: URLSearchParams}) {
           const att = p.meetings.cala + p.meetings.czesciowa;
           return [<tr key={p.personId}>
             <th scope="row"><span class="stack-tight"><span>{p.name}</span>
-              <button type="button" class="link small" aria-expanded={open === p.personId} onClick={() => setOpen(open === p.personId ? null : p.personId)}>Posiedzenia po kolei</button></span></th>
+              <button type="button" class="link small link-cel" aria-expanded={open === p.personId} onClick={() => setOpen(open === p.personId ? null : p.personId)}>Posiedzenia po kolei</button></span></th>
             <td class="roster-wide">{p.label}</td><td class="roster-wide">{p.meetings.held}</td><td class="roster-wide">{p.meetings.cala}</td><td class="roster-wide">{p.meetings.czesciowa}</td><td class="roster-wide">{p.meetings.nieobecnosc}</td>
             <td><Bar value={att} of={p.meetings.held} text={p.meetings.held ? `${pct(att, p.meetings.held)}% (${share(att, p.meetings.held)})` : '–'}/></td>
             <td class="oi-nowrap">{share(p.sessionVotes.cast, p.sessionVotes.eligible)}</td>
