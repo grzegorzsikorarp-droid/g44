@@ -4,7 +4,7 @@ import {useSession} from './session.ts';
 import {useDocTypes} from './doctypes.ts';
 import {generalNow} from './general.ts';
 import {MailDialog, MailHistory} from './mail.tsx';
-import {Button, CardTitle, Check, ErrorNotice, Field, Fold, Modal, Notice, plural, Segments, StateChip, useAction} from './ui.tsx';
+import {announce, Button, CardTitle, Check, ErrorNotice, Field, Fold, Modal, Notice, plural, Segments, StateChip, useAction} from './ui.tsx';
 import {checkChip, commsReleaseChip, paperStateChip, protocolChip} from './stany.ts';
 import {changedText, checkBallotNumber, FILED_LABELS, filedGroups, filedLine, formatButtons, mdBlocks, paperPath, paperRows, releaseButton, releaseText, type MdItem} from './papers-rules.ts';
 import {meetingPapers, paperNameAccusative, type PaperEntry} from '../shared/papers.ts';
@@ -61,6 +61,10 @@ function PaperRow(props: {meeting: MeetingData; paper: PaperEntry; signature: Pa
 /** Okno „Udostępnić materiał komunikacji?” z podglądem pliku (DB-42). */
 export function ReleaseDialog(props: {meeting: Pick<MeetingData, 'id'>; onClose: () => void; onDone: (m: MeetingData) => void}) {
   const {busy, error, errorKind, run} = useAction();
+  const s = useSession();
+  // Dodatek D-15 (DB-9, 6.7.2): „Materiał dla komunikacji gotowy” do konta komunikacji przy udostępnieniu, gdy poczta działa.
+  const mailOn = !!s.mail?.enabled;
+  const [mail, setMail] = useState(mailOn);
   const [text, setText] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => { request<{text: string}>(`/api/katalog/${enc(props.meeting.id)}/komunikacja.json`).then(r => setText(r.text)).catch(e => { setFailed(true); setText((e as Error).message); }); }, [props.meeting.id]);
@@ -68,9 +72,19 @@ export function ReleaseDialog(props: {meeting: Pick<MeetingData, 'id'>; onClose:
     <div class="stack">
       <p>{typo('Konto komunikacji pobierze ten plik i może go wkleić do zewnętrznego czatu. Sprawdź, czy tytuły, zdania i opis nie zawierają danych osób spoza organu.')}</p>
       <CommsView text={text} error={failed}/>
+      {mailOn && <Check checked={mail} onChange={setMail}>Wyślij e-mail do konta komunikacji</Check>}
       {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
       <div class="actions">
-        <Button kind="primary" busy={busy} onClick={() => run(async () => props.onDone((await sendCmd(props.meeting.id, {type: 'comms_release'})).meeting))}>Udostępnij</Button>
+        <Button kind="primary" busy={busy} onClick={() => run(async () => {
+          const next = (await sendCmd(props.meeting.id, {type: 'comms_release'})).meeting;
+          let note = '';
+          if (mail && mailOn) {
+            try { await request(`/api/meetings/${enc(props.meeting.id)}/mail/send`, {body: {kind: 'komunikacja', intro: '', recipients: {group: 'wybrani', ids: []}}}); note = 'Udostępniono. Wiadomość do konta komunikacji przyjęta do wysyłki.'; }
+            catch (e) { note = `Udostępniono. Wiadomości nie wysłano. ${(e as Error).message}`; }
+          }
+          props.onDone(next);
+          if (note) announce(note);
+        })}>Udostępnij</Button>
         <Button kind="ghost" onClick={props.onClose}>Anuluj</Button>
       </div>
     </div>

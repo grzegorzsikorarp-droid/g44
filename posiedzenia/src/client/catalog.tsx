@@ -7,7 +7,7 @@ import {MeetingsTabs} from './home.tsx';
 import {CommsPreview, PhotosDialog} from './papers.tsx';
 import {Button, Check, ErrorNotice, Fact, Field, Fold, Notice, Segments, StateChip, Tag, usePageTitle} from './ui.tsx';
 import {commsReleaseChip, protocolChip} from './stany.ts';
-import {CATALOG_KINDS, CATALOG_STATES, catalogHref, catalogParams, catalogQuery, commsRowText, filtersActive, presetOf, presetRange, type CatalogQuery, type ReportPreset} from './papers-rules.ts';
+import {CATALOG_KINDS, CATALOG_STATES, catalogHref, catalogParams, catalogQuery, commsRowText, filtersActive, presetOf, presetRange, type CatalogQuery, type ReportPreset, reportDownloads} from './papers-rules.ts';
 import {photosLinkText, type CatalogRow} from '../shared/catalog.ts';
 import {isLeading, isService} from '../shared/role.ts';
 import {dateDots, isoDayOf} from '../shared/text.ts';
@@ -131,6 +131,7 @@ function termRange(name: string | null, rows: Row[], today: string): {from: stri
 /** Zestawienie za okres (`#zestawienie?od=&do=`, B1-30): treść z serwera, wydruk w oknie i dwa pliki CSV. */
 export function ReportPage(props: {query: URLSearchParams}) {
   usePageTitle('Zestawienie za okres – Posiedzenia Prezydium');
+  const session = useSession();
   const today = isoDayOf(Date.now());
   const [rows, setRows] = useState<Row[]>([]);
   useEffect(() => { request<{rows: Row[]}>('/api/katalog').then(r => setRows(r.rows)).catch(() => setRows([])); }, []);
@@ -193,9 +194,11 @@ export function ReportPage(props: {query: URLSearchParams}) {
     {error ? <ErrorNotice>{error}</ErrorNotice> : <>
       <div class="actions">
         <a class="oi-btn oi-btn--obrys" href={base} target="_blank" rel="noopener"><span>Drukuj albo zapisz jako PDF</span></a>
-        <Button kind="ghost" onClick={() => download(`${base}&format=csv&czesc=posiedzenia`)}>Pobierz posiedzenia w formacie CSV</Button>
-        <Button kind="ghost" onClick={() => download(`${base}&format=csv&czesc=akty`)}>Pobierz akty w formacie CSV</Button>
+        {/* CSV i, z dodatkiem D-17, Word i Markdown z tą samą treścią co wydruk. */}
+        {reportDownloads(base).map(d => <Button key={d.href} kind="ghost" onClick={() => download(d.href)}>{d.label}</Button>)}
       </div>
+      {/* Dodatek D-13 (B4-27): obecność i udział członków w tym samym okresie jako osobny wydruk, tylko krąg z pytania 11. */}
+      {session.can.rosterStats && <p><a class="oi-link" href={routeHref('#statystyki', {od: range.from, do: range.to})}>Obecność i udział członków w tym okresie (osobny wydruk)</a></p>}
       {html === null ? <p class="muted">Wczytywanie zestawienia…</p> : <section class="oi-card report-view minutes-view" aria-label="Zestawienie" dangerouslySetInnerHTML={{__html: html}}/>}
     </>}
   </div>;

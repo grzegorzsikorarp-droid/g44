@@ -6,7 +6,8 @@ import {canChairPerson, canDesignateDeputy, canKeepAttendance, chairRank, deputy
 import {docTypeById} from '../shared/doctypes.ts';
 import {lawOf} from '../shared/law.ts';
 import {VOTE_MINUTES} from '../shared/settings.ts';
-import {minutesText} from '../shared/text.ts';
+import {minutesText, timeOf} from '../shared/text.ts';
+import {PapersCard} from './papers.tsx';
 import type {Effective} from '../shared/cascade.ts';
 import type {Actor, AgendaChange, AgendaItem, BallotPurpose, DocType, Meeting, Message, Motion, Presence, Roster, VoteMode} from '../shared/types.ts';
 import {request, serverNow} from './api.ts';
@@ -189,6 +190,8 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
   const [selected, setSelected] = useState<string | null>(m.currentItemId ?? m.agenda[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>('punkt');
   const [messagesOpen, setMessagesOpen] = useState(false);
+  // Dodatek D-18: zwinięta sekcja „Dokumenty (stan na godz. {g})”; karta powstaje z widoku dopiero po rozwinięciu, bez zapytań (T-2).
+  const [docsOpen, setDocsOpen] = useState(false);
   const [focusTitle, setFocusTitle] = useState(0);
   const tabs = useRef<HTMLElement>(null);
   useEffect(() => { if (!m.agenda.some(i => i.id === selected)) setSelected(m.currentItemId); }, [m.agenda.length]);
@@ -298,6 +301,7 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       <Fold title="Wiadomości" count={m.messages.length || undefined} id={MESSAGES} open={messagesOpen}
         onToggle={on => { setMessagesOpen(on); if (on) window.setTimeout(scrollMessages, 0); }}><Messages bare/></Fold>
       <Log/>
+      <div class="chair-papers"><Fold title={`Dokumenty (stan na godz. ${timeOf(Date.now())})`} open={docsOpen} onToggle={setDocsOpen}>{docsOpen && <PapersCard meeting={m as unknown as MeetingData} compact/>}</Fold></div>
     </aside>
   </div>;
 }

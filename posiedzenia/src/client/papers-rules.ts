@@ -185,3 +185,16 @@ export function mdBlocks(md: string): MdBlock[] {
   flush();
   return out;
 }
+
+/**
+ * Przyciski pobierania na stronie zestawienia (6.9): CSV posiedzeń i aktów oraz, z dodatkiem D-17, Word i Markdown
+ * z tą samą treścią co wydruk. `base` to adres zestawienia z okresem (`/api/zestawienie?od=…&do=…`).
+ */
+export function reportDownloads(base: string): {label: string; href: string}[] {
+  return [
+    {label: 'Pobierz posiedzenia w formacie CSV', href: `${base}&format=csv&czesc=posiedzenia`},
+    {label: 'Pobierz akty w formacie CSV', href: `${base}&format=csv&czesc=akty`},
+    {label: 'Pobierz w formacie Word', href: `${base}&format=docx`},
+    {label: 'Pobierz w formacie Markdown', href: `${base}&format=md`},
+  ];
+}

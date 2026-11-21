@@ -206,3 +206,7 @@
 .chairing-who > .facts, .chairing-who > * { min-width: 0; }
 /* Wersja 4 (6.6): lista „Do pokazania” w karcie punktu pod materiałami. */
 .item-work .show-row { display: flex; flex-direction: column; gap: var(--odstep-2); }
+
+/* Dodatek D-18: karta dokumentów w zwiniętej sekcji panelu; nagłówek sekcji już podaje „Dokumenty (stan na godz. …)”. */
+.chair-papers .papers-card--compact { border: 0; padding: 0; box-shadow: none; }
+.chair-papers .papers-card--compact > .oi-card__title { display: none; }

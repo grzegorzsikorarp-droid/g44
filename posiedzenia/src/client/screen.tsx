@@ -12,6 +12,7 @@ import {Plate} from './plate.tsx';
 import {brand} from './brand.ts';
 import {breakSince, meetingState, modeName} from './stany.ts';
 import {ShowStage} from './show.tsx';
+import {Avatar} from './avatar.tsx';
 import {showVisible} from '../shared/show.ts';
 import type {MeetingData} from './api.ts';
 
@@ -135,7 +136,7 @@ export function RoomScreen({id}: {id: string}) {
     </header>
     <section class={'screen-body' + (showing && m.status === 'trwa' ? ' screen-body--pokaz' : '')}>{body}</section>
     <footer class="screen-foot">
-      <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[m.chair.current] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact>}</dl>
+      <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{s.avatars?.[m.chair.current]?.screen && <Avatar personKey={m.chair.current} name={chairingText(s.roster, m)} size={64} class="screen-chair-photo"/>}{chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[m.chair.current] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact>}</dl>
       {m.working && <p class="screen-foot-note">Bez kworum Prezydium nie podejmuje uchwał.</p>}
       {m.working && !editing && latest && m.status !== 'zakonczone' && <p class="screen-foot-note">Projekt porządku obrad zmieniono o {fmtTime(latest.at)}.</p>}
     </footer>

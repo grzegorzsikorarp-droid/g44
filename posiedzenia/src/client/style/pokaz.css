@@ -57,3 +57,11 @@
 .show-nopdf { max-width: 40ch; }
 /* W-W4-18: w karcie pokazu u uczestnika tytuł materiału stoi raz (nad czytnikiem), czytnik pokazuje tylko wersję. */
 .member-show .reader-head h2 { display: none; }
+
+/* Dodatek D-4 (B3-23): wideo na sali bez kontrolek z przyciskiem „Włącz dźwięk pokazu” w rogu; na telefonie własny odtwarzacz. */
+.show-video { position: relative; align-self: stretch; flex: 1; min-height: 50vh; }
+.show-video__player { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--tekst-mocny); }
+.show-video__sound { position: absolute; right: var(--odstep-3); bottom: var(--odstep-3); max-width: 24rem; display: flex; flex-direction: column; gap: var(--odstep-2);
+  background: var(--powierzchnia); border: var(--kreska) solid var(--linia); padding: var(--odstep-3); }
+.show-video__sound p { margin: 0; }
+.show-video__own { width: 100%; max-height: 60vh; background: var(--tekst-mocny); }

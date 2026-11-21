@@ -2,7 +2,12 @@ import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import type {AgendaItem} from '../shared/types.ts';
 import {useMeeting} from './context.ts';
-import {announce, Button, Confirm, Field, StateChip} from './ui.tsx';
+import {announce, Button, Confirm, ErrorNotice, Field, Fold, StateChip, useAction} from './ui.tsx';
+import {request, type MeetingData} from './api.ts';
+import {useSession} from './session.ts';
+import {carriedText, waitingLiveAllowed, type Proposal} from '../shared/workspace.ts';
+import {dateDotsOf} from '../shared/text.ts';
+import type {Meeting} from '../shared/types.ts';
 import {agendaChip} from './stany.ts';
 import {ItemEditForm} from './item-form.tsx';
 import {PeopleFacts} from './people.tsx';
@@ -211,6 +216,7 @@ export function DraftAgenda(props: {live?: {main: 'primary' | 'secondary'}}) {
       {drag?.slot && !drag.slot.same && <span class="drop-line" style={{top: `${drag.slot.y}px`}} aria-hidden="true"/>}
     </div>
     <AddForm label="Nowy punkt" hint="Punkt stanie przed „Zamknięciem posiedzenia”." button="Dodaj punkt" focus={false} onAdd={async title => !!(await send({type: 'item_add', title, parentId: null}))}/>
+    <WaitingProposals/>
     {removed && <Confirm title="Usunąć punkt?" kind="danger" confirm="Usuń punkt" onClose={() => setRemoving(null)}
       onConfirm={() => send({type: 'item_remove', itemId: removed.id})}
       text={<p>{`Punkt ${itemNumber(m.agenda, removed.id)} „${removed.title}”${m.agenda.some(i => i.parentId === removed.id) ? ' zostanie usunięty z projektu razem z podpunktami.' : ' zostanie usunięty z projektu porządku obrad.'}`}</p>}/>}
@@ -230,4 +236,36 @@ function AddForm(props: {label: string; hint?: string; button: string; focus?: b
     <Field label={props.label} hint={props.hint}><input ref={input} name="title" maxLength={400} required/></Field>
     <Button small type="submit" busy={busy}>{props.button}</Button>
   </form>;
+}
+
+/**
+ * Dodatek D-5 (U-44, B2-W16, D2): na spotkaniu roboczym osoba prowadząca widzi zwiniętą część „Zgłoszenia czekające ({n})”
+ * ze zgłoszeniami odłożonymi, także przeniesionymi przy otwarciu. Lista ładuje się dopiero po rozwinięciu (S-25), a cichy
+ * „Dodaj do projektu” zmienia projekt na żywo (`item_add`, wpis `projekt` widoczny w notatce według F8).
+ */
+function WaitingProposals() {
+  const {m, replace} = useMeeting();
+  const s = useSession();
+  const {busy, error, errorKind, run} = useAction();
+  const [list, setList] = useState<Proposal[] | null>(null);
+  if (!waitingLiveAllowed(m as unknown as Meeting, {account: s.account, personId: s.personId, name: s.name})) return null;
+  const path = `/api/meetings/${encodeURIComponent(m.id)}/czekajace`;
+  const load = () => run(async () => setList((await request<{proposals: Proposal[]}>(path)).proposals));
+  return <div class="draft-waiting">
+    <Fold title={list ? `Zgłoszenia czekające (${list.length})` : 'Zgłoszenia czekające'} onToggle={open => { if (open && !list) load(); }}>
+      {!list ? <p class="muted">Wczytywanie…</p> : !list.length ? <p class="muted">Nie ma zgłoszeń czekających na posiedzenie.</p>
+        : <ul class="proposal-list">{list.map(p => <li key={p.id} class="proposal">
+          <p><strong>{`„${p.title}”`}</strong></p>
+          <p class="small">{`${p.byName}, ${dateDotsOf(p.at)}. ${p.justification}`}</p>
+          {carriedText(p) && <p class="small muted">{carriedText(p)}</p>}
+          <div><Button small kind="ghost" quiet busy={busy} label={`Dodaj do projektu zgłoszenie „${p.title}”`} onClick={() => run(async () => {
+            const r = await request<{meeting: MeetingData; proposals: Proposal[]}>(path, {body: {proposalId: p.id}});
+            setList(r.proposals);
+            replace({meeting: r.meeting as never});
+            announce(`Dodano punkt „${p.title}” do projektu porządku obrad.`);
+          })}>Dodaj do projektu</Button></div>
+        </li>)}</ul>}
+      {error && <ErrorNotice kind={errorKind}>{error}</ErrorNotice>}
+    </Fold>
+  </div>;
 }

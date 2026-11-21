@@ -37,5 +37,6 @@
   /* Telefon: tabela mieści się w szerokości ekranu, a rozwinięcie wiersza zawija się w widocznej części obszaru. */
   .roster-table th[scope="row"] { min-width: 0; }
   .roster-table th[scope="col"], .stat-sort { white-space: normal; }
-  .roster-rows .stat-rows, .roster-rows .roster-narrow { max-width: calc(100vw - 5rem); }
+  /* Kontrola g: rozwinięcie mieści się w widocznej części obszaru także przy 320 px (odstęp strony, karty i komórki). */
+  .roster-rows .stat-rows, .roster-rows .roster-narrow { max-width: calc(100vw - 7rem); }
 }

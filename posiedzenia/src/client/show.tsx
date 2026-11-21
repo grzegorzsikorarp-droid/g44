@@ -1,5 +1,5 @@
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
-import {request, upload, useFileUrl, download, type MeetingData} from './api.ts';
+import {request, serverNow, upload, useFileUrl, download, type MeetingData} from './api.ts';
 import {MeetingCtx} from './context.ts';
 import {useSession} from './session.ts';
 import {brand} from './brand.ts';
@@ -12,7 +12,7 @@ import {canAddDisplay, canRemoveDisplay, canShow} from '../shared/role.ts';
 import {itemNumber, orderedAgenda} from '../shared/rules.ts';
 import {naturalOrder, refusalByName} from '../shared/files.ts';
 import {typo} from '../shared/typo.ts';
-import type {Actor, AgendaItem, DisplayRef, MaterialRef, Meeting} from '../shared/types.ts';
+import type {Actor, AgendaItem, DisplayRef, MaterialRef, Meeting, ShowState} from '../shared/types.ts';
 import './style/pokaz.css';
 
 // Pokaz plików (SPEC-4 6.6, B3-08–B3-25, B3 3.11). Pokaz rozpoczyna, przewija, wznawia i kończy tylko osoba prowadząca
@@ -121,9 +121,10 @@ export function PdfFrame(props: {meetingId: string; fileId: string; page: number
 }
 
 /** Obraz albo strona pokazu (wspólne dla sali, podglądu w panelu i uczestnika). Kolejny slajd pobiera się dopiero przy pokazie. */
-function ShownView(props: {meetingId: string; x: Shown; page: number; variant: 'sala' | 'uczestnik'; pages?: string[] | null}) {
+function ShownView(props: {meetingId: string; x: Shown; page: number; variant: 'sala' | 'uczestnik'; pages?: string[] | null; show?: ShowState}) {
   const {x, page} = props;
-  const file = x.kind === 'plik' && x.d.kind !== 'pdf' ? (x.d.kind === 'obrazy' ? x.d.files[page - 1] : x.d.files[0]) : null;
+  // Wideo (D-4) nie przechodzi przez pamięć `blob:`: sala odtwarza je z trasy pokazu z zakresami bajtów, telefon dopiero po kliknięciu.
+  const file = x.kind === 'plik' && x.d.kind !== 'pdf' && x.d.kind !== 'wideo' ? (x.d.kind === 'obrazy' ? x.d.files[page - 1] : x.d.files[0]) : null;
   const url = useFileUrl(file ? filePath(props.meetingId, file.fileId) : null);
   if (x.kind === 'plik' && x.d.kind === 'pdf') return <PdfFrame meetingId={props.meetingId} fileId={x.d.files[0].fileId} page={page} pages={x.d.pages} title={x.title} variant={props.variant}/>;
   if (x.kind === 'material-pdf') return <PdfFrame meetingId={props.meetingId} fileId={x.ref.fileId!} page={page} pages={null} title={x.title} variant={props.variant}/>;
@@ -136,10 +137,47 @@ function ShownView(props: {meetingId: string; x: Shown; page: number; variant: '
       {page > pages.length && <p class="show-text__end">koniec materiału</p>}
     </div>;
   }
-  if (x.kind === 'plik' && x.d.kind === 'wideo') return <p class="muted">Wideo pokazuje pełna aplikacja.</p>;
+  if (x.kind === 'plik' && x.d.kind === 'wideo') {
+    if (brand.demo) return <p class="muted">Wideo pokazuje pełna aplikacja.</p>;
+    return props.show && props.variant === 'sala' ? <VideoStage meetingId={props.meetingId} d={x.d} show={props.show}/>
+      : <video class="show-video__own" src={filePath(props.meetingId, x.d.files[0].fileId)} controls preload="none" aria-label={`${x.title}, wideo`}/>;
+  }
   if (!url) return null;
   const total = x.kind === 'plik' && x.d.kind === 'obrazy' ? x.d.files.length : 1;
   return <img class={`show-image show-image--${props.variant}`} src={url} alt={`${x.title}, slajd ${page} z ${total}`}/>;
+}
+
+const SOUND_KEY = 'posiedzenia:dzwiek-pokazu';
+const readSound = () => { try { return sessionStorage.getItem(SOUND_KEY) === '1'; } catch { return false; } };
+/**
+ * Dodatek D-4 (B3-23): wideo na ekranie sali bez kontrolek, sterowane stanem `show.playing` z korektą przy rozjeździe
+ * ponad 1 s (zegar serwera z `serverNow`). Bez kliknięcia w karcie przeglądarka odtwarza bez dźwięku, więc w rogu stoi
+ * „Włącz dźwięk pokazu”; wybór zostaje w pamięci karty. W trakcie głosowania sala nie pokazuje pokazu, więc film znika.
+ */
+function VideoStage(props: {meetingId: string; d: DisplayRef; show: ShowState}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [sound, setSound] = useState(readSound);
+  const playing = props.show.playing ?? null, pausedAt = props.show.pausedAt ?? 0;
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const sync = () => {
+      const want = playing ? playing.from + (serverNow() - playing.since) / 1000 : pausedAt;
+      if (Math.abs((v.currentTime || 0) - want) > 1) { try { v.currentTime = Math.max(0, want); } catch { /* jeszcze bez danych */ } }
+      if (playing && v.paused) v.play().catch(() => { /* przeglądarka czeka na kliknięcie */ });
+      if (!playing && !v.paused) v.pause();
+    };
+    sync();
+    const timer = window.setInterval(sync, 1000);
+    return () => window.clearInterval(timer);
+  }, [playing?.since, playing?.from, pausedAt]);
+  return <div class="show-video">
+    <video ref={ref} class="show-video__player" src={filePath(props.meetingId, props.d.files[0].fileId)} muted={!sound} playsInline preload="auto" aria-label={`${props.d.title}, wideo`}/>
+    {!sound && <div class="show-video__sound">
+      <p>Bez dźwięku. Na komputerze sali kliknij „Włącz dźwięk pokazu”.</p>
+      <Button onClick={() => { setSound(true); try { sessionStorage.setItem(SOUND_KEY, '1'); } catch { /* bez zapisu */ } }}>Włącz dźwięk pokazu</Button>
+    </div>}
+  </div>;
 }
 
 /** Komunikat dla czytnika ekranu tylko przy rozpoczęciu, wstrzymaniu i zakończeniu pokazu (6.0, B3-18). */
@@ -170,6 +208,21 @@ export function ShowCard(props: {meeting: MeetingData; onChange: (m: MeetingData
   useShowAnnouncements(m);
   const x = shownOf(m);
   const materialPages = useMaterialPages(m.id, x && x.kind === 'material-tekst' && !blockingBallot(m) ? x.ref : null, m.show?.version);
+  // Dodatek D-1 (B3-20): pilot do prezentacji wysyła PageDown i PageUp; poza polem tekstowym i oknem zmieniają stronę
+  // tylko u osoby prowadzącej, poza głosowaniem (strzałki przewijają stronę, więc ich nie używamy).
+  const pilot = useRef<((dir: 1 | -1) => void) | null>(null);
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if ((e.key !== 'PageDown' && e.key !== 'PageUp') || e.altKey || e.ctrlKey || e.metaKey || !pilot.current) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], dialog') || document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')) return;
+      e.preventDefault();
+      pilot.current(e.key === 'PageDown' ? 1 : -1);
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, []);
+  pilot.current = null;
   if (!m.show || !x) return null;
   const actor = actorOf(s);
   const presiding = canShow(m as unknown as Meeting, actor);
@@ -183,6 +236,9 @@ export function ShowCard(props: {meeting: MeetingData; onChange: (m: MeetingData
   const lastPage = pages ?? 999;
   const jump = Number(target);
   const jumpOk = Number.isInteger(jump) && jump >= 1 && jump <= lastPage;
+  const video = x.kind === 'plik' && x.d.kind === 'wideo';
+  const paged = !video && lastPage > 1;
+  if (presiding && !ballot && !paused && paged) pilot.current = dir => { const next = page + dir; if (!busy && next >= 1 && next <= lastPage) go({type: 'show_page', page: next}); };
   return <section class="oi-card stack show-card" aria-labelledby="pokaz-tytul">
     <CardTitle level={2}><span id="pokaz-tytul">{remote ? 'Pokaz' : 'Pokaz na sali i telefonach'}</span></CardTitle>
     <div class="stack-tight">
@@ -193,6 +249,12 @@ export function ShowCard(props: {meeting: MeetingData; onChange: (m: MeetingData
       : !presiding ? <p class="muted small">Pokazuje osoba prowadząca obrady.</p>
       : paused ? <div class="actions show-actions">
         <Button busy={busy} onClick={() => go({type: 'present', kind: 'pokaz', id: m.show!.id})}>{`Wróć do pokazu (${nounOf(x)} ${page})`}</Button>
+        <Button kind="ghost" quiet busy={busy} onClick={() => go({type: 'show_end'})}>Zakończ pokaz</Button>
+      </div>
+      : video ? <div class="actions show-actions">
+        {/* Dodatek D-4 (B3-23): zamiast stron „Odtwórz” albo „Zatrzymaj” i „Od początku”. */}
+        <Button kind="danger" busy={busy} onClick={() => go({type: 'show_play', on: !m.show!.playing})}>{m.show.playing ? 'Zatrzymaj' : 'Odtwórz'}</Button>
+        <Button kind="ghost" quiet busy={busy} onClick={() => go({type: 'show_play', on: !!m.show!.playing, at: 0})}>Od początku</Button>
         <Button kind="ghost" quiet busy={busy} onClick={() => go({type: 'show_end'})}>Zakończ pokaz</Button>
       </div>
       : <>
@@ -209,6 +271,7 @@ export function ShowCard(props: {meeting: MeetingData; onChange: (m: MeetingData
           <Field label={slide ? 'Numer slajdu' : 'Numer strony'}><input type="number" inputMode="numeric" min={1} max={lastPage < 999 ? lastPage : undefined} value={target} onInput={e => setTarget((e.target as HTMLInputElement).value)}/></Field>
           <Button type="submit" disabled={!jumpOk} reason={jumpOk ? undefined : typo(pages ? `Wpisz liczbę od 1 do ${pages}.` : 'Wpisz numer strony.')} busy={busy}>Pokaż stronę</Button>
         </form>}
+        {paged && <p class="small muted">Pilot do prezentacji zmienia strony, gdy ta karta jest otwarta.</p>}
         {wide && (pdfMode === 'ramka' || !((x.kind === 'plik' && x.d.kind === 'pdf') || x.kind === 'material-pdf')) && <div class="show-preview">
           <ShownView meetingId={m.id} x={x} page={page} variant="sala" pages={materialPages}/>
         </div>}
@@ -345,7 +408,7 @@ export function AddDisplay(props: {meeting: Pick<MeetingData, 'id'>; itemId: str
       form.append('description', description);
       props.onDone((await upload<{meeting: MeetingData}>(`/api/meetings/${enc(props.meeting.id)}/pokaz`, form)).meeting);
     }); }}>
-      <Field label="Plik" hint={typo('PDF, obrazy JPG, PNG albo WebP do 10 MB. Prezentację najlepiej dodać jako obrazy slajdów, bo wtedy wygląda tak samo na sali i na telefonach. PDF wyświetli się na sali i na komputerach, a na telefonach jako plik do otwarcia.')}>
+      <Field label="Plik" hint={typo('PDF, obrazy JPG, PNG albo WebP do 10 MB.' + (brand.demo ? '' : ' Film MP4 do 25 MB.') + ' Prezentację najlepiej dodać jako obrazy slajdów, bo wtedy wygląda tak samo na sali i na telefonach. PDF wyświetli się na sali i na komputerach, a na telefonach jako plik do otwarcia.')}>
         <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.mp4" multiple onChange={e => {
           const picked = [...((e.target as HTMLInputElement).files ?? [])];
           // Wersja próbna (7.3): wideo pokazuje pełna aplikacja; w rdzeniu MP4 ma odmowę z files.ts (wideo to dodatek D-4).
@@ -399,8 +462,8 @@ export function ShowStage(props: {meeting: MeetingData}) {
   const total = x.pages ?? (x.kind === 'material-tekst' && pages ? pages.length : null);
   const page = x.kind === 'material-tekst' && total ? Math.min(m.show.page, total) : m.show.page;
   return <div class={`show-stage show-stage--${x.kind === 'plik' ? x.d.kind : x.kind}`}>
-    <div class="show-stage__body"><ShownView meetingId={m.id} x={x} page={m.show.page} variant="sala" pages={pages}/></div>
-    <p class="show-stage__label">{typo(`Pokaz „${x.title}”, ${pageText(x, page, total)}`)}</p>
+    <div class="show-stage__body"><ShownView meetingId={m.id} x={x} page={m.show.page} variant="sala" pages={pages} show={m.show}/></div>
+    <p class="show-stage__label">{typo(`Pokaz „${x.title}”, ${x.kind === 'plik' && x.d.kind === 'wideo' ? 'wideo' : pageText(x, page, total)}`)}</p>
   </div>;
 }
 
@@ -447,7 +510,7 @@ export function MemberShow(props: {meeting: MeetingData}) {
     {x.kind === 'material-tekst'
       ? <MaterialReader id={x.ref.id} version={m.show.version ?? x.ref.version} inline shownPage={roomPage}/>
       : <>
-        {framed && <p class="small">{typo(mine !== null ? `Przeglądasz samodzielnie. Na sali ${nounOf(x)} ${roomPage} z ${pages}.` : x.kind === 'plik' && (x.d.kind === 'obraz' || x.d.kind === 'wideo') ? kindLine(x, page) : `${slide ? 'Slajd' : 'Strona'} ${page}${x.pages ? ` z ${x.pages}` : ''}`)}</p>}
+        {framed && <p class="small">{typo(x.kind === 'plik' && x.d.kind === 'wideo' && m.show.playing ? `Na sali odtwarzane jest wideo „${x.title}”.` : mine !== null ? `Przeglądasz samodzielnie. Na sali ${nounOf(x)} ${roomPage} z ${pages}.` : x.kind === 'plik' && (x.d.kind === 'obraz' || x.d.kind === 'wideo') ? kindLine(x, page) : `${slide ? 'Slajd' : 'Strona'} ${page}${x.pages ? ` z ${x.pages}` : ''}`)}</p>}
         <div class="member-show__view"><ShownView meetingId={m.id} x={x} page={page} variant="uczestnik"/></div>
         {pagedFile && (mine === null
           ? <div><Button kind="ghost" onClick={() => setOwn({key: runKey, page: roomPage})}>Przeglądaj samodzielnie</Button></div>
