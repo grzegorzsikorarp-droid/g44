@@ -1,0 +1,53 @@
+/* Dokumenty posiedzenia, odbyte posiedzenia i zestawienie (SPEC-4 6.8, 6.9). Tylko tokeny, zero zaokrągleń, bez kółek,
+   strzałek i kropek list; stan zawsze słowem (znaczniki z stany.ts), nigdy samym kolorem. */
+
+/* Karta „Dokumenty posiedzenia”: części z etykietą wersalikami, wiersze dokumentów z przyciskami formatów. */
+.papers-part { padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.papers-part__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-1) var(--odstep-3); }
+.papers-part p { margin: 0; }
+.papers-check { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--odstep-1) var(--odstep-3); }
+.papers-check p { margin: 0; }
+.paper-list, .filed-list, .comms-items, .complete-list, .catalog-list { list-style: none; margin: 0; padding: 0; }
+.paper-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--odstep-1) var(--odstep-4); padding: var(--odstep-2) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.paper-row:first-child { border-top: 0; }
+.paper-name { font-weight: 600; color: var(--tekst-mocny); overflow-wrap: anywhere; min-width: 0; }
+.paper-formats { display: flex; flex-wrap: wrap; gap: 0 var(--odstep-4); }
+.filed-list li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--odstep-1) var(--odstep-3); padding: var(--odstep-1) 0; overflow-wrap: anywhere; }
+.comms-preview { width: 100%; min-height: 16rem; font-family: var(--font-sans); font-size: var(--t-maly); line-height: 1.45; white-space: pre-wrap; }
+.comms-items { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.comms-item { display: flex; flex-direction: column; gap: var(--odstep-2); padding-top: var(--odstep-3); border-top: var(--kreska) solid var(--linia-jasna); }
+.comms-item:first-child { border-top: 0; padding-top: 0; }
+.comms-item__title { margin: 0; overflow-wrap: anywhere; }
+
+/* Odbyte posiedzenia: blok daty z lewej, treść z prawej; przy 560 px blok daty nad treścią. */
+.catalog-filters .field-row, .report-page .field-row { display: flex; flex-wrap: wrap; gap: var(--odstep-3) var(--odstep-5); }
+.catalog-filters .field-row > * { flex: 1 1 12rem; min-width: 0; }
+.catalog-list { display: flex; flex-direction: column; gap: var(--odstep-4); }
+.catalog-list > li.catalog-row { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: var(--odstep-4); align-items: start; }
+.catalog-date { display: flex; flex-direction: column; align-items: center; padding: var(--odstep-2); border-left: var(--pasek-akcentu) solid var(--linia-aktywna); background: var(--powierzchnia-miekka); color: var(--tekst-mocny); font-variant-numeric: tabular-nums; }
+.catalog-date b { font-size: var(--t-liczba); font-weight: 700; font-style: italic; line-height: 1.1; }
+.catalog-date span { font-size: var(--t-meta); font-weight: 600; }
+.catalog-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--odstep-1) var(--odstep-3); }
+.catalog-title { margin: 0; font-size: var(--t-karta); font-weight: 600; color: var(--tekst-mocny); overflow-wrap: anywhere; }
+.catalog-main p { margin: 0; }
+.catalog-kind { color: var(--tekst-drugorzedny); }
+.catalog-facts { gap: var(--odstep-2) var(--odstep-6); }
+.complete-list li { display: flex; justify-content: space-between; gap: var(--odstep-3); padding: var(--odstep-1) 0; border-top: var(--kreska) solid var(--linia-jasna); }
+.complete-list li:first-child { border-top: 0; }
+@media (max-width: 560px) {
+  .catalog-list > li.catalog-row { grid-template-columns: minmax(0, 1fr); }
+  .catalog-date { flex-direction: row; align-items: baseline; justify-content: flex-start; gap: var(--odstep-2); }
+}
+
+/* Zestawienie za okres na ekranie: treść strony do druku w karcie, tabela przewija się w swoim obszarze. */
+.report-view { overflow-wrap: anywhere; }
+/* Tytuł z okresem „01.01.2026–31.12.2026” mieści się w wierszu przy 320 px (przedział się nie łamie). */
+.report-view h1, .report-view .minutes-view h1 { font-size: clamp(1.2rem, 0.85rem + 2vw, 2rem); overflow-wrap: normal; }
+.report-view { min-width: 0; }
+.report-view > *, .report-view .table-wrap { min-width: 0; max-width: 100%; }
+.report-view .table-wrap { overflow-x: auto; }
+.report-view table { border-collapse: collapse; width: 100%; }
+/* Na telefonie tabela zachowuje czytelne kolumny i przewija się w poziomie w swoim obszarze. */
+.report-view .table-wrap > table { min-width: 48rem; }
+.report-view th, .report-view td { text-align: left; padding: var(--odstep-1) var(--odstep-2); border-bottom: var(--kreska) solid var(--linia-jasna); vertical-align: top; }
+.report-view .paper-list li { padding: var(--odstep-1) 0; }

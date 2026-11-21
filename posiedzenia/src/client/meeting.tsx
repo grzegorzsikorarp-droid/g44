@@ -27,6 +27,11 @@ import {brand} from './brand.ts';
 import {typo} from '../shared/typo.ts';
 import {useDocTypes} from './doctypes.ts';
 import {PeopleFacts} from './people.tsx';
+import {MemberShow} from './show.tsx';
+import {PapersCard} from './papers.tsx';
+import {PrepArchive, PrepCard} from './workspace.tsx';
+import type {MeetingData} from './api.ts';
+import {canSeeWorkspace} from '../shared/role.ts';
 
 const APP = 'Posiedzenia Prezydium';
 const day = (ts: number) => new Intl.DateTimeFormat('pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Warsaw'}).format(ts);
@@ -859,6 +864,8 @@ function MemberView(props: {online: boolean}) {
       : result ? <ResultCard b={result} big/> : null}
     <RejectedVote ballots={m.ballots}/>
     {current && <CurrentItem it={current} accent={!open && !chairTake.deputyCard}/>}
+    {/* Wersja 4 (6.6, T-3): karta „Pokaz na sali” tylko przy showVisible(view), czyli przy stanie wspólnym posiedzenia. */}
+    <MemberShow meeting={m as unknown as MeetingData}/>
     {presented && !open && <section class="oi-card"><span class="oi-label">Materiał pokazywany na sali</span><MaterialReader id={presented.id} version={presented.version} inline/></section>}
     <Motions/>
     {/* Kanał wiadomości według effective.meeting.messages: zawsze (zdalne), od początku (U-12) albo gdy ktoś napisze. */}
@@ -874,6 +881,8 @@ function MemberView(props: {online: boolean}) {
     {chairman && <DeputyFact change/>}
     {/* O-09 (dodatek): zasady tego posiedzenia i różnice od ustawień ogólnych, zwinięte. */}
     {m.effective && <MeetingRules variant="uczestnik"/>}
+    {/* Wersja 4 (6.5, S-25): w trakcie obrad przestrzeni roboczej nie widać, w jej miejscu jedno zdanie (bez zapytań). */}
+    {canSeeWorkspace(s.roster, m as unknown as Meeting, actorOf(s)) && <PrepCard meeting={m as unknown as MeetingData}/>}
     {/* O-07, DA-10: jawny przebieg obrad u członka, zwinięty, przed szczegółami posiedzenia. */}
     {member && <Fold title="Przebieg obrad"><LogList/></Fold>}
     {chairTake.dialogs}
@@ -984,7 +993,7 @@ export function Motions() {
 
 // Podsumowanie zamkniętego posiedzenia: informacja o zamknięciu z projektem protokołu, porządek i tabela wyników.
 function Summary() {
-  const {m} = useMeeting();
+  const {m, replace} = useMeeting();
   const s = useSession();
   const members = organRoster(s.roster, m);
   const quorum = quorumNow(m, s.roster);
@@ -1008,6 +1017,9 @@ function Summary() {
         <Fact label="Zawiadomienie">{days === null ? 'nie wpisano daty' : `${days} ${plural(days, 'dzień', 'dni', 'dni')} przed posiedzeniem`}</Fact>
       </dl>
     </div>
+    {/* Wersja 4 (6.8, DB-7): karta „Dokumenty posiedzenia” i pod nią przygotowanie tylko do odczytu (6.5, S-25). */}
+    <PapersCard meeting={m as unknown as MeetingData} onChange={next => replace({meeting: next as unknown as ViewMeeting})}/>
+    <PrepArchive meeting={m as unknown as MeetingData}/>
     <section class="oi-card"><CardTitle level={2}>Porządek obrad</CardTitle><AgendaList compact/></section>
     {/* Spotkanie robocze bez głosowań (F5): zdanie zamiast pustej sekcji wyników z licznikiem. */}
     {m.working && !final.length ? <p class="muted">Na spotkaniu roboczym nie przeprowadza się głosowań.</p> : <section>

@@ -11,6 +11,9 @@ import {chairingText, draftChanges, draftLive, lastDraftChange, proposerSentence
 import {Plate} from './plate.tsx';
 import {brand} from './brand.ts';
 import {breakSince, meetingState, modeName} from './stany.ts';
+import {ShowStage} from './show.tsx';
+import {showVisible} from '../shared/show.ts';
+import type {MeetingData} from './api.ts';
 
 /**
  * Jeden wzór wszystkich stanów ekranu sali: skośna etykieta nad tytułem, oba wyśrodkowane, a pod tytułem szczegóły.
@@ -64,6 +67,7 @@ function basisLine(roster: Roster, m: ViewMeeting, b: ViewBallot) {
 
 // Ekran sali, czyli projektor: duże, czytelne informacje bez elementów sterowania.
 // Kolejność stanów jest ta sama co w podglądzie „Ekran sali pokazuje” w panelu prowadzenia obrad (chair.tsx).
+// Wersja 4 (B3-08): pokaz plików na piątym miejscu, po wyniku i zakończonym głosowaniu, przed projektem porządku.
 // Wynik głosowania w sprawie ekran pokazuje dopiero po ogłoszeniu (F2), a wynik głosowania próbnego od razu (F1).
 export function RoomScreen({id}: {id: string}) {
   const s = useSession();
@@ -84,6 +88,8 @@ export function RoomScreen({id}: {id: string}) {
   const ended = shown?.kind === 'glosowanie' ? m.ballots.find(b => b.id === shown.id && b.status === 'zamkniete' && (b.purpose === 'proba' || !b.announcedAt)) : null;
   const current = m.agenda.find(i => i.id === (shown?.kind === 'punkt' ? shown.id : m.currentItemId));
   const material = shown?.kind === 'material' ? m.materials.find(x => x.id === shown.id) : null;
+  // Pokaz tylko przy stanie wspólnym (T-3): `presentation.kind === 'pokaz'` i brak otwartego głosowania.
+  const showing = !open && !result && !ended && showVisible(m as unknown as MeetingData);
   const pending = (b: ViewBallot) => <State label={`Głosowanie ${modeName(b.mode)} nr ${b.number}`} title={b.subject} lead>
     <p class="screen-sub">{resultPendingText}</p>
   </State>;
@@ -109,6 +115,7 @@ export function RoomScreen({id}: {id: string}) {
     </State>;
   } else if (result) body = visible(result) ? <ResultCard b={result} big kind={materialTypeOf(m, result)} proposer={proposerSentence(s.roster, m, result)} basisLine={basisLine(s.roster, m, result)}/> : pending(result);
   else if (ended) body = ended.purpose === 'proba' ? <ResultCard b={ended} big basisLine={null}/> : pending(ended);
+  else if (showing) body = <ShowStage meeting={m as unknown as MeetingData}/>;
   else if (material) body = <State label="Materiał" title={material.title} lead><p class="screen-sub">Pełna treść jest dostępna na telefonach uczestników.</p></State>;
   else if (editing || (current && current.kind === 'porzadek' && current.id === m.currentItemId && draftLive(m))) {
     // Na spotkaniu roboczym zawsze „Projekt porządku obrad”, nigdy „Porządek obrad” (§ 8 ust. 2).
@@ -126,7 +133,7 @@ export function RoomScreen({id}: {id: string}) {
         {m.working && <span class="screen-working"><Chip>Spotkanie robocze</Chip></span>}</div>
       <span class="screen-clock">{fmtTime(now)}</span>
     </header>
-    <section class="screen-body">{body}</section>
+    <section class={'screen-body' + (showing && m.status === 'trwa' ? ' screen-body--pokaz' : '')}>{body}</section>
     <footer class="screen-foot">
       <dl class="facts"><Fact label="Obecnych">{present} z {quorum.total}</Fact><Fact label="Wymagane kworum">{quorum.required}</Fact>{m.chair.current && <Fact label="Prowadzi">{chairingText(s.roster, m)}{m.status !== 'zakonczone' && m.attendance[m.chair.current] !== 'obecny' ? ', poza posiedzeniem' : ''}</Fact>}</dl>
       {m.working && <p class="screen-foot-note">Bez kworum Prezydium nie podejmuje uchwał.</p>}

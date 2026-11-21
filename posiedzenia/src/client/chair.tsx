@@ -2,7 +2,7 @@ import {Fragment, type ComponentChildren} from 'preact';
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {announceFirst, awaitingVote, choiceLabel, docTypeFor, itemNumber, itemVoted, materialTypeOf, needsVote, orderedAgenda, pendingBefore, pendingPresence, presentMembers, quorumStated, resolutionSubject, resultLabel, unannounced, unhandledItems} from '../shared/rules.ts';
 import {organOf} from '../shared/roster.ts';
-import {canChairPerson, canDesignateDeputy, canKeepAttendance, chairRank, isChairmanOf, isOfficeAccount, organRoster} from '../shared/role.ts';
+import {canChairPerson, canDesignateDeputy, canKeepAttendance, chairRank, deputyOf, isChairmanOf, isOfficeAccount, organRoster} from '../shared/role.ts';
 import {docTypeById} from '../shared/doctypes.ts';
 import {lawOf} from '../shared/law.ts';
 import {VOTE_MINUTES} from '../shared/settings.ts';
@@ -22,6 +22,11 @@ import {Messages} from './messages.tsx';
 import {useDocTypes} from './doctypes.ts';
 import {DocTypeSelect, PeopleFacts, usePeople} from './people.tsx';
 import {DraftAgenda} from './draft.tsx';
+import {DisplayList, ShowCard} from './show.tsx';
+import {Avatar} from './avatar.tsx';
+import type {MeetingData} from './api.ts';
+import {canShowNow, shownDisplay} from '../shared/show.ts';
+import {canShow} from '../shared/role.ts';
 
 // Panel prowadzenia obrad. Środkowa kolumna to praca: „Czeka na Twoją decyzję”, trwające głosowanie i karta punktu.
 // Na ekranie jest jedna karta z czerwonym paskiem (is-teraz) według pierwszeństwa: decyzja, głosowanie, bieżący punkt,
@@ -96,7 +101,7 @@ function nextItem(m: ViewMeeting, it: AgendaItem) {
   return order.slice(order.indexOf(it) + 1).find(i => i.status === 'oczekuje' && (m.agendaAdopted || m.working || beforeAdoption(m, i)) && !(i.kind === 'uchwaly' && order.some(c => c.parentId === i.id)));
 }
 /** Co pokazuje ekran sali (ta sama kolejność co w screen.tsx) i czy można wrócić do bieżącego punktu. */
-function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: string; material?: string} {
+function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: string; material?: string; pokaz?: string} {
   const shown = m.presentation;
   const current = m.agenda.find(i => i.id === m.currentItemId);
   if (m.status === 'przerwa') return {text: 'przerwę w obradach', other: false};
@@ -107,6 +112,15 @@ function screenShows(m: ViewMeeting): {text: string; other: boolean; item?: stri
   if (result) return {text: result.purpose === 'proba' ? 'wynik głosowania próbnego' : result.announcedAt ? `wynik głosowania nr ${result.number}, także na telefonach` : `zakończenie głosowania nr ${result.number}, bez wyniku do czasu ogłoszenia`, other: true};
   const ended = shown?.kind === 'glosowanie' ? m.ballots.find(b => b.id === shown.id && b.status === 'zamkniete' && (b.purpose === 'proba' || !b.announcedAt)) : undefined;
   if (ended) return {text: ended.purpose === 'proba' ? 'wynik głosowania próbnego' : `zakończenie głosowania nr ${ended.number}, bez wyniku do czasu ogłoszenia`, other: true};
+  // Wersja 4 (B3-08, B3-19): pokaz plików na piątym miejscu kolejności, także na telefonach.
+  if (shown?.kind === 'pokaz' && m.show) {
+    const d = shownDisplay(m), mat = m.show.source === 'material' ? m.materials.find(x => x.id === m.show!.id) : undefined;
+    const noun = d?.kind === 'obrazy' ? 'slajd' : 'stronę', nounNom = d?.kind === 'obrazy' ? 'slajd' : 'strona';
+    const total = d ? (d.kind === 'obrazy' ? d.files.length : d.pages) : null;
+    const what = d ? `plik „${d.title}”` : `materiał „${mat?.title ?? ''}”`;
+    const pages = d && (d.kind === 'obraz' || d.kind === 'wideo') ? '' : ` ${m.show.page}${total ? ` z ${total}` : ''}`;
+    return {text: `${what}${pages ? `, ${noun}${pages}` : ''}, także na telefonach`, other: false, pokaz: `${what.replace(/^./, c => c.toLocaleUpperCase('pl'))}${pages ? `, ${nounNom}${pages}` : ''}, także na telefonach`};
+  }
   const material = shown?.kind === 'material' ? m.materials.find(x => x.id === shown.id) : undefined;
   if (material) return {text: `materiał „${material.title}”, także na telefonach`, other: true, material: material.id};
   const point = shown?.kind === 'punkt' ? m.agenda.find(i => i.id === shown.id) : undefined;
@@ -170,7 +184,7 @@ const tabHint = (tab: Tab, n: number) => tab === 'porzadek' ? `, ${n} ${plural(n
   : `, ${n} ${plural(n, 'nowa wiadomość', 'nowe wiadomości', 'nowych wiadomości')}`;
 
 export function ChairPanel({readOnly}: {readOnly: boolean}) {
-  const {m} = useMeeting();
+  const {m, replace} = useMeeting();
   const s = useSession();
   const [selected, setSelected] = useState<string | null>(m.currentItemId ?? m.agenda[0]?.id ?? null);
   const [tab, setTab] = useState<Tab>('punkt');
@@ -266,6 +280,8 @@ export function ChairPanel({readOnly}: {readOnly: boolean}) {
       {m.status === 'przerwa' && <Notice tone="warn">Trwa przerwa w obradach. Głosowania są wstrzymane.</Notice>}
       {decisions.length > 0 && <DecisionCard rows={decisions} teraz={focus === 'decyzja'} onMessages={showMessages} readOnly={readOnly}/>}
       {open && <LiveBallot b={open} readOnly={readOnly} teraz={focus === 'glosowanie'}/>}
+      {/* Wersja 4 (6.6, B3-18): karta „Pokaz na sali i telefonach” pod decyzjami i trwającym głosowaniem, bez is-teraz. */}
+      <ShowCard meeting={m as unknown as MeetingData} onChange={next => replace({meeting: next as unknown as ViewMeeting})}/>
       {/* F8, D2: przy przyjmowaniu porządku i w trybie zmian na spotkaniu roboczym prowadzący układa projekt kafelkami,
           a członkowie i ekran sali widzą zmiany na żywo. Przy przyjmowaniu porządku kafelki stoją przed kartą punktu
           z kartą głosowania, a w trybie zmian zastępują kartę punktu (O-04). */}
@@ -523,7 +539,7 @@ function StartStep(props: {step: Step; flow: Flow; onConfirm: (value: string) =>
 
 // Karta punktu: nagłówek, jedno działanie główne zależne od stanu, działania poboczne, wyniki i notatka.
 function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: boolean; main: Main; teraz: boolean}) {
-  const {m, send, busy} = useMeeting();
+  const {m, send, busy, replace} = useMeeting();
   const s = useSession();
   const types = useDocTypes();
   const id = useId();
@@ -554,6 +570,9 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
   const quorum = quorumNow(m, s.roster), members = quorum.total, present = presentMembers(m as Meeting, s.roster).length;
   const itemEff = m.effective?.items[it.id]?.voteMinutes;
   const ownMinutes = itemEff && (itemEff.source === 'punkt' || itemEff.source === 'obrady') && itemEff.value !== m.effective!.meeting.voteMinutes.value ? itemEff.value : null;
+  // Pokaz (DB-11): tylko osoba prowadząca obrady i tylko poza głosowaniem (G-24).
+  const showing = canShow(m as unknown as Meeting, actorOf(s)) && canShowNow(m as unknown as Meeting);
+  const showLabel = m.mode === 'zdalne' ? 'Pokaż uczestnikom' : 'Pokaż na sali i telefonach';
   return <section class={'oi-card item-work' + (teraz && current ? ' is-teraz' : '')} aria-labelledby={id}>
     <div class="panel-head">
       {current ? <span class="oi-label">Punkt {no}</span> : <span class="kicker">Punkt {no}</span>}
@@ -572,8 +591,15 @@ function ItemCard({itemId, readOnly, main, teraz}: {itemId: string; readOnly: bo
       <h3 class="card-sub">Materiały</h3>
       {materials.map(x => <div class="stack-tight" key={x.id}>
         <MaterialLink id={x.id} version={x.version} label={x.title} meta={`wersja ${x.version}`}/>
+        {/* B3-19: materiał punktu pokazuje się tym samym przyciskiem co pliki do pokazania (zamiast odnośnika O-12). */}
+        {showing && m.show?.id !== x.id && <div><Button kind="ghost" quiet small busy={busy} label={`${showLabel}, materiał „${x.title}”`} onClick={() => send({type: 'show', source: 'material', id: x.id})}>{showLabel}</Button></div>}
       </div>)}
     </div>}
+    {/* Wersja 4 (6.6, B3-19): lista „Do pokazania” pod materiałami; pliki innych punktów w zwiniętej sekcji. */}
+    <div class="material-row show-row">
+      <h3 class="card-sub">Do pokazania</h3>
+      <DisplayList meeting={m as unknown as MeetingData} itemId={it.id} mode="obrady" onChange={next => replace({meeting: next as unknown as ViewMeeting})}/>
+    </div>
     {/* O-12 (dodatek): jedna nazwa dla ekranu sali. Fakt „Na ekranie sali” i jeden cichy odnośnik zależny od stanu. */}
     <ScreenFact it={it} materials={materials} readOnly={readOnly}/>
     {/* Działania poboczne tego punktu stoją przy jego treści, przed głosowaniem i blokiem „Następny punkt”.
@@ -618,19 +644,17 @@ function ScreenFact({it, materials, readOnly}: {it: AgendaItem; materials: ViewM
   const {m, send, busy} = useMeeting();
   const screen = screenShows(m);
   const shownMaterial = materials.find(x => x.id === screen.material);
-  const value = shownMaterial ? `Materiał »${shownMaterial.title}«, także na telefonach`
+  const value = screen.pokaz ? screen.pokaz : shownMaterial ? `Materiał »${shownMaterial.title}«, także na telefonach`
     : screen.item === it.id && !screen.text.startsWith('projekt') ? 'Tytuł punktu i osoby'
     : screen.text.charAt(0).toLocaleUpperCase('pl') + screen.text.slice(1);
   // W trakcie głosowania, przerwy i przy projekcie porządku na żywo ekran pokazuje to, co wynika z obrad.
   const locked = !!m.ballots.find(b => b.status === 'otwarte') || m.status === 'przerwa';
-  const showTitle = (shownMaterial || screen.item !== it.id) && !locked;
-  const hidden = materials.filter(x => x.id !== screen.material);
+  // Wersja 4 (6.6): w trakcie pokazu ekran sali zmienia karta „Pokaz”; materiał pokazuje przycisk przy materiale (B3-19).
+  const showTitle = (shownMaterial || screen.item !== it.id) && !locked && !screen.pokaz;
   return <div class="screen-fact">
     <dl class="facts"><Fact label="Na ekranie sali">{value}</Fact></dl>
-    {!readOnly && !locked && <div class="item-screen">
-      {showTitle && <Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż tytuł punktu na ekranie sali</Button>}
-      {!showTitle && hidden.length === 1 && <Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'material', id: hidden[0].id})}>Pokaż materiał na ekranie sali</Button>}
-      {!showTitle && hidden.length > 1 && hidden.map(x => <Button key={x.id} kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'material', id: x.id})}>{`Pokaż materiał »${x.title}« na ekranie sali`}</Button>)}
+    {!readOnly && showTitle && <div class="item-screen">
+      <Button kind="ghost" quiet small busy={busy} onClick={() => send({type: 'present', kind: 'punkt', id: it.id})}>Pokaż tytuł punktu na ekranie sali</Button>
     </div>}
   </div>;
 }
@@ -830,7 +854,9 @@ function BallotForm({it, main}: {it: AgendaItem; main: Main}) {
       <div><Button kind="ghost" quiet small onClick={() => { setExtra(true); setEditing(true); }}>Inne głosowanie w tym punkcie</Button></div>
     </div>;
   }
-  const basePurpose: BallotPurpose = it.kind === 'porzadek' ? 'porzadek' : it.kind === 'protokol' ? 'protokol' : 'uchwala';
+  // B1-19, DB-5: podpunkt z „Dotyczy protokołu” (albo w punkcie przyjęcia protokołu) głosuje się w celu `protokol`.
+  const protocolVote = it.kind === 'protokol' || !!it.protocolOf || rootOf(m, it).kind === 'protokol';
+  const basePurpose: BallotPurpose = it.kind === 'porzadek' ? 'porzadek' : protocolVote ? 'protokol' : 'uchwala';
   const project = !extra || target === 'projekt';
   const purpose: BallotPurpose = project ? basePurpose : target;
   const chosenMaterial = project ? materialId : '';
@@ -1296,6 +1322,8 @@ function Attendance() {
       : markable && <Button kind="ghost" quiet small busy={busy} label={`${action}, ${name}`}
         onClick={() => send({type: 'presence', who, guest: guest || undefined, present: !present})}>{action}</Button>;
     return <li key={who} class={'att-' + (status ?? 'nieobecny')}>
+      {/* Wersja 4 (B3-38): zdjęcie 40 px z pamięci przeglądarki, imię obok (alt=""). */}
+      <Avatar personKey={who} name={name} size={40} class="att-avatar"/>
       <span class="att-name"><strong>{name}</strong><small>{line(label, status, who, guest)}</small></span>
       <span class="att-side"><StateChip state={presenceChip(status)}/>{tools}</span>
     </li>;
@@ -1333,10 +1361,13 @@ function Chairing({readOnly}: {readOnly: boolean}) {
   const target = candidates.find(c => c.personId === to);
   const chairman = isChairmanOf(s.roster, mm, s.personId);
   const changes = !readOnly && canDesignateDeputy(s.roster, mm, actorOf(s));
+  const deputy = deputyOf(s.roster, mm);
   return <Fold title="Prowadzenie obrad">
     <div class="stack">
-      <dl class="facts"><Fact label="Prowadzi">{chairingText(s.roster, m) || s.personName(m.chair.current)}</Fact></dl>
-      <DeputyFact change={changes}/>
+      {/* Wersja 4 (B3-38): zdjęcie osoby prowadzącej i zastępcy 48 px. */}
+      <div class="chairing-who">{m.chair.current && <Avatar personKey={m.chair.current} name={s.personName(m.chair.current)} size={48}/>}
+        <dl class="facts"><Fact label="Prowadzi">{chairingText(s.roster, m) || s.personName(m.chair.current)}</Fact></dl></div>
+      <div class="chairing-who">{deputy && deputy !== m.chair.current && <Avatar personKey={deputy} name={s.personName(deputy)} size={48}/>}<DeputyFact change={changes}/></div>
       {!readOnly && candidates.length > 0 && <>
         <Field label="Komu przekazać prowadzenie?"><select value={to} onChange={e => setTo((e.target as HTMLSelectElement).value)}>
           {candidates.map(c => <option key={c.personId} value={c.personId}>{s.personName(c.personId)}, {c.label}{m.attendance[c.personId] === 'zgloszony' ? ', obecność zgłoszona' : ''}</option>)}

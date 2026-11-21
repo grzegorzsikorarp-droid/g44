@@ -20,6 +20,8 @@ export function Messages(props: {bare?: boolean; secondary?: boolean}) {
   const id = useId();
   useEffect(() => { list.current?.scrollTo({top: list.current.scrollHeight}); }, [m.messages.length]);
   const closed = m.status === 'zakonczone';
+  // Wersja 4 (G-28, B2-W20): kanał działa od otwarcia; w przygotowaniu bez pola do pisania, z jednym zdaniem.
+  const before = m.status === 'przygotowanie';
   const writes = canMessage(m, {account: s.account, personId: s.personId, name: s.name});
   if (closed && !m.messages.length) return null;
   const submit = async (e: Event) => {
@@ -29,14 +31,15 @@ export function Messages(props: {bare?: boolean; secondary?: boolean}) {
     if (await send({type: 'message', text})) setText('');
   };
   const body = <>
-    {m.messages.length === 0 && <p class="muted small">{m.kind === 'procedura' ? 'Tu uczestnicy mogą zadawać pytania i wyjaśniać wątpliwości w trakcie głosowania.' : 'Wiadomości widzą wszyscy uczestnicy posiedzenia.'}</p>}
+    {m.messages.length === 0 && !before && <p class="muted small">{m.kind === 'procedura' ? 'Tu uczestnicy mogą zadawać pytania i wyjaśniać wątpliwości w trakcie głosowania.' : 'Wiadomości widzą wszyscy uczestnicy posiedzenia.'}</p>}
     <div role="log" aria-label="Wiadomości">
       {m.messages.length > 0 && <ol class="message-list" ref={list}>
         {m.messages.map(x => <li key={x.id} class={x.author === s.account.id ? 'is-mine' : ''}><span class="message-meta">{x.authorName}, godz. {fmtTime(x.at)}</span><span class="message-text">{x.text}</span></li>)}
       </ol>}
     </div>
-    {!closed && !writes && <p class="muted small">Goście czytają wiadomości, ale ich nie piszą.</p>}
-    {!closed && writes && <form class="message-form" onSubmit={submit}>
+    {before && <p class="muted small">Przed rozpoczęciem pisz w uwagach przygotowania. Kanał wiadomości działa od otwarcia posiedzenia.</p>}
+    {!closed && !before && !writes && <p class="muted small">Goście czytają wiadomości, ale ich nie piszą.</p>}
+    {!closed && !before && writes && <form class="message-form" onSubmit={submit}>
       <div class={'oi-field' + (empty ? ' oi-field--blad' : '')}>
         <label class="oi-field__label" for={id}>Wiadomość do wszystkich uczestników</label>
         <div class="message-row">

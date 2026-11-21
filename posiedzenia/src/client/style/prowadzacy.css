@@ -195,3 +195,14 @@
 }
 /* O-08: przedmiot głosowania zwykłym pismem pod zdaniem karty decyzji */
 .decision .decision-subject { font-weight: 400; color: var(--tekst); }
+
+/* Wersja 4 (B3-38): zdjęcie 40 px przy liście obecności i 48 px przy prowadzeniu obrad; imię i nazwisko obok. */
+/* Z kwadratem zdjęcia wiersz ma dwie kolumny: zdjęcie i imię, a stan i czynności stoją pod imieniem (wąska kolumna panelu). */
+.attendance li:has(> .att-avatar) { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; gap: var(--odstep-1) var(--odstep-3); }
+.attendance li > .att-avatar { grid-row: 1 / span 2; margin-top: 2px; }
+.attendance li:has(> .att-avatar) > .att-side { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; gap: var(--odstep-1) var(--odstep-3); }
+.attendance li:has(> .att-avatar) > .att-side:empty { display: none; }
+.chairing-who { display: flex; align-items: center; gap: var(--odstep-3); }
+.chairing-who > .facts, .chairing-who > * { min-width: 0; }
+/* Wersja 4 (6.6): lista „Do pokazania” w karcie punktu pod materiałami. */
+.item-work .show-row { display: flex; flex-direction: column; gap: var(--odstep-2); }
