@@ -55,7 +55,9 @@ export type PaperFormat = 'html' | 'docx' | 'md' | 'csv' | 'zip';
 /** Stan dokumentu (B1-02): projekt, stan na chwilę (posiedzenie trwa) albo ustalony. */
 export type PaperState = 'projekt' | 'stan_na' | 'ustalony';
 /** Zamknięte posiedzenie albo głosowanie między posiedzeniami do „Dotyczy protokołu” (G-33). */
-export interface ClosedRef { id: string; organ: OrganCode; kind: MeetingKind; day: string; working: boolean; adopted: boolean; title: string }
+export interface ClosedRef { id: string; organ: OrganCode; kind: MeetingKind; day: string; working: boolean; adopted: boolean; title: string;
+  /** Dodatek D-7 (B2 2.7): data faktu „Protokół sporządzony” i termin sporządzenia (§ 13 ust. 2) do gotowości „Przyjęcie protokołu”. */
+  minutes?: {ready: string | null; deadline: string | null} }
 
 // członek organu, osoba z głosem doradczym (§ 7 ust. 2), zaproszony gość (§ 7 ust. 3), obsługa biura (§ 23),
 // konto „Komunikacja” bez osoby ze składu (wersja 4, DB-9: widzi tylko odbyte posiedzenia i materiały dla komunikacji)

@@ -37,6 +37,15 @@ export async function request<T = any>(path: string, options: {method?: string; 
   return data as T;
 }
 
+/**
+ * Dodatek D-9 (B2-W14, 5.2): miejsce w przygotowaniu posiedzenia dołączane do zwykłego odświeżania widoku posiedzenia
+ * w nagłówku `X-Przygotowanie` (`punkt:{id}`, `ustawienia`, `zgloszenie` albo pusto). Nie wysyła osobnego zapytania;
+ * serwer zapisuje obecność tylko w przygotowaniu i tylko za zgodą osoby (T-5).
+ */
+let prepPlace = '';
+export function setPrepPlace(place: '' | `punkt:${string}` | 'ustawienia' | 'zgloszenie') { prepPlace = place; }
+const meetingPath = /^\/api\/meetings\/[\w-]+$/;
+
 // Odświeżanie stanu co kilka sekund; serwer odpowiada 304, gdy nic się nie zmieniło.
 export function useLive<T>(path: string | null, interval = 2000) {
   const [data, setData] = useState<T | null>(null);
@@ -49,7 +58,9 @@ export function useLive<T>(path: string | null, interval = 2000) {
   const load = useCallback(async () => {
     if (!path) return;
     try {
-      const res = await fetch(path, {headers: etag.current ? {'If-None-Match': etag.current} : {}, credentials: 'same-origin'});
+      const headers: Record<string, string> = etag.current ? {'If-None-Match': etag.current} : {};
+      if (prepPlace && meetingPath.test(path)) headers['X-Przygotowanie'] = prepPlace;
+      const res = await fetch(path, {headers, credentials: 'same-origin'});
       noteServerTime(res);
       if (latest.current !== path) return;
       setOnline(true);

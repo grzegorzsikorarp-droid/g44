@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {gzipSync} from 'node:zlib';
 import {createHash, randomInt, randomUUID} from 'node:crypto';
 import {accountView, Store, type UserRow} from './store.ts';
-import {cookieToken, hashToken, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_REFRESH_MS, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
+import {cookieToken, hashToken, LOGOUT_OTHERS_SQL, newToken, passwordHash, passwordMatches, sessionCookie, SESSION_REFRESH_MS, SESSION_SECONDS, validPassword, validUsername} from './auth.ts';
 import {SecretBallots} from './secret.ts';
 import {cleanHtml, docxToHtml, guessType, htmlHash, markdownToHtml, splitActs, textToHtml} from './documents.ts';
 import {minutesDocx, minutesDocxFileName, minutesHtml, type MinutesLook} from './minutes.ts';
@@ -18,13 +18,14 @@ import {Outbox, type Outgoing, type Sender} from './mail/outbox.ts';
 import {sendOne, type SmtpOptions} from './mail/smtp.ts';
 import {buildMessage} from './mail/mime.ts';
 import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, minutesDraft, hostMatches, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
-import {afterMail, addressChangedMail, codeMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
-import {applyPrep, applyWaiting, carryOver, deferredOnOpen, emptySpace, onOpen, prepView, progress, purgeOld, toWaiting, waitingId, PREP_REFUSALS, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
-import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
-import {actBallots, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} from '../shared/papers.ts';
-import {statsPageBody} from '../shared/stats-page.ts';
-import {acceptAvatar, acceptDisplayFile, acceptFiled, checkPdf, naturalOrder, refusalByName, seriesProblem, SHOW_LIMITS} from '../shared/files.ts';
-import {memberStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
+import {afterMail, addressChangedMail, codeMail, commsReadyMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
+import {acceptWaitingLive, applyPrep, applyWaiting, attachCommentMaterial, carryOver, mailTasks, nextVisit, presenceAllowed, presencePlace, presenceRows, seenVisit, deferredOnOpen, emptySpace, onOpen, prepView, progress, purgeOld, toWaiting, waitingId, waitingLiveAllowed, waitingLiveList, PREP_REFUSALS, WAITING_LIVE_REFUSAL, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
+import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportLinks, periodReportMarkdown, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
+import {actBallots, generatedLine, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} from '../shared/papers.ts';
+import {docxFromHtml} from '../shared/docx.ts';
+import {rosterPageBody, statsPageBody} from '../shared/stats-page.ts';
+import {acceptAvatar, acceptDisplayFile, acceptFiled, checkPdf, displayBytesLimit, naturalOrder, refusalByName, seriesProblem, SHOW_LIMITS, REFUSALS as FILE_REFUSALS} from '../shared/files.ts';
+import {memberStats, rosterFileName, rosterPersonStats, rosterStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
 import {organOfCode} from '../shared/roster.ts';
 import {mailController, mailOffice} from './seed.ts';
 import {newItem} from '../shared/agenda.ts';
@@ -33,13 +34,14 @@ import {personName} from '../shared/roster.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import {
   canAddDisplay, canCreate, canDownloadComms, canDownloadPaper, canPrepare, canPropose, canReadMinutes, canReport, canSeeCatalog, canSeeOwnStats, canSeeRosterStats, canSeeWorkspace,
-  canSetPhotos, canSetStatsSince, canView as roleCanView, COMMS_REFUSAL, commsPathAllowed, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, organRoster, photoCircleText, seesPhotos, settingsAccess,
+  canSetPhotos, canSetStatsSince, canView as roleCanView, COMMS_REFUSAL, commsPathAllowed, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, mayShowOnScreen, organRoster, photoCircleText, rosterStatsRefusal, SCREEN_PHOTO_REFUSAL, seesPhotos, seesStatsNotes, settingsAccess,
 } from '../shared/role.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit as docTypeAuditEntry, organSettingsOf, type AuditEntry, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
 import {cascadeEnv, othersOf} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
 import {dateDots, isoDayOf, plural, timeOf} from '../shared/text.ts';
 import type {Account, Actor, DisplayFile, DocType, ItemKind, MaterialRef, MaterialType, Meeting, OrganCode, PaperFormat, PaperId} from '../shared/types.ts';
+import {Presence} from './presence.ts';
 
 export const VERSION = '0.4.0';
 const mime: Record<string, string> = {
@@ -142,10 +144,14 @@ export async function createApplication(options: AppOptions = {}) {
   // Wersja 4: przestrzeń robocza (tylko przygotowanie) i dane zakończonego posiedzenia (`archive`) w widoku (2.1).
   const prepFor = (m: Pick<Meeting, 'id' | 'organ'>): PrepSpace => store.prepSpace(m.id) ?? emptySpace(m.id, m.organ);
   const waitingFor = (organ: Meeting['organ']): PrepSpace => store.prepSpace(waitingId(organ)) ?? emptySpace(waitingId(organ), organ);
+  // Dodatek D-9: obecność w pamięci procesu (5.7), bez zapisu do bazy.
+  const presence = new Presence();
   const view = (m: Meeting, a: Actor) => {
     const env = envFor(m);
     const extra: Parameters<typeof viewFor>[4] = {};
-    if (m.status === 'przygotowanie') extra.prep = prepView(prepFor(m), m, a, store.roster(), {env, waiting: waitingFor(m.organ), now: now()});
+    if (m.status === 'przygotowanie') extra.prep = prepView(prepFor(m), m, a, store.roster(), {env, waiting: waitingFor(m.organ), now: now(),
+      // Dodatki D-9 i D-10: „Teraz oglądają” bez osoby oglądającej i poprzednia wizyta tej osoby.
+      presence: presenceRows(presence.list(m.id, now(), a.account.id), m, store.roster(), accounts()), previousVisit: store.visit(a.account.id, m.id)?.prevAt ?? null});
     if (m.status === 'zakonczone') extra.archive = archiveInfo(m, allMeetings(), a, store.roster(), isoDayOf(now()));
     return viewFor(m, a, store.roster(), env, extra);
   };
@@ -199,17 +205,20 @@ export async function createApplication(options: AppOptions = {}) {
     : {name: a.name, func: organRoster(store.roster(), m).find(x => x.personId === a.personId)?.label ?? ''};
   const domainOf = () => (mailSettings().fromAddress.split('@')[1] || configured?.hostname || 'localhost');
   /** Wiadomości do kolejki: jedna na odbiorcę, tylko wiersze „wysle” z adresem (B2-P04). */
-  function enqueueMail(kind: MailKind, m: Meeting | null, a: Actor, content: {subject: string; text: string; html: string}, intro: string, rows: {accountId: string; state: string}[]) {
+  function enqueueMail(kind: MailKind, m: Meeting | null, a: Actor, content: {subject: string; text: string; html: string}, intro: string, rows: {accountId: string; state: string}[],
+    /** Dodatek D-11: treść inna dla każdej osoby („Twoje zadania” w informacji o postępie). */
+    contentFor?: (accountId: string) => {subject: string; text: string; html: string}) {
     const byId = new Map(contacts().map(c => [c.accountId, c]));
     const list: Outgoing[] = rows.filter(r => r.state === 'wysle').map(r => byId.get(r.accountId)!).filter(c => c?.email)
-      .map(c => ({accountId: c.accountId, to: {name: c.name, address: c.email!}, subject: content.subject, text: content.text, html: content.html}));
+      .map(c => { const own = contentFor?.(c.accountId) ?? content; return {accountId: c.accountId, to: {name: c.name, address: c.email!}, subject: own.subject, text: own.text, html: own.html}; });
     const id = outbox.enqueue({kind, meetingId: m?.id ?? null, createdBy: a.account.id, actor: a.name, subject: content.subject, intro}, list, now(), domainOf());
     return {id, recipients: list.length};
   }
   /** Treść wiadomości o posiedzeniu (6.7.2) z jednej funkcji domeny dla podglądu i wysyłki. */
-  function mailContent(kind: MailKind, m: Meeting, a: Actor, intro: string) {
+  function mailContent(kind: MailKind, m: Meeting, a: Actor, intro: string, forAccount?: string | null) {
     const base = mailBase(m.organ);
-    if (kind === 'postep') return progressMail(m, progress(envFor(m), m, prepFor(m), a, now()), {...base, intro, sender: senderOf(a, m), now: now()});
+    const target = forAccount ? accounts().find(x => x.id === forAccount) : undefined;
+    if (kind === 'postep') return progressMail(m, progress(envFor(m), m, prepFor(m), a, now()), {...base, intro, sender: senderOf(a, m), now: now(), tasks: target ? mailTasks(prepFor(m), m, target) : []});
     if (kind === 'po_posiedzeniu') {
       const env = envFor(m);
       const adopted = m.ballots.find(b => b.purpose === 'protokol' && b.protocolOf && b.announcedAt && b.result?.adopted && !b.aborted);
@@ -217,6 +226,7 @@ export async function createApplication(options: AppOptions = {}) {
       return afterMail(m, {...base, intro, sender: senderOf(a, m), acts: actBallots(m, env).length, adoptedDay});
     }
     if (kind === 'protokol') return minutesMail(m, base);
+    if (kind === 'komunikacja') return commsReadyMail(m, base);
     return fail('Tej wiadomości nie wysyła się z posiedzenia.');
   }
   const codeHash = (salt: string, code: string) => createHash('sha256').update(`${salt}:${code}`).digest('hex');
@@ -476,13 +486,14 @@ export async function createApplication(options: AppOptions = {}) {
         const roster = store.roster();
         // Poza kręgiem z pytania 13 mapa ma tylko własne zdjęcie (W-2: osoba widzi swoje zdjęcie w pasku i w „Moim koncie”).
         const own = store.user(actor.account.id);
-        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(store.users().filter(u => u.avatar && !u.disabled).map(u => [avatarKey(u), {v: Number(u.avatar)}]))
+        // Dodatek D-16 (B3-40): `screen` przy osobie, która zgodziła się na zdjęcie na ekranie sali, gdy prowadzi obrady.
+        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(store.users().filter(u => u.avatar && !u.disabled).map(u => [avatarKey(u), {v: Number(u.avatar), ...(u.avatar_screen ? {screen: true} : {})}]))
           : own && Number(own.avatar) ? {[avatarKey(own)]: {v: Number(own.avatar)}} : null;
         const closed = allMeetings().filter(m => m.status === 'zakonczone');
         const prepares = canCreate(roster, 'prezydium', actor);
         return json(res, {...base, avatars, photoCircle: photoCircleText(roster), ...(isCommsAccount(actor) ? {home: '#odbyte'} : {}),
           ...(mayMail(roster, actor, prepares) ? {mail: {enabled: mailEnabled()}} : {}),
-          can: {ownStats: canSeeOwnStats(roster, actor, closed), rosterStats: false, report: canReport(roster, actor), catalog: isCommsAccount(actor) || isOfficeAccount(actor) || !!actor.personId || actor.account.kind === 'doradczy' || actor.account.kind === 'gosc'}});
+          can: {ownStats: canSeeOwnStats(roster, actor, closed), rosterStats: canSeeRosterStats(roster, actor), report: canReport(roster, actor), catalog: isCommsAccount(actor) || isOfficeAccount(actor) || !!actor.personId || actor.account.kind === 'doradczy' || actor.account.kind === 'gosc'}});
       }
       if (path === '/api/setup' && method === 'POST') {
         const input = await jsonBody(req, 10000);
@@ -550,6 +561,12 @@ export async function createApplication(options: AppOptions = {}) {
             avatar: Number(row.avatar) || 0, avatarScreen: !!row.avatar_screen, avatarRemoved: accountView(row).avatarRemoved ?? null, mailEnabled: mailEnabled(),
             // E-1 (K4-30): odnośnik do informacji o przetwarzaniu danych z ustawień poczty dla każdej osoby w „Moim koncie”.
             privacyUrl: /^https:\/\/\S+$/.test(mailSettings().privacyUrl) ? mailSettings().privacyUrl : null}, 200, noStore);
+        }
+        if (path === '/api/me/sessions/logout-others' && method === 'POST') {
+          // Dodatek D-3: to urządzenie zostaje zalogowane, pozostałe sesje konta znikają od razu.
+          const token = cookieToken(req)!;
+          const removed = write(() => Number(db.prepare(LOGOUT_OTHERS_SQL).run(a.account.id, hashToken(token)).changes));
+          return json(res, {ok: true, removed}, 200, noStore);
         }
         if (path === '/api/me/prefs' && method === 'PUT') {
           const input = await jsonBody(req, 10000);
@@ -634,6 +651,14 @@ export async function createApplication(options: AppOptions = {}) {
             if (row.avatar) { try { unlinkSync(avatarFile(avatarKey(row), Number(row.avatar))); } catch { /* brak pliku */ } }
             store.setAvatar(row.id, version);
           });
+          return json(res, {account: accountView(store.user(a.account.id)!)}, 200, noStore);
+        }
+        if (path === '/api/me/avatar-screen' && method === 'PUT') {
+          // Dodatek D-16 (B3-40, U-45): zgoda na zdjęcie na ekranie sali tylko u osób, które mogą prowadzić obrady.
+          const input = await jsonBody(req, 1000);
+          if (typeof input?.on !== 'boolean') fail('Nieprawidłowe ustawienie.');
+          if (!mayShowOnScreen(store.roster(), a)) fail(SCREEN_PHOTO_REFUSAL, 403);
+          write(() => store.setAvatarScreen(a.account.id, input.on));
           return json(res, {account: accountView(store.user(a.account.id)!)}, 200, noStore);
         }
         const avatarMatch = path.match(/^\/api\/avatars\/([\w-]+)$/);
@@ -780,10 +805,19 @@ export async function createApplication(options: AppOptions = {}) {
             res.writeHead(200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': disposition(`${base}-${part}.csv`), 'X-Content-Type-Options': 'nosniff', ...noStore});
             return res.end(periodReportCsv(r, part));
           }
+          // Dodatek D-17: Word (ta sama treść co wydruk) i Markdown.
+          if (format === 'docx') {
+            const data = await docxFromHtml(periodReportHtml(r, store.roster()), {title: 'Zestawienie za okres', header: 'Zestawienie za okres', firstHeader: minutesLook().org, footerLeft: generatedLine(now()), now: now(), deflateRaw});
+            res.writeHead(200, {'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': disposition(`${base}.docx`), 'X-Content-Type-Options': 'nosniff', ...noStore});
+            return res.end(data);
+          }
+          if (format === 'md') {
+            res.writeHead(200, {'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': disposition(`${base}.md`), 'X-Content-Type-Options': 'nosniff', ...noStore});
+            return res.end(periodReportMarkdown(r));
+          }
           if (format !== 'html') fail('Ten dokument nie ma takiego formatu.');
           const html = paperPage(periodReportHtml(r, store.roster()), {title: 'Zestawienie za okres', header: 'Zestawienie za okres', draft: false, generatedAt: now(), css: minutesLook().css ?? null,
-            links: [{href: `/api/zestawienie?od=${(period as {from: string}).from}&do=${(period as {to: string}).to}&format=csv&czesc=posiedzenia`, label: 'CSV', name: 'Pobierz posiedzenia w formacie CSV'},
-              {href: `/api/zestawienie?od=${(period as {from: string}).from}&do=${(period as {to: string}).to}&format=csv&czesc=akty`, label: 'CSV akty', name: 'Pobierz akty w formacie CSV'}]});
+            links: periodReportLinks(period as {from: string; to: string})});
           res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': disposition(`${base}.html`, true), ...noStore});
           return res.end(html);
         }
@@ -807,7 +841,31 @@ export async function createApplication(options: AppOptions = {}) {
           }
           return json(res, {stats: r, source: statsSourceLines(r, now()), generatedAt: now()}, 200, noStore);
         }
-        if (path.startsWith('/api/statystyki/')) fail('Statystyki składu dochodzą z dodatkiem.', 404);
+        const rosterMatch = path.match(/^\/api\/statystyki\/sklad(?:\/([\w-]{1,64}))?$/);
+        if (rosterMatch && method === 'GET') {
+          // Dodatek D-13 (5.2, B4-23–B4-27, DB-23, T-6): krąg z pytania 11; bez wierszy i głosów jawnych; uwagi tylko biuro i przewodniczący.
+          const roster = store.roster();
+          if (!canSeeRosterStats(roster, a)) fail(rosterStatsRefusal(), 403);
+          const q = statsRangeInput({od: url.searchParams.get('od'), do: url.searchParams.get('do'), kadencja: url.searchParams.get('kadencja'), rok: url.searchParams.get('rok')}, isoDayOf(now()));
+          if ('error' in q) fail(q.error);
+          const since = organSettingsOf(store.general().general, 'prezydium').statsSince;
+          const input = {meetings: allMeetings(), roster, range: (q as {range: {from: string; to: string}}).range, ...(since ? {since} : {}), ...((q as {term?: string}).term ? {term: (q as {term?: string}).term} : {})};
+          const notes = seesStatsNotes(roster, a);
+          if (rosterMatch[1]) return json(res, {stats: rosterPersonStats(input, rosterMatch[1], {notes}), generatedAt: now()}, 200, noStore);
+          const r = rosterStats(input, {notes});
+          const format = url.searchParams.get('format') || 'json';
+          if (format === 'csv') {
+            res.writeHead(200, {'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': disposition(rosterFileName(r, 'csv')), 'X-Content-Type-Options': 'nosniff', ...noStore});
+            return res.end(statsCsv({...r, notes: []}, 'sklad', now()));
+          }
+          if (format === 'html') {
+            const variant = url.searchParams.get('wariant') === 'sprawozdanie' ? 'sprawozdanie' : 'pelny';
+            res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': disposition(rosterFileName(r, 'html'), true), ...noStore});
+            return res.end(paperPage(rosterPageBody(r, now(), variant), {title: 'Statystyki składu', header: 'Statystyki składu', draft: false, generatedAt: now(), css: minutesLook().css ?? null}));
+          }
+          return json(res, {stats: r, source: statsSourceLines(r, now()), generatedAt: now()}, 200, noStore);
+        }
+        if (path.startsWith('/api/statystyki/')) fail('Nie znaleziono tej funkcji.', 404);
         const organWaiting = path.match(/^\/api\/organs\/(prezydium|rada|zjazd)\/czekajace$/);
         if (organWaiting) {
           // B2-W06: zgłoszenia czekające na posiedzenie organu; zgłasza członek albo głos doradczy, całość widzą osoby przygotowujące.
@@ -1048,10 +1106,18 @@ export async function createApplication(options: AppOptions = {}) {
           if (rest === '' && method === 'GET') {
             const m = meetingFor(id, a);
             // ETag (2.4): w statusach „trwa” i „przerwa” format wersji 3 (T-5); w przygotowaniu dochodzą licznik katalogu,
-            // rewizja przestrzeni roboczej i dzień, po zamknięciu licznik katalogu i dzień (DB-5, K4-24).
+            // rewizja przestrzeni roboczej i dzień, po zamknięciu licznik katalogu i dzień (DB-5, K4-24). Dodatki D-9 i D-10
+            // (tylko w przygotowaniu): skrót obecności innych osób i poprzednia wizyta osoby oglądającej.
             const day = isoDayOf(now());
+            let extraTag = '';
+            if (m.status === 'przygotowanie') {
+              if (presenceAllowed(store.roster(), m, a, prefsOf(store.user(a.account.id)?.prefs))) presence.touch(m.id, a.account.id, presencePlace(req.headers['x-przygotowanie'] as string | undefined), now());
+              let visit = store.visit(a.account.id, m.id);
+              if (canSeeWorkspace(store.roster(), m, a)) { const next = nextVisit(visit, now()); if (next) { store.saveVisit(a.account.id, m.id, next); visit = next; } }
+              extraTag = `-${presence.digest(m.id, now(), a.account.id)}-${visit?.prevAt ?? 0}`;
+            }
             const etag = m.status === 'trwa' || m.status === 'przerwa' ? `"${VERSION}-${m.revision}-${store.revision()}-${a.account.id}"`
-              : m.status === 'przygotowanie' ? `"${VERSION}-${m.revision}-${store.revision()}-${store.archiveRevision()}-${prepFor(m).revision}-${day}-${a.account.id}"`
+              : m.status === 'przygotowanie' ? `"${VERSION}-${m.revision}-${store.revision()}-${store.archiveRevision()}-${prepFor(m).revision}-${day}-${a.account.id}${extraTag}"`
               : `"${VERSION}-${m.revision}-${store.revision()}-${store.archiveRevision()}-${day}-${a.account.id}"`;
             if (req.headers['if-none-match'] === etag) { res.writeHead(304, {'ETag': etag, 'X-Server-Now': String(now()), 'Cache-Control': 'private, no-cache'}); return res.end(); }
             return json(res, {meeting: view(m, a)}, 200, {'ETag': etag, 'Cache-Control': 'private, no-cache'});
@@ -1081,6 +1147,8 @@ export async function createApplication(options: AppOptions = {}) {
                 const deferred = deferredOnOpen(before, after, m);
                 if (deferred.length) store.savePrep(toWaiting(waitingFor(m.organ), deferred), now());
                 outbox.cancelProgress(m.id);
+                // Dodatek D-9 (T-5): od otwarcia mapa obecności tego posiedzenia jest pusta i nie rośnie.
+                presence.clear(m.id);
               }
               return updated;
             });
@@ -1125,8 +1193,10 @@ export async function createApplication(options: AppOptions = {}) {
               for (const d of copy.displays ?? []) for (const f of [...d.files, ...(d.pdf ? [d.pdf] : [])]) { const nf = displayFiles.get(f.fileId); if (nf) f.fileId = nf; }
               if (copy.displays) copy.displays = copy.displays.filter(d => d.files.every(f => [...displayFiles.values()].includes(f.fileId)));
               store.saveMeeting(copy, now());
-              const moved = carryOver(waitingFor(copy.organ), null, copy);
-              if (moved.ws.proposals.length) { store.savePrep(moved.ws, now()); store.savePrep(moved.waiting, now()); }
+              // Dodatek D-11 (B2-W17): powielone posiedzenie przejmuje też niezakończone zadania.
+              const moved = carryOver(waitingFor(copy.organ), store.prepSpace(src.id), copy, src);
+              if (moved.ws.proposals.length || moved.ws.tasks.length) store.savePrep(moved.ws, now());
+              if (moved.ws.proposals.length) store.savePrep(moved.waiting, now());
             });
             return json(res, {meeting: view(copy, a)}, 201);
           }
@@ -1223,6 +1293,15 @@ export async function createApplication(options: AppOptions = {}) {
                 converted = {html: up.html, source: up.source, name: row.name, fileId: row.id};
               }
             }
+            if (input?.cmd?.type === 'seen') {
+              // Dodatek D-10: „Oznacz jako przeczytane” przesuwa poprzednią wizytę na teraz (tylko w przygotowaniu, T-5).
+              const m = meetingFor(id, a);
+              if (!canSeeWorkspace(store.roster(), m, a)) fail(PREP_REFUSALS.see, 403);
+              if (m.status !== 'przygotowanie') fail(PREP_REFUSALS.opened, 409);
+              write(() => store.saveVisit(a.account.id, m.id, seenVisit(now())));
+              const v = view(m, a);
+              return json(res, {meeting: v, prep: v.prep ?? null});
+            }
             const result = write(() => {
               const m = meetingFor(id, a);
               const own = (store.prepSpaces().filter(x => x.organ === m.organ && x.meetingId !== m.id).flatMap(x => x.proposals)).filter(p => p.accountId === a.account.id && p.state === 'zgloszone').length;
@@ -1230,12 +1309,37 @@ export async function createApplication(options: AppOptions = {}) {
               let meeting = r.meeting ?? m;
               if (r.created) meeting = attachProposalFile(meeting, r.created, a, converted);
               if (r.meeting) store.saveMeeting(meeting, now());
+              if (r.toMaterial) {
+                // Dodatek D-12 (B2-W09): uwaga przeniesiona przez autora staje się zwykłym materiałem punktu.
+                const draft = structuredClone(meeting);
+                const ref = addMaterial(draft, a, {title: r.toMaterial.title, type: 'inny', number: '', html: textToHtml(r.toMaterial.text), source: 'text', fileId: null, fileName: null});
+                draft.materials = draft.materials.filter(x => x.id !== ref.id);
+                const moved = attachCommentMaterial(meeting, r.ws, ref, r.toMaterial, a, now());
+                meeting = moved.meeting;
+                store.saveMeeting(meeting, now());
+                r.ws = moved.ws;
+              }
               store.savePrep(r.ws, now());
               if (r.waiting?.length) store.savePrep(toWaiting(waitingFor(m.organ), r.waiting), now());
               return meeting;
             });
             const v = view(result, a);
             return json(res, {meeting: v, prep: v.prep ?? null});
+          }
+          if (rest === '/czekajace' && (method === 'GET' || method === 'POST')) {
+            // Dodatek D-5 (U-44, B2-W16): zgłoszenia czekające na spotkaniu roboczym u osoby prowadzącej, ładowane po rozwinięciu.
+            const m0 = meetingFor(id, a);
+            if (!waitingLiveAllowed(m0, a)) fail(WAITING_LIVE_REFUSAL, 403);
+            if (method === 'GET') return json(res, {proposals: waitingLiveList(waitingFor(m0.organ))}, 200, noStore);
+            const input = await jsonBody(req, 10000);
+            const next = write(() => {
+              const m = meetingFor(id, a);
+              const r = acceptWaitingLive(waitingFor(m.organ), m, String(input?.proposalId ?? ''), a, context());
+              store.saveMeeting(r.meeting, now());
+              store.savePrep(r.ws, now());
+              return {meeting: r.meeting, proposals: waitingLiveList(r.ws)};
+            });
+            return json(res, {meeting: view(next.meeting, a), proposals: next.proposals});
           }
           if (rest === '/przygotowanie' && method === 'GET') {
             const m = meetingFor(id, a);
@@ -1292,10 +1396,10 @@ export async function createApplication(options: AppOptions = {}) {
               if (!intro) fail('Wpisz wstęp tej wiadomości.');
             }
             const choice = input?.recipients && typeof input.recipients === 'object' ? input.recipients : {group: 'wszyscy'};
-            const rows = mailRecipients(kind, store.roster(), m, contacts(), {group: ['wszyscy', 'zadania', 'wybrani'].includes(choice.group) ? choice.group : 'wszyscy', ids: Array.isArray(choice.ids) ? choice.ids.map(String) : [], office: !!choice.office});
-            const content = mailContent(kind, m, a, intro);
+            const rows = mailRecipients(kind, store.roster(), m, contacts(), {group: ['wszyscy', 'zadania', 'wybrani'].includes(choice.group) ? choice.group : 'wszyscy', ids: Array.isArray(choice.ids) ? choice.ids.map(String) : [], office: !!choice.office}, prepFor(m));
+            const content = mailContent(kind, m, a, intro, typeof input?.for === 'string' ? input.for : null);
             if (!sending) return json(res, {...content, recipients: rows, lastProgressAt}, 200, {'Cache-Control': 'private, no-store'});
-            const batch = write(() => enqueueMail(kind, m, a, content, intro, rows));
+            const batch = write(() => enqueueMail(kind, m, a, content, intro, rows, kind === 'postep' ? accountId => mailContent(kind, m, a, intro, accountId) : undefined));
             return json(res, {batch}, 201);
           }
           if (rest === '/pokaz' && method === 'POST') {
@@ -1309,7 +1413,8 @@ export async function createApplication(options: AppOptions = {}) {
             for (const f of files) { const r = refusalByName(f.name); if (r) fail(r, 415); }
             const accepted = [];
             for (const f of files) {
-              if (f.size > SHOW_LIMITS.fileBytes) fail('Plik jest za duży. Dodaj plik do 10 MB.', 413);
+              // Dodatek D-4: wideo MP4 do 25 MB; pozostałe pliki do 10 MB (sprawdza też acceptDisplayFile po sygnaturze).
+              if (f.size > displayBytesLimit(f.name)) fail(displayBytesLimit(f.name) > SHOW_LIMITS.fileBytes ? FILE_REFUSALS.videoBig : FILE_REFUSALS.tooBig, 413);
               accepted.push({file: f, ...(await acceptDisplayFile(new Uint8Array(await f.arrayBuffer()), f.name, {inflate: inflateAsync}))});
             }
             const series = form.get('series') === '1' && accepted.length > 1;
@@ -1541,5 +1646,5 @@ export async function createApplication(options: AppOptions = {}) {
     if (s.user && !mailCfg.password) return 'Poczta bez hasła na serwerze aplikacji.';
     return `Poczta gotowa, serwer ${s.host}, port ${s.port}.`;
   };
-  return {server, store, setupKey, outbox, mailStatus};
+  return {server, store, setupKey, outbox, mailStatus, presence};
 }

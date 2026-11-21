@@ -74,6 +74,8 @@ export const REFUSALS = {
   heic: 'To zdjęcie jest w formacie HEIC, którego nie wyświetli każda przeglądarka. Dodaj je z iPhone’a przez przeglądarkę (zapisze się jako JPG) albo zapisz jako JPG.',
   other: 'Dodaj plik PDF, obraz JPG, PNG albo WebP, a krótki film jako MP4.',
   tooBig: 'Plik jest za duży. Dodaj plik do 10 MB.',
+  /** Dodatek D-4: brzmienie spoza B3 (B3-06 podaje tylko limit 25 MB). */
+  videoBig: 'Film jest za duży. Dodaj film MP4 do 25 MB.',
   series: 'Seria może mieć najwyżej 60 obrazów i 30 MB. Dodaj pozostałe obrazy osobno.',
   imageTooLarge: 'Obraz jest za duży. Zapisz go w mniejszym rozmiarze, np. 1920 px szerokości.',
   pdfScript: 'Ten plik PDF zawiera skrypty albo osadzone elementy, które mogą się uruchomić same. Wydrukuj go do nowego pliku PDF (Drukuj, Zapisz jako PDF) i dodaj ten nowy plik.',
@@ -106,7 +108,7 @@ export function refusalFor(sniffed: Sniffed | null, name = ''): string {
  */
 export function refusalByName(name: string): string | null {
   const ext = extOf(name);
-  return ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext) ? null : refusalFor(null, name);
+  return ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'mp4'].includes(ext) ? null : refusalFor(null, name);
 }
 
 /** Kolejność slajdów według nazw z liczbami naturalnymi („slajd2” przed „slajd10”, B3-04). */
@@ -314,12 +316,16 @@ export interface AcceptedFile { bytes: Uint8Array; type: DisplayType; size: numb
 
 /**
  * Plik do pokazania (B3-04–B3-06, B3-26, G-34): rodzaj z sygnatury, limit 10 MB, obraz sprawdzony wymiarami przed
- * czyszczeniem i oczyszczony z metadanych, PDF po kontroli. Wideo MP4 (limit `SHOW_LIMITS.videoBytes`) dochodzi
- * z dodatkiem D-4; w rdzeniu MP4 dostaje odmowę jak inny plik. Odmowa to błąd z `status` 413 (rozmiar), 415 (rodzaj)
- * albo 400 (treść).
+ * czyszczeniem i oczyszczony z metadanych, PDF po kontroli. Dodatek D-4 (B3-23): wideo MP4 z sygnaturą `ftyp`, do
+ * `SHOW_LIMITS.videoBytes` (25 MB), bez zmian w treści. Wersja próbna wideo odrzuca przed wywołaniem (7.3). Odmowa to
+ * błąd z `status` 413 (rozmiar), 415 (rodzaj) albo 400 (treść).
  */
 export async function acceptDisplayFile(b: Uint8Array, name: string, o: {inflate: (bytes: Uint8Array) => Promise<Uint8Array>}): Promise<AcceptedFile> {
   const kind = sniff(b);
+  if (kind === 'mp4') {
+    if (b.length > SHOW_LIMITS.videoBytes) fail(REFUSALS.videoBig, 413);
+    return {bytes: b, type: 'mp4', size: b.length, pages: null};
+  }
   if (kind !== 'pdf' && kind !== 'jpeg' && kind !== 'png' && kind !== 'webp') return fail(refusalFor(kind, name), 415);
   if (b.length > SHOW_LIMITS.fileBytes) fail(REFUSALS.tooBig, 413);
   if (kind === 'pdf') {
@@ -332,6 +338,8 @@ export async function acceptDisplayFile(b: Uint8Array, name: string, o: {inflate
   const cleaned = kind === 'jpeg' ? cleanJpeg(b) : kind === 'png' ? cleanPng(b) : cleanWebp(b);
   return {bytes: cleaned.bytes, type: kind, size: cleaned.bytes.length, width: cleaned.width, height: cleaned.height, removed: cleaned.removed};
 }
+/** Największy plik do pokazania przed odczytem treści (B3-06): wideo do 25 MB (D-4), pozostałe do 10 MB. */
+export const displayBytesLimit = (name: string) => /\.(mp4|m4v)$/i.test(name.trim()) ? SHOW_LIMITS.videoBytes : SHOW_LIMITS.fileBytes;
 /** Seria obrazów (B3-06): najwyżej 60 obrazów i 30 MB w jednym dodaniu. */
 export function seriesProblem(files: {size: number}[]): string | null {
   return files.length > SHOW_LIMITS.seriesCount || files.reduce((n, f) => n + f.size, 0) > SHOW_LIMITS.seriesBytes ? REFUSALS.series : null;

@@ -196,7 +196,7 @@ test('checkPdf: czysty, strumień obiektów, skrypty, #xx, /Launch, /EmbeddedFil
   assert.equal(notPdf.ok ? '' : notPdf.reason, REFUSALS.notPdf);
 });
 
-test('acceptDisplayFile: limity, rodzaje, czyszczenie; MP4 i PPTX odrzucone w rdzeniu (B3-04–B3-06, G-34)', async () => {
+test('acceptDisplayFile: limity, rodzaje, czyszczenie; PPTX odrzucony, MP4 do 25 MB z dodatkiem D-4 (B3-04–B3-06, B3-23, G-34)', async () => {
   const o = {inflate: inflateAsync};
   const okPdf = await acceptDisplayFile(plainPdf(3), 'budzet.pdf', o);
   assert.deepEqual([okPdf.type, okPdf.pages], ['pdf', 3]);
@@ -204,7 +204,12 @@ test('acceptDisplayFile: limity, rodzaje, czyszczenie; MP4 i PPTX odrzucone w rd
   assert.deepEqual([img.type, img.width, img.height], ['jpeg', 1920, 1080]);
   assert.ok(!has(img.bytes, 'GPS'));
   await assert.rejects(acceptDisplayFile(cat(enc('PK\x03\x04'), enc('ppt/presentation.xml')), 'a.pptx', o), (e: Error & {status?: number}) => e.message === REFUSALS.powerpoint && e.status === 415);
-  await assert.rejects(acceptDisplayFile(cat([0, 0, 0, 0x18], enc('ftypmp42'), new Uint8Array(16)), 'film.mp4', o), {message: REFUSALS.other});
+  // Dodatek D-4 (B3-23): w rdzeniu MP4 dostawało odmowę REFUSALS.other; z dodatkiem wideo przechodzi bez zmian treści, do 25 MB.
+  const film = cat([0, 0, 0, 0x18], enc('ftypmp42'), new Uint8Array(16));
+  const okFilm = await acceptDisplayFile(film, 'film.mp4', o);
+  assert.deepEqual([okFilm.type, okFilm.pages, okFilm.size], ['mp4', null, film.length]);
+  await assert.rejects(acceptDisplayFile(cat(film, new Uint8Array(25 * 1024 * 1024)), 'film.mp4', o), (e: Error & {status?: number}) => e.message === REFUSALS.videoBig && e.status === 413);
+  await assert.rejects(acceptDisplayFile(cat(enc('GIF89a'), new Uint8Array(16)), 'ruchomy.gif', o), {message: REFUSALS.animated});
   await assert.rejects(acceptDisplayFile(plainPdf(1, '/OpenAction 6 0 R ', ['<< /S /JavaScript /JS (x) >>']), 'skrypt.pdf', o), {message: REFUSALS.pdfScript});
   const big = cat(plainPdf(1), new Uint8Array(10 * 1024 * 1024));
   await assert.rejects(acceptDisplayFile(big, 'duzy.pdf', o), (e: Error & {status?: number}) => e.message === REFUSALS.tooBig && e.status === 413);

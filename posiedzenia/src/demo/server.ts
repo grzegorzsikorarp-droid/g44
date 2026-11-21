@@ -8,8 +8,8 @@ import {defaultDocTypes, docTypeInput, lockedDocTypeRefusal, sortedDocTypes} fro
 import {migrateDocTypesV3, migrateDocTypesV4, migrateMeeting, migrateMeetingV3, migrateMeetingV4, migrationNotesV3, migrationNotesV4} from '../shared/migrate.ts';
 import {applyCompositionChange, applySettingsChange, docTypeAudit, organSettingsOf, type AuditEntry, type GeneralBundle, type GeneralSettings, type SettingsArea, type SettingsChange} from '../shared/settings.ts';
 import {
-  canAddDisplay, canCreate, canDownloadComms, canDownloadPaper, canPrepare, canPropose, canReadMinutes, canReport, canSeeCatalog, canSeeOwnStats, canSeeWorkspace, canSetStatsSince,
-  COMMS_REFUSAL, commsPathAllowed, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, organRoster, photoCircleText, seesPhotos, settingsAccess,
+  canAddDisplay, canCreate, canDownloadComms, canDownloadPaper, canPrepare, canPropose, canReadMinutes, canReport, canSeeCatalog, canSeeOwnStats, canSeeRosterStats, canSeeWorkspace, canSetStatsSince,
+  COMMS_REFUSAL, commsPathAllowed, isCommsAccount, isOfficeAccount, isPresiding, isReferent, minutesRefusal, mayShowOnScreen, organRoster, photoCircleText, rosterStatsRefusal, SCREEN_PHOTO_REFUSAL, seesPhotos, seesStatsNotes, settingsAccess,
 } from '../shared/role.ts';
 import {cascadeEnv, othersOf} from '../shared/cascade.ts';
 import {isLockedDocType, LAW} from '../shared/law.ts';
@@ -18,14 +18,16 @@ import {bytesToHex, fdhSync, hexToBytes, keyFingerprintSync, modPow, verifySigna
 import {sha256} from '../shared/sha256.ts';
 import {seesUnannounced, summary, viewFor} from '../shared/view.ts';
 import {organOfCode, personName} from '../shared/roster.ts';
-import {applyPrep, applyWaiting, carryOver, deferredOnOpen, emptySpace, onOpen, prepView, progress, toWaiting, waitingId, PREP_REFUSALS, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
-import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
-import {actBallots, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} from '../shared/papers.ts';
+import {type Visit, acceptWaitingLive, applyPrep, applyWaiting, attachCommentMaterial, carryOver, mailTasks, nextVisit, presenceAllowed, presencePlace, presenceRows, seenVisit, deferredOnOpen, emptySpace, onOpen, prepView, progress, toWaiting, waitingId, waitingLiveAllowed, waitingLiveList, PREP_REFUSALS, WAITING_LIVE_REFUSAL, type PrepCommand, type PrepSpace} from '../shared/workspace.ts';
+import {Presence} from '../server/presence.ts';
+import {archiveInfo, catalogCsv, catalogRows, closedRefs, periodInput, periodReport, periodReportCsv, periodReportLinks, periodReportMarkdown, periodReportHtml, protocolAdoptions, type CatalogFilter} from '../shared/catalog.ts';
+import {actBallots, generatedLine, meetingPapers, paperPage, paperRefusalOf, type PaperEntry} from '../shared/papers.ts';
+import {docxFromHtml} from '../shared/docx.ts';
 import {acceptAvatar, acceptDisplayFile, naturalOrder, refusalByName, seriesProblem, sniff, SHOW_LIMITS} from '../shared/files.ts';
-import {memberStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
-import {statsPageBody} from '../shared/stats-page.ts';
+import {memberStats, rosterFileName, rosterPersonStats, rosterStats, statsCsv, statsRangeInput, statsSourceLines} from '../shared/stats.ts';
+import {rosterPageBody, statsPageBody} from '../shared/stats-page.ts';
 import {ADDRESS_REFUSAL, MAIL_KINDS, MAIL_LIMITS, canSendMail, minutesDraft, defaultMailSettings, mailRecipients, mailSettingsOf, mayMail, prefsOf, validAddress, validateMail, type AccountContact, type MailEnv, type MailKind} from '../shared/mail.ts';
-import {afterMail, addressChangedMail, codeMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
+import {afterMail, addressChangedMail, codeMail, commsReadyMail, minutesMail, progressMail, testMail, type MailBase, type MailSender} from '../shared/mail-templates.ts';
 import {minutesBody, minutesDocx, minutesDocxFileName, minutesHtml, minutesTitle, type MinutesLook} from '../server/minutes.ts';
 import {buildFolder, disposition, paperFile, type ExportCodec, type ExportDeps} from '../server/export-core.ts';
 import {brand} from '../client/brand.ts';
@@ -54,7 +56,9 @@ interface State {
    * Okresy członkostwa (dodatek D-14) są w `roster.periods`, ustawienia poczty w `general.mail`.
    */
   v4?: true;
-  prep: Record<string, PrepSpace>; visits: Record<string, Record<string, number>>;
+  prep: Record<string, PrepSpace>;
+  /** Dodatek D-10: wizyty (posiedzenie, konto), jak tabela `prep_visits`. */
+  visits: Record<string, Record<string, Visit>>;
   contacts: Record<string, DemoContact>; batches: DemoBatch[]; messages: DemoMessage[];
   files: Record<string, DemoFileRow>; archiveRevision: number;
 }
@@ -97,9 +101,9 @@ export class DemoServer {
     const now = Date.now();
     const d = demoData(now, newId, hashHtml);
     const state: State = {version: 1, roster: d.roster, accounts: structuredClone(demoAccounts), current: null, meetings: {}, materials: {}, keys: {}, secretVotes: {}, docTypes: d.docTypes,
-      general: d.general, audit: [], revision: 1, v3: true, v4: true, prep: d.prep, visits: {}, contacts: d.contacts, batches: [], messages: [], files: {}, archiveRevision: 1};
+      general: d.general, audit: [], revision: 1, v3: true, v4: true, prep: d.prep, visits: d.visits ?? {}, contacts: d.contacts, batches: [], messages: [], files: {}, archiveRevision: 1};
     for (const m of d.meetings) state.meetings[m.id] = m;
-    for (const x of d.materials) state.materials[x.ref.id] = {meetingId: x.meetingId, versions: {1: x.html}};
+    for (const x of d.materials) state.materials[x.ref.id] = {meetingId: x.meetingId, versions: {...x.older, [x.ref.version]: x.html}};
     for (const f of d.files) state.files[f.id] = f;
     state.audit = d.audit.map((e, i) => ({...e, id: i + 1}));
     return state;
@@ -280,10 +284,13 @@ export class DemoServer {
   private prepFor(m: Pick<Meeting, 'id' | 'organ'>): PrepSpace { return this.state.prep[m.id] ?? emptySpace(m.id, m.organ); }
   private waitingFor(organ: OrganCode): PrepSpace { return this.state.prep[waitingId(organ)] ?? emptySpace(waitingId(organ), organ); }
   private savePrep(ws: PrepSpace) { this.state.prep[ws.meetingId] = ws; }
+  /** Dodatek D-9: obecność w pamięci karty; w wersji próbnej wpis trwa 2 minuty, żeby po „Zmień osobę” było widać osobę wybraną poprzednio. */
+  private presence = new Presence(120000);
   private view(m: Meeting, a: Actor) {
     const env = this.envFor(m);
     const extra: Parameters<typeof viewFor>[4] = {};
-    if (m.status === 'przygotowanie') extra.prep = prepView(this.prepFor(m), m, a, this.state.roster, {env, waiting: this.waitingFor(m.organ), now: Date.now()});
+    if (m.status === 'przygotowanie') extra.prep = prepView(this.prepFor(m), m, a, this.state.roster, {env, waiting: this.waitingFor(m.organ), now: Date.now(),
+      presence: presenceRows(this.presence.list(m.id, Date.now(), a.account.id), m, this.state.roster, this.accounts()), previousVisit: this.state.visits[m.id]?.[a.account.id]?.prevAt ?? null});
     if (m.status === 'zakonczone') extra.archive = archiveInfo(m, this.allMeetings(), a, this.state.roster, isoDayOf(Date.now()));
     return viewFor(m, a, this.state.roster, env, extra);
   }
@@ -322,16 +329,18 @@ export class DemoServer {
     return isOfficeAccount(a) ? {office: brand.officeLower} : {name: a.name, func: organRoster(this.state.roster, m).find(x => x.personId === a.personId)?.label ?? ''};
   }
   /** Wiadomości do „Skrzynki (próba)”: jedna na odbiorcę ze stanem „Nie wysłano, wersja próbna” (B2-P18). */
-  private enqueue(kind: MailKind, meetingId: string | null, a: Actor, content: {subject: string; text: string; html: string}, intro: string, list: {accountId: string | null; name: string; address: string}[], error = '') {
+  private enqueue(kind: MailKind, meetingId: string | null, a: Actor, content: {subject: string; text: string; html: string}, intro: string, list: {accountId: string | null; name: string; address: string}[], error = '',
+    contentFor?: (accountId: string) => {subject: string; text: string; html: string}) {
     const batch: DemoBatch = {id: newId(), kind, meetingId, created: Date.now(), createdBy: a.account.id, actor: a.name, subject: content.subject, intro, recipients: list.length};
     this.state.batches.push(batch);
-    for (const r of list) this.state.messages.push({id: newId(), batchId: batch.id, accountId: r.accountId, name: r.name, address: r.address, subject: content.subject, text: content.text, html: content.html, status: 'proba', error, at: batch.created});
+    for (const r of list) { const own = (r.accountId && contentFor?.(r.accountId)) || content; this.state.messages.push({id: newId(), batchId: batch.id, accountId: r.accountId, name: r.name, address: r.address, subject: own.subject, text: own.text, html: own.html, status: 'proba', error, at: batch.created}); }
     if (this.state.messages.length > 300) this.state.messages.splice(0, this.state.messages.length - 300);
     return batch;
   }
-  private mailContent(kind: MailKind, m: Meeting, a: Actor, intro: string) {
+  private mailContent(kind: MailKind, m: Meeting, a: Actor, intro: string, forAccount?: string | null) {
     const base = this.mailBase(m.organ);
-    if (kind === 'postep') return progressMail(m, progress(this.envFor(m), m, this.prepFor(m), a, Date.now()), {...base, intro, sender: this.senderOf(a, m), now: Date.now()});
+    const target = forAccount ? this.state.accounts.find(x => x.id === forAccount) : undefined;
+    if (kind === 'postep') return progressMail(m, progress(this.envFor(m), m, this.prepFor(m), a, Date.now()), {...base, intro, sender: this.senderOf(a, m), now: Date.now(), tasks: target ? mailTasks(this.prepFor(m), m, target) : []});
     if (kind === 'po_posiedzeniu') {
       const env = this.envFor(m);
       const adopted = m.ballots.find(b => b.purpose === 'protokol' && b.protocolOf && b.announcedAt && b.result?.adopted && !b.aborted);
@@ -339,6 +348,7 @@ export class DemoServer {
       return afterMail(m, {...base, intro, sender: this.senderOf(a, m), acts: actBallots(m, env).length, adoptedDay});
     }
     if (kind === 'protokol') return minutesMail(m, base);
+    if (kind === 'komunikacja') return commsReadyMail(m, base);
     return fail('Tej wiadomości nie wysyła się z posiedzenia.');
   }
   private exportDeps(m: Meeting, a?: Actor): ExportDeps {
@@ -456,13 +466,13 @@ export class DemoServer {
         const roster = this.state.roster;
         // Poza kręgiem z pytania 13 mapa ma tylko własne zdjęcie (W-2), jak na serwerze.
         const ownV = this.avatars.get(this.avatarKey(actor.account))?.v;
-        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(this.state.accounts.filter(u => !u.disabled && this.avatars.has(this.avatarKey(u))).map(u => [this.avatarKey(u), {v: this.avatars.get(this.avatarKey(u))!.v}]))
+        const avatars = seesPhotos(roster, actor) ? Object.fromEntries(this.state.accounts.filter(u => !u.disabled && this.avatars.has(this.avatarKey(u))).map(u => [this.avatarKey(u), {v: this.avatars.get(this.avatarKey(u))!.v, ...(u.avatarScreen ? {screen: true} : {})}]))
           : ownV ? {[this.avatarKey(actor.account)]: {v: ownV}} : null;
         const closed = this.allMeetings().filter(m => m.status === 'zakonczone');
         const prepares = canCreate(roster, 'prezydium', actor);
         return json({...base, avatars, photoCircle: photoCircleText(roster), ...(isCommsAccount(actor) ? {home: '#odbyte'} : {}),
           ...(mayMail(roster, actor, prepares) ? {mail: {enabled: this.mailEnabled()}} : {}),
-          can: {ownStats: canSeeOwnStats(roster, actor, closed), rosterStats: false, report: canReport(roster, actor), catalog: isCommsAccount(actor) || isOfficeAccount(actor) || !!actor.personId || actor.account.kind === 'doradczy' || actor.account.kind === 'gosc'}});
+          can: {ownStats: canSeeOwnStats(roster, actor, closed), rosterStats: canSeeRosterStats(roster, actor), report: canReport(roster, actor), catalog: isCommsAccount(actor) || isOfficeAccount(actor) || !!actor.personId || actor.account.kind === 'doradczy' || actor.account.kind === 'gosc'}});
       }
       if (path === '/api/login' && method === 'POST') {
         const account = this.state.accounts.find(a => a.username === input.username && !a.disabled) ?? fail('Nie ma takiej osoby w wersji próbnej.', 401);
@@ -485,6 +495,8 @@ export class DemoServer {
           prefs: prefsOf(c.prefs), avatar: a.account.avatar ?? 0, avatarScreen: !!a.account.avatarScreen, avatarRemoved: a.account.avatarRemoved ?? null, mailEnabled: this.mailEnabled(),
           privacyUrl: /^https:\/\/\S+$/.test(this.mailSettings().privacyUrl) ? this.mailSettings().privacyUrl : null}, 200, noStore);
       }
+      // Dodatek D-3: wersja próbna ma jedną sesję w karcie przeglądarki, więc nie ma innych urządzeń do wylogowania.
+      if (path === '/api/me/sessions/logout-others' && method === 'POST') return json({ok: true, removed: 0}, 200, noStore);
       if (path === '/api/me/prefs' && method === 'PUT') {
         const c = this.contactOf(a.account.id);
         const prefs = prefsOf(c.prefs);
@@ -545,6 +557,15 @@ export class DemoServer {
         const cleaned = acceptAvatar(bytes);
         this.avatars.set(key, {v: (this.avatars.get(key)?.v ?? 0) + 1, bytes: cleaned.bytes});
         return json({account: this.withAvatar(this.state.accounts.find(x => x.id === a.account.id)!)}, 200, noStore);
+      }
+      if (path === '/api/me/avatar-screen' && method === 'PUT') {
+        // Dodatek D-16: jak serwer.
+        if (typeof input?.on !== 'boolean') fail('Nieprawidłowe ustawienie.');
+        if (!mayShowOnScreen(this.state.roster, a)) fail(SCREEN_PHOTO_REFUSAL, 403);
+        const acc = this.state.accounts.find(x => x.id === a.account.id)!;
+        if (input.on) acc.avatarScreen = true; else delete acc.avatarScreen;
+        this.save();
+        return json({account: this.withAvatar(acc)}, 200, noStore);
       }
       const avatarMatch = path.match(/^\/api\/avatars\/([\w-]+)$/);
       if (avatarMatch && method === 'GET') {
@@ -656,10 +677,13 @@ export class DemoServer {
           const part = url.searchParams.get('czesc') === 'akty' ? 'akty' : 'posiedzenia';
           return file(periodReportCsv(r, part), 'text/csv; charset=utf-8', {'Content-Disposition': disposition(`${base}-${part}.csv`)});
         }
+        // Dodatek D-17: Word i Markdown tymi samymi funkcjami co serwer.
+        if (format === 'docx') return file(await docxFromHtml(periodReportHtml(r, this.state.roster), {title: 'Zestawienie za okres', header: 'Zestawienie za okres', footerLeft: generatedLine(Date.now()), now: Date.now(), deflateRaw: browserDeflateRaw}),
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', {'Content-Disposition': disposition(`${base}.docx`)});
+        if (format === 'md') return file(periodReportMarkdown(r), 'text/markdown; charset=utf-8', {'Content-Disposition': disposition(`${base}.md`)});
         if (format !== 'html') fail('Ten dokument nie ma takiego formatu.');
         const html = paperPage(periodReportHtml(r, this.state.roster), {title: 'Zestawienie za okres', header: 'Zestawienie za okres', draft: false, generatedAt: Date.now(), css: null,
-          links: [{href: `/api/zestawienie?od=${range.from}&do=${range.to}&format=csv&czesc=posiedzenia`, label: 'CSV', name: 'Pobierz posiedzenia w formacie CSV'},
-            {href: `/api/zestawienie?od=${range.from}&do=${range.to}&format=csv&czesc=akty`, label: 'CSV akty', name: 'Pobierz akty w formacie CSV'}]});
+          links: periodReportLinks(range)});
         return file(html, 'text/html; charset=utf-8', {'Content-Disposition': disposition(`${base}.html`, true)});
       }
       if (path === '/api/statystyki/moje' && method === 'GET') {
@@ -675,7 +699,24 @@ export class DemoServer {
         if (format === 'html') return file(paperPage(statsPageBody(r, Date.now()), {title: 'Moje statystyki', header: 'Moje statystyki', draft: false, generatedAt: Date.now(), css: null}), 'text/html; charset=utf-8', {'Content-Disposition': disposition(`${isoDayOf(Date.now())}-moje-statystyki.html`, true)});
         return json({stats: r, source: statsSourceLines(r, Date.now()), generatedAt: Date.now()}, 200, noStore);
       }
-      if (path.startsWith('/api/statystyki/')) fail('Statystyki składu dochodzą z dodatkiem.', 404);
+      const rosterMatch = path.match(/^\/api\/statystyki\/sklad(?:\/([\w-]{1,64}))?$/);
+      if (rosterMatch && method === 'GET') {
+        // Dodatek D-13: jak serwer.
+        const roster = this.state.roster;
+        if (!canSeeRosterStats(roster, a)) fail(rosterStatsRefusal(), 403);
+        const q = statsRangeInput({od: url.searchParams.get('od'), do: url.searchParams.get('do'), kadencja: url.searchParams.get('kadencja'), rok: url.searchParams.get('rok')}, isoDayOf(Date.now()));
+        if ('error' in q) fail(q.error);
+        const since = organSettingsOf(this.state.general, 'prezydium').statsSince;
+        const input = {meetings: this.allMeetings(), roster, range: (q as {range: {from: string; to: string}}).range, ...(since ? {since} : {}), ...((q as {term?: string}).term ? {term: (q as {term?: string}).term} : {})};
+        const notes = seesStatsNotes(roster, a);
+        if (rosterMatch[1]) return json({stats: rosterPersonStats(input, rosterMatch[1], {notes}), generatedAt: Date.now()}, 200, noStore);
+        const r = rosterStats(input, {notes});
+        const format = url.searchParams.get('format') || 'json';
+        if (format === 'csv') return file(statsCsv({...r, notes: []}, 'sklad', Date.now()), 'text/csv; charset=utf-8', {'Content-Disposition': disposition(rosterFileName(r, 'csv'))});
+        if (format === 'html') return file(paperPage(rosterPageBody(r, Date.now(), url.searchParams.get('wariant') === 'sprawozdanie' ? 'sprawozdanie' : 'pelny'), {title: 'Statystyki składu', header: 'Statystyki składu', draft: false, generatedAt: Date.now(), css: null}), 'text/html; charset=utf-8', {'Content-Disposition': disposition(rosterFileName(r, 'html'), true)});
+        return json({stats: r, source: statsSourceLines(r, Date.now()), generatedAt: Date.now()}, 200, noStore);
+      }
+      if (path.startsWith('/api/statystyki/')) fail('Nie znaleziono tej funkcji.', 404);
       const organWaiting = path.match(/^\/api\/organs\/(prezydium|rada|zjazd)\/czekajace$/);
       if (organWaiting) {
         const organ = organWaiting[1] as OrganCode;
@@ -853,8 +894,16 @@ export class DemoServer {
         // ETag (2.4): w „trwa” i „przerwa” format wersji 3 (T-5); w przygotowaniu dochodzą licznik katalogu, rewizja
         // przestrzeni roboczej i dzień, po zamknięciu licznik katalogu i dzień.
         const m = this.meetingFor(id, a), day = isoDayOf(Date.now());
+        // Dodatki D-9 i D-10 (tylko w przygotowaniu, T-5): obecność i wizyta jak na serwerze.
+        let extraTag = '';
+        if (m.status === 'przygotowanie') {
+          if (presenceAllowed(this.state.roster, m, a, prefsOf(this.contactOf(a.account.id).prefs))) this.presence.touch(m.id, a.account.id, presencePlace(headers.get('X-Przygotowanie')), Date.now());
+          const room = (this.state.visits[m.id] ??= {});
+          if (canSeeWorkspace(this.state.roster, m, a)) { const next = nextVisit(room[a.account.id] ?? null, Date.now()); if (next) { room[a.account.id] = next; this.save(); } }
+          extraTag = `-${this.presence.digest(m.id, Date.now(), a.account.id)}-${room[a.account.id]?.prevAt ?? 0}`;
+        }
         const etag = m.status === 'trwa' || m.status === 'przerwa' ? `"${m.revision}-${this.state.revision}-${a.account.id}"`
-          : m.status === 'przygotowanie' ? `"${m.revision}-${this.state.revision}-${this.state.archiveRevision}-${this.prepFor(m).revision}-${day}-${a.account.id}"`
+          : m.status === 'przygotowanie' ? `"${m.revision}-${this.state.revision}-${this.state.archiveRevision}-${this.prepFor(m).revision}-${day}-${a.account.id}${extraTag}"`
           : `"${m.revision}-${this.state.revision}-${this.state.archiveRevision}-${day}-${a.account.id}"`;
         if (headers.get('If-None-Match') === etag) return new Response(null, {status: 304, headers: {ETag: etag, 'X-Server-Now': String(Date.now())}});
         return json({meeting: this.view(m, a)}, 200, {ETag: etag});
@@ -880,6 +929,8 @@ export class DemoServer {
           if (deferred.length) this.savePrep(toWaiting(this.waitingFor(m.organ), deferred));
           const batches = new Set(this.state.batches.filter(b => b.kind === 'postep' && b.meetingId === m.id).map(b => b.id));
           for (const x of this.state.messages) if (batches.has(x.batchId) && x.status === 'proba') { x.status = 'anulowana'; x.error = CANCELLED_ON_OPEN; }
+          // Dodatek D-9 (T-5): od otwarcia obecność tego posiedzenia jest pusta i nie rośnie.
+          this.presence.clear(m.id);
         }
         return json({meeting: this.view(this.put(updated), a)});
       }
@@ -906,8 +957,9 @@ export class DemoServer {
         }
         for (const d of copy.displays ?? []) for (const f of [...d.files, ...(d.pdf ? [d.pdf] : [])]) { const nf = map.get(f.fileId); if (nf) f.fileId = nf; }
         if (copy.displays) copy.displays = copy.displays.filter(d => d.files.every(f => [...map.values()].includes(f.fileId)));
-        const moved = carryOver(this.waitingFor(copy.organ), null, copy);
-        if (moved.ws.proposals.length) { this.savePrep(moved.ws); this.savePrep(moved.waiting); }
+        const moved = carryOver(this.waitingFor(copy.organ), this.state.prep[src.id] ?? null, copy, src);
+        if (moved.ws.proposals.length || moved.ws.tasks.length) this.savePrep(moved.ws);
+        if (moved.ws.proposals.length) this.savePrep(moved.waiting);
         return json({meeting: this.view(this.put(copy), a)}, 201);
       }
       if (rest === '/secret/issue' && method === 'POST') {
@@ -962,17 +1014,45 @@ export class DemoServer {
       if (filedMatch && method === 'DELETE') {
         return json({meeting: this.view(this.put(removeFiled(this.meetingFor(id, a), filedMatch[1], a, this.context())), a)});
       }
+      if (rest === '/przygotowanie' && method === 'POST' && input?.cmd?.type === 'seen') {
+        // Dodatek D-10: „Oznacz jako przeczytane” (tylko w przygotowaniu, T-5).
+        const m = this.meetingFor(id, a);
+        if (!canSeeWorkspace(this.state.roster, m, a)) fail(PREP_REFUSALS.see, 403);
+        if (m.status !== 'przygotowanie') fail(PREP_REFUSALS.opened, 409);
+        (this.state.visits[m.id] ??= {})[a.account.id] = seenVisit(Date.now());
+        this.save();
+        const v = this.view(m, a);
+        return json({meeting: v, prep: v.prep ?? null});
+      }
       if (rest === '/przygotowanie' && method === 'POST') {
         const m = this.meetingFor(id, a);
         const own = Object.values(this.state.prep).filter(x => x.organ === m.organ && x.meetingId !== m.id).flatMap(x => x.proposals).filter(p => p.accountId === a.account.id && p.state === 'zgloszone').length;
         const r = applyPrep(this.prepFor(m), m, input?.cmd as PrepCommand, a, {...this.context(), attachment: aid => this.attachmentOf(m.id, aid), waitingElsewhere: own});
         let meeting = r.meeting ?? m;
         if (r.created) meeting = this.attachProposalFile(meeting, r.created, a);
+        if (r.toMaterial) {
+          // Dodatek D-12 (B2-W09): materiał „Inny” z treścią uwagi.
+          const html = textToHtml(r.toMaterial.text);
+          const ref: MaterialRef = {id: newId(), title: r.toMaterial.title, type: 'inny', number: '', version: 1, hash: hashHtml(html), size: html.length, fileId: null, fileName: null, createdAt: Date.now()};
+          this.state.materials[ref.id] = {meetingId: m.id, versions: {1: html}};
+          const moved = attachCommentMaterial(meeting, r.ws, ref, r.toMaterial, a, Date.now());
+          meeting = moved.meeting; r.ws = moved.ws; r.meeting = meeting;
+        }
         this.savePrep(r.ws);
         if (r.waiting?.length) this.savePrep(toWaiting(this.waitingFor(m.organ), r.waiting));
         if (r.meeting) this.put(meeting); else this.save();
         const v = this.view(meeting, a);
         return json({meeting: v, prep: v.prep ?? null});
+      }
+      if (rest === '/czekajace' && (method === 'GET' || method === 'POST')) {
+        // Dodatek D-5 (U-44, B2-W16): jak serwer.
+        const m = this.meetingFor(id, a);
+        if (!waitingLiveAllowed(m, a)) fail(WAITING_LIVE_REFUSAL, 403);
+        if (method === 'GET') return json({proposals: waitingLiveList(this.waitingFor(m.organ))}, 200, noStore);
+        const r = acceptWaitingLive(this.waitingFor(m.organ), m, String(input?.proposalId ?? ''), a, this.context());
+        this.savePrep(r.ws);
+        const saved = this.put(r.meeting);
+        return json({meeting: this.view(saved, a), proposals: waitingLiveList(r.ws)});
       }
       if (rest === '/przygotowanie' && method === 'GET') {
         const m = this.meetingFor(id, a);
@@ -1033,12 +1113,12 @@ export class DemoServer {
         }
         const choice = input?.recipients && typeof input.recipients === 'object' ? input.recipients : {group: 'wszyscy'};
         const contacts = this.contacts();
-        const rows = mailRecipients(kind, this.state.roster, m, contacts, {group: ['wszyscy', 'zadania', 'wybrani'].includes(choice.group) ? choice.group : 'wszyscy', ids: Array.isArray(choice.ids) ? choice.ids.map(String) : [], office: !!choice.office});
-        const content = this.mailContent(kind, m, a, intro);
+        const rows = mailRecipients(kind, this.state.roster, m, contacts, {group: ['wszyscy', 'zadania', 'wybrani'].includes(choice.group) ? choice.group : 'wszyscy', ids: Array.isArray(choice.ids) ? choice.ids.map(String) : [], office: !!choice.office}, this.prepFor(m));
+        const content = this.mailContent(kind, m, a, intro, typeof input?.for === 'string' ? input.for : null);
         if (!sending) return json({...content, recipients: rows, lastProgressAt}, 200, noStore);
         const byId = new Map(contacts.map(c => [c.accountId, c]));
         const list = rows.filter(r => r.state === 'wysle').map(r => byId.get(r.accountId)!).filter(c => c?.email).map(c => ({accountId: c.accountId, name: c.name, address: c.email!}));
-        const batch = this.enqueue(kind, m.id, a, content, intro, list);
+        const batch = this.enqueue(kind, m.id, a, content, intro, list, '', kind === 'postep' ? accountId => this.mailContent(kind, m, a, intro, accountId) : undefined);
         this.save();
         return json({batch: {id: batch.id, recipients: list.length}}, 201);
       }

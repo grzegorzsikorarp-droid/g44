@@ -209,7 +209,7 @@ test('T-W13, G-31: zmiana nazwy z `expect` i poprawka uwagi przez 15 minut przed
   assert.ok(ws.comments[0].resolved);
   ws = applyPrep(ws, m, {type: 'comment_delete', commentId: ws.comments[1].id}, office, ctxOf(ctx.tick())).ws;
   assert.ok(ws.comments[1].deleted && ws.comments[1].text === '');
-  // Dodatki (D-11, D-12) nie są poleceniami rdzenia.
-  assert.throws(() => applyPrep(ws, m, {type: 'task_add'} as never, office, ctxOf(ctx)), {message: 'Nieznana czynność.'});
+  // Polecenia dodatków D-11 i D-12 doszły w fazie dodatków (tests/dodatki-v4-domena.test.ts); nieznane polecenie nadal odmowa.
+  assert.throws(() => applyPrep(ws, m, {type: 'zadanie_nieznane'} as never, office, ctxOf(ctx)), {message: 'Nieznana czynność.'});
   void presidium;
 });

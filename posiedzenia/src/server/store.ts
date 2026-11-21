@@ -402,6 +402,16 @@ export class Store {
       ON CONFLICT(meeting_id) DO UPDATE SET data=excluded.data, revision=excluded.revision, updated=excluded.updated`).run(ws.meetingId, ws.organ, JSON.stringify(ws), ws.revision, now);
   }
   deletePrep(meetingId: string) { this.db.prepare('DELETE FROM prep_spaces WHERE meeting_id=?').run(meetingId); this.db.prepare('DELETE FROM prep_visits WHERE meeting_id=?').run(meetingId); }
+  /** Dodatek D-10 (B2-W13): wizyta konta przy posiedzeniu w przygotowaniu (`prep_visits`). */
+  visit(accountId: string, meetingId: string): {lastAt: number; prevAt: number | null} | null {
+    const r = this.db.prepare('SELECT last_at, prev_at FROM prep_visits WHERE account_id=? AND meeting_id=?').get(accountId, meetingId) as {last_at: number; prev_at: number | null} | undefined;
+    return r ? {lastAt: Number(r.last_at), prevAt: r.prev_at === null ? null : Number(r.prev_at)} : null;
+  }
+  saveVisit(accountId: string, meetingId: string, v: {lastAt: number; prevAt: number | null}) {
+    this.db.prepare(`INSERT INTO prep_visits(account_id,meeting_id,last_at,prev_at) VALUES (?,?,?,?)
+      ON CONFLICT(account_id, meeting_id) DO UPDATE SET last_at=excluded.last_at, prev_at=excluded.prev_at`).run(accountId, meetingId, v.lastAt, v.prevAt);
+  }
+  visitCount(meetingId: string) { return Number((this.db.prepare('SELECT COUNT(*) AS n FROM prep_visits WHERE meeting_id=?').get(meetingId) as {n: number}).n); }
   prepSpaces(): PrepSpace[] {
     return (this.db.prepare('SELECT data FROM prep_spaces').all() as {data: string}[]).flatMap(r => { try { return [JSON.parse(r.data) as PrepSpace]; } catch { return []; } });
   }

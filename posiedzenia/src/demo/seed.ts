@@ -119,8 +119,10 @@ export interface DemoContact {
   code?: {address: string; code: string; expires: number; attempts: number; sentLog: number[]} | null;
 }
 export interface DemoSeed {
-  roster: Roster; general: GeneralSettings; docTypes: DocType[]; meetings: Meeting[]; materials: {meetingId: string; ref: MaterialRef; html: string}[];
+  roster: Roster; general: GeneralSettings; docTypes: DocType[]; meetings: Meeting[]; materials: {meetingId: string; ref: MaterialRef; html: string; /** Dodatek D-12: wcześniejsze wersje. */ older?: Record<number, string>}[];
   prep: Record<string, PrepSpace>; files: DemoFileRow[]; audit: Omit<AuditEntry, 'id'>[]; contacts: Record<string, DemoContact>;
+  /** Dodatek D-10: poprzednie wizyty (posiedzenie, konto). */
+  visits?: Record<string, Record<string, {lastAt: number; prevAt: number | null}>>;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -466,25 +468,46 @@ export function demoData(now: number, newId: () => string, hash: (html: string) 
   prep({type: 'thread_resolve', commentId: question.id, on: true}, person('p3'), 5);
   const positionItem = today.agenda.find(i => i.docType === 'stanowisko')!;
   prep({type: 'comment_add', target: {kind: 'punkt', itemId: positionItem.id}, text: 'Proponuję dopisać zdanie o obsadzie w weekendy.'}, person('p4'), 120);
+  // Dodatek D-12 (7.2): uwaga do wersji 1 projektu stanowiska, uwzględniona w wersji 2 (druga wersja dodana przez osobę referującą).
+  const positionMat = positionItem.materialIds[0];
+  const remark = prep({type: 'comment_add', target: {kind: 'material', materialId: positionMat, version: 1, quote: 'obsada dyżurów powinna odpowiadać potrzebom pacjentów'}, text: 'Warto dodać, kto ustala obsadę w weekendy (dane fikcyjne).'}, person('p2'), 20).ws.comments.at(-1)!;
+  const entry = materials.find(x => x.ref.id === positionMat)!;
+  const html2 = textToHtml('Prezydium Okręgowej Rady (dane fikcyjne)\n\nPrezydium zwraca uwagę, że obsada dyżurów powinna odpowiadać potrzebom pacjentów, także w weekendy (przykład).');
+  entry.older = {1: entry.html};
+  entry.html = html2;
+  entry.ref = {...entry.ref, version: 2, hash: hash(html2), size: html2.length};
+  today = {...today, materials: today.materials.map(r => r.id === positionMat ? {...entry.ref} : r)};
+  clock.add(15);
+  today.log.push({at: clock.now, text: `Dodano nową wersję materiału „${entry.ref.title}” (wersja 2).`, by: 'Joanna Szymańska', accountId: 'a-p6', tag: 'projekt', itemId: positionItem.id});
+  prep({type: 'remark_state', commentId: remark.id, state: 'uwzgledniona', version: 2}, person('p6'), 10);
+  // Dodatek D-11 (7.2): zadania z terminem, jedno po terminie; zadanie dla członka przydziela zwołująca.
+  const yesterday = new Date(now - 86400000).toISOString().slice(0, 10), later = new Date(now + 5 * 86400000).toISOString().slice(0, 10);
+  prep({type: 'task_add', title: 'Przygotować projekt uchwały w sprawie patronatu (przykład)', assignee: {personId: 'p4'}, due: yesterday}, person('p1'), 15);
+  prep({type: 'task_add', title: 'Zarezerwować salę szkoleniową (przykład)', assignee: {office: true}, due: later, itemId: reportItem.id}, person('p3'), 15);
 
   // Adresy kont fikcyjnych (7.2): „Potwierdzony”, „Czeka na potwierdzenie” i „Brak adresu”.
   const confirmedAt = warsaw('2026-09-01', '10:00');
   const contact = (email: string | null, state: EmailState, by: DemoContact['confirmedBy'] = state === 'potwierdzony' ? 'kod' : null): DemoContact =>
     ({email, state, confirmedAt: state === 'potwierdzony' ? confirmedAt : null, confirmedBy: by, prefs: {...defaultPrefs}});
+  // Dodatek D-9 (7.3): część osób fikcyjnych pozwala pokazywać, że ogląda przygotowanie (po „Zmień osobę” przez 2 minuty).
+  const watching = (c: DemoContact): DemoContact => ({...c, prefs: {...c.prefs, showPresence: true}});
   const contacts: Record<string, DemoContact> = {
-    'a-p1': contact('barbara.wisniewska@example.org', 'potwierdzony'),
-    'a-p2': contact('tomasz.lewandowski@example.org', 'potwierdzony', 'administrator'),
-    'a-p3': contact('ewa.dabrowska@example.org', 'niepotwierdzony'),
+    'a-p1': watching(contact('barbara.wisniewska@example.org', 'potwierdzony')),
+    'a-p2': watching(contact('tomasz.lewandowski@example.org', 'potwierdzony', 'administrator')),
+    'a-p3': watching(contact('ewa.dabrowska@example.org', 'niepotwierdzony')),
     'a-p4': contact('marta.kaczmarek@example.org', 'potwierdzony'),
     'a-p5': contact(null, 'brak'),
     'a-p6': contact('joanna.szymanska@example.org', 'potwierdzony'),
     'a-p7': contact(null, 'brak'),
     'a-p8': contact('karolina.mazur@example.org', 'potwierdzony'),
-    'a-biuro': contact('biuro@example.org', 'potwierdzony', 'administrator'),
+    'a-biuro': watching(contact('biuro@example.org', 'potwierdzony', 'administrator')),
     'a-kr': contact(null, 'brak'),
     'a-komunikacja': contact('komunikacja@example.org', 'potwierdzony', 'administrator'),
   };
-  return {roster, general, docTypes, meetings: [today, procedure, ...closed], materials, prep: {[today.id]: ws}, files, audit, contacts};
+  // Dodatek D-10 (7.3): poprzednia wizyta każdej osoby fikcyjnej sprzed zmian w przygotowaniu, więc „Co nowego” ma treść.
+  const firstChange = Math.min(...ws.events.map(e => e.at), ...ws.comments.map(c => c.at));
+  const visits = {[today.id]: Object.fromEntries(Object.keys(contacts).map(id => [id, {lastAt: firstChange - 60000, prevAt: null}]))};
+  return {roster, general, docTypes, meetings: [today, procedure, ...closed], materials, prep: {[today.id]: ws}, files, audit, contacts, visits};
 }
 
 /** Posiedzenie w przygotowaniu i głosowanie między posiedzeniami w przygotowaniu (dane wersji 2 i 3 bez zmian). */

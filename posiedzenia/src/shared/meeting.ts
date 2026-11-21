@@ -64,7 +64,9 @@ export type Command =
   /** Wersja 3: tylko przewodniczący; `basis` jest pomijane (pole zniknie z klienta). */
   | {type: 'deputy'; personId: string | null; /** @deprecated wersja 3 */ basis?: string}
   /** Wersja 3: gość wymaga `invitedBy`, a przy zaproszeniu przez organ także `decision` (G-14). */
-  | {type: 'invite'; accountId: string; on: boolean; invitedBy?: 'przewodniczacy' | 'organ'; decision?: string}
+  | {type: 'invite'; accountId: string; on: boolean; invitedBy?: 'przewodniczacy' | 'organ'; decision?: string;
+    /** Dodatek D-6 (U-43, B1-34): zgoda gościa na wymienienie w materiałach dla komunikacji; samo `comms` przy zaproszonym gościu zmienia tylko zgodę. */
+    comms?: boolean}
   | {type: 'item_add'; title: string; parentId?: string | null; afterId?: string | null}
   /**
    * F11, F12: `docType` pusty albo null usuwa „Co jest głosowane”; `presenters` zastępuje listę osób (najwyżej 6).
@@ -148,6 +150,8 @@ export type Command =
   /** Pokaz (U-31, G-24): rozpoczęcie albo przełączenie, strona, zakończenie. Powrót do pokazu: `present {kind: 'pokaz', id}`. */
   | {type: 'show'; source: 'plik' | 'material'; id: string; page?: number}
   | {type: 'show_page'; page: number}
+  /** Dodatek D-4 (B3-23): odtwarzanie wideo na sali; `at` to sekunda filmu („Od początku”: 0). */
+  | {type: 'show_play'; on: boolean; at?: number}
   | {type: 'show_end'};
 
 /** Nazwa rodzaju materiału ze słownika (F11), np. „Stanowisko”; nieznany rodzaj to „Materiał”. */
@@ -495,6 +499,8 @@ function openBallot(m: Meeting, ctx: Context, actor: Actor, input: {
   if (input.mode === 'tajne') b.secret = {...ctx.secret!.openKey(id), issued: [], cast: 0};
   m.ballots.push(b);
   if (!remote) m.presentation = {kind: 'glosowanie', id, at: ctx.now};
+  // Dodatek D-4 (B3-11, B3-23): głosowanie wstrzymuje pokaz, więc trwające wideo zatrzymuje się w bieżącym miejscu.
+  if (m.show?.playing) pauseVideo(m.show, ctx.now);
   // Wersja 3 (poziom 3): czas inny niż w ustawieniach punktu albo posiedzenia trafia do wpisu.
   let timing = '';
   if (!trial && !remote && input.setting) {
@@ -750,6 +756,15 @@ function endShow(m: Meeting, ctx: Context, actor: Actor | null) {
   log(m, ctx, actor, `Zakończono pokaz ${title}${where}.`, {tag: 'pokaz', itemId: s.itemId ?? undefined, ...(d ? {displayId: d.id} : {})});
   m.show = null;
   if (m.presentation?.kind === 'pokaz') m.presentation = null;
+}
+/** Sekunda filmu w trwającym pokazie wideo (B3-23): przy odtwarzaniu od `from` od chwili `since`, inaczej miejsce zatrzymania. */
+export function videoPosition(s: Pick<NonNullable<Meeting['show']>, 'playing' | 'pausedAt'>, now: number): number {
+  if (s.playing) return Math.max(0, s.playing.from + (now - s.playing.since) / 1000);
+  return s.pausedAt ?? 0;
+}
+function pauseVideo(s: NonNullable<Meeting['show']>, now: number) {
+  s.pausedAt = Math.round(videoPosition(s, now) * 10) / 10;
+  s.playing = null;
 }
 /** Punkt, do którego w trakcie obrad można dodać plik do pokazania (G-25): bieżący albo jeszcze nierozpatrzony. */
 const liveItemOk = (m: Meeting, itemId: string | null) => {
@@ -1031,12 +1046,22 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
         if (!m.invited.includes(cmd.accountId)) { m.invited.push(cmd.accountId); settingLog(m, ctx, actor, `Dodano osobę z głosem doradczym ${label} (§ 7 ust. 2).`); }
         break;
       }
+      if (cmd.on && cmd.comms !== undefined && cmd.invitedBy === undefined) {
+        // Dodatek D-6 (U-43): zgoda dotyczy tylko danych tej osoby; zapis z datą i osobą, która ją przyjęła.
+        const inv = m.guestInvites?.[cmd.accountId];
+        ensure(inv && m.invited.includes(cmd.accountId), 'Najpierw dodaj zaproszenie gościa.', 409);
+        if (cmd.comms === !!inv!.comms) break;
+        if (cmd.comms) inv!.comms = {at: ctx.now, by: actor.name, accountId: actor.account.id}; else delete inv!.comms;
+        settingLog(m, ctx, actor, cmd.comms ? `Zapisano zgodę gościa ${label} na wymienienie w materiale dla komunikacji.` : `Usunięto zgodę gościa ${label} na wymienienie w materiale dla komunikacji.`);
+        break;
+      }
       if (cmd.on) {
         ensure(cmd.invitedBy && law.guests.by.some(g => g.kind === cmd.invitedBy), `Wskaż, kto zaprasza gościa (${law.guests.basis}).`);
         const decision = reasonOf(cmd.decision);
         if (cmd.invitedBy === 'organ') ensure(decision, 'Wpisz, kiedy Prezydium zaprosiło gościa, np. datę posiedzenia albo numer uchwały.');
         m.invited = [...new Set([...m.invited, cmd.accountId])];
-        (m.guestInvites ??= {})[cmd.accountId] = {by: cmd.invitedBy!, ...(cmd.invitedBy === 'organ' ? {decision} : {}), at: ctx.now, recordedBy: actor.name, accountId: actor.account.id};
+        (m.guestInvites ??= {})[cmd.accountId] = {by: cmd.invitedBy!, ...(cmd.invitedBy === 'organ' ? {decision} : {}), at: ctx.now, recordedBy: actor.name, accountId: actor.account.id,
+          ...(cmd.comms ? {comms: {at: ctx.now, by: actor.name, accountId: actor.account.id}} : {})};
         settingLog(m, ctx, actor, cmd.invitedBy === 'organ'
           ? `Dodano gościa ${label} na zaproszenie ${organWord(ctx, m.organ)}, ${decision} (${law.guests.basis}).`
           : `Dodano gościa ${label} na zaproszenie przewodniczącego (${law.guests.basis}).`);
@@ -1945,6 +1970,25 @@ export function apply(meeting: Meeting, cmd: Command, actor: Actor, ctx: Context
       ensure(Number.isInteger(page) && page >= 1 && page <= showPages(m, m.show.source, m.show.id), SHOW_REFUSALS.page);
       if (page === m.show.page) return meeting;
       m.show.page = page;
+      break;
+    }
+    case 'show_play': {
+      // Dodatek D-4 (B3-23, G-24): „Odtwórz”, „Zatrzymaj”, „Od początku” tylko osoba prowadząca, poza głosowaniem.
+      ensure(!closed, SHOW_REFUSALS.closed, 409);
+      ensure(canShow(m, actor), SHOW_REFUSALS.who, 403);
+      ensure(canShowNow(m), showBlocked(m), 409);
+      ensure(m.show && m.presentation?.kind === 'pokaz', 'Pokaz nie trwa.', 409);
+      const d = m.show.source === 'plik' ? (m.displays ?? []).find(x => x.id === m.show!.id) : undefined;
+      ensure(d?.kind === 'wideo', 'Odtwarzać można tylko wideo.', 409);
+      const at = cmd.at === undefined ? null : Number(cmd.at);
+      ensure(at === null || (Number.isFinite(at) && at >= 0 && at <= 24 * 3600), 'Nieprawidłowe miejsce w filmie.');
+      if (cmd.on) {
+        m.show.playing = {since: ctx.now, from: at ?? m.show.pausedAt ?? 0};
+        delete m.show.pausedAt;
+      } else {
+        pauseVideo(m.show, ctx.now);
+        if (at !== null) m.show.pausedAt = at;
+      }
       break;
     }
     case 'show_end': {

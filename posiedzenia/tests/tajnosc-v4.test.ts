@@ -164,7 +164,8 @@ test('T-5, 2.4: w statusie „trwa” ETag w formacie wersji 3, bez przestrzeni 
     const prepRes = await eo.raw(`/api/meetings/${m.id}`);
     const prepView = (await prepRes.json()).meeting;
     const ws = app.store.prepSpace(m.id)!;
-    assert.equal(prepRes.headers.get('etag'), `"0.4.0-${prepView.revision}-${app.store.revision()}-${app.store.archiveRevision()}-${ws.revision}-${day}-${p.idOf('eo.test')}"`);
+    // Dodatki D-9 i D-10 (2.4): w przygotowaniu dochodzą skrót obecności innych osób („0”: nikogo) i poprzednia wizyta („0”: pierwsza).
+    assert.equal(prepRes.headers.get('etag'), `"0.4.0-${prepView.revision}-${app.store.revision()}-${app.store.archiveRevision()}-${ws.revision}-${day}-${p.idOf('eo.test')}-0-0"`);
     assert.equal(prepView.prep.proposals.length, 1);
     await p.si.ok(`/api/meetings/${m.id}/command`, {type: 'open'});
     const etags: string[] = [];

@@ -186,10 +186,12 @@ export const APP_RULES: AppRule[] = [
   {id: 'czas_procedury', title: 'Najkrótszy czas głosowania między posiedzeniami', question: 7,
     text: 'Głosowanie między posiedzeniami trwa co najmniej 24 godziny, chyba że osoba, która je rozpoczyna albo zmienia termin, poda powód krótszego terminu.'},
   // Wersja 4 (SPEC-4 rozdz. 3.2): odczytanie prośby z 20.11.2026 i nowe ustalenia jako zasady aplikacji, nie zasady
-  // przyjęte przez Izbę (DB-33, K4-12). Zasady i zdania dodatków dochodzą razem z dodatkiem (D-9 obecnosc_przygotowanie,
+  // przyjęte przez Izbę (DB-33, K4-12). Zasady i zdania dodatków doszły razem z dodatkami (D-9 obecnosc_przygotowanie,
   // D-11 zadania w `przestrzen_robocza`, D-16 zdanie o ekranie sali w `zdjecia`).
   {id: 'przestrzen_robocza', title: 'Przygotowanie posiedzenia',
-    text: 'Uwagi i zgłoszenia z przygotowania nie są materiałem posiedzenia i nie trafiają do protokołu. Od otwarcia posiedzenia nie można ich zmieniać, a po zamknięciu można je czytać przez 90 dni. Zgłoszenie czekające na posiedzenie wygasa po 365 dniach. O odrzuceniu i odłożeniu zgłoszenia decyduje zwołujący.'},
+    text: 'Uwagi, zgłoszenia i zadania z przygotowania nie są materiałem posiedzenia i nie trafiają do protokołu. Od otwarcia posiedzenia nie można ich zmieniać, a po zamknięciu można je czytać przez 90 dni. Zgłoszenie czekające na posiedzenie wygasa po 365 dniach. O odrzuceniu i odłożeniu zgłoszenia decyduje zwołujący.'},
+  {id: 'obecnosc_przygotowanie', title: 'Kto ogląda przygotowanie',
+    text: 'Aplikacja pokazuje, kto ogląda przygotowanie posiedzenia, tylko przed otwarciem posiedzenia, tylko u osób, które na to pozwoliły, i bez zapisu historii.'},
   {id: 'kanal_od_otwarcia', title: 'Kanał wiadomości od otwarcia',
     text: 'Kanał wiadomości posiedzenia działa od otwarcia posiedzenia albo rozpoczęcia głosowania między posiedzeniami. Wcześniej pisze się w uwagach przygotowania.'},
   {id: 'poczta', title: 'Wiadomości e-mail',
@@ -207,7 +209,7 @@ export const APP_RULES: AppRule[] = [
   {id: 'pokaz_glosowanie', title: 'Pokaz a głosowanie',
     text: 'W trakcie głosowania pokazu nie można zmienić. Ekran sali i telefony pokazują głosowanie, a pokaz wraca przyciskiem osoby prowadzącej obrady.'},
   {id: 'zdjecia', title: 'Zdjęcie profilowe', question: 13,
-    text: `Zdjęcie jest dobrowolne. Widzą je ${PHOTO_CIRCLES[ANSWERS.q13]}. Nie trafia do dokumentów. Znika przy blokadzie konta i 30 dni po zakończeniu członkostwa.`},
+    text: `Zdjęcie jest dobrowolne. Widzą je ${PHOTO_CIRCLES[ANSWERS.q13]}. Nie trafia do dokumentów. Znika przy blokadzie konta i 30 dni po zakończeniu członkostwa. Na ekranie sali pojawia się tylko za zgodą tej osoby.`},
   {id: 'obecnosc_czesciowa', title: 'Obecność w statystykach',
     text: 'Obecność częściowa to spóźnienie, wcześniejsze wyjście albo przerwa w obecności dłuższe niż 15 minut albo nieobecność przy głosowaniu. Godziną przybycia jest godzina zgłoszenia obecności w aplikacji.'},
   {id: 'statystyki_glosy', title: 'Głosy w statystykach',

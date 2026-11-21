@@ -37,9 +37,10 @@ window.addEventListener('click', event => {
 // ---------------------------------------------------------------------------------------------------------------
 // Wersja 4 (SPEC-4 8.2 D.3, pakiet D0): trasy nowych stron. Parametry stoją po znaku „?” w adresie trasy
 // (np. `#odbyte?rok=2026&rodzaj=posiedzenia`, `#zestawienie?od=2026-01-01&do=2026-12-31`, `#konto/statystyki?od=&do=`).
-// Trasa `#statystyki` („Statystyki składu”) dochodzi w dodatku D-13.
+// Trasa `#statystyki` („Statystyki składu”) doszła z dodatkiem D-13.
 export type V4Route =
   | {page: 'konto'}
+  | {page: 'statystyki'; query: URLSearchParams}
   | {page: 'moje-statystyki'; query: URLSearchParams}
   | {page: 'odbyte'; query: URLSearchParams}
   | {page: 'zestawienie'; query: URLSearchParams}
@@ -60,6 +61,7 @@ export function v4Route(hash: string): V4Route | null {
   const path = hash.split('?')[0];
   if (path === '#konto') return {page: 'konto'};
   if (path === '#konto/statystyki') return {page: 'moje-statystyki', query: routeQuery(hash)};
+  if (path === '#statystyki') return {page: 'statystyki', query: routeQuery(hash)};
   if (path === '#odbyte') return {page: 'odbyte', query: routeQuery(hash)};
   if (path === '#zestawienie') return {page: 'zestawienie', query: routeQuery(hash)};
   if (path === '#skrzynka') return {page: 'skrzynka'};

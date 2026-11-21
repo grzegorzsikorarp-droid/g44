@@ -472,6 +472,9 @@ export function canSeeRosterStats(roster: Roster, a: Actor): boolean {
   if (ANSWERS.q11 === 'a') return !!a.personId && roster.memberships.some(ms => ms.personId === a.personId && ms.organ === 'prezydium');
   return isReporting(roster, a);
 }
+/** Dodatek D-16 (B3-40, 4.3.5 przypis 14): zgodę na zdjęcie na ekranie sali zaznacza osoba, która może prowadzić obrady. */
+export const mayShowOnScreen = (roster: Roster, a: Actor) => !isCommsAccount(a) && isLeading(roster, a);
+export const SCREEN_PHOTO_REFUSAL = 'Zgodę na zdjęcie na ekranie sali zaznacza osoba, która może prowadzić obrady.';
 /** Komunikat odmowy „Statystyk składu” zgodny z odpowiedzią na pytanie 11 (rozdz. 4.5). */
 export const rosterStatsRefusal = () => ANSWERS.q11 === 'a' ? 'Statystyki składu widzą biuro i członkowie Prezydium.' : 'Statystyki składu widzą biuro, przewodniczący, wiceprzewodniczący i sekretarz.';
 /** Dodatek D-13: uwagi „Do sprawdzenia” w statystykach widzą biuro i przewodniczący. */

@@ -191,7 +191,10 @@ export function commsMarkdown(m: Meeting, env: CascadeEnv, o: CommsOptions): str
   const advisory = invited.filter(a => a.kind === 'doradczy' && came(a.id));
   const guests = invited.filter(a => a.kind === 'gosc' && came(a.id));
   if (advisory.length) out.push(`- Z głosem doradczym ${advisory.map(a => md(`${a.displayName}${a.label ? `, ${a.label}` : ''}`)).join('; ')}.`);
-  if (guests.length) { out.push(`- Goście na zaproszenie ${guests.length}.`); check.push('Materiał nie podaje imion i nazwisk gości. Jeśli wizyta ma trafić do relacji, ustal to z biurem.'); }
+  // Dodatek D-6 (B1-34, U-43): gość ze zgodą zapisaną przy zaproszeniu z imienia, nazwiska i funkcji; pozostali tylko liczbą.
+  const named = guests.filter(a => !!m.guestInvites?.[a.id]?.comms), counted = guests.filter(a => !m.guestInvites?.[a.id]?.comms);
+  if (named.length) out.push(`- Goście na zaproszenie ${named.map(a => md(`${a.displayName}${a.label ? `, ${a.label}` : ''}`)).join('; ')}.`);
+  if (counted.length) { out.push(`- ${named.length ? 'Inni goście' : 'Goście'} na zaproszenie ${counted.length}.`); check.push(named.length ? 'Materiał nie podaje imion i nazwisk gości bez zgody na wymienienie. Jeśli wizyta ma trafić do relacji, ustal to z biurem.' : 'Materiał nie podaje imion i nazwisk gości. Jeśli wizyta ma trafić do relacji, ustal to z biurem.'); }
   out.push('');
 
   // Porządek obrad: punkty porządkowe z tytułami, sprawy według poziomu, sprawy bez rodzaju sprawy tylko liczbą (K4-1).

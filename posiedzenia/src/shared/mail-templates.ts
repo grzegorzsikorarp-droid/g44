@@ -75,7 +75,9 @@ const link = (o: MailBase, m: Pick<Meeting, 'id'>, path = '') => `${o.appUrl.rep
  * zdanie „To nie jest zawiadomienie o posiedzeniu (§ 7 ust. 1).” nad stopką (K4-21). Część „Twoje zadania” należy do
  * dodatku D-11.
  */
-export function progressMail(m: Meeting, p: Progress, o: MailBase & {intro: string; sender: MailSender; now: number}): MailContent {
+export function progressMail(m: Meeting, p: Progress, o: MailBase & {intro: string; sender: MailSender; now: number;
+  /** Dodatek D-11 (B2 3.3): „Twoje zadania” tylko u osoby, która ma zadania; treść inna dla każdej osoby. */
+  tasks?: string[]}): MailContent {
   const subject = `Przygotowanie posiedzenia ${shortDate(m.date)}, gotowe ${p.ready} z ${p.total} ${p.total === 1 ? 'punktu' : 'punktów'}`;
   const where = m.kind === 'procedura' ? 'głosowanie między posiedzeniami' : m.mode === 'zdalne' ? 'posiedzenie zdalne' : m.place.trim();
   const facts = [p.text, ...(p.missing ? [p.missing] : []), ...(p.proposalsWaiting ? [`Zgłoszenia czekające na decyzję zwołującego ${p.proposalsWaiting}.`] : []), ...(p.notice ? [p.notice] : [])];
@@ -83,6 +85,7 @@ export function progressMail(m: Meeting, p: Progress, o: MailBase & {intro: stri
     {p: o.intro.trim()},
     {lines: [o.organ.name, [longDate(m.date), m.time && m.kind !== 'procedura' ? `godz. ${m.time}` : '', where].filter(Boolean).join(', ')]},
     {label: `Stan przygotowań ${dateDotsOf(o.now)}, godz. ${timeOf(o.now)}`, items: facts},
+    ...(o.tasks?.length ? [{label: 'Twoje zadania', items: o.tasks}] : []),
     {link: link(o, m), text: 'Szczegóły i materiały znajdziesz w aplikacji', button: 'Otwórz przygotowanie posiedzenia'},
     {small: senderLine(o.sender)},
     {small: 'To nie jest zawiadomienie o posiedzeniu (§ 7 ust. 1).'},
@@ -138,6 +141,19 @@ export function minutesMail(m: Meeting, o: MailBase): MailContent {
     {p: 'Jest do wglądu w biurze (§ 13 ust. 2) i w aplikacji. Prezydium przyjmie go na najbliższym posiedzeniu (§ 13 ust. 3).'},
     {link: link(o, m, '/dokumenty'), text: 'Dokumenty znajdziesz w aplikacji', button: 'Otwórz dokumenty posiedzenia'},
   ], 'To wiadomość służbowa. Przychodzi do osób, które pełnią funkcję w organie.', o);
+}
+
+/**
+ * Dodatek D-15 (DB-9, DB-18, 6.7.2): „Materiał dla komunikacji gotowy” do konta komunikacji przy udostępnieniu materiału;
+ * nieobowiązkowa, z rezygnacją przez preferencję „Dokumenty po posiedzeniu”. Link do wiersza katalogu.
+ */
+export function commsReadyMail(m: Meeting, o: MailBase): MailContent {
+  const day = paperDay(m);
+  return render(`Materiał dla komunikacji z posiedzenia ${shortDate(day)}`, [
+    {p: `Materiał dla komunikacji z posiedzenia ${o.organ.forms.genitive} z dnia ${longDate(day)} jest gotowy w aplikacji.`},
+    {p: m.photos?.url ? 'Odnośnik do zdjęć jest już wpisany.' : 'Odnośnika do zdjęć jeszcze nie wpisano.'},
+    {link: `${o.appUrl.replace(/\/$/, '')}/#odbyte?p=${m.id}`, text: 'Materiał znajdziesz w aplikacji', button: 'Otwórz odbyte posiedzenia'},
+  ], 'To wiadomość o materiale dla komunikacji. Możesz z niej zrezygnować w aplikacji, w części Moje konto, Powiadomienia.', o);
 }
 
 /** „Kod potwierdzenia adresu e-mail” (B2 3.3): kod bez linku. */

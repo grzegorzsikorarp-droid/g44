@@ -1,6 +1,6 @@
 import type {AccountKind, Actor, Meeting, Roster} from './types.ts';
 import type {Allowed} from './law.ts';
-import {canSendAfter, canSendProgress, canFile, isCommsAccount, isService, organRoster} from './role.ts';
+import {canReleaseComms, canSendAfter, canSendProgress, canFile, commsReleasedOk, isCommsAccount, isService, organRoster} from './role.ts';
 import {personName} from './roster.ts';
 import {timeOf} from './text.ts';
 
@@ -136,6 +136,13 @@ export function canSendMail(kind: MailKind, roster: Roster, m: Meeting, a: Actor
     if (!canSendAfter(roster, m, a)) return {allowed: false, reason: 'Powiadomienie o dokumentach wysyła biuro, przewodniczący albo osoba, która zamknęła obrady.', status: 403};
     return {allowed: true, basis: '§ 13'};
   }
+  if (kind === 'komunikacja') {
+    // Dodatek D-15 (DB-9, DB-42): przy udostępnieniu materiału, tym samym kręgiem co udostępnienie.
+    if (m.status !== 'zakonczone') return {allowed: false, reason: 'Materiał dla komunikacji udostępnia się po zamknięciu posiedzenia.', status: 409};
+    if (!canReleaseComms(roster, m, a)) return {allowed: false, reason: 'Materiał udostępnia biuro, przewodniczący albo osoba, która zamknęła obrady.', status: 403};
+    if (!commsReleasedOk(m)) return {allowed: false, reason: 'Najpierw udostępnij materiał komunikacji.', status: 409};
+    return {allowed: true, basis: 'DB-9'};
+  }
   if (kind === 'protokol') {
     if (!canFile(roster, m, a)) return {allowed: false, reason: 'Dokumenty po posiedzeniu dołącza biuro, przewodniczący albo sekretarz.', status: 403};
     if (!m.minutesReady) return {allowed: false, reason: 'Wiadomość „Protokół do wglądu” wychodzi po wpisaniu, kto i kiedy sporządził protokół.', status: 409};
@@ -163,20 +170,26 @@ export function minutesDraft(m: Meeting, roster: Roster, draft: unknown): Meetin
  * Adresaci wysyłki (B2-P02, B2-P04, 6.7.1): członkowie organu według bieżącego składu (wszyscy albo wybrani), do tego
  * nieobowiązkowo konta biura. Wiadomość informacyjna idzie tylko na adres potwierdzony i tylko do osób, które z niej nie
  * zrezygnowały; służbowa na każdy adres potwierdzony. Wiersz mówi, dlaczego osoba nie dostanie wiadomości, bez adresu.
- * Grupa „Osoby z otwartymi zadaniami” należy do dodatku D-11 (w rdzeniu daje pustą listę).
+ * Grupa „Osoby z otwartymi zadaniami” (dodatek D-11) bierze osoby z otwartymi zadaniami z przestrzeni roboczej `ws`.
  */
 export function mailRecipients(kind: MailKind, roster: Roster, m: Meeting | null, contacts: AccountContact[],
-  choice: {group: 'wszyscy' | 'zadania' | 'wybrani'; ids?: string[]; office?: boolean; comms?: boolean}, _ws?: unknown): MailRecipientRow[] {
+  choice: {group: 'wszyscy' | 'zadania' | 'wybrani'; ids?: string[]; office?: boolean; comms?: boolean}, ws?: {tasks: {assignee: {personId: string} | {office: true}; done?: unknown; cancelled?: unknown}[]} | null): MailRecipientRow[] {
   const organ = m?.organ ?? 'prezydium';
   const members = organRoster(roster, m ?? {organ}).map(ms => ms.personId);
   const active = contacts.filter(c => !c.disabled);
   let list: AccountContact[] = [];
-  if (choice.group === 'wszyscy') list = members.map(pid => active.find(c => c.personId === pid)).filter((c): c is AccountContact => !!c);
-  else if (choice.group === 'wybrani') {
+  // Dodatek D-15: „Materiał dla komunikacji gotowy” idzie wyłącznie do kont komunikacji, niezależnie od wyboru w oknie.
+  if (kind === 'komunikacja') list = active.filter(c => c.kind === 'komunikacja');
+  else if (choice.group === 'wszyscy') list = members.map(pid => active.find(c => c.personId === pid)).filter((c): c is AccountContact => !!c);
+  else if (choice.group === 'zadania') {
+    // Dodatek D-11: członkowie organu z otwartymi zadaniami w przestrzeni roboczej posiedzenia (zadania dla biura: „Także konta biura”).
+    const owners = new Set((ws?.tasks ?? []).filter(t => !t.done && !t.cancelled && 'personId' in t.assignee).map(t => (t.assignee as {personId: string}).personId));
+    list = members.filter(pid => owners.has(pid)).map(pid => active.find(c => c.personId === pid)).filter((c): c is AccountContact => !!c);
+  } else if (choice.group === 'wybrani') {
     const ids = new Set(choice.ids ?? []);
     list = active.filter(c => ids.has(c.accountId) && (c.kind === 'biuro' || (!!c.personId && members.includes(c.personId))));
   }
-  if (choice.office) for (const c of active) if (c.kind === 'biuro' && !list.includes(c)) list.push(c);
+  if (choice.office && kind !== 'komunikacja') for (const c of active) if (c.kind === 'biuro' && !list.includes(c)) list.push(c);
   if (choice.comms && kind === 'komunikacja') for (const c of active) if (c.kind === 'komunikacja' && !list.includes(c)) list.push(c);
   const service = MAIL_KINDS[kind].service;
   const pref = kind === 'postep' ? 'postep' : kind === 'po_posiedzeniu' || kind === 'komunikacja' ? 'po_posiedzeniu' : null;

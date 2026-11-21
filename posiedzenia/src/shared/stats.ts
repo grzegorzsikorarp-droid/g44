@@ -248,3 +248,25 @@ export function statsCsv(r: StatsResult, kind: 'moje' | 'sklad', at: number): st
 export function rosterView(r: StatsResult): StatsResult {
   return {...r, persons: r.persons.map(p => ({...p, rows: [], sessionVotes: {...p.sessionVotes, own: undefined}, procedureVotes: {...p.procedureVotes, own: undefined}}))};
 }
+
+/**
+ * Dodatek D-13 (B4-23–B4-26, DB-23, T-6): „Statystyki składu” wszystkich osób bez wierszy i bez głosów jawnych; uwagi
+ * „Do sprawdzenia” tylko dla osób z `seesStatsNotes` (biuro, przewodniczący), bez wydruku i CSV.
+ */
+export function rosterStats(input: Omit<StatsInput, 'self' | 'only'>, o: {notes: boolean}): StatsResult {
+  const r = rosterView(memberStats({...input, self: null}));
+  return o.notes ? r : {...r, notes: []};
+}
+/** „Posiedzenia po kolei” jednej osoby (B4-26): wiersze z obecnością i udziałem, wybór tylko z głosowań imiennych. */
+export function rosterPersonStats(input: Omit<StatsInput, 'self' | 'only'>, personId: string, o: {notes: boolean}): StatsResult {
+  const r = memberStats({...input, self: null, only: [personId]});
+  return {...r, persons: r.persons.map(p => ({...p, sessionVotes: {...p.sessionVotes, own: undefined}, procedureVotes: {...p.procedureVotes, own: undefined}})),
+    notes: o.notes ? r.notes.filter(n => !n.personId || n.personId === personId) : []};
+}
+/** Frekwencja składu w okresie (B4-07): suma obecności wobec sumy miejsc w składach posiedzeń. */
+export function rosterTurnout(r: StatsResult): {present: number; places: number; percent: number | null} {
+  const present = r.persons.reduce((n, p) => n + p.meetings.cala + p.meetings.czesciowa, 0), places = r.persons.reduce((n, p) => n + p.meetings.held, 0);
+  return {present, places, percent: share(present, places)};
+}
+/** Nazwy plików „Statystyk składu” (B4-24, B1-07), bez imion i nazwisk. */
+export const rosterFileName = (r: StatsResult, ext: 'csv' | 'html') => `${r.range.from === '0000-01-01' ? 'kadencja' : r.range.from}_${r.range.to === '9999-12-31' ? 'kadencja' : r.range.to}-prezydium-statystyki-skladu.${ext}`;

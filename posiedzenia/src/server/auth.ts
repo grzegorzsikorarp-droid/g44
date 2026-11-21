@@ -10,6 +10,11 @@ export const SESSION_SECONDS = 12 * 3600;
 export const SESSION_REFRESH_MS = 15 * 60 * 1000;
 
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
+/**
+ * Dodatek D-3 (B3-43 pkt 6, SPEC-4 5.2): „Wyloguj na innych urządzeniach” usuwa wszystkie sesje konta poza sesją,
+ * z której przyszło polecenie. Parametry: identyfikator konta, skrót tokenu bieżącej sesji.
+ */
+export const LOGOUT_OTHERS_SQL = 'DELETE FROM sessions WHERE user_id=? AND token<>?';
 export const newToken = () => randomBytes(32).toString('base64url');
 
 export function validPassword(value: unknown): string {

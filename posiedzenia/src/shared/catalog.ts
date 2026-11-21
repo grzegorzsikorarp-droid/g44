@@ -36,7 +36,8 @@ export function protocolAdoptions(meetings: Meeting[]): Map<string, Adoption> {
 /** Zamknięte posiedzenia do „Dotyczy protokołu” (G-33) z rozpoznanym przyjęciem. */
 export function closedRefs(meetings: Meeting[], adoptions = protocolAdoptions(meetings)): ClosedRef[] {
   return meetings.filter(m => m.status === 'zakonczone')
-    .map(m => ({id: m.id, organ: m.organ, kind: m.kind, day: paperDay(m), working: m.kind === 'posiedzenie' && !!m.working, adopted: adoptions.has(m.id), title: m.title}))
+    .map(m => ({id: m.id, organ: m.organ, kind: m.kind, day: paperDay(m), working: m.kind === 'posiedzenie' && !!m.working, adopted: adoptions.has(m.id), title: m.title,
+      minutes: {ready: m.minutesReady?.date ?? null, deadline: minutesDeadline(m)}}))
     .sort((a, b) => a.day.localeCompare(b.day));
 }
 
@@ -306,6 +307,38 @@ export function periodReportHtml(r: PeriodReport, roster: Roster): string {
   const photos = r.meetings.filter(m => m.photos);
   if (photos.length) out.push(`<h2>${t('Odnośniki do zdjęć')}</h2><ul class="paper-list">` + photos.map(m => `<li>${t(`${dateDots(m.day)}, ${m.photos}`)}</li>`).join('') + '</ul>');
   return out.join('');
+}
+/**
+ * Dodatek D-17: zestawienie w Markdown z tą samą treścią co wydruk (B1-30 pkt 1–5), zwykłe spacje (kontrola j). Adres
+ * albumu jak w wydruku, bo plik pobierają te same osoby (`canReport`, K4-31).
+ */
+export function periodReportMarkdown(r: PeriodReport): string {
+  const md = (v: string) => v.replace(/\u00a0/g, ' ').replace(/([\\`*_[\]#<>|])/g, '\\$1');
+  const out = [`# ${md(`Zestawienie posiedzeń ${r.organ} za okres ${dateDots(r.from)}–${dateDots(r.to)}`)}`, '', md(`Stan na ${dateDots(isoDayOf(r.at))}, godz. ${timeOf(r.at)}. Zestawienie z zapisu aplikacji.`), ''];
+  if (r.pending) out.push(md(`Dane posiedzeń bez przyjętego protokołu mogą się jeszcze zmienić (${r.pending}).`), '');
+  if (!r.meetings.length) return out.concat('W tym okresie nie zakończyło się żadne posiedzenie Prezydium.', '').join('\n');
+  out.push('## Liczby', '', `- ${md(`Posiedzenia ${r.counts.meetings}, w tym zdalne ${r.counts.remote} i spotkania robocze ${r.counts.working}.`)}`, `- ${md(`Głosowania między posiedzeniami ${r.counts.procedures}.`)}`,
+    `- ${md(actsLine(r.counts.acts))}`, `- ${md(`Średnia frekwencja ${r.counts.turnout}.`)}`, '');
+  out.push('## Posiedzenia', '', '| Data | Rodzaj | Tryb | Numer protokołu | Stan protokołu | Obecnych | Podjęte akty | Zdjęcia |', '|---|---|---|---|---|---|---|---|');
+  for (const m of r.meetings) out.push(`| ${[dateDots(m.day), m.kind, m.mode, m.protocolNumber || 'brak numeru', m.protocol, m.turnout, String(m.acts), m.photos ? 'jest' : 'brak'].map(md).join(' | ')} |`);
+  out.push('');
+  if (r.actsByCase.length) {
+    out.push('## Podjęte akty według rodzajów spraw', '');
+    for (const g of r.actsByCase) {
+      out.push(`### ${md(`${g.group}, ${g.count}`)}`, '');
+      if (g.level === 'lista') out.push(...g.items.map(i => `- ${md(`${i.number ? `${i.number}, ` : ''}${i.subject}, posiedzenie z dnia ${dateDots(i.day)}`)}`), '');
+      else if (g.numbers.length) out.push(md(`Numery ${g.numbers.join(', ')}.`), '');
+    }
+  }
+  const photos = r.meetings.filter(m => m.photos);
+  if (photos.length) out.push('## Odnośniki do zdjęć', '', ...photos.map(m => `- ${dateDots(m.day)}, <${m.photos}>`), '');
+  return out.join('\n');
+}
+/** Odnośniki pobierania na stronie wydruku zestawienia (6.9; z dodatkiem D-17 także Word i Markdown). */
+export function periodReportLinks(range: {from: string; to: string}): {href: string; label: string; name: string}[] {
+  const q = `/api/zestawienie?od=${range.from}&do=${range.to}`;
+  return [{href: `${q}&format=docx`, label: 'Word', name: 'Pobierz zestawienie w formacie Word'}, {href: `${q}&format=md`, label: 'Markdown', name: 'Pobierz zestawienie w formacie Markdown'},
+    {href: `${q}&format=csv&czesc=posiedzenia`, label: 'CSV', name: 'Pobierz posiedzenia w formacie CSV'}, {href: `${q}&format=csv&czesc=akty`, label: 'CSV akty', name: 'Pobierz akty w formacie CSV'}];
 }
 /** CSV zestawienia: posiedzenia albo akty (B1-30); odnośnik do albumu tylko „jest” albo „brak” (K4-31). */
 export function periodReportCsv(r: PeriodReport, part: 'posiedzenia' | 'akty'): string {
